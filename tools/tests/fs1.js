@@ -38,7 +38,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fails+
     const puts=[];await ctx.route('https://api.github.com/**',r=>{if(r.request().method()!=='GET')puts.push(r.request().url());r.fulfill({status:404,body:'{}'})});
     await ctx.route(`http://127.0.0.1:${PORT}/dept/config.js*`,r=>{let s=cfgSrc;
       if(source!=='github')s=s.replace(new RegExp(`(\\{ id: "${dept}",[^\\n]*?)( \\},?\\n)`),`$1, source: "${source}"$2`);
-      s=s.replace('firebase: { apiKey: "", authDomain: "", projectId: "", appId: "" }',
+      s=s.replace(/firebase: \{[^}]*\}/,
         `firebase: { apiKey: "demo", authDomain: "", projectId: "demo-stustsa-board", appId: "", emulator: { host: "${h}", port: ${pt}, mockUserToken: ${user===null?'null':JSON.stringify(tok(user||'vw'))} } }`);
       r.fulfill({contentType:'text/javascript',body:s})});
     const p=await ctx.newPage();p.errs=[];p.toasts=[];p.puts=puts;p.on('pageerror',e=>p.errs.push(e.message));

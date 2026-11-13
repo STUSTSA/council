@@ -180,6 +180,7 @@ const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
 function settingsInner(){
+  if(storeSource()==="firestore")return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js） */
   if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()+" · 生成週報、歷史週報"))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
     :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`);
@@ -282,6 +283,7 @@ function paneDismiss(all){
   if(hubNow&&(all||hubOn))hubNow.end();
   if(hubOn)return paneJob||Promise.resolve();
   if(weekPaneEnd){weekPaneEnd();return paneJob||Promise.resolve()}   /* 每週概述（weekly.js 的 weekPane）：關掉就回到「報告」合併頁（或設定清單） */
+  if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、會長室管理的面板（account.js）：一次收一層，all＝全部 */
   if(lg&&!lg.hidden&&lg.classList.contains("in-pane"))closeLog();
   else if(d.open&&d.classList.contains("in-pane")){const ev=new Event("cancel",{cancelable:true});d.dispatchEvent(ev);if(!ev.defaultPrevented)d.close()}
   return paneJob||Promise.resolve();
@@ -378,13 +380,14 @@ const SET_FLOWS={
   labels:()=>labelSettings(),
   title:()=>editBoardInfo("title"),
   ...SET_HUBS,
+  ...ACCT_FLOWS,
 };
 document.addEventListener("click",async e=>{
   if(!e.target.closest)return;
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入 */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);

@@ -31,6 +31,7 @@ const remBoot=async()=>{if(!loggedIn()&&remRead()&&await remLogin())render()};
 dataReady.then(()=>{
 setBaseline();
 render();
+acctStart();   /* 02B：新資料庫的部門、或網址帶 QR 邀請時，開始監聽 Google 登入（account.js） */
 if(!cloudOn())remBoot();
 /* 學年、開學日、甘特圖預設學期跟著秘書處（state.js 的 termCfg）：讀到秘書處的資料檔就重畫 */
 if(!termOwn())fwLoad(TERM_OWNER).then(c=>{if(c&&c.data){termSrc={yearLabel:c.data.yearLabel,termStart:c.data.termStart,semester:c.data.semester};render()}});
@@ -50,6 +51,6 @@ if(HOSTED)(async()=>{
   render();
 })();
 boardSplashOut();
-if(storeLocked())setTimeout(()=>toast(storeFsErr&&storeFsErr.code==="permission-denied"?"這個部門要登入才能看（登入在下一階段開放）":STORE_NOTE[storeSource()]),1200);
+if(storeLocked())setTimeout(()=>toast(storeFsErr&&storeFsErr.code==="permission-denied"?"這個部門要登入才能看":STORE_NOTE[storeSource()]),1200);
 if(MIGRATE_NOTE.staffDropped)setTimeout(()=>toast(`專員改成引用帳號：有 ${MIGRATE_NOTE.staffDropped} 筆專員標記找不到同名帳號，已拿掉（儲存後生效）`),4200);
 });
