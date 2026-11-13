@@ -174,6 +174,7 @@ async function councilHub(){
     {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()}]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
+const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
 const roleChips=r=>[...(r.super?[`<span class="acct-chip on">總管理員</span>`]:[]),...Object.entries(r.depts||{}).map(([d,v])=>`<span class="acct-chip">${esc(deptNameOf(d))}・${ROLE_T[v]||esc(v)}</span>`)].join("")||`<span class="acct-chip">唯讀</span>`;   /* 被撤光的人也列出來（roles 文件還在） */
 
 /* 人員：列出有角色的人；點一個人：改角色、撤銷部門、授予／取消總管理員（不能取消自己）、看他的權限歷史 */
@@ -182,7 +183,7 @@ function peoplePanel(){
     const A=await acctLoad();
     let roles=[],users=[],who=null;
     const load=async()=>{[roles,users]=await Promise.all([A.rolesList(),A.usersList()]);acct.names=await A.profiles().catch(()=>acct.names)};
-    const mail=uid=>(users.find(x=>x.uid===uid)||{}).email||"";
+    const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
       if(who){const r=roles.find(x=>x.uid===who)||{uid:who,super:false,depts:{}},self=who===acct.user.uid;
@@ -286,7 +287,7 @@ function requestsPanel(){
   return acctPanel("申請",async p=>{
     const A=await acctLoad();
     let list=[],users=[];
-    const mail=uid=>(users.find(x=>x.uid===uid)||{}).email||"";
+    const mail=uid=>mailOf(users,uid);
     const legName=async()=>{try{const l=await A.legacyList();return Object.fromEntries(l.map(x=>[x.id,x.name]))}catch(_){return {}}};
     let leg={};
     const draw=()=>{if(!p.alive)return;
