@@ -4,7 +4,7 @@ import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { env, google, anon, seed, seedRole, seedDepts, assertSucceeds, assertFails, NOW, TS,
          createCard, editCard, cardData, verData, readDoc, audit, auditId,
-         purgeCard, purgeStartData, createCardWithEvents, eventData } from './helpers.js';
+         purgeCard, purgeStartWrites, createCardWithEvents, eventData, commit, patch } from './helpers.js';
 
 let t;
 const U = { boss: { super: true }, ed: { depts: { rights: 'editor' } }, adm: { depts: { rights: 'admin' } },
@@ -138,7 +138,7 @@ describe('卡片與版本 C-01～C-20', () => {
     await createCard(db('ed'), 'ed', 'c1');
     const cur = await readDoc(t, 'cards/c1');
     await editCard(db('ed'), 'ed', 'c1', cur, { title: '第二版' });
-    await db('ed').doc('cards/c1').set(purgeStartData(await readDoc(t, 'cards/c1'), 'ed', []));
+    await commit(db('ed'), purgeStartWrites(await readDoc(t, 'cards/c1'), 'ed', 'c1'));
   }
   it('C-01～C-04 一般登入者讀不到刪除中的卡片與其版本（get、list、collection group）', async () => {
     await purgingCard();
@@ -319,14 +319,14 @@ describe('卡片與版本 C-01～C-20', () => {
     await assertSucceeds(db('vw').collection('events').where('deptId', '==', 'rights').get());
     // 刪除中的卡片不能再掛時間事件
     cur = await readDoc(t, 'cards/c1');
-    await assertSucceeds(x.doc('cards/c1').set(purgeStartData(cur, 'ed', ['e1', 'e2'].slice(0, 1))));
+    await assertSucceeds(commit(x, purgeStartWrites(cur, 'ed', 'c1')));
     await assertFails(x.doc('events/e2').set(eventData('ed', 'c1')));
   });
   it('狀態轉換：完成要 doneAt＝現在；刪除要 deletedBy＝自己', async () => {
     await createCard(db('ed'), 'ed', 'c1');
     const cur = await readDoc(t, 'cards/c1');
     await assertFails(editCard(db('ed'), 'ed', 'c1', cur, { state: 'done', doneAt: TS.fromMillis(0) }));
-    await assertFails(db('ed').doc('cards/c1').set(purgeStartData(cur, 'adm', [])));            // 開始刪除要 deletedBy＝自己
+    await assertFails(commit(db('ed'), patch(purgeStartWrites(cur, 'ed', 'c1'), 0, { deletedBy: 'adm' })));   // 開始刪除要 deletedBy＝自己
     await assertFails(editCard(db('ed'), 'ed', 'c1', cur, { state: 'deleted', deletedAt: NOW(), deletedBy: 'ed' }));   // 02A：沒有 deleted 狀態
     await assertSucceeds(editCard(db('ed'), 'ed', 'c1', cur, { state: 'done', doneAt: NOW() }));
     await assertFails(db('ed').doc('cards/c1').update({ order: 5, title: 'x', updatedAt: NOW(), updatedBy: 'ed' }));

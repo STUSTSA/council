@@ -1,8 +1,8 @@
 rules_version = '2';
-// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A 修正）
+// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-08、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -218,18 +218,38 @@ service cloud.firestore {
         return a().after is map && a().after.status == target().status
           && (a().rev == 1 ? a().before == {} : (a().before is map && a().before.status == before().status));
       }
+      // 受 rev 鏈保護的文件：ID＝{col}_{docId}_{rev}
+      function chainOk() {
+        return a().col in ['roles', 'invitations', 'roleRequests', 'grants', 'legacyIdentities',
+                           'bookings', 'deptSettings', 'migrations']
+          && aid == a().col + '_' + a().docId + '_' + string(a().rev)
+          && target().rev == a().rev && target().updatedBy == me()
+          && (a().col != 'roles' || (rolesOk() && a().action == target().lastVia && a().ref == target().lastRef))
+          && (!(a().col in ['invitations', 'roleRequests', 'bookings', 'migrations']) || statusOk());
+      }
+      // 02B 卡片刪除紀錄：只能在「開始永久刪除」那一批建立（卡片批次前 open／done、批次後 purging、deletedBy＝自己、
+      // deletedAt＝這次寫入），內容＝卡片的標題、部門、狀態與版本號。ID＝cards_{卡片ID}_purge_{ref}，ref＝卡片的 purgeLog
+      // （每次刪除不同的亂數，同一個卡片 ID 刪掉又重建再刪也不會撞號）。卡片永久刪除後只剩這一筆
+      function cardPurgeOk() {
+        let c0 = get(doc('cards', a().docId)).data;
+        let c1 = getAfter(doc('cards', a().docId)).data;
+        return a().col == 'cards' && a().action == 'purge'
+          && a().ref is string && a().ref.matches('^[A-Za-z0-9]{8,40}$')
+          && aid == 'cards_' + a().docId + '_purge_' + a().ref
+          && c0.state in ['open', 'done'] && c1.state == 'purging'
+          && c1.get('purgeLog', null) == a().ref
+          && c1.deletedBy == me() && c1.deletedAt == request.time
+          && a().rev == c0.version
+          && a().before == { 'title': c0.title, 'deptId': c0.deptId, 'state': c0.state }
+          && a().after == { 'state': 'purging' };
+      }
       allow get, list: if isSuper();
       allow update, delete: if false;
       allow create: if signedIn()
         && a().keys().hasOnly(['col', 'docId', 'rev', 'action', 'actor', 'at', 'before', 'after', 'ref'])
-        && a().col in ['roles', 'invitations', 'roleRequests', 'grants', 'legacyIdentities',
-                       'bookings', 'deptSettings', 'migrations']
         && a().docId is string && a().rev is int
-        && aid == a().col + '_' + a().docId + '_' + string(a().rev)
         && a().actor == me() && a().at == request.time
-        && target().rev == a().rev && target().updatedBy == me()
-        && (a().col != 'roles' || (rolesOk() && a().action == target().lastVia && a().ref == target().lastRef))
-        && (!(a().col in ['invitations', 'roleRequests', 'bookings', 'migrations']) || statusOk());
+        && (chainOk() || cardPurgeOk());
     }
 
     // ===================== 舊身分（決定 A4） =====================
@@ -265,7 +285,7 @@ service cloud.firestore {
     // ===================== 即時回報卡片（permissions.md 第 5.1 節） =====================
     // 02A：刪除＝永久刪除，卡片連同全部版本與時間事件一起移除；不做軟刪除、不能復原。
     // 規則沒有迴圈、整批讀取有上限，所以永久刪除分成三步（一張卡片版本少時可以全部放同一批）：
-    //   ① 開始：open／done → purging。不可逆；之後只有部門編輯者以上與總管理員讀得到（給前端接續清除）。
+    //   ① 開始：open／done → purging，同一批寫刪除紀錄（02B）。不可逆；之後只有部門編輯者以上與總管理員讀得到（給前端接續清除）。
     //   ② 清除（可以多批）：時間事件——卡片的 timeIds 列出它全部的時間事件（建立事件時規則要求列在裡面），
     //      從 timeIds 拿掉一個 ID 時，那份事件必須同一批刪掉；版本——由新往舊刪（刪第 v 版時第 v+1 版必須已經不在），
     //      所以剩下的版本永遠是 1～k。
@@ -274,7 +294,7 @@ service cloud.firestore {
       function cardKeys() {
         return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report',
                 'state', 'doneAt', 'deletedAt', 'deletedBy', 'order', 'round', 'roundAt', 'touched', 'touchedAt',
-                'fromEv', 'version', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'legacyDesc', 'importBatch'];
+                'fromEv', 'version', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'legacyDesc', 'importBatch', 'purgeLog'];
       }
       function cardShape() {
         return d().keys().hasOnly(cardKeys())
@@ -307,7 +327,7 @@ service cloud.firestore {
       }
       function onlyShrinks() { return resource.data.get('timeIds', []).hasAll(d().get('timeIds', [])) && droppedGone(); }
 
-      function editorEdit()  { return live() && deptWriter(resource.data.deptId) && stamped()
+      function editorEdit()  { return live() && deptWriter(resource.data.deptId) && stamped() && unchanged(['purgeLog'])
                                  && d().version == resource.data.version + 1 && verAfter() && stateMove() && droppedGone(); }
       // 秘書處會議編輯：報告事項、授權未到期、只改內容
       function meetingEdit() { return live() && isEditor('secretariat') && resource.data.report == true
@@ -316,10 +336,16 @@ service cloud.firestore {
                                  && stamped() && d().version == resource.data.version + 1 && verAfter() && droppedGone(); }
       function reorder()     { return live() && deptWriter(resource.data.deptId)
                                  && onlyChanged(['order', 'updatedAt', 'updatedBy']) && stamped(); }
-      // 永久刪除 ①：開始（可以同一批先刪掉最多 3 個時間事件）。刪除權限＝該部門編輯者以上、總管理員
+      // 永久刪除 ①：開始。刪除權限＝該部門編輯者以上、總管理員。
+      // 02B：同一批一定要新建刪除紀錄 auditLogs/cards_{id}_purge_{purgeLog}（誰、何時、標題；不能略過、不能沿用舊的）；
+      // 為了讓整批讀取留在上限內，開始那一批不刪時間事件（02A 原本可以先刪 3 個），時間事件全部在 ② 清除
+      function purgeLogNew() {
+        let p = doc('auditLogs', 'cards_' + id + '_purge_' + d().purgeLog);
+        return d().purgeLog is string && d().purgeLog.matches('^[A-Za-z0-9]{8,40}$') && !exists(p) && existsAfter(p);
+      }
       function purgeStart()  { return live() && deptWriter(resource.data.deptId) && d().state == 'purging'
-                                 && onlyChanged(['state', 'deletedAt', 'deletedBy', 'timeIds', 'updatedAt', 'updatedBy'])
-                                 && d().deletedAt == request.time && d().deletedBy == me() && stamped() && onlyShrinks(); }
+                                 && onlyChanged(['state', 'deletedAt', 'deletedBy', 'purgeLog', 'updatedAt', 'updatedBy'])
+                                 && d().deletedAt == request.time && d().deletedBy == me() && stamped() && purgeLogNew(); }
       // 永久刪除 ②：清除時間事件（版本的清除在 versions 的 delete 規則）
       function purgeSweep()  { return resource.data.state == 'purging' && d().state == 'purging' && deptWriter(resource.data.deptId)
                                  && onlyChanged(['timeIds', 'updatedAt', 'updatedBy']) && stamped() && onlyShrinks(); }
@@ -342,7 +368,7 @@ service cloud.firestore {
 
       allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
       allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
-      allow create: if cardShape() && (normalCreate() || importCreate()) && verAfter();
+      allow create: if cardShape() && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
       allow update: if cardShape() && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
         && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
       allow delete: if purgeFinish() || rollbackDelete();
