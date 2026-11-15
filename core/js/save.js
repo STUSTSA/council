@@ -45,6 +45,7 @@ async function fsSave(){
 /* 匯出備份：JSON（只有資料，用「匯入備份」還原） */
 async function exportBackup(){
   const s=JSON.parse(JSON.stringify(state));s.locked=false;if(!s.savedAt)s.savedAt=nowStr();
+  if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
   const kind={mime:"application/json",ext:".json",desc:"JSON"},doc=JSON.stringify(s,null,1);
   const name=`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,label="備份";

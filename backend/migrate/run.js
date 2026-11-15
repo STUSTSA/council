@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sameBoard } from './compare.js';
 
 const require = createRequire(import.meta.url);
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -21,26 +22,29 @@ export function loadDepts() {
   const code = readFileSync(path.join(ROOT, 'dept/config.js'), 'utf8') + '\n;this.__D = BOARD_DEPTS;';
   const ctx = { window: {}, location: { search: '' }, URLSearchParams };
   vm.runInNewContext(code, ctx);
-  return ctx.__D.map(d => ({ id: d.id, name: d.name, path: d.path, test: !!d.test }));
+  return Array.from(ctx.__D, d => ({ id: d.id, name: d.name, path: d.path, test: !!d.test }));   // 換成這個程式自己的陣列（vm 的陣列原型不同，比對會出錯）
 }
 
-// 讀來源：預設是目前工作目錄的檔案；給 commit 時用 git show 讀那個版本（都是唯讀）
-export function loadSources({ commit } = {}) {
+// 讀來源：預設是目前工作目錄的檔案；給 commit 時用 git show 讀那個版本；給 dir 時讀那個資料夾裡的同名檔案（演練用：先把資料檔複製到暫存資料夾，只讀複本）。都是唯讀。
+// dept：只讀這一個部門（02D 逐部門切換）；部門清單仍是完整的（departments 的 order 照全部的順序）
+export function loadSources({ commit, dir, dept } = {}) {
+  if (commit && dir) throw new Error('--commit 與 --dir 只能擇一');
   const depts = loadDepts();
+  if (dept && !depts.some(d => d.id === dept)) throw new Error(`沒有 ${dept} 這個部門（${depts.map(d => d.id).join('、')}）`);
   const head = commit || execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT }).toString().trim();
-  const files = depts.map(d => {
-    const raw = commit ? execFileSync('git', ['show', `${commit}:${d.path}`], { cwd: ROOT }) : readFileSync(path.join(ROOT, d.path));
+  const files = depts.filter(d => !dept || d.id === dept).map(d => {
+    const raw = commit ? execFileSync('git', ['show', `${commit}:${d.path}`], { cwd: ROOT }) : readFileSync(path.join(dir ? path.resolve(dir) : ROOT, d.path));
     const state = JSON.parse(raw.toString('utf8'));
     return { dept: d.id, path: d.path, sha256: createHash('sha256').update(raw).digest('hex'), state };
   });
-  return { depts, commit: head, files };
+  return { depts, commit: head, dir: dir ? path.resolve(dir) : null, only: dept || null, files };
 }
 
-// 產生所有文件（不寫入）。schemaVersion 不是 13 的檔案直接停下來（不猜舊格式）
+// 產生所有文件（不寫入）。schemaVersion 不是 13 的檔案直接停下來（不猜舊格式）。只匯入一個部門時，departments 只寫那一個
 export function plan(src, { batch, uid }) {
   const out = [], reports = [];
-  src.depts.forEach((d, i) => out.push({ kind: 'departments', path: `departments/${d.id}`,
-    data: { name: d.name, order: i, active: !d.test, updatedAt: { __now: true }, updatedBy: uid } }));
+  src.depts.forEach((d, i) => { if (!src.only || d.id === src.only) out.push({ kind: 'departments', path: `departments/${d.id}`,
+    data: { name: d.name, order: i, active: !d.test, updatedAt: { __now: true }, updatedBy: uid } }); });
   for (const f of src.files) {
     const v = +f.state.schemaVersion || +f.state.v || 0;
     if (v !== 13) throw new Error(`${f.path} 的 schemaVersion 是 ${v}，不是 13：請先用看板開啟並儲存一次（core/js/state.js 的 migrate）再遷移`);
@@ -184,20 +188,26 @@ export async function rollbackImport(db, FV, batch, uid, { log = () => {} } = {}
 }
 
 // ---------- 驗證 V1～V6（V7 在測試裡用不同身分讀；V8 是現有 Playwright 測試） ----------
-export async function verify(db, src, p) {
+// dept：只看這一個部門的文件（逐部門切換時其他部門可能已經匯入、甚至已經在編輯）。連結檢查仍對照整個資料庫；
+// 指到別的部門而那個部門還沒匯入的（例如會長室追蹤權益部的議題），列出來但不算失敗。
+const ofDept = (dept, kind, d) => !dept ? true
+  : kind === 'departments' || kind === 'deptSettings' ? d.id === dept
+  : kind === 'org' ? dept === 'secretariat' : kind === 'grants' ? dept === 'president' : d.deptId === dept;
+export async function verify(db, src, p, { dept = src.only } = {}) {
   const out = { ok: true, items: [] };
   const fail = (id, msg) => { out.ok = false; out.items.push({ id, ok: false, msg }); };
   const pass = (id, msg) => out.items.push({ id, ok: true, msg });
   const read = async q => (await q.get()).docs.map(s => ({ id: s.id, path: s.ref.path, ...fromFirestore(s.data()) }));
-  const all = {};
+  const every = {};
   for (const c of ['departments', 'deptSettings', 'legacyIdentities', 'cards', 'issues', 'weeks', 'labels', 'events', 'meetingMinutes'])
-    all[c] = await read(db.collection(c));
-  all.versions = await read(db.collectionGroup('versions'));
-  all.org = await read(db.collection('org'));
-  all.grants = await read(db.collection('grants'));
+    every[c] = await read(db.collection(c));
+  every.versions = await read(db.collectionGroup('versions'));
+  every.org = await read(db.collection('org'));
+  every.grants = await read(db.collection('grants'));
+  const all = Object.fromEntries(Object.entries(every).map(([k, v]) => [k, v.filter(d => ofDept(dept, k, d))]));
   // V1 筆數：每個集合、每個部門
   const want = {};
-  p.docs.forEach(d => { const dept = d.data.deptId || d.path.split('/')[1]; const k = `${d.kind}/${d.kind === 'departments' || d.kind === 'deptSettings' ? '-' : dept}`; want[k] = (want[k] || 0) + 1; });
+  p.docs.forEach(d => { const dp = d.data.deptId || d.path.split('/')[1]; const k = `${d.kind}/${d.kind === 'departments' || d.kind === 'deptSettings' ? '-' : dp}`; want[k] = (want[k] || 0) + 1; });
   const have = {};
   for (const [kind, docs] of Object.entries(all)) docs.forEach(d => { const k = `${kind}/${kind === 'departments' || kind === 'deptSettings' ? '-' : (d.deptId || d.id)}`; have[k] = (have[k] || 0) + 1; });
   const diff = Object.keys({ ...want, ...have }).filter(k => (want[k] || 0) !== (have[k] || 0) && !k.startsWith('org/') && !k.startsWith('grants/'));
@@ -207,40 +217,96 @@ export async function verify(db, src, p) {
   src.files.forEach(f => (f.state.events || []).forEach(e => srcCards.set(`${f.dept}__${e.id}`, String(e.desc || ''))));
   let multi = 0; const bad2 = [];
   for (const c of all.cards) { const joined = (c.blocks || []).map(b => b.text).join('\n'), orig = srcCards.get(c.id);
-    if (orig != null && orig.includes('\n')) multi++;
+    if (orig != null && orig.includes('\n') && joined === orig) multi++;
     if (joined !== orig || c.legacyDesc !== orig) bad2.push(c.id); }
   bad2.length ? fail('V2', '還原不符：' + bad2.join(', ')) : pass('V2', `${all.cards.length} 張卡片還原相同，其中多行 ${multi} 張`);
   // V3 連結：議題、註記、追蹤、分段來源、標籤、負責人
-  const ids = new Set([...all.cards, ...all.issues, ...all.labels, ...all.events, ...all.legacyIdentities].map(d => d.id));
-  const broken = [];
-  const chk = (what, from, id) => { if (id && !ids.has(id)) broken.push(`${what}:${from}→${id}`); };
+  const ids = new Set([...every.cards, ...every.issues, ...every.labels, ...every.events, ...every.legacyIdentities].map(d => d.id));
+  const broken = [], pending = [];
+  const own = id => !dept || String(id).startsWith(dept + '__') || String(id).startsWith(`legacy:${dept}__`);
+  const chk = (what, from, id) => { if (id && !ids.has(id)) (own(id) ? broken : pending).push(`${what}:${from}→${id}`); };
   all.cards.forEach(c => { chk('issueId', c.id, c.issueId); chk('fromEv', c.id, c.fromEv); (c.labels || []).forEach(x => chk('label', c.id, x));
     (c.staff || []).forEach(s => chk('staff', c.id, s.replace(/^legacy:/, ''))); (c.timeIds || []).forEach(x => chk('timeId', c.id, x)); });
   all.issues.forEach(i => (i.markers || []).forEach(m => { chk('marker.evId', i.id, m.evId); chk('marker.tmId', i.id, m.tmId); }));
   all.deptSettings.forEach(s => (s.follows || []).forEach(f => chk('follow', s.id, f.ref)));
   all.events.forEach(e => chk('event.cardId', e.id, e.cardId));
   const srcBroken = p.reports.flatMap(r => r.broken.map(b => `${b.what}:${r.dept}__${b.from}→${b.id}`));
+  const note = (srcBroken.length ? `；來源本來就斷的 ${srcBroken.length} 筆已保留原值` : '') + (pending.length ? `；指到還沒匯入的部門 ${pending.length} 筆（${pending.join(', ')}）` : '');
   broken.length ? fail('V3', '斷掉的連結：' + broken.join(', ') + (srcBroken.length ? `（來源本來就斷的：${srcBroken.join(', ')}）` : ''))
-    : pass('V3', '所有連結都指得到' + (srcBroken.length ? `；來源本來就斷的 ${srcBroken.length} 筆已保留原值` : ''));
+    : pass('V3', '所有連結都指得到' + note);
+  out.pending = pending;
   // V4 時間：startRaw 重新解析＝start；全天事件在台灣時間是同一天
   const bad4 = all.events.filter(e => { const s = MAP.parseTaipei(e.startRaw);
     return !s || s.ms !== e.start.__ts || s.allDay !== e.allDay || (e.allDay && MAP.fmtTaipei(e.start.__ts, true) !== e.startRaw.slice(0, 10)); });
   bad4.length ? fail('V4', '時間不符：' + bad4.map(e => e.id).join(', ')) : pass('V4', `${all.events.length} 筆時間標記相同`);
-  // V6 敏感欄位：鍵名不存在、來源裡的權杖與雜湊字串也不存在
+  // V6 敏感欄位：鍵名不存在、來源裡的權杖與雜湊字串也不存在（整個資料庫都查）
   const secrets = [];
   const grab = (o, inSecret) => { if (Array.isArray(o)) return o.forEach(x => grab(x, inSecret));
     if (o && typeof o === 'object') return Object.entries(o).forEach(([k, v]) => grab(v, inSecret || SENSITIVE_KEYS.includes(k)));
     if (inSecret && typeof o === 'string' && o.length >= 16) secrets.push(o); };
   src.files.forEach(f => grab(f.state, false));
-  const dump = JSON.stringify(all);
+  const dump = JSON.stringify(every);
   const keyHit = SENSITIVE_KEYS.filter(k => dump.includes(`"${k}":`));
   const valHit = secrets.filter(s => dump.includes(s));
   keyHit.length || valHit.length ? fail('V6', `找到敏感欄位 ${keyHit.join(',')}，值 ${valHit.length} 筆`) : pass('V6', `沒有敏感欄位；比對了 ${secrets.length} 個來源機密字串`);
   out.counts = Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v.length]));
   out.counts.markers = all.issues.reduce((n, i) => n + (i.markers || []).length, 0);
   out.counts.multiline = multi;
-  out.expectedDiff = Object.entries(EXPECTED).filter(([k, v]) => out.counts[k] !== v).map(([k, v]) => `${k}: 預期 ${v}，實際 ${out.counts[k]}`);
+  out.counts.importedVersions = all.versions.filter(v => v.imported === true).length;
+  out.expectedDiff = dept ? [] : Object.entries(EXPECTED).filter(([k, v]) => out.counts[k] !== v).map(([k, v]) => `${k}: 預期 ${v}，實際 ${out.counts[k]}`);
   out.hash = createHash('sha256').update(JSON.stringify(Object.fromEntries(Object.entries(all).map(([k, v]) =>
     [k, v.map(d => [d.path, contentHash(d)]).sort()])))).digest('hex');
+  return out;
+}
+
+// ---------- 02D：逐部門的筆數報告（upgrade-plan.md 第 6.5 節「看報告」） ----------
+// 左邊直接從資料檔數（不經過對照程式），右邊是 Firestore 裡這個部門的文件；任何一列不同或 V1～V6 任一項失敗＝不通過。
+// 只在匯入後、開放編輯前看（開始編輯後卡片、時間標記的數量本來就會變）。版本只數遷移產生的第 1 版。
+export const REPORT_ROWS = [['cards', '卡片（即時回報）'], ['versions', '版本（遷移產生的第 1 版）'], ['issues', '母議題'], ['weeks', '週報'],
+  ['labels', '標籤'], ['events', '時間標記'], ['markers', '議題註記'], ['legacyIdentities', '舊身分'], ['multiline', '多行說明（逐字還原）']];
+export function sourceCounts(state) {
+  const ev = state.events || [], is = state.issues || [];
+  return { cards: ev.length, versions: ev.length, issues: is.length, weeks: (state.weeks || []).length, labels: (state.labels || []).length,
+    events: ev.reduce((n, e) => n + (e.times || []).length, 0), markers: is.reduce((n, i) => n + (i.markers || []).length, 0),
+    legacyIdentities: (state.members || []).length, multiline: ev.filter(e => String(e.desc || '').includes('\n')).length };
+}
+export async function deptReport(db, src, dept) {
+  const f = src.files.find(x => x.dept === dept);
+  if (!f) throw new Error(`來源裡沒有 ${dept}`);
+  const one = { ...src, only: dept, files: [f] };
+  const v = await verify(db, one, plan(one, { batch: 'report', uid: 'report' }), { dept });
+  const a = sourceCounts(f.state), b = { ...v.counts, versions: v.counts.importedVersions };
+  const rows = REPORT_ROWS.map(([k, label]) => ({ key: k, label, source: a[k], firestore: b[k] || 0, ok: a[k] === (b[k] || 0) }));
+  return { dept, path: f.path, sha256: f.sha256, commit: src.commit, rows, verify: v.items, pending: v.pending, ok: v.ok && rows.every(r => r.ok) };
+}
+const cols = t => [...String(t)].reduce((n, c) => n + (c.codePointAt(0) > 0x2e80 ? 2 : 1), 0);
+const padTo = (t, n) => t + ' '.repeat(Math.max(0, n - cols(t)));
+export function formatReport(r) {
+  const w = Math.max(...r.rows.map(x => cols(x.label))) + 2;
+  return [`部門 ${r.dept}（${r.path}，SHA-256 ${r.sha256}）`, `${padTo('項目', w)}資料檔  Firestore  結果`,
+    ...r.rows.map(x => `${padTo(x.label, w)}${String(x.source).padStart(6)}  ${String(x.firestore).padStart(9)}  ${x.ok ? '相同' : '不同'}`),
+    ...r.verify.map(i => `${i.ok ? '通過' : '失敗'} ${i.id} ${i.msg}`),
+    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列）'].join('\n');
+}
+
+// ---------- 02D：回復用的匯出（upgrade-plan.md 第 6.6 節第 2 列） ----------
+// 從 Firestore 讀一個部門，轉回 schemaVersion 13 的部門資料（跟網頁 firestore 模式讀取同一組查詢、同一個 store-map.js 的 toState），
+// 看板的「匯入備份」可以直接讀。只在 GitHub 模式有的欄位（雲端設定、權杖、密碼、會議紀錄）不在裡面：看板匯入時沿用原本的值。
+export async function exportDept(db, dept) {
+  const one = async p => { const s = await db.doc(p).get(); return s.exists ? { id: s.id, ...fromFirestore(s.data()) } : null; };
+  const many = async q => (await q.get()).docs.map(s => ({ id: s.id, ...fromFirestore(s.data()) }));
+  const by = c => db.collection(c).where('deptId', '==', dept);
+  const [settings, org, grant, cards, issues, weeks, labels, events, legacy] = await Promise.all([
+    one(`deptSettings/${dept}`), one('org/config'), dept === 'president' ? one('grants/meetingEdit') : null,
+    many(by('cards').where('state', 'in', ['open', 'done'])), many(by('issues')), many(by('weeks')), many(by('labels')), many(by('events')), many(by('legacyIdentities'))]);
+  const s = MAP.toState(dept, { settings, org, grant, cards, issues, weeks, labels, events, legacy });
+  s.savedAt = MAP.fmtTaipei(Date.now(), false);
+  return s;
+}
+
+// 往返檢查：每個部門 Firestore → 匯出 → 跟原始資料檔做語意比對（不比的欄位見 compare.js 的 IGNORED）。回傳每個部門不同的位置
+export async function roundTrip(db, src) {
+  const out = [];
+  for (const f of src.files) out.push({ dept: f.dept, path: f.path, diffs: sameBoard(await exportDept(db, f.dept), f.state, f.dept) });
   return out;
 }

@@ -239,7 +239,12 @@ $("#importFile").addEventListener("change",async e=>{
     const data=normalize(raw);
     const v=await ask(`匯入「${f.name}」？`,[],{});
     if(v===null)return;
-    data.locked=false;data.id=state.id;state=data;state.savedAt=nowStr();
+    data.locked=false;data.id=state.id;
+    /* 02D：從新資料庫匯出的備份（切換後退回 GitHub 的回復路徑，docs/architecture/migration.md 第 7 節）沒有只在 GitHub 模式有的欄位：
+       雲端設定與權杖、共用密碼、身分的密碼與權杖、會議紀錄。備份裡沒有的就沿用目前看板的值，匯入不會把它們清掉 */
+    for(const k of ["sync","pwKdf","pwHash","minutes"])if(!(k in raw)&&state[k]!==undefined)data[k]=state[k];
+    data.members.forEach(m=>{const o=(state.members||[]).find(x=>x.id===m.id);if(o)["kdf","tok"].forEach(k=>{if(!(k in m)&&o[k]!==undefined)m[k]=o[k]})});
+    state=data;state.savedAt=nowStr();
     editing=false;dirty=false;progOpen=null;render();await persist(`已匯入並${HOSTED?'發布':'儲存'}`);
     toast(`已匯入：${state.issues.length} 個議題、${state.events.length} 則即時回報、${state.weeks.length} 份週報`);
   }catch(err){toast("這個檔案讀不到看板資料")}
