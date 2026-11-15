@@ -26,17 +26,6 @@ textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var
 select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:6px 10px;width:100%;border-radius:10px;background-color:var(--surface)}
 .empty{color:var(--muted);font-size:13.5px;margin:6px 0}
 .hint{font-size:12px;color:var(--muted)}
-/* ===== 單卡編輯（2026-11-06，render.js 的 cardEdit） =====
-   編輯中的那張卡片（或那一區：追蹤、會議編輯、甘特圖時間軸）加 .sec-edit，裡面的 .edit-only 工具才出現 */
-.edit-only{display:none!important}
-.sec-edit .edit-only{display:inline-flex!important}
-/* 登入才看得到的按鈕：卡片上的「編輯」（.card-edit-btn）與新增鈕（.auth-only）；有一張在編輯時全部先藏起來（一次只編一張） */
-body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.auth-only),.card-edit-btn[hidden]{display:none}
-.card-edit-btn{flex:none;gap:5px}
-.ev-edrow{display:flex;justify-content:flex-end;margin-top:10px}   /* 即時回報、完成紀錄展開後最下面那顆「編輯」 */
-body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
-/* 編輯中那張最下面的「取消｜儲存」 */
-.card-edbar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);width:100%;animation:fadeSlide .4s var(--ease) both}
 dialog form{display:grid;gap:10px}
 dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 .num{font-family:"Jost","Noto Sans TC",sans-serif;font-weight:400;letter-spacing:.02em}
@@ -74,6 +63,16 @@ button.ghost{border-color:var(--muted)}
   *{scrollbar-width:thin;scrollbar-color:rgba(140,140,150,.45) transparent}
 }
 
+/* ===== 單卡編輯（2026-11-06，render.js 的 cardEdit） =====
+   編輯中的那張卡片（或那一區：追蹤、會議編輯、甘特圖時間軸）加 .sec-edit，裡面的 .edit-only 工具才出現 */
+.edit-only{display:none!important}
+.sec-edit .edit-only{display:inline-flex!important}
+/* 登入才看得到的按鈕：卡片上的「編輯」（.card-edit-btn）與新增鈕（.auth-only）；有一張在編輯時全部先藏起來（一次只編一張） */
+body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.auth-only),.card-edit-btn[hidden]{display:none}
+.card-edit-btn{flex:none;gap:5px}
+/* 編輯中那張最下面的「取消｜儲存」 */
+.card-edbar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);width:100%;animation:fadeSlide .4s var(--ease) both}
+
 /* ===== 共用：多個元件一起設定的效果 ===== */
 .actions button,.add-row,.dlg-actions button,.week-tools button,.ev-tools button{padding-top:5.5px;padding-bottom:6.5px}
 /* 進度色調（議題卡片、甘特圖）：--acc 給線條與色塊，--acc-ink 給文字 */
@@ -87,8 +86,9 @@ button.ghost{border-color:var(--muted)}
 .anim-title b{font-size:clamp(20px,2.4vw,28px);font-weight:500;letter-spacing:.08em}
 .anim-k{font-family:"Jost",sans-serif;font-size:13px;letter-spacing:.2em;color:var(--muted)}
 .anim-ctl{display:flex;gap:8px}
+/* 每週概述的膠囊滑過去放大一點、外圈光暈（即時回報膠囊的同一組效果在「即時回報」段） */
 @media (hover:hover){
-  .ev:hover,.week:hover{transform:scale(1.015);box-shadow:var(--glow);border-color:transparent;z-index:1;position:relative}
+  .week:hover{transform:scale(1.015);box-shadow:var(--glow);border-color:transparent;z-index:1;position:relative}
 }
 
 /* ===== 捲軸 ===== */
@@ -238,10 +238,10 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 @keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}
 /* 燈號擴散只動 transform／opacity（交給合成執行緒），展開收合時也不暫停（暫停再繼續看起來像卡住）；重畫後的相位由 anim.js 的 Anim.syncPings 接回去 */
 
-/* ===== 即時回報 ===== */
-/* 膠囊一律白底黑字（細框），狀態只放在左邊的燈號：data-st＝ok 綠（期限前有更新）／go 黃（學生會黃 --su-yellow；這週完成過一段，或期限後才補更新）／stall 紅（沒有進度）。
+/* ===== 即時回報（完成紀錄的膠囊、左右兩欄也用這一套；議題卡片裡的小膠囊在本段最後） =====
+   膠囊一律白底黑字（細框），狀態只放在左邊的燈號：data-st＝ok 綠（期限前有更新）／go 黃（學生會黃 --su-yellow；這週完成過一段，或期限後才補更新）／stall 紅（沒有進度）。
    只有紅色（沒有進度）的燈號會一直向外擴散提醒，其他靜止——一整排同時閃很吵，也會讓展開收合動畫變卡。
-   --st＝燈號與狀態標籤的顏色，--st-ink＝狀態標籤上的字色 */
+   --st＝燈號與狀態標籤的顏色，--st-ink＝狀態標籤上的字色。逐欄編輯（.evf*）在下一段「逐欄編輯」 */
 /* --- 狀態色 --- */
 .ev,.kid-ev,.evd{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
 .ev[data-st="ok"],.kid-ev[data-st="ok"],.evd[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
@@ -256,40 +256,48 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 @media (max-width:640px){
   .events{grid-template-columns:minmax(0,1fr)}   /* 不能寫 1fr：最小寬度會跟著不換行的長標題撐開、超出畫面 */
 }
+/* --- 上下兩區 --- */
+/* 要報告的（有 ev.report）在上、其他回報在下；報告區不寫區名（膠囊自己標「報告」），
+   其他回報上面一條細線、中間小字「其他回報」（2026-11-06 使用者從預覽選 D）；沒有報告事項時只有一區、沒有分隔線 */
+.ev-zones{display:grid;gap:18px}
+.ev-zone-h{display:flex;align-items:center;gap:12px;margin:0 4px 12px;font-size:11.5px;letter-spacing:.14em;color:var(--muted)}
+.ev-zone-h::before,.ev-zone-h::after{content:"";flex:1;height:1px;background:var(--hair)}
 /* --- 膠囊：收合白色、展開淺灰 --- */
 .ev{position:relative;display:block;padding:0;border:1px solid var(--line);border-radius:18px;background:var(--surface);transition:background-color .3s,color .3s,transform .22s var(--ease),box-shadow .22s var(--ease),border-color .3s}
+/* 滑過去放大一點、外圈光暈（減少動態時不放大，見下面「手機焦點與減少動態」） */
+@media (hover:hover){
+  .ev:hover{transform:scale(1.015);box-shadow:var(--glow);border-color:transparent;z-index:1;position:relative}
+}
 .ev summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:14px}   /* 左右內距收合、展開都一樣（18px）：以前展開 14px、收合 18px，收合動畫結束那一刻燈號會橫向跳 4px */
 .ev summary::-webkit-details-marker{display:none}
 .ev summary b{display:block;font-size:14.5px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
 .ev-chev{color:var(--muted);font-size:12px;transition:transform .25s var(--ease)}
 .ev[open] .ev-chev{transform:rotate(180deg)}
-.ev-del{flex:none;justify-content:center;align-items:center;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;border:1px solid currentColor;background:transparent;color:inherit;font-size:13px}
+.ev-parent{flex:0 1 auto;min-width:0;max-width:45%;font-size:11.5px;line-height:18px;padding:0 8px;border-radius:999px;border:1px solid currentColor;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 會議要報告：膠囊右邊（展開箭頭前）與右側詳情標題上的紅色小字「報告」（ev.report；不加框） */
 .ev-rep{flex:none;font-size:11.5px;font-weight:500;line-height:18px;letter-spacing:.14em;color:var(--red)}
 [data-evrep][aria-pressed="true"]{color:var(--red);border-color:var(--red)}
-/* 上下兩區：要報告的（有 ev.report）在上、其他回報在下；報告區不寫區名（膠囊自己標「報告」），
-   其他回報上面一條細線、中間小字「其他回報」（2026-11-06 使用者從預覽選 D）；沒有報告事項時只有一區、沒有分隔線 */
-.ev-zones{display:grid;gap:18px}
-.ev-zone-h{display:flex;align-items:center;gap:12px;margin:0 4px 12px;font-size:11.5px;letter-spacing:.14em;color:var(--muted)}
-.ev-zone-h::before,.ev-zone-h::after{content:"";flex:1;height:1px;background:var(--hair)}
-.ev-parent{flex:0 1 auto;min-width:0;max-width:45%;font-size:11.5px;line-height:18px;padding:0 8px;border-radius:999px;border:1px solid currentColor;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 刪除鈕（.edit-only：只在編輯中那張出現）：收合時淡灰框、展開時紅色 */
+.ev-del{flex:none;justify-content:center;align-items:center;width:28px;height:28px;min-height:0;padding:0;border-radius:50%;border:1px solid currentColor;background:transparent;color:inherit;font-size:13px}
+.events .ev:not([open]) .ev-del{border-color:#c9c9d0}
+.ev[open] .ev-del{color:var(--red);border-color:var(--red)}
 /* 收合：白色膠囊 */
 .events .ev:not([open]),.events .ev.closing{border-radius:999px;background:#fff;border-color:var(--line);color:#111114}
 .events .ev:not([open]) summary{border-radius:999px}
 .events .ev:not([open]) .ev-chev,.events .ev.closing>summary .ev-chev{color:#5d5d66}
 .events .ev.closing>summary .ev-chev{transform:none}
-.events .ev:not([open]) .ev-del{border-color:#c9c9d0}
 /* 完成紀錄膠囊：跟即時回報完全同一套（2026-11-06 起；以前收合時是空心綠框綠字），只有燈號是綠色（data-st="done"） */
 .events .done-ev.new{animation:doneIn .9s var(--ease) both}
-/* 展開：深淺色模式都是淺灰底黑字（在這張卡片上重設色彩變數） */
-.ev[open]{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink);border-color:var(--surface)}
-.ev[open] .ev-del{color:var(--red);border-color:var(--red)}
+/* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數）；詳情卡另外重設 --hair（見「左右兩欄」） */
+.ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
+.ev[open]{border-color:var(--surface)}
 /* --- 展開後的內容 --- */
 .ev-body{flex:1;min-width:0;padding:0 18px 12px 37px}   /* 左邊對齊標題文字（標題列內距 18＋燈號＋間距） */
 .ev-body p{margin:0;font-size:13.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
 .ev-body .ev-parent-full{font-size:12px;color:var(--muted);margin:0 0 6px}
-/* 狀態列：狀態標籤＋第幾段＋最後更新 */
-.ev-body .ev-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:0 0 6px;font-size:12px;color:var(--muted)}
+/* 狀態列：狀態標籤＋第幾段＋最後更新（膠囊與右側詳情共用） */
+.ev-body .ev-meta,.evd .ev-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12px;color:var(--muted)}
+.ev-body .ev-meta{margin:0 0 6px}
 .ev-st{display:inline-flex;align-items:center;padding:0 9px;border-radius:999px;line-height:20px;background:var(--st);color:var(--st-ink);font-weight:500}
 /* 時間標記清單（展開的即時回報、完成紀錄共用） */
 .ev-times{list-style:none;margin:10px 0 0;padding:0 0 0 12px;display:grid;gap:4px;border-left:1.5px solid var(--hair);font-size:13px}
@@ -297,10 +305,31 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .ev-times li::before{content:"";position:absolute;left:-16.5px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--ink)}
 .ev-t-when{flex:none;font-size:12.5px}
 .ev-t-label{flex:0 1 auto;min-width:0;word-break:break-word}
+.ev-t-place{color:var(--muted)}
 .ev-tools{display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 .ev-links{margin-top:10px}
 .ev .staff-row{margin-top:10px}
-/* --- 焦點與減少動態 --- */
+/* 展開後最下面那顆「編輯」（即時回報、完成紀錄）：登入、沒有卡片在編輯時才出現（跟「單卡編輯」段的 .card-edit-btn 同一條規則） */
+.ev-edrow{display:flex;justify-content:flex-end;margin-top:10px}
+body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
+/* --- 展開與收合的內容動畫（motion.js 的 animateDetails 展開時加 .opening；完成紀錄的 .done-body 同一套） --- */
+.opening .ev-body>*,.opening .done-body>*{animation:dropIn .55s var(--ease) both}
+.opening .ev-body>*:nth-child(2){animation-delay:0.14s}
+.opening .ev-body>*:nth-child(3){animation-delay:0.22s}
+.opening .ev-body>*:nth-child(4){animation-delay:0.30s}
+.opening .ev-body>*:nth-child(5){animation-delay:0.38s}
+.opening .ev-body>*:nth-child(6){animation-delay:0.46s}
+.opening .ev-body>*:nth-child(7){animation-delay:0.54s}
+.opening .ev-body>*:nth-child(8){animation-delay:0.62s}
+.opening .done-body>*:nth-child(2){animation-delay:0.13s}
+.opening .done-body>*:nth-child(3){animation-delay:0.20s}
+.opening .done-body>*:nth-child(4){animation-delay:0.27s}
+.opening .done-body>*:nth-child(5){animation-delay:0.34s}
+.opening .done-body>*:nth-child(6){animation-delay:0.41s}
+.opening .done-body>*:nth-child(7){animation-delay:0.48s}
+.opening .done-body>*:nth-child(8){animation-delay:0.55s}
+.ev.opening .ev-body>*:first-child{animation-delay:.06s}
+/* --- 手機焦點與減少動態 --- */
 /* 手機焦點：有一張展開時，其他還收著的膠囊變暗（展開那一下的「拿起來」動畫在 motion.js 的 animateDetails） */
 @media (max-width:640px){
   /* 亮度過渡跟展開收合（0.38–0.56 秒）同步，不要瞬間變暗變亮；被收起的那張在開始收合時就一起變暗，不會收完才再暗一下 */
@@ -325,7 +354,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 /* 被選到的那一顆「飛到」右邊：原位留一個虛線空位（其他膠囊不動，位置好記），收起時縮回這個空位、膠囊再出現 */
 .events .ev.sel{border-style:dashed;border-color:color-mix(in srgb,var(--ink) 35%,transparent);background:transparent;box-shadow:none;pointer-events:none}
 .events .ev.sel>*{visibility:hidden}
-#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--hair:#e2e2e8;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px;background:var(--surface);color:var(--ink)}
+#evDetail,#doneDetail{--hair:#e2e2e8;position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px}
 .evd-head{display:flex;align-items:center;gap:10px;font-size:20px;line-height:1.4}
 .md-close{margin-left:auto;flex:none;font-size:12.5px;font-weight:400}   /* 即時回報、完成紀錄右側的「收起」 */
 /* 詳情卡標題列的「上一個／下一個」：放在收起前面；到頭或到尾時那一顆變淡不能按 */
@@ -338,24 +367,28 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 @keyframes nextIn{from{opacity:0;transform:translateX(-4px)}}
 @media (hover:hover){#evDetail button:hover,#doneDetail button:hover{box-shadow:0 0 0 1px var(--ink),0 0 10px rgba(255,255,255,.18)}}   /* 右側會捲動，外散的光暈會被邊緣切掉：改成貼著按鈕的小光暈 */
 .evd-head b{font-weight:700;min-width:0;overflow-wrap:anywhere}
-.evd .ev-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:8px 0 0;font-size:12px;color:var(--muted)}
+.evd .ev-meta{margin:8px 0 0}
 .evd-par{margin:12px 0 0}
 .evd-desc{margin:12px 0 0;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
 .evd-f,.evd .fld,.evd fieldset.multi{display:grid;gap:4px;margin-top:14px;font-size:12.5px;color:var(--muted)}
 .evd-sec{display:grid;gap:8px;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
-.evd-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
-.evd-row>input{flex:1 1 180px;min-width:0}
-.evd-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evd-when input[type=date]{width:auto}
-.evd-when input:not([type]){width:72px}
-.evd-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.evd-add{justify-self:start}
-.evd-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
 .evd-gap{flex:1}
+/* 「完成這一段」的展開框（events.js 的 data-evd） */
 .evd-round{display:grid;gap:4px;padding:4px 14px 14px;border:1px solid var(--hair);border-radius:14px;margin-bottom:6px}
 .evd-round[hidden]{display:none}
-/* 逐欄編輯（編輯中，膠囊與右側詳情共用；views.js 的 evFieldsHTML）：每一欄一列「標題｜內容」，內容本身就是按鈕，
-   點了那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
+/* --- 議題卡片裡的小膠囊 --- */
+/* 議題卡片裡「進行中的即時回報」小膠囊：同樣白底、燈號帶狀態色 */
+.kid-evs{display:grid;gap:4px}
+.kid-list{display:flex;flex-wrap:wrap;gap:6px}
+.kid-ev{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#111114;border-radius:999px;padding:3px 12px 3px 10px;font-size:13px;box-shadow:inset 0 0 0 1px var(--line)}
+.kid-ev .live-dot{width:7px;height:7px}
+/* --- 列印 --- */
+@media print{
+  .ev-edrow{display:none}
+}
+
+/* ===== 逐欄編輯（即時回報、進度、完成紀錄、秘書處會議卡共用；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML） =====
+   編輯中每一欄一列「標題｜內容」，內容本身就是按鈕，點了那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
 .evfs{display:grid;margin-top:12px}
 .evf{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:4px 10px;min-height:42px;padding:3px 0;border-bottom:1px solid var(--hair);font-size:14px}
 .evf-l{font-size:12px;color:var(--muted);letter-spacing:.04em}
@@ -367,40 +400,41 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .evf-v:hover::after,.evf-v:focus-visible::after{opacity:1;transform:translate(0,-50%)}
 .evf-desc{white-space:pre-wrap;line-height:1.7}
 .evf-url{max-width:100%;overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.evf-v .tags{gap:4px}
 .evf.open{position:relative;z-index:3;grid-template-columns:minmax(0,1fr);gap:8px;margin:6px 0;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide .28s var(--ease) both}   /* z-index：打開的欄位疊在下面幾列上，下拉清單才不會被後面的欄位文字穿過去（母議題選單看不清楚的原因） */
 .evf-ed{display:grid;gap:8px;min-width:0}
 .evf-ed input,.evf-ed textarea{width:100%}
 .evf-ed input.bad{border-color:var(--red)}
 .evf-ed .fld,.evf-ed fieldset.multi{margin:0}
 .evf-hint{font-size:11.5px}
-.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+/* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
+.evd-btns,.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+/* 時間標記、超連結一組（每一筆各自一列，最後一顆「+ 時間」「+ 超連結」）；「+ 階段」也是 .evd-add */
+.evd-add{justify-self:start}
 .evf-group{display:grid;padding-top:10px;border-bottom:1px solid var(--hair)}
 .evf-group:last-child{border-bottom:0}   /* 最後一組下面接動作列（詳情卡的分隔線、膠囊的按鈕），不再多一條線 */
 .evf-group>.evf-l{padding-bottom:2px}
 .evf-group .evf{grid-template-columns:minmax(0,1fr)}
-.evf-group .evf.open{grid-template-columns:minmax(0,1fr)}
 .evf-group .evf:last-of-type:not(.open){border-bottom:0}
-.evf-group .evd-add{justify-self:start;margin:6px 0 10px}
+.evf-group .evd-add{margin:6px 0 10px}
+/* --- 時間標記、超連結的輸入框（views.js 的 evTimeEditor、linkEditorHTML；議題的超連結也用） --- */
+.evd-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.evd-row>input{flex:1 1 180px;min-width:0}
+.evd-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evd-when input[type=date]{width:auto}
+.evd-when input:not([type]){width:72px}
+.evd-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.evd-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evd-place input{flex:1 1 180px}
+.place-quick{display:flex;flex-wrap:wrap;gap:4px}
+/* --- 議題的「階段」欄 --- */
 /* 議題的「階段」欄（進度的逐欄編輯，views.js 的 stageEditorHTML）：一列一個階段＝「目前」鈕＋名稱＋刪除 */
 .stg-list{display:grid;gap:6px}
 .stg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px}
 .stg-cur{min-height:30px;padding:0 12px;font-size:12px;color:var(--muted);border-color:var(--hair);transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
 .stg-cur[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .stg-del{width:30px;min-height:30px;padding:0}
-.evf-ed>.evd-add{justify-self:start}
-.evf-v .tags{gap:4px}
-.evd-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evd-place input{flex:1 1 180px}
-.place-quick{display:flex;flex-wrap:wrap;gap:4px}
-.ev-t-place{color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.evf.open{animation:none}}
-/* --- 議題卡片裡的小膠囊 --- */
-/* 議題卡片裡「進行中的即時回報」小膠囊：同樣白底、燈號帶狀態色 */
-.kid-evs{display:grid;gap:4px}
-.kid-list{display:flex;flex-wrap:wrap;gap:6px}
-.kid-ev{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#111114;border-radius:999px;padding:3px 12px 3px 10px;font-size:13px;box-shadow:inset 0 0 0 1px var(--line)}
-.kid-ev .live-dot{width:7px;height:7px}
-
 /* ===== 部門專用分頁（dept/config.js 的 ext：會長室「會長室」、秘書處「會議」；shell.js 把面板搬進 .sgroup-ext） =====
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
 .sgroup-ext>.panel{margin:0}
@@ -1701,7 +1735,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .rpt-ch-h{break-after:avoid}
 }
 
-/* ===== 展開與收合的內容動畫（卡片、即時回報、完成紀錄、週報共用） ===== */
+/* ===== 展開與收合的內容動畫（議題卡片、週報、編輯紀錄；即時回報與完成紀錄的在「即時回報」段） ===== */
 .card.open>*:nth-child(3){animation-delay:.03s}
 .card.open>*:nth-child(4){animation-delay:.06s}
 .card.open>*:nth-child(5){animation-delay:.09s}
@@ -1718,24 +1752,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .card.opening>*:nth-child(9){animation-delay:0.56s}
 .card.opening>*:nth-child(10){animation-delay:0.63s}
 .card.opening>*:nth-child(11){animation-delay:0.70s}
-.opening .ev-body>*,.opening .done-body>*{animation:dropIn .55s var(--ease) both}
 .week.opening>.week-tools{animation:dropIn .55s var(--ease) both;animation-delay:.06s}
 .week.opening>.week-text{animation:dropIn .55s var(--ease) both;animation-delay:.14s}
 .log.opening ol>li{animation:dropIn .55s var(--ease) both}
-.opening .ev-body>*:nth-child(2){animation-delay:0.14s}
-.opening .ev-body>*:nth-child(3){animation-delay:0.22s}
-.opening .ev-body>*:nth-child(4){animation-delay:0.30s}
-.opening .ev-body>*:nth-child(5){animation-delay:0.38s}
-.opening .ev-body>*:nth-child(6){animation-delay:0.46s}
-.opening .ev-body>*:nth-child(7){animation-delay:0.54s}
-.opening .ev-body>*:nth-child(8){animation-delay:0.62s}
-.opening .done-body>*:nth-child(2){animation-delay:0.13s}
-.opening .done-body>*:nth-child(3){animation-delay:0.20s}
-.opening .done-body>*:nth-child(4){animation-delay:0.27s}
-.opening .done-body>*:nth-child(5){animation-delay:0.34s}
-.opening .done-body>*:nth-child(6){animation-delay:0.41s}
-.opening .done-body>*:nth-child(7){animation-delay:0.48s}
-.opening .done-body>*:nth-child(8){animation-delay:0.55s}
 .log.opening ol>li:nth-child(2){animation-delay:0.09s}
 .log.opening ol>li:nth-child(3){animation-delay:0.14s}
 .log.opening ol>li:nth-child(4){animation-delay:0.19s}
@@ -1745,7 +1764,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .log.opening ol>li:nth-child(8){animation-delay:0.39s}
 .log.opening ol>li:nth-child(9){animation-delay:0.44s}
 .log.opening ol>li:nth-child(10){animation-delay:0.49s}
-.ev.opening .ev-body>*:first-child{animation-delay:.06s}
 .week.opening .week-tools{animation:dropIn .55s .06s var(--ease) both}
 .week.closing summary::before,.log.closing summary::before{transform:none}
 .week.opening .week-text{animation:none!important}
@@ -1812,7 +1830,7 @@ body.no-done .layout{grid-template-columns:minmax(0,1fr)}
   .pager{display:block;height:auto;overflow:visible}
   .page{height:auto;overflow:visible;width:auto}
   .actions{display:none!important}
-  .week-tools,.tabbar,.card-edit-btn,.auth-only,.ev-edrow,.card-edbar{display:none}
+  .week-tools,.tabbar,.card-edit-btn,.auth-only,.card-edbar{display:none}
 }
 
 /* ===== 共用動畫關鍵影格 ===== */
