@@ -153,7 +153,7 @@ async function createMember(first,title){
 function teamHTML(){
   const me=meMember(),adm=isAdmin();
   const rows=state.members.map(m=>`<li class="tm-row"><span class="tm-name">${esc(m.name)}</span>${m.role==="admin"?'<span class="tm-pill on">管理員</span>':""}${m.id===meId?'<span class="tm-pill">我</span>':""}
-    <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${m.id}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${m.id}">刪除</button>`:""}</span></li>`).join("");
+    <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${esc(m.id)}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${esc(m.id)}">刪除</button>`:""}</span></li>`).join("");
   return `<b>身分與專員</b>
   <section class="tm-sec"><div class="att-h">編輯身分${me?`（目前：${esc(me.name)}）`:""}</div><ul class="tm-list">${rows||'<li class="sub">還沒有身分</li>'}</ul>
     <p class="sub tm-note">即時回報與議題上的「專員」就是從這些身分挑選；沒有身分的人不能被標。新成員：在設定頁按「登入」→「＋ 新增身分」，輸入部門共用密碼後自己設定個人密碼。${adm?"":"刪除身分、指定管理員需要管理員。"}</p>

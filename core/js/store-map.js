@@ -28,6 +28,10 @@
   const strOf = v => v && typeof v.__ts === "number" ? fmtTaipei(v.__ts, (v.__ts + TZ_MS) % 86400000 === 0) : null;
 
   const nid = (dept, id) => `${dept}__${id}`;
+  /* 02D 審查（P0）：文件 ID 只接受英數、底線、連字號（跟規則 safeId 相同）。讀回來時不合格的文件整份略過，不放進畫面
+     （ID 會進到畫面的屬性；規則已擋下建立，這裡是第二道） */
+  const SAFE_ID = /^[A-Za-z0-9_-]{1,120}$/;
+  const safe = list => (list || []).filter(d => d && typeof d.id === "string" && SAFE_ID.test(d.id));
   const oid = (dept, id) => typeof id === "string" && id.startsWith(dept + "__") ? id.slice(dept.length + 2) : id;
   const legacyStaff = (dept, id) => `legacy:${dept}__${id}`;
   const fromStaff = (dept, s) => typeof s === "string" && s.startsWith(`legacy:${dept}__`) ? s.slice(`legacy:${dept}__`.length) : s;
@@ -125,7 +129,9 @@
 
   /* ===== 新 → 舊（網頁讀 Firestore 時用；回傳 schemaVersion 13 的部門資料，交給 normalize） =====
      src：{settings, org, grant, cards, issues, weeks, labels, events, legacy}，每份文件是 {id, ...data}，時間值是 {__ts} */
-  function toState(dept, src, base) {
+  function toState(dept, src0, base) {
+    const src = Object.assign({}, src0, { cards: safe(src0.cards), issues: safe(src0.issues), weeks: safe(src0.weeks), labels: safe(src0.labels),
+      events: safe(src0.events), legacy: safe(src0.legacy) });
     const s = Object.assign({ schemaVersion: 13 }, base || {});
     const st = src.settings || {};
     s.title = st.title || s.title || "";
@@ -227,7 +233,7 @@
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);

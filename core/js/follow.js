@@ -52,7 +52,7 @@ function renderFollows(){
   $("#follows").innerHTML=fs.map(f=>{
     const dp=fwDept(f.dept),c=fwCache.get(f.dept);
     const b=!c?{title:"讀取中…",html:""}:c.data?fwBody(f,c.data):{title:"（讀不到）",html:`<p class="sub">${esc(c.err)}</p>`};
-    return `<article class="fw${b.gone?" gone":""}" data-fw="${f.id}" data-dot="${b.dot||""}">
+    return `<article class="fw${b.gone?" gone":""}" data-fw="${esc(f.id)}" data-dot="${esc(b.dot)}">
       <div class="fw-top"><span class="tag sm">${esc(dp?dp.name:f.dept)}</span><span class="fw-k">${FW_KIND[f.kind]||""}</span>${dp?`<a class="fw-open" href="?d=${encodeURIComponent(dp.id)}" target="_blank" rel="noopener">開啟看板 →</a>`:""}<button type="button" class="icon danger edit-only" data-fwdel aria-label="不再追蹤">移除</button></div>
       <h3 class="fw-t">${esc(b.title)}</h3>${b.html}</article>`}).join("")
     ||`<p class="empty">還沒有追蹤任何項目。登入後按這區的「編輯」→「+ 追蹤項目」，選部門和要看的即時回報、進度、完成紀錄或週報。</p>`;
@@ -94,9 +94,9 @@ function renderDocs(){
   const p=$("#docsPanel");if(!p)return;p.hidden=!CFG.follow;if(!CFG.follow)return;
   const ds=state.docs||[],ed=docsEd();
   $("#docsList").innerHTML=ds.map((d,i)=>ed
-    ?`<div class="doc-ed" data-doc="${d.id}"><span class="doc-pill">${ico("doc")}<b>${esc(d.name)}</b></span><small class="doc-u">${esc(d.url)}</small>
+    ?`<div class="doc-ed" data-doc="${esc(d.id)}"><span class="doc-pill">${ico("doc")}<b>${esc(d.name)}</b></span><small class="doc-u">${esc(d.url)}</small>
        <span class="doc-tools"><button type="button" class="icon" data-docedit>修改</button><button type="button" class="icon" data-docmove="-1" aria-label="往前移"${i?"":" disabled"}>↑</button><button type="button" class="icon" data-docmove="1" aria-label="往後移"${i<ds.length-1?"":" disabled"}>↓</button><button type="button" class="icon danger" data-docdel aria-label="刪除「${esc(d.name)}」">刪除</button></span></div>`
-    :`<a class="doc-pill" data-doc="${d.id}" href="${esc(docURL(d.url))}" target="_blank" rel="noopener">${ico("doc")}<b>${esc(d.name)}</b><span class="doc-go" aria-hidden="true">↗</span></a>`).join("")
+    :`<a class="doc-pill" data-doc="${esc(d.id)}" href="${esc(docURL(d.url))}" target="_blank" rel="noopener">${ico("doc")}<b>${esc(d.name)}</b><span class="doc-go" aria-hidden="true">↗</span></a>`).join("")
     ||`<p class="empty">還沒有文件。登入後按這區的「編輯」→「+ 新增文件」，貼上文件的網址（例如 Google 雲端硬碟的連結）。</p>`;
 }
 async function docAsk(d){

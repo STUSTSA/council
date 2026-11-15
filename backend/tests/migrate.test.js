@@ -242,4 +242,18 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.equal(r.status, 1, r.stdout);
     assert.match(r.stdout, /週報\s+\d+\s+\d+\s+不同/);
   });
+
+  it('讀回來時（toState）略過 ID 不合格的文件（02D 審查 P0 的第二道；規則 safeId 已擋下建立）', () => {
+    const bad = 'rights__x" onmouseover="alert(1)';
+    const card = (id, extra = {}) => ({ id, deptId: 'rights', title: id, blocks: [{ id: 'b', text: 'x' }], timeIds: [], state: 'open', order: 0, ...extra });
+    const s = MAP.toState('rights', {
+      settings: { title: 't' }, cards: [card('rights__ok1'), card(bad)], issues: [{ id: bad, title: 'i' }, { id: 'rights__i1', title: 'ok' }],
+      weeks: [{ id: 'rights__<w>', date: '2026-11-15', text: 'w' }], labels: [{ id: 'rights__l 1', kind: '人', name: 'x' }],
+      events: [{ id: 'rights__t"1', cardId: 'rights__ok1', label: 'x', startRaw: '2026-11-15', endRaw: '', start: { __ts: 0 }, end: { __ts: 0 }, allDay: true }],
+      legacy: [{ id: 'rights__m"1', deptId: 'rights', name: 'n', oldRole: 'member' }] });
+    assert.deepEqual(s.events.map(e => e.id), ['ok1']);
+    assert.deepEqual(s.events[0].times, []);
+    assert.deepEqual(s.issues.map(i => i.id), ['i1']);
+    assert.deepEqual([s.weeks.length, s.labels.length, s.members.length], [0, 0, 0]);
+  });
 });

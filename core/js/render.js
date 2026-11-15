@@ -29,7 +29,7 @@ let cardEdit="";
 const cardEd=(t,id)=>editing&&cardEdit===`${t}:${id}`;
 const secEd=k=>editing&&cardEdit==="s:"+k;
 const canEdit=()=>loggedIn()&&!readOnly();
-const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${key}">${ico("edit")}編輯</button>`;
+const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${esc(key)}">${ico("edit")}編輯</button>`;
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */
 /* 02D：firestore 模式整區編輯的限制——甘特圖時間軸、會長室追蹤、文件連結寫的是部門設定（部門管理員以上）；

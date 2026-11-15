@@ -21,8 +21,8 @@ function renderWeeks(){
   const ws=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date));
   if(!openWeeks&&ws.length)openWeeks=new Set([ws[0].id]);
   const lines=t=>String(t||"").split("\n").map(l=>`<span class="wl">${l.trim()?esc(l):"&nbsp;"}</span>`).join("");
-  $("#weekList").innerHTML=ws.map((w,k)=>`<details class="week ${w.id===newWeekId?"new":""}" data-week="${w.id}" ${openWeeks&&openWeeks.has(w.id)?"open":""}>
-      <summary><span class="num">${fmt(w.date)}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${fmt(w.date)} 的週報">刪除</button>`:""}</summary>
+  $("#weekList").innerHTML=ws.map((w,k)=>`<details class="week ${w.id===newWeekId?"new":""}" data-week="${esc(w.id)}" ${openWeeks&&openWeeks.has(w.id)?"open":""}>
+      <summary><span class="num">${fmt(w.date)}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${esc(fmt(w.date))} 的週報">刪除</button>`:""}</summary>
       <div class="week-tools"><button type="button" class="icon" data-copyweek>複製文字</button><button type="button" class="icon auth-only" data-editweek>${ico("edit")}編輯</button></div>
       <div class="week-text">${lines(w.text)}</div></details>`).join("")
     ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
@@ -56,11 +56,11 @@ function renderGantt(){
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     const l=pos(s),w=Math.max(.8,pos(e)-l);
     const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${esc(m.color||MARK_COLORS[0])}" title="${esc(fmt(m.date))} ${m.stage?"【"+esc(m.stage)+"】":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
-    return `<div class="g-row g-issue" data-jump="${it.id}" data-fk="g${it.id}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${it.id}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
+    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
       <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
   }).join("");
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
-  h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${it.id}" data-fk="g${it.id}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${it.id}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
+  h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
   if(!all.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 新增議題」開始。"}</p>`;
   $("#gantt").innerHTML=h;
@@ -76,7 +76,7 @@ function latestMarkerId(list){
 }
 function markerHTML(m,latest,it){
   const at=mkAt(it,m),edge=at<18?"edgeL":at>82?"edgeR":"";
-  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${esc(m.color||MARK_COLORS[0])}" data-marker="${m.id}" title="${m.date?esc(fmt(m.date))+" ":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
+  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${esc(at)}%;--mc:${esc(m.color||MARK_COLORS[0])}" data-marker="${esc(m.id)}" title="${m.date?esc(fmt(m.date))+" ":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
 }
 
 const sortedMarkers=it=>[...it.markers].sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||a.at-b.at);
@@ -119,7 +119,7 @@ document.fonts?.ready.then(layoutAll);
 /* 一張議題卡片；open＝展開內容，sel＝左右兩欄時清單裡選到的那列，pane＝畫在右側詳情（不帶 id，避免重複） */
 function cardHTML(it,open,pane,sel){
   const ed=cardEd("i",it.id);
-  return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${it.id}"`} data-issue="${it.id}" data-edbox="i:${it.id}"${sel?' aria-current="true"':""}>
+  return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${esc(it.id)}"`} data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}"${sel?' aria-current="true"':""}>
     <div class="card-top">
       <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct title="時程：設定的期間已經過的比例">${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
@@ -147,7 +147,7 @@ function cardHTML(it,open,pane,sel){
    存回在 events.js 的「進度、完成紀錄的逐欄編輯」段 */
 let ifFld=null;
 const ifOpen=(t,id,k)=>!!ifFld&&ifFld.t===t&&ifFld.id===id&&ifFld.k===k;
-function ifFieldHTML(t,id,k,label,view,editor){return fldRowHTML({open:ifOpen(t,id,k),k,label,view,editor,del:/^l:(?!\+)/.test(k),key:"iffk",pen:"ifpen",fx:"iffx",attr:`data-ift="${t}" data-ifid="${id}"`})}
+function ifFieldHTML(t,id,k,label,view,editor){return fldRowHTML({open:ifOpen(t,id,k),k,label,view,editor,del:/^l:(?!\+)/.test(k),key:"iffk",pen:"ifpen",fx:"iffx",attr:`data-ift="${esc(t)}" data-ifid="${esc(id)}"`})}
 /* 欄位沒有內容時的灰字：不用全形括號（2026-11-06 使用者：文字要視覺上對齊——全形「（」左邊自帶半格空白，整欄看起來往右縮） */
 const noneTxt=t=>`<span class="sub">${t}</span>`;
 /* 階段：每一列一個階段（可改名、刪除），「目前」選這個議題現在在哪個階段；「+ 階段」在最後加一列 */
@@ -160,12 +160,12 @@ function issueFieldsHTML(it){
       ${F("title","名稱",`<b>${esc(it.title)}</b>`,()=>`<input data-e="title" value="${esc(it.title)}">`)}
       ${F("stage","階段",it.tags.length?`<span class="tags">${tagsHTML(it)}</span>`:noneTxt("沒有階段"),()=>stageEditorHTML(it))}
       ${F("note","目前進度",it.note?`<span class="evf-desc">${esc(it.note)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="note" rows="3" placeholder="例如：已和總務處確認，等待書面回覆">${esc(it.note||"")}</textarea>`)}
-      ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evd-when"><input type="date" data-e="start" value="${it.start||""}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${it.end||""}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
+      ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evd-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
       <div class="evf-group"><span class="evf-l">超連結</span>
         ${it.links.map(l=>F("l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,it.links.length,"iffx"))).join("")}
-        ${ifOpen("i",it.id,"l:+")?F("l:+","","",()=>linkEditorHTML(null,it.links.length,"iffx")):`<button type="button" class="ghost evd-add" data-ifpen="l:+" data-ift="i" data-ifid="${it.id}">+ 超連結</button>`}</div>
+        ${ifOpen("i",it.id,"l:+")?F("l:+","","",()=>linkEditorHTML(null,it.links.length,"iffx")):`<button type="button" class="ghost evd-add" data-ifpen="l:+" data-ift="i" data-ifid="${esc(it.id)}">+ 超連結</button>`}</div>
     </div>`;
 }
 /* 完成紀錄（編輯中）的欄位：議題＝名稱、完成日期、說明；即時回報＝名稱、完成日期、說明、母議題 */
@@ -174,7 +174,7 @@ function doneFieldsHTML(o,isEv){
   const opts=[["","（不連結）"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   return `<div class="evfs">
       ${F(nk,"名稱",`<b>${esc(o[nk])}</b>`,()=>`<input data-e="${nk}" value="${esc(o[nk])}">`)}
-      ${isEv&&fsMode()?"":F("done","完成日期",`<span class="num">${fmt(o.doneAt)||"—"}</span>`,()=>`<input type="date" data-e="done" value="${o.doneAt||""}">`)}
+      ${isEv&&fsMode()?"":F("done","完成日期",`<span class="num">${fmt(o.doneAt)||"—"}</span>`,()=>`<input type="date" data-e="done" value="${esc(o.doneAt)}">`)}
       ${F(dk,"說明",o[dk]?`<span class="evf-desc">${esc(o[dk])}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="${dk}" rows="3">${esc(o[dk]||"")}</textarea>`)}
       ${isEv?F("issue","母議題",par?esc(par.title):noneTxt("不連結"),()=>fieldHTML({name:"evIssue",label:"完成紀錄會寫進這個議題的處理紀錄",type:"select",value:o.issueId||"",options:opts})):""}
     </div>`;
@@ -288,7 +288,7 @@ function evCapHTML(ev,o){
     :`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${evMetaHTML(ev,st)}${ev.desc?`<p>${esc(ev.desc)}</p>`:`<p class="sub">沒有說明</p>`}
         ${evTimesHTML(ev)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
         ${evLinksHTML(ev)}${sel?"":`<div class="ev-edrow">${editBtnHTML("e:"+ev.id)}</div>`}`;
-  return `<details class="ev ${sel?"sel":""} ${ev.id===o.next?"next":""} ${ed?"sec-edit":""}" data-ev="${ev.id}" data-edbox="e:${ev.id}" data-st="${st}" ${!o.md&&(openEv.has(ev.id)||ed)?"open":""}${sel?' aria-current="true"':""}>
+  return `<details class="ev ${sel?"sel":""} ${ev.id===o.next?"next":""} ${ed?"sec-edit":""}" data-ev="${esc(ev.id)}" data-edbox="e:${esc(ev.id)}" data-st="${st}" ${!o.md&&(openEv.has(ev.id)||ed)?"open":""}${sel?' aria-current="true"':""}>
       <summary><span class="live-dot" aria-hidden="true"></span><b>${esc(ev.name)}</b>${par?`<span class="ev-parent">→ ${esc(par.title)}</span>`:""}${ev.report?'<span class="ev-rep">報告</span>':""}<button type="button" class="ev-del edit-only" data-evdel aria-label="刪除「${esc(ev.name)}」">${ico("close","solo")}</button><span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body">${body}</div>
     </details>`;
@@ -298,12 +298,12 @@ function evDetailHTML(ev){
   const st=evStatus(ev),par=parentOf(ev),ed=cardEd("e",ev.id);
   const head=`<div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${esc(ev.name)}</b>${ev.report?'<span class="ev-rep">報告</span>':""}${editBtnHTML("e:"+ev.id)}${mdStepHTML("live",liveOrder().map(e=>e.id),ev.id)}<button type="button" class="icon md-close" data-mdclose="live" aria-label="收起右側">${ico("close")}收起</button></div>
     ${evMetaHTML(ev,st)}`;
-  if(!ed)return `<div class="evd" data-ev="${ev.id}" data-st="${st}">${head}
+  if(!ed)return `<div class="evd" data-ev="${esc(ev.id)}" data-st="${st}">${head}
     ${par?`<p class="sub evd-par">母議題：${esc(par.title)}</p>`:""}
     ${ev.desc?`<p class="evd-desc">${esc(ev.desc)}</p>`:`<p class="sub">沒有說明</p>`}
     ${evTimesHTML(ev)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
     ${evLinksHTML(ev)}</div>`;
-  return `<div class="evd editing sec-edit" data-ev="${ev.id}" data-edbox="e:${ev.id}" data-st="${st}">${head}
+  return `<div class="evd editing sec-edit" data-ev="${esc(ev.id)}" data-edbox="e:${esc(ev.id)}" data-st="${st}">${head}
     ${evFieldsHTML(ev)}
     <section class="evd-sec evd-acts">
       <div class="evd-round" hidden><label class="evd-f">這一段完成了什麼（存進完成紀錄）<textarea data-rf="done" rows="3">${esc(ev.desc||"")}</textarea></label>
@@ -345,14 +345,14 @@ function renderDone(){
   /* 每一筆拆成：屬性、標題、副標、內容，膠囊與右側詳情共用。內容最下面「編輯」（登入才看得到）；
      編輯中（cardEd）名稱、完成日期、說明（即時回報多母議題）換成逐欄編輯（doneFieldsHTML），最下面「取消｜儲存」 */
   const tail=(key,ed)=>ed?editBarHTML():`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
-  const items=ds.map(it=>{const ed=cardEd("i",it.id);return {id:it.id,ed,key:"i:"+it.id,d:it.doneAt||"",attr:`data-issue="${it.id}"`,title:esc(it.title),sub:`${fmt(it.doneAt)||"—"} · 議題`,del:fsDelOk()?`data-deldone aria-label="刪除「${esc(it.title)}」"`:"",
+  const items=ds.map(it=>{const ed=cardEd("i",it.id);return {id:it.id,ed,key:"i:"+it.id,d:it.doneAt||"",attr:`data-issue="${esc(it.id)}"`,title:esc(it.title),sub:`${esc(fmt(it.doneAt))||"—"} · 議題`,del:fsDelOk()?`data-deldone aria-label="刪除「${esc(it.title)}」"`:"",
     body:`${ed?doneFieldsHTML(it,false):""}${hasDates(it)?`<div class="sub">期間 ${fmt(it.start)} – ${fmt(it.end)}</div>`:""}
         ${!ed&&it.note?`<p style="margin:0;white-space:pre-wrap">${esc(it.note)}</p>`:""}
         ${it.tags.length?`<div class="tags">${it.tags.map((g,k)=>`<span class="tag ${k===it.cur?"cur":k<it.cur?"past":""}">${esc(g)}</span>`).join("")}</div>`:""}
         ${it.markers.length?`<ul>${sortedMarkers(it).map(m=>`<li>${m.date?`<span class="num">${fmt(m.date)}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
         ${it.links.length?`<div class="links">${it.links.map(link).join("")}</div>`:""}
         <span class="edit-only" style="gap:6px"><button type="button" class="icon" data-restore>取消結案</button></span>${tail("i:"+it.id,ed)}`}})
-  .concat(de.map(ev=>{const ed=cardEd("e",ev.id);return {id:ev.id,ed,key:"e:"+ev.id,d:ev.doneAt,attr:`data-ev="${ev.id}"`,title:esc(evName(ev)),sub:`${fmt(ev.doneAt)||"—"} · 即時回報${parentOf(ev)?` → ${esc(parentOf(ev).title)}`:""}`,del:`data-evdel aria-label="刪除「${esc(ev.name)}」"`,
+  .concat(de.map(ev=>{const ed=cardEd("e",ev.id);return {id:ev.id,ed,key:"e:"+ev.id,d:ev.doneAt,attr:`data-ev="${esc(ev.id)}"`,title:esc(evName(ev)),sub:`${esc(fmt(ev.doneAt))||"—"} · 即時回報${parentOf(ev)?` → ${esc(parentOf(ev).title)}`:""}`,del:`data-evdel aria-label="刪除「${esc(ev.name)}」"`,
     body:`${ed?doneFieldsHTML(ev,true):ev.desc?`<p style="margin:0;white-space:pre-wrap">${esc(ev.desc)}</p>`:""}${(ev.links||[]).length?`<div class="links">${ev.links.map(link).join("")}</div>`:""}
         ${evTimesHTML(ev)}
         ${ev.fromEv?"":`<span class="edit-only" style="gap:6px"><button type="button" class="icon" data-evundo>移回即時回報</button></span>`}${tail("e:"+ev.id,ed)}`}}))
@@ -363,12 +363,12 @@ function renderDone(){
   $("#doneMD").classList.toggle("split",md);
   $("#doneCount").textContent=items.length;
   const nextDone=md?(items[items.findIndex(y=>y.id===selDone)+1]||{}).id:null;
-  const cap=x=>`<details class="ev done-ev ${dnew(x.id)} ${md&&x.id===selDone?"sel":""} ${x.id===nextDone?"next":""} ${x.ed?"sec-edit":""}" data-done="${x.id}" data-edbox="${x.key}" ${x.attr} data-st="done" ${!md&&(openDone.has(x.id)||x.ed)?"open":""}${md&&x.id===selDone?' aria-current="true"':""}>
+  const cap=x=>`<details class="ev done-ev ${dnew(x.id)} ${md&&x.id===selDone?"sel":""} ${x.id===nextDone?"next":""} ${x.ed?"sec-edit":""}" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr} data-st="done" ${!md&&(openDone.has(x.id)||x.ed)?"open":""}${md&&x.id===selDone?' aria-current="true"':""}>
       <summary><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${x.del?`<button type="button" class="ev-del edit-only" ${x.del}>${ico("close","solo")}</button>`:""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><p class="ev-meta">${x.sub}</p><div class="done-body">${md&&x.id===selDone?"":x.body}</div></div></details>`;   /* 左右兩欄時被選到的那顆只是空位，內容（含編輯欄位）只畫在右側詳情 */
   $("#doneList").innerHTML=items.map(cap).join("")||`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`;
   if(md){const x=items.find(y=>y.id===selDone);
-    pane.innerHTML=`<div class="evd ${x.ed?"sec-edit":""}" data-st="done" data-done="${x.id}" data-edbox="${x.key}" ${x.attr}><div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${mdStepHTML("done",items.map(y=>y.id),x.id)}<button type="button" class="icon md-close" data-mdclose="done" aria-label="收起右側">${ico("close")}收起</button></div>
+    pane.innerHTML=`<div class="evd ${x.ed?"sec-edit":""}" data-st="done" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr}><div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${mdStepHTML("done",items.map(y=>y.id),x.id)}<button type="button" class="icon md-close" data-mdclose="done" aria-label="收起右側">${ico("close")}收起</button></div>
       <p class="ev-meta">${x.sub}</p><div class="done-body">${x.body}</div></div>`;pane.hidden=false;
   }else{pane.innerHTML="";pane.hidden=true}
   prevDone=ids;Anim.syncPings();

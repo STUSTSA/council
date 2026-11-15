@@ -249,6 +249,13 @@ match /cards/{cid}/versions/{v} {
 
 - **編輯紀錄與會長室編輯量（02D D3）**：讀版本歷史（collection group `versions` where `deptId` order by `at`，Q9；規則只給總管理員與該部門編輯者，其他人 `permission-denied`）；總管理員另外讀 `auditLogs`（order by `at`），只取部門設定的修改（`deptSettings`、`update`）與卡片刪除（`cards`、`purge`）。遷移產生的第 1 版在編輯紀錄顯示成「遷移｜匯入」，不算進編輯量。議題、週報、標籤沒有歷史（只有最後一次的 `updatedAt`），不在這兩個畫面裡。測試：`fw1.js` 第 7 段。
 
+### 5.1e 02D 獨立審查的修正（`backend/tests/rules-02d.test.js`）
+
+- **文件 ID 限制（P0）**：`cards`、`events`、`issues`、`weeks`、`labels` 新建時文件 ID 必須符合 `^[A-Za-z0-9_-]{1,120}$`（規則 `safeId(id)`，含總管理員）。原因：網頁讀回來時拿掉部門前綴、把 ID 放進畫面的屬性（`data-id`、`data-ev`…），有部門角色的人用 SDK 建一份 ID 帶引號的文件（例如 `rights__x" onmouseover=…`），就能在總管理員打開看板時執行程式＝權限提升。三道防線：① 規則擋下建立；② `store-map.js` 的 `toState` 讀回來時略過 ID 不合格的文件（卡片、時間事件、議題、週報、標籤、舊身分）；③ 看板範本裡所有來自資料的屬性值都經過 `esc`（github 模式的資料檔走同一套範本，也一起變安全）。現有資料檔的 ID（遷移成 `{部門}__{舊 ID}`）與網頁產生的 ID（`uid()`＝英數、`t`＋十六進位）都符合（S-04 只讀資料檔檢查）。
+  - S-01 卡片、S-02 時間事件、S-03 議題／週報／標籤：ID 帶引號＋事件屬性、角括號、空白、單引號、`.`、`&`、非英數、超過 120 字 → 編輯者與總管理員都拒絕；合法 ID（含剛好 120 字）可以。
+  - S-04 現有十個資料檔的全部 ID 加上最長的部門前綴後都合格。
+  - 遷移測試：`toState` 略過不合格 ID 的文件（`migrate.test.js`）。
+
 ### 5.2 時間事件
 
 ```

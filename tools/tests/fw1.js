@@ -8,6 +8,7 @@
    5. 撤權：畫面即時變回唯讀；編輯中按儲存被規則擋下、修改留著；直接呼叫寫入也被拒
    6. 其他部門的 Firestore 文件前後完全相同；沒有頁面錯誤
    7. 編輯紀錄（版本歷史；總管理員加上稽核紀錄）、會長室在 firestore 模式的各部門編輯量（讀不到的部門顯示「—」）（02D D3，跑在第 6 段之前）
+   8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：ID 不合格的文件不顯示、欄位值跳脫，總管理員打開看板不執行（跑在第 6 段之前）
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');
@@ -255,6 +256,27 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   {const a=await actOf(ps);ok(a.rows.rights===want&&want>10&&a.rows.president===0&&a.rows.events==='—',`會長室（總管理員）：權益部 ${a.rows.rights} 項（版本＋稽核紀錄 ${want}）、會長室 0、還在 GitHub 的部門 —`);}
   const pe=await open('president',[DEPT,'president']);const peUid=await signIn(pe,'pe');await setRole(peUid,{president:'editor'});await until(async()=>!(await ui(pe)).locked);
   {const a=await actOf(pe);ok(a.rows.rights==='—'&&a.leg==='—'&&a.rows.president===0,`會長室（會長室編輯者）：讀不到權益部的版本歷史（—）、會長室 0（${JSON.stringify(a.rows)}）`);}
+
+  /* ---------- 8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：繞過規則塞進去的文件不顯示、欄位值都經過跳脫，總管理員打開看板不會執行 ---------- */
+  {const BAD=`${DEPT}__x" onmouseover="window.__xss=1" data-x="`,TSN=TS.now();
+    await admin(async d=>{
+      await d.doc(`cards/${BAD}`).set({deptId:DEPT,title:'XSS 卡片',blocks:[{id:'b',text:'x',check:null,timeId:null}],timeIds:[],issueId:null,staff:[],labels:[],links:[],report:false,state:'open',doneAt:null,deletedAt:null,deletedBy:null,order:1,version:1,createdAt:TSN,createdBy:'x',updatedAt:TSN,updatedBy:'x'});
+      await d.doc(`weeks/${DEPT}__<img src=x onerror=window.__xss=2>`).set({deptId:DEPT,date:'2026-11-15',text:'XSS 週報',auto:false,createdAt:TSN,updatedAt:TSN,updatedBy:'x'});
+      await d.doc(`labels/${DEPT}__l" onfocus="window.__xss=3`).set({deptId:DEPT,kind:'人',name:'XSS 標籤',updatedAt:TSN,updatedBy:'x'});
+      await d.doc(`issues/${DEPT}__xssi`).set({deptId:DEPT,title:'XSS 議題',cur:0,start:'',end:'',note:'',tags:[],labels:[],links:[],staff:[],doneAt:null,order:999999,rev:1,updatedAt:TSN,updatedBy:'x',
+        markers:[{id:'m" onmouseover="window.__xss=4',at:'5%" onmouseover="window.__xss=5" x="',text:'XSS 註記',color:'#000',pos:'up',date:''}]});
+    });
+    const xs=await open();await signIn(xs,'su2');await until(async()=>!(await ui(xs)).locked);
+    await xs.evaluate(()=>{setSection('progress',{instant:true})});await xs.waitForTimeout(800);
+    await xs.evaluate(()=>{progOpen='xssi';render()});await xs.waitForTimeout(800);
+    const r=await xs.evaluate(()=>({onAttr:[...document.querySelectorAll('*')].filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).map(e=>e.tagName),
+      xss:window.__xss,card:state.events.some(e=>e.name==='XSS 卡片'),week:state.weeks.some(w=>w.text==='XSS 週報'),label:state.labels.some(l=>l.name==='XSS 標籤'),
+      issue:state.issues.some(i=>i.title==='XSS 議題'),marker:[...document.querySelectorAll('[data-marker]')].some(e=>e.dataset.marker.startsWith('m" onmouseover'))}));
+    ok(!r.card&&!r.week&&!r.label&&r.issue,`ID 不合格的卡片、週報、標籤讀回來時略過；ID 合格的議題照常顯示（${JSON.stringify(r)}）`);
+    ok(r.marker&&!r.onAttr.length&&r.xss===undefined,'欄位值帶引號（註記的 id、at）：屬性值跳脫，沒有多出事件屬性、沒有執行');
+    await xs.hover('[data-issue="xssi"] [data-marker]',{force:true}).catch(()=>{});await xs.waitForTimeout(300);
+    ok(await xs.evaluate(()=>window.__xss===undefined),'滑過註記也沒有執行');
+    await admin(async d=>{for(const p of [`cards/${BAD}`,`weeks/${DEPT}__<img src=x onerror=window.__xss=2>`,`labels/${DEPT}__l" onfocus="window.__xss=3`,`issues/${DEPT}__xssi`])await d.doc(p).delete()});}
 
   /* ---------- 6. 其他部門不受影響、沒有頁面錯誤 ---------- */
   const after=await others();

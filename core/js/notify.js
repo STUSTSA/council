@@ -49,7 +49,7 @@ function dayCardHTML(d,lab,cls,list){
   const xs=list.filter(x=>covers(x,d)),MAX=4;
   /* 今日卡片：在「整理」裡右滑（今天處理）的事件不在卡片上列，只寫件數；點今日卡片＝卡片放大成全螢幕的「今日」層（openToday）才列出來 */
   const pk=cls==="today"?triPicked(list):[];
-  return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${d}" aria-label="${lab} ${fmt(d)}，${xs.length} 件事，${cls==="today"?"打開今日":"打開這一天"}">
+  return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件事，${cls==="today"?"打開今日":"打開這一天"}">
     <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}<i>・</i>週${WD[pd(d).getDay()]}</b><small class="num">${xs.length?`${xs.length} 件`:nmd(d)}</small></span></span>
     ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row" style="--c:${itemColor(x)}"><span class="nd-t num">${dayWhen(x,d)}</span><span class="nd-x"><b>${esc(x.title)}</b>${notiSub(x)?`<small>${esc(notiSub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more">還有 ${xs.length-MAX} 件</span>`:""}</span>`
       :(pk.length?"":`<span class="nd-empty"><i aria-hidden="true"></i>沒有安排</span>`)}
@@ -262,7 +262,7 @@ function notiSearch(){
   $("#notiOv .noti-search").classList.toggle("has-q",!!NOTI.q);
   if(!q){resBox(false);return}
   const ql=q.toLowerCase(),xs=notiList().filter(x=>[x.title,x.place,x.ev,NOTI.scope==="all"?deptName(x.dept):""].join(" ").toLowerCase().includes(ql)).slice(0,30);
-  box.innerHTML=xs.map(x=>`<button type="button" class="nr" data-nd="${x.date}" data-ne="${x.end||""}" style="--c:${itemColor(x)}"><span class="nr-when num">${nmd(x.date)}${x.end?`–${nmd(x.end)}`:""}${x.time?` ${x.time}`:""}</span><span class="nr-main"><b>${hl(x.title,q)}</b>${notiSub(x)?`<small>${hl(notiSub(x),q)}</small>`:""}</span></button>`).join("")||`<p class="nr-none">找不到「${esc(q)}」</p>`;
+  box.innerHTML=xs.map(x=>`<button type="button" class="nr" data-nd="${esc(x.date)}" data-ne="${esc(x.end)}" style="--c:${itemColor(x)}"><span class="nr-when num">${nmd(x.date)}${x.end?`–${nmd(x.end)}`:""}${x.time?` ${x.time}`:""}</span><span class="nr-main"><b>${hl(x.title,q)}</b>${notiSub(x)?`<small>${hl(notiSub(x),q)}</small>`:""}</span></button>`).join("")||`<p class="nr-none">找不到「${esc(q)}」</p>`;
   resBox(true);
 }
 /* 結果框的顯示／隱藏（打字很快時不會被還沒播完的隱藏動畫蓋掉） */

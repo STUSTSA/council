@@ -35,9 +35,9 @@ const MTS={sel:"",open:new Set()};
 const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&e.report):[];
 function mtGroupHTML(m,ed){
   const evs=mtEvs(m);if(!evs.length)return "";
-  return `<section class="mt-dept" data-mtdept="${m.id}" data-fk="mt${m.id}">${ed&&m.dirty?'<p class="sub mt-dirty">已修改，按「儲存」後寫回</p>':""}
+  return `<section class="mt-dept" data-mtdept="${esc(m.id)}" data-fk="mt${esc(m.id)}">${ed&&m.dirty?'<p class="sub mt-dirty">已修改，按「儲存」後寫回</p>':""}
     <div class="events mt-list">${withState(m.data,()=>evs.map(e=>{const st=evStatus(e),par=parentOf(e);
-      return `<details class="ev mt-ev" data-ev="${e.id}" data-mtev="${e.id}" data-st="${st}"${MTS.open.has(e.id)?" open":""}>
+      return `<details class="ev mt-ev" data-ev="${esc(e.id)}" data-mtev="${esc(e.id)}" data-st="${st}"${MTS.open.has(e.id)?" open":""}>
         <summary><span class="live-dot" aria-hidden="true"></span><b>${esc(e.name)}</b><span class="mt-st">${EV_ST[st]}</span><span class="ev-chev" aria-hidden="true">▾</span></summary>
         <div class="ev-body">${ed?evFieldsHTML(e):`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${e.desc?`<p>${esc(e.desc)}</p>`:`<p class="sub">沒有說明</p>`}${evTimesHTML(e)}${staffHTML(e.staff)}${labelChipsHTML(e.labels)}${evLinksHTML(e)}`}</div></details>`}).join(""))}</div></section>`;
 }
@@ -56,7 +56,7 @@ function renderMeet(){
   /* 狀態只寫一行短的 */
   $("#meetEdSt").innerHTML=g?`<span class="grant-on">開放修改中</span> · ${esc(g.by||"會長室")} ${esc((g.at||"").slice(11,16))} 開，今天有效`
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
-  $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${m.id}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
+  $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${esc(m.id)}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
     +(MTS.sel?`<a class="fw-open mt-open" href="?d=${encodeURIComponent(MTS.sel)}" target="_blank" rel="noopener">開啟看板 →</a>`:"");   /* 開啟看板放在部門膠囊那一排的右邊，不另外佔一列 */
   const ed=mtCanEdit(),loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
   $("#meetEdList").innerHTML=loading+(MTS.sel?mtGroupHTML(MT.depts.get(MTS.sel),ed):MT.depts.size?`<p class="empty">目前沒有部門標「會議要報告」。各部門在自己的即時回報按「會議要報告」後會出現在這裡。</p>`:"")
@@ -186,13 +186,13 @@ function renderWeekRead(){
   const ms=[...MT.depts.values()],ws=m=>m.data?[...m.data.weeks].filter(w=>w.text).sort((a,b)=>b.date.localeCompare(a.date)):[];
   if(WK.dept!=="all"&&!MT.depts.has(WK.dept))WK.dept="all";
   $("#wkDepts").innerHTML=[`<button type="button" role="tab" class="wk-d" data-wkd="all" aria-selected="${WK.dept==="all"}">全部最新</button>`,
-    ...ms.filter(m=>ws(m).length||m.id===WK.dept).map(m=>{const n=ws(m).length,fresh=n&&wkThisWeek(ws(m)[0].date);return `<button type="button" role="tab" class="wk-d${n?"":" none"}" data-wkd="${m.id}" aria-selected="${WK.dept===m.id}">${fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(m.name)}<span class="num">${n}</span></button>`})].join("");
+    ...ms.filter(m=>ws(m).length||m.id===WK.dept).map(m=>{const n=ws(m).length,fresh=n&&wkThisWeek(ws(m)[0].date);return `<button type="button" role="tab" class="wk-d${n?"":" none"}" data-wkd="${esc(m.id)}" aria-selected="${WK.dept===m.id}">${fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(m.name)}<span class="num">${n}</span></button>`})].join("");
   const body=$("#wkBody");
   if(MT.loading&&!ms.length){body.innerHTML=`<p class="sub">讀取各部門資料中…</p>`;return}
   const block=(m,w,head)=>`<article class="wk-doc" data-wkdoc><div class="wk-top">${head}<span class="num">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></article>`;
   if(WK.dept==="all"){
     /* 全部最新：每個部門一顆膠囊（部門、日期、本週），點了才展開全文（2026-11-06 使用者：秘書處太臃腫，要收起來） */
-    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${m.id}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
+    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${esc(m.id)}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><div class="wk-top"><button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></div></details>`;
     const docs=ms.map(m=>{const w=ws(m)[0];return w?cap(m,w):""}).filter(Boolean);
     const miss=ms.filter(m=>!ws(m).length).map(m=>m.name);
@@ -202,7 +202,7 @@ function renderWeekRead(){
   const m=MT.depts.get(WK.dept),list=ws(m);
   if(!list.length){body.innerHTML=`<p class="empty">${esc(m.name)}${m.data?"還沒有週報。":esc(m.err||"讀不到資料")}</p>`;return}
   const w=list.find(x=>x.id===WK.week)||list[0];
-  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${x.id}" aria-selected="${x.id===w.id}"><span class="num">${fmt(x.date).slice(5)}</span></button>`).join("")}</div>
+  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${esc(x.id)}" aria-selected="${x.id===w.id}"><span class="num">${fmt(x.date).slice(5)}</span></button>`).join("")}</div>
     ${block(m,w,`<span class="tag sm">${esc(m.name)}</span>`)}<a class="wk-open" href="?d=${encodeURIComponent(m.id)}" target="_blank" rel="noopener">開啟${esc(m.name)}看板 →</a>`;
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#wkBody .wk-cap"))return;if(d.open)WK.open.add(d.dataset.wkcap);else WK.open.delete(d.dataset.wkcap)},true);

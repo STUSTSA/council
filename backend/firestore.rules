@@ -1,8 +1,8 @@
 rules_version = '2';
-// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B 修正）
+// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -30,6 +30,9 @@ service cloud.firestore {
     function unchanged(keys){ return !d().diff(resource.data).affectedKeys().hasAny(keys); }
     function onlyChanged(keys) { return d().diff(resource.data).affectedKeys().hasOnly(keys); }
     function revNext()      { return d().rev == resource.data.rev + 1; }
+    // 02D 審查（P0）：看板內容的文件 ID 只能是英數、底線、連字號（1～120 字）。網頁讀回來時會拿掉部門前綴、把 ID 放進畫面的屬性，
+    // 不限制的話，有部門角色的人用 SDK 建一份 ID 帶引號或 < 的文件，就能在別人（含總管理員）的畫面上執行程式（permissions.md 第 5.1e 節）
+    function safeId(x)      { return x is string && x.matches('^[A-Za-z0-9_-]{1,120}$'); }
     // 稽核鏈：同一批寫入裡必須新建 auditLogs/{col}_{id}_{rev}
     function auditAfter(col, id, rev) { return existsAfter(doc('auditLogs', col + '_' + id + '_' + string(rev))); }
     // 遷移：總管理員＋running 的批次（migration.md 第 3 節）
@@ -377,7 +380,7 @@ service cloud.firestore {
 
       allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
       allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
-      allow create: if cardShape() && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
+      allow create: if safeId(id) && cardShape() && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
       allow update: if cardShape() && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
         && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
       allow delete: if purgeFinish() || rollbackDelete();
@@ -434,7 +437,7 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().title is string;
       }
       allow get, list: if internalReader();
-      allow create: if shape() && deptWriter(d().deptId) && d().rev == 1 && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
       allow delete: if isSuper();
     }
@@ -444,7 +447,7 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().text is string;
       }
       allow get, list: if internalReader();
-      allow create: if shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'createdAt', 'importBatch']) && stamped();
       allow delete: if isSuper();
     }
@@ -454,7 +457,7 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().name is string;
       }
       allow get, list: if internalReader();
-      allow create: if shape() && deptWriter(d().deptId) && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && stamped();
       allow delete: if isSuper();
     }
@@ -510,7 +513,7 @@ service cloud.firestore {
       }
 
       allow get, list: if resource.data.visibility == 'public' || internalReader();
-      allow create: if deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
+      allow create: if safeId(id) && deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
         && d().rev == 1 && stamped();
       allow update: if eventShape() && unchanged(['deptId', 'cardId', 'importBatch']) && stamped() && revNext() && (
              (deptWriter(resource.data.deptId) && scopeOk() && visOk() && cardOk())
