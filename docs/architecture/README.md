@@ -3,6 +3,7 @@
 - 產出日期：2026-11-11。分支 `claude/cool-ramanujan-qg4y8o`，疊在階段 00（[#52](https://github.com/LinkMasterKing/-/pull/52)，`docs/upgrade-plan.md`）之上。
 - **01A-R（架構驗收修正）**：同日依審查意見補強，修改內容與待驗證項目見 [review-01A-R.md](review-01A-R.md)。
 - 本階段只有設計文件：沒有改網站功能、沒有碰 `data*.json`、沒有建立 Firebase 專案、沒有開始 01B。
+- **02B（Google 登入、角色、QR 邀請、撤權、稽核紀錄、卡片刪除紀錄）已在模擬器完成**（2026-11-13）：實作見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 9.6 節、卡片刪除紀錄見 [permissions.md](permissions.md) 第 5.1c 節，實測見 [verification.md](verification.md) 第 8 節。規則**還沒部署**到開發專案（等你同意）。
 - **02A（02B 開工前的缺口）已完成**：寫入四項已定決策（下方「02A 定案」）、補 02B 的登入／角色／QR／撤權／稽核畫面流程（[invitations-roles-audit.md](invitations-roles-audit.md) 第 9 節）、規則負面測試 N-01～N-17（[permissions.md](permissions.md) 第 5.1b 節）、repo 移轉檢查清單（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節）。實測見 [verification.md](verification.md) 第 7 節。
 - **01B（模擬器實作）已完成**：正式規則 `backend/firestore.rules`、索引、遷移程式、規則與遷移測試、網頁的資料來源開關（`dept/config.js` 的 `source`，預設全部 `github`）。實測結果見 [verification.md](verification.md) 第 6 節；01B 對設計的調整見下方「01B 實作調整」。
 - 設計依據：`CLAUDE.md`、`docs/upgrade-plan.md`、使用者在 01A 指示的四項架構決定，以及對 `core/js/cloud.js`、`state.js` 與現有資料檔欄位的唯讀檢查。
@@ -73,6 +74,8 @@
 | D14 | ~~已刪除卡片的時間標記採用 `events.cardDeleted`~~ | **02A 取消**，由 D16 取代（卡片刪除後時間標記一併移除，不需要標記） | `cardDeleted` 欄位與兩個索引已拿掉 |
 | D15 | Organization 移轉時機 | **02A 修正：02B 建立正式 Google 登入網域之前，由你手動移轉**（移轉文件的時機 A）。02A 只寫檢查清單，不執行 | [github-ownership-migration.md](github-ownership-migration.md) 第 9 節 |
 | D16 | 卡片刪除（02A 新增） | **直接永久刪除**，卡片連同它的版本與時間標記一起移除；不做軟刪除、不能復原。卡片有時間標記時，刪除前要求再確認一次。刪除權限＝該部門編輯者以上與總管理員 | 規則與流程見 [permissions.md](permissions.md) 第 5.1 節；取代 01A／01A-R 的「`deleted` 狀態、L2 可看、可復原」 |
+| D17 | 卡片刪除紀錄（02B，使用者 2026-11-13 決定要） | 開始永久刪除的同一批一定要新建一筆刪除紀錄（誰、何時、卡片標題）；只有總管理員讀得到；任何人都不能改、刪 | [permissions.md](permissions.md) 第 5.1c 節，測試 D-01～D-07；開始那一批改成不刪時間事件（讀取次數） |
+| D18 | QR 圖（02B，使用者 2026-11-13 決定用現成開源單檔程式） | qrcode-generator 1.4.4（MIT），原檔放 `core/vendor/qrcode-generator/`，附授權檔 | 階段 00 決策 8-8 |
 
 ### 01B 實作調整（照已核准架構，以下是實作時補上的細節，不改變權限設計）
 
@@ -105,9 +108,23 @@
 
 | 項目 | 何時 | 誰 |
 |---|---|---|
-| 要不要能擋特定 Google 帳號閱讀（封鎖名單）：D1 之後撤權只收回寫入 | 02B 開工前 | 你決定 |
-| 卡片永久刪除要不要留紀錄（誰、何時、刪了哪張）：版本會一起消失，目前沒有任何刪除紀錄 | 02B 開工前 | 你決定；要的話加一種稽核紀錄，規則與測試一起改 |
-| 永久刪除每批的讀取次數（估算 17～18）在開發專案實測 | 02B | 02B 驗收（併入上面「整批讀取次數」） |
+| 要不要能擋特定 Google 帳號閱讀（封鎖名單）：D1 之後撤權只收回寫入 | 仍待決定（02B 沒做） | 你決定 |
+| ~~卡片永久刪除要不要留紀錄~~ | 02B 定案（D17） | |
+| 永久刪除每批的讀取次數（估算：開始 6、清除 17～18）在開發專案實測 | 開發專案部署規則後 | 02 驗收（併入上面「整批讀取次數」） |
 | 時間標記超過 3 個的卡片，第一批之後剩下的時間標記在清除完之前仍是登入可讀（N-17） | 03 | 前端在同一個動作裡接著清完；不接受的話要再討論 |
-| QR 圖的產生方式（階段 00 決策 8-8：單檔程式進 repo 或自己寫） | 02B 開工前 | 你決定 |
-| repo 移轉（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節的檢查清單） | 02B 建立正式登入網域之前 | 你操作 |
+| ~~QR 圖的產生方式~~ | 02B 定案（D18） | |
+| repo 移轉（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節的檢查清單） | 02B 建立正式登入網域之前 | 你操作（開發專案的授權網域已經有 `stustsa.github.io`，看起來已移轉；請確認 F 段其他項目） |
+
+### 02B 新增的待辦與待決定
+
+| 項目 | 何時 | 誰 |
+|---|---|---|
+| 把規則與索引部署到開發專案 `stustsa-council-dev`（`firebase deploy --only firestore:rules,firestore:indexes`） | 你同意後 | 我執行或你執行 |
+| 開發專案的 OAuth 同意畫面（Google Auth Platform → 目標對象）：使用者類型要是「外部」、發布狀態「正式版」，任何 Google 帳號才能登入。專案若在學校 Google 組織底下而且設成「內部」，只有學校帳號能登入（D1 要求任何帳號）。從外部查不到這個設定，見 [verification.md](verification.md) 第 8 節 | 部署前 | 你在主控台看 |
+| 開發專案的 `departments` 十個部門文件（邀請與申請的規則要求部門存在）：用遷移程式只匯入部門、或在主控台手動建 | 部署後、實測前 | 你決定方式 |
+| 第一位總管理員（[第 7 節](invitations-roles-audit.md)）：先登入一次取得 UID，再在主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1` | 實測前 | 你 |
+| 實機測試要一個 `source: "firestore"` 的部門：把水果部切成 `firestore`（一行的 PR；水果部在開發專案沒有資料，看板會是空的） | 實測前 | 你決定 |
+| 看板內容在 `firestore` 模式的寫入（卡片新增、修改、永久刪除的前端，照 `purgeCard` 的順序）還沒接上，02D 切換正式資料前要有 | 02D 之前，哪個階段做待定 | 你決定 |
+| 彈出視窗被擋時的轉址登入在 Safari／iPhone 安裝版是否可用（`authDomain` 與網站不同網域） | 實機測試 | 02 驗收 |
+| `dept/config.js` 現在填的是開發專案的網頁設定：這串 PR 合併進 main 之前要換成正式專案的設定（否則正式網站的 QR、角色會寫進開發專案） | 進 main 之前 | 你決定 |
+| 核銷後原始權杖會寫進 `invitations.token`（已核准設計第 2 節：規則靠它驗證；用過的權杖沒有作用）。驗收條件「資料庫不存權杖」若要照字面，要改成另一種驗證方式 | 方便時 | 你確認是否接受 |

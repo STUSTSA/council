@@ -1185,6 +1185,48 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .sr-chev{color:var(--muted);display:grid}
 .set-p{margin:0;color:var(--muted);font-size:14px;line-height:1.85;padding:0}
 
+/* ===== 帳號與會長室管理（02B，account.js）=====
+   新資料庫的部門：設定頁的 Google 登入、帳號、會長室管理（人員、QR 邀請、申請、紀錄）。面板畫在設定頁右側面板／手機子頁，
+   外框沿用 .set-hub、.set-list、.set-row；這裡只有面板裡新增的列、膠囊、QR 卡片與紀錄清單。不放說明文字（2026-11-13 使用者） */
+.acct-err{margin:4px 0 0;color:var(--red);font-size:13.5px}
+.acct-empty{padding:16px 20px}
+.acct-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.acct-chip{font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
+.acct-chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.acct-person{display:grid;gap:2px}
+.acct-person b{font-size:17px;font-weight:500;letter-spacing:.06em}
+.acct-person small,.acct-line small{color:var(--muted);font-size:12.5px}
+/* 面板裡的一列（不是按鈕）：左邊文字、右邊小按鈕 */
+.acct-line{display:flex;align-items:center;gap:10px;padding:13px 20px;min-width:0}
+.acct-line+.acct-line{border-top:1px solid var(--hair)}
+.acct-line>span{flex:1;min-width:0;display:grid;gap:2px}
+.acct-line>span b{font-weight:500;letter-spacing:.04em}
+.acct-line button.icon{flex:0 0 auto}
+.acct-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.acct-acts .add-row{margin-top:0}
+.acct-new{justify-self:start}
+/* QR 卡片：QR 一律白底黑點（深色模式也是，掃描比較穩），到期後變淡、只剩「重新產生」 */
+.acct-qr{display:grid;justify-items:center;gap:8px;padding:22px 20px;border:1px solid var(--line);border-radius:24px;text-align:center}
+.acct-qr-img{width:min(240px,70vw);aspect-ratio:1;padding:14px;border-radius:18px;background:#fff;transition:opacity var(--mo-slow) var(--mo-out),filter var(--mo-slow) var(--mo-out)}
+.acct-qr-img svg{display:block;width:100%;height:100%}
+.acct-qr.off .acct-qr-img{opacity:.25;filter:grayscale(1)}
+.acct-qr>b{font-size:17px;font-weight:500;letter-spacing:.08em}
+.acct-qr-t{font-family:"Jost",sans-serif;font-weight:300;font-size:34px;letter-spacing:.04em;line-height:1}
+.acct-qr .acct-acts{justify-content:center;margin-top:6px}
+.acct-filter .fld{margin:0}
+.acct-filter .fld-l{display:none}
+/* 紀錄：時間欄等寬、內容兩行（動作＋對象；差異；操作者・第幾號） */
+.acct-log{list-style:none;margin:0;padding:0;display:grid;border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.acct-log:empty{display:none}
+.acct-log li{display:flex;gap:14px;padding:12px 20px;min-width:0}
+.acct-log li+li{border-top:1px solid var(--hair)}
+.acct-log-t{flex:0 0 auto;color:var(--muted);font-size:12.5px;padding-top:2px;font-variant-numeric:tabular-nums}
+.acct-log-b{flex:1;min-width:0;display:grid;gap:2px;overflow-wrap:anywhere}
+.acct-log-b b{font-weight:500}
+.acct-log-b small{color:var(--muted);font-size:12.5px}
+.acct-chain{font-size:13px;color:var(--ok)}
+.acct-chain.bad{color:var(--red)}
+
 /* ===== 通知層（notify.js）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05，交接說明四十二） =====
    版面沿用設定頁的 .set-ov；內容寬度上限 920px 置中。顏色：本部門＝即時回報狀態色、全會＝部門色（--c，由 JS 給） */
 .noti-ov{z-index:37}

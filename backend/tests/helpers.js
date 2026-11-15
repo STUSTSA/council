@@ -81,26 +81,32 @@ export function editCard(db, uid, id, cur, patch = {}, vo = {}) {
   if (vo !== null) b.set(db.doc(`cards/${id}/versions/${c.version}`), verData(uid, id, c, vo));
   return b.commit();
 }
-// ---------- 永久刪除卡片（02A；前端 02B／03 照這個順序做） ----------
-// ① 開始：open／done → purging，同批先刪最多 3 個時間事件；② 清除：每批最多 3 個時間事件、或由新往舊最多 3 個版本；
-// ③ 最後一批刪掉剩下的版本（最多 3 個）與卡片。x＝使用者的 Firestore（部門編輯者以上）。
-// 一批的大小照整批讀取上限 20 估算、不依賴快取：事件 3×4＋卡片 5＝17；版本 3×5＋卡片 3＝18。
-export function purgeStartData(cur, uid, timeIds) {
-  return { ...cur, state: 'purging', deletedAt: NOW(), deletedBy: uid, timeIds, updatedAt: NOW(), updatedBy: uid };
+// ---------- 永久刪除卡片（02A；02B 加刪除紀錄；前端照這個順序做） ----------
+// ① 開始：open／done → purging，同一批新建刪除紀錄 auditLogs/cards_{id}_purge_{亂數}（誰、何時、標題）；開始那一批不刪時間事件；
+// ② 清除：每批最多 3 個時間事件、或由新往舊最多 3 個版本；③ 最後一批刪掉剩下的版本（最多 3 個）與卡片。
+// x＝使用者的 Firestore（部門編輯者以上）。一批的大小照整批讀取上限 20 估算、不依賴快取：
+// 開始 卡片 4＋紀錄 2＝6；事件 3×4＋卡片 5＝17；版本 3×5＋卡片 3＝18。
+export const purgeNonce = () => randomBytes(12).toString('hex');
+export function purgeStartData(cur, uid, nonce = purgeNonce()) {
+  return { ...cur, state: 'purging', deletedAt: NOW(), deletedBy: uid, purgeLog: nonce, updatedAt: NOW(), updatedBy: uid };
+}
+export const purgeAuditId = (id, nonce) => `auditLogs/cards_${id}_purge_${nonce}`;
+export function purgeAudit(cur, uid, id, nonce, o = {}) {
+  return { col: 'cards', docId: id, rev: cur.version, action: 'purge', actor: uid, at: NOW(),
+    before: { title: cur.title, deptId: cur.deptId, state: cur.state }, after: { state: 'purging' }, ref: nonce, ...o };
+}
+// 開始永久刪除的一批：[卡片, 刪除紀錄]；攻擊測試用 patch 改其中一筆
+export function purgeStartWrites(cur, uid, id, nonce = purgeNonce()) {
+  return [[`cards/${id}`, purgeStartData(cur, uid, nonce)], [purgeAuditId(id, nonce), purgeAudit(cur, uid, id, nonce)]];
 }
 export async function purgeCard(x, uid, id, { evPer = 3, verPer = 3 } = {}) {
   const ref = x.doc(`cards/${id}`);
-  let cur = (await ref.get()).data();
-  let ids = [...(cur.timeIds || [])];
-  const take = n => ids.splice(0, n);
-  let gone = take(evPer), b = x.batch();
-  if (cur.state !== 'purging') {
-    b.set(ref, purgeStartData(cur, uid, ids.slice()));
-    gone.forEach(e => b.delete(x.doc(`events/${e}`)));
-    await b.commit();
-  } else { ids.unshift(...gone); }
+  const cur = (await ref.get()).data();
+  if (cur.state !== 'purging') await commit(x, purgeStartWrites(cur, uid, id));
+  const ids = [...(cur.timeIds || [])];
+  let b;
   while (ids.length) {
-    gone = take(evPer); b = x.batch();
+    const gone = ids.splice(0, evPer); b = x.batch();
     gone.forEach(e => b.delete(x.doc(`events/${e}`)));
     b.update(ref, { timeIds: ids.slice(), updatedAt: NOW(), updatedBy: uid });
     await b.commit();

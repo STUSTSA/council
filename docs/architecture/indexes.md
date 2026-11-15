@@ -34,6 +34,7 @@
 | Q22 | 待審申請 | `roleRequests` where `status == 'pending'` order by `createdAt` | `status ASC, createdAt ASC` | L4 |
 | Q23 | 我的申請 | `roleRequests` where `uid == me` | 單一欄位 | 本人 |
 | Q24 | 邀請清單 | `invitations` where `status == 'active'` order by `expiresAt` | `status ASC, expiresAt ASC` | L4 |
+| Q24b | 最近的邀請（02B 會長室管理 → QR 邀請，含已使用、已撤銷） | `invitations` order by `createdAt DESC` limit 30 | 單一欄位 | L4 |
 | Q25 | 稽核：某人的權限歷史 | `auditLogs` where `col == 'roles'` and `docId == uid` order by `rev DESC` | `col ASC, docId ASC, rev DESC` | L4 |
 | Q26 | 稽核：最近紀錄 | `auditLogs` order by `at DESC` limit 50 | 單一欄位 | L4 |
 | Q27 | 稽核：某人做過什麼 | `auditLogs` where `actor == uid` order by `at DESC` | `actor ASC, at DESC` | L4 |

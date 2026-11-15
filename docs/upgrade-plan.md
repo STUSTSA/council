@@ -461,7 +461,7 @@ cards/{cardId}
 | 8-5 | 建立 Firebase 專案（開發、正式各一），資料庫位置選台灣（asia-east1） | 位置選了不能改。會提供逐步操作清單。 |
 | 8-6 | 開啟 Google 登入、把**移轉後的網域**（`<org>.github.io` 或自訂網域）加入授權網域（02A 修正：不加 `linkmasterking.github.io`） | 主控台操作，由你做。 |
 | 8-7 | 可以登入的帳號範圍 | **02A 定案：任何 Google 帳號，登入即可唯讀內部看板**（秘書處點名名單與會長私人行程除外）。 |
-| 8-8 | QR Code 產生方式 | 不能加 npm 套件的前提下：放一支單檔的 QR 程式進 repo（要挑授權條款允許的），或自己寫。建議前者。 |
+| 8-8 | QR Code 產生方式 | **02B 定案**：現成開源單檔程式 qrcode-generator 1.4.4（MIT），原檔放 `core/vendor/qrcode-generator/`，附授權檔（`docs/architecture/README.md` D18）。 |
 
 ### 之後各階段開工前要定的
 

@@ -72,6 +72,7 @@
 
 ### `auditLogs/{集合}_{文件ID}_{rev}`：L4 讀；只能新增
 `col`、`docId`、`rev`、`action`、`actor`、`at`、`before`、`after`、`ref`。詳見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 3 節。
+02B：卡片刪除紀錄 `auditLogs/cards_{卡片ID}_purge_{亂數}`（`col: 'cards'`、`action: 'purge'`、`rev`＝卡片版本號、`before: {title, deptId, state}`、`after: {state: 'purging'}`、`ref`＝亂數），見 [permissions.md](permissions.md) 第 5.1c 節。
 
 ## 3. 看板內容（L1 讀；該部門管理員／編輯者寫）
 
@@ -89,6 +90,7 @@
 | `report` | 會議要報告（`report`） |
 | `state` | `open` \| `done` \| `purging`（02A：永久刪除進行中，不可逆；拿掉 `deleted`） |
 | `doneAt`、`deletedAt`、`deletedBy` | （`doneAt`）；`deletedAt`、`deletedBy`＝開始永久刪除的時間與人 |
+| `purgeLog` | 02B：開始永久刪除時寫入的亂數，指向刪除紀錄 `auditLogs/cards_{id}_purge_{purgeLog}`；新建、一般編輯都不能帶（[permissions.md](permissions.md) 第 5.1c 節） |
 | `order` | 排序值 |
 | `round`、`roundAt`、`touched`、`touchedAt`、`fromEv` | 燈號與舊分段紀錄，原樣保留 |
 | `version` | 每次內容修改加 1，與 `cards/{id}/versions/{version}` 對應 |

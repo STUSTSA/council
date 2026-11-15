@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { env, google, anon, seed, seedRole, seedDepts, assertSucceeds, assertFails, NOW, TS, DEPTS,
          createCard, editCard, cardData, verData, readDoc, audit, auditId, newToken,
          commit, inviteWrites, redeemWrites, patch, superRoleWrites,
-         purgeCard, purgeStartData, createCardWithEvents, eventData } from './helpers.js';
+         purgeCard, purgeStartWrites, createCardWithEvents, eventData } from './helpers.js';
 
 let t;
 const MIN = 60000;
@@ -53,7 +53,7 @@ function boardWrites(u, dept) {
     ['新增卡片', () => createCard(x, u, `${dept}__n_${u}`, { deptId: dept })],
     ['修改卡片', async () => editCard(x, u, `${dept}__c1`, await readDoc(t, `cards/${dept}__c1`), { title: '改' })],
     ['排序卡片', () => x.doc(`cards/${dept}__c1`).update({ order: 7, updatedAt: NOW(), updatedBy: u })],
-    ['開始刪除卡片', async () => x.doc(`cards/${dept}__c1`).set(purgeStartData(await readDoc(t, `cards/${dept}__c1`), u, []))],
+    ['開始刪除卡片', async () => commit(x, purgeStartWrites(await readDoc(t, `cards/${dept}__c1`), u, `${dept}__c1`))],
     ['新增議題', () => x.doc(`issues/${dept}__n_${u}`).set({ deptId: dept, title: 'x', rev: 1, updatedAt: NOW(), updatedBy: u })],
     ['修改議題', () => x.doc(`issues/${dept}__i1`).set({ deptId: dept, title: '改', rev: 2, updatedAt: NOW(), updatedBy: u })],
     ['新增週報', () => x.doc(`weeks/${dept}__n_${u}`).set({ deptId: dept, date: '2026-11-12', text: 'x', createdAt: NOW(), updatedAt: NOW(), updatedBy: u })],
@@ -257,12 +257,12 @@ describe('N-13～N-17 卡片永久刪除（連同版本與時間標記，不留�
     const ids = await bigCard();
     await purgeCard(db('ed'), 'ed', 'c1');
     assert.deepEqual(await leftovers('c1', ids), []);
-    // 小卡片只要兩批：開始＋刪時間事件；刪版本＋刪卡片（同一份文件一批只寫一次）
+    // 小卡片三批：開始（＋刪除紀錄）；刪時間事件；刪版本＋刪卡片（同一份文件一批只寫一次）
     const small = await createCardWithEvents(db('adm'), 'adm', 'c2', 2);
     const x = db('adm'), b = x.batch();
-    b.set(x.doc('cards/c2'), purgeStartData(await readDoc(t, 'cards/c2'), 'adm', []));
-    small.forEach(e => b.delete(x.doc(`events/${e}`)));
-    await assertSucceeds(b.commit());                                                               // 先進 purging（同一份文件一批只能寫一次）
+    await assertSucceeds(commit(x, purgeStartWrites(await readDoc(t, 'cards/c2'), 'adm', 'c2')));
+    small.forEach(e => b.delete(x.doc(`events/${e}`))); b.update(x.doc('cards/c2'), { timeIds: [], updatedAt: NOW(), updatedBy: 'adm' });
+    await assertSucceeds(b.commit());
     const b2 = x.batch(); b2.delete(x.doc('cards/c2/versions/1')); b2.delete(x.doc('cards/c2'));
     await assertSucceeds(b2.commit());
     assert.deepEqual(await leftovers('c2', small), []);
@@ -277,16 +277,19 @@ describe('N-13～N-17 卡片永久刪除（連同版本與時間標記，不留�
     // 直接刪卡片（沒進 purging）
     await assertFails(x.doc('cards/c1').delete());
     await assertFails(db('boss').doc('cards/c1').delete());
-    // 開始刪除時從 timeIds 拿掉事件卻沒刪事件
+    // 開始刪除時動 timeIds：拿掉事件卻沒刪事件、拿掉並刪事件（02B：開始那一批不刪事件）、順便加新的時間標記
     let cur = await readDoc(t, 'cards/c1');
-    await assertFails(x.doc('cards/c1').set(purgeStartData(cur, 'ed', ids.slice(1))));
-    // 一次拿掉超過 3 個（規則沒有迴圈）
-    let b = x.batch(); b.set(x.doc('cards/c1'), purgeStartData(cur, 'ed', ids.slice(4))); ids.slice(0, 4).forEach(e => b.delete(x.doc(`events/${e}`)));
-    await assertFails(b.commit());
-    // 開始刪除時順便加新的時間標記
-    await assertFails(x.doc('cards/c1').set(purgeStartData(cur, 'ed', [...ids, 'new'])));
-    await assertSucceeds(x.doc('cards/c1').set(purgeStartData(cur, 'ed', ids)));
+    let w = purgeStartWrites(cur, 'ed', 'c1'); w[0][1].timeIds = ids.slice(1);
+    await assertFails(commit(x, w));
+    w = purgeStartWrites(cur, 'ed', 'c1'); w[0][1].timeIds = ids.slice(1);
+    await assertFails(commit(x, [...w, [`events/${ids[0]}`, null, 'delete']]));
+    w = purgeStartWrites(cur, 'ed', 'c1'); w[0][1].timeIds = [...ids, 'new'];
+    await assertFails(commit(x, w));
+    await assertSucceeds(commit(x, purgeStartWrites(cur, 'ed', 'c1')));
     cur = await readDoc(t, 'cards/c1');
+    // 清除時一次拿掉超過 3 個（規則沒有迴圈）
+    let b = x.batch(); ids.slice(0, 4).forEach(e => b.delete(x.doc(`events/${e}`))); b.update(x.doc('cards/c1'), { timeIds: ids.slice(4), updatedAt: NOW(), updatedBy: 'ed' });
+    await assertFails(b.commit());
     // 還有時間事件（timeIds 不是空的）、還有版本：刪卡片拒絕
     b = x.batch(); [3, 2, 1].forEach(v => b.delete(x.doc(`cards/c1/versions/${v}`))); b.delete(x.doc('cards/c1'));
     await assertFails(b.commit());
@@ -337,14 +340,14 @@ describe('N-13～N-17 卡片永久刪除（連同版本與時間標記，不留�
       await d.doc('grants/meetingEdit').set({ until: TS.fromMillis(Date.now() + 3600e3), by: 'boss', at: TS.now(), rev: 1 }); });
     const cur = await readDoc(t, 'cards/c1');
     for (const u of ['gen', 'nobody', 'evx', 'sec', 'ex', 'pres']) {
-      await assertFails(db(u).doc('cards/c1').set(purgeStartData(cur, u, ids)));
+      await assertFails(commit(db(u), purgeStartWrites(cur, u, 'c1')));
       await assertFails(db(u).doc('cards/c1').delete());
       await assertFails(db(u).doc('cards/c1/versions/3').delete());
       await assertFails(db(u).doc(`events/${ids[0]}`).delete());
     }
     await assertFails(anon(t).doc('cards/c1').delete());
     // 部門編輯者開始刪除之後，沒有刪除權限的人也不能接手清除或刪卡片本身
-    await assertSucceeds(db('ed').doc('cards/c1').set(purgeStartData(cur, 'ed', ids)));
+    await assertSucceeds(commit(db('ed'), purgeStartWrites(cur, 'ed', 'c1')));
     const mid = await readDoc(t, 'cards/c1');
     for (const u of ['gen', 'evx', 'ex']) {
       const x = db(u), b = x.batch();
@@ -361,7 +364,8 @@ describe('N-13～N-17 卡片永久刪除（連同版本與時間標記，不留�
     const ids = await bigCard();
     const cur = await readDoc(t, 'cards/c1');
     const x = db('ed'), b = x.batch();
-    b.set(x.doc('cards/c1'), purgeStartData(cur, 'ed', ids.slice(3))); ids.slice(0, 3).forEach(e => b.delete(x.doc(`events/${e}`)));
+    await assertSucceeds(commit(x, purgeStartWrites(cur, 'ed', 'c1')));
+    ids.slice(0, 3).forEach(e => b.delete(x.doc(`events/${e}`))); b.update(x.doc('cards/c1'), { timeIds: ids.slice(3), updatedAt: NOW(), updatedBy: 'ed' });
     await assertSucceeds(b.commit());
     await assertFails(db('gen').doc('cards/c1').get());
     await assertFails(db('gen').doc('cards/c1/versions/3').get());
