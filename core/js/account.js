@@ -26,12 +26,7 @@ const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.use
 const acct={ready:false,user:null,roles:null,err:"",names:{}};
 let acctMod=null,acctRolesOff=null,acctUid=undefined;
 function acctLoad(){
-  if(!acctMod)acctMod=new Promise((ok,no)=>{
-    const go=()=>ok(window.BoardAccount.init(CFG.firebase));
-    if(window.BoardAccount)return go();
-    addEventListener("board-account-ready",go,{once:true});
-    const s=document.createElement("script");s.type="module";s.src="core/js/fb-account.js";s.onerror=()=>no(new Error("load"));document.head.append(s);
-  });
+  if(!acctMod)acctMod=storeModLoad("fb-account.js","board-account-ready","BoardAccount").then(A=>A.init(CFG.firebase));   /* 載入方式同 store.js */
   return acctMod;
 }
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
