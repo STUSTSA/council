@@ -1,7 +1,7 @@
 // 遷移程式（01B）：只讀 repo 根目錄的 data*.json 與 dept/config.js，永遠不寫它們。
 // 寫入對象只有呼叫端給的 Firestore（測試與演練＝本機模擬器，經過正式規則，以總管理員身分走 importing() 分支）。
 // 欄位對照在 core/js/store-map.js（網頁讀回來也用同一份）。
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync, lstatSync, readlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -302,6 +302,21 @@ export async function exportDept(db, dept) {
   const s = MAP.toState(dept, { settings, org, grant, cards, issues, weeks, labels, events, legacy });
   s.savedAt = MAP.fmtTaipei(Date.now(), false);
   return s;
+}
+
+// 匯出檔不能寫到 repo 裡的正式資料檔或 archive/（CLAUDE.md 第 1 條）。02D 審查：先解開符號連結（檔案本身、或它所在的資料夾）再比對，
+// 大小寫不分（Windows、macOS 預設不分大小寫）。回傳擋下的相對位置，可以寫就回傳 null。root 給測試用（預設＝repo 根目錄）
+export function blockedOut(out, root = ROOT) {
+  const real = (p, n = 0) => {
+    if (n > 40) return p;
+    try { return realpathSync(p); } catch (_) { /* 還不存在：看是不是指向別處的連結，否則解開上一層資料夾 */ }
+    try { if (lstatSync(p).isSymbolicLink()) return real(path.resolve(path.dirname(p), readlinkSync(p)), n + 1); } catch (_) { /* 不存在 */ }
+    const up = path.dirname(p);
+    return up === p ? p : path.join(real(up, n + 1), path.basename(p));
+  };
+  const rel = path.relative(real(root), real(path.resolve(out)));
+  if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  return /^data[^/\\]*\.json$/i.test(rel) || /^archive([/\\]|$)/i.test(rel) ? rel : null;
 }
 
 // 往返檢查：每個部門 Firestore → 匯出 → 跟原始資料檔做語意比對（不比的欄位見 compare.js 的 IGNORED）。回傳每個部門不同的位置

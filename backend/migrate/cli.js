@@ -2,7 +2,7 @@
 // 正式匯入是「總管理員在瀏覽器執行的匯入頁」（migration.md 第 3 節），不在這裡。
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { ROOT, loadSources, plan, runImport, finishImport, verify, deptReport, formatReport, exportDept, roundTrip } from './run.js';
+import { ROOT, loadSources, plan, runImport, finishImport, verify, deptReport, formatReport, exportDept, roundTrip, blockedOut } from './run.js';
 import { IGNORED } from './compare.js';
 
 const USAGE = `用法（在 backend/ 資料夾）：
@@ -60,9 +60,9 @@ const done = async code => { await t.cleanup(); process.exit(code); };
 if (exportId) {
   const out = opt('out');
   if (!out) fail('要給 --out=檔名.json');
-  const abs = path.resolve(out), rel = path.relative(ROOT, abs);
-  // 匯出檔不能蓋到 repo 裡的正式資料檔或 archive/（CLAUDE.md 第 1 條）
-  if (!rel.startsWith('..') && (/^data[^/\\]*\.json$/i.test(rel) || /^archive([/\\]|$)/.test(rel))) fail(`不能寫到 ${rel}：這是正式資料檔的位置，請存到別的資料夾`);
+  const abs = path.resolve(out), rel = blockedOut(abs);
+  // 匯出檔不能蓋到 repo 裡的正式資料檔或 archive/（CLAUDE.md 第 1 條；解開符號連結、大小寫不分，run.js 的 blockedOut）
+  if (rel) fail(`不能寫到 ${rel}：這是正式資料檔的位置，請存到別的資料夾`);
   const s = await exportDept(db, exportId);
   writeFileSync(abs, JSON.stringify(s, null, 1));
   console.log(`已匯出 ${exportId} 到 ${abs}：${s.issues.length} 個議題、${s.events.length} 則即時回報、${s.weeks.length} 份週報、${s.labels.length} 個標籤`);

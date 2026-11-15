@@ -5,8 +5,8 @@ import { env, google, anon, seed, seedRole, assertFails, assertSucceeds, FV, TS 
 import { loadSources, runImport, finishImport, rollbackImport, setMigrationStatus, verify, fromFirestore, MAP } from '../migrate/run.js';
 import { editCard, readDoc } from './helpers.js';
 import { canon } from '../migrate/compare.js';
-import { deptReport, exportDept, roundTrip, ROOT } from '../migrate/run.js';
-import { mkdtempSync, copyFileSync, readFileSync, existsSync } from 'node:fs';
+import { deptReport, exportDept, roundTrip, ROOT, blockedOut } from '../migrate/run.js';
+import { mkdtempSync, copyFileSync, readFileSync, existsSync, mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -255,5 +255,21 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.deepEqual(s.events[0].times, []);
     assert.deepEqual(s.issues.map(i => i.id), ['i1']);
     assert.deepEqual([s.weeks.length, s.labels.length, s.members.length], [0, 0, 0]);
+  });
+
+  it('匯出位置檢查（02D 審查）：大小寫不分、解開符號連結（檔案或資料夾）；只在暫存的假 repo 裡測，不碰正式資料檔', () => {
+    const root = mkdtempSync(join(tmpdir(), 'blk-root-')), other = mkdtempSync(join(tmpdir(), 'blk-other-'));
+    mkdirSync(join(root, 'archive')); writeFileSync(join(root, 'data-fruit.json'), '{}'); writeFileSync(join(root, 'data.json'), '{}');
+    symlinkSync(join(root, 'data-fruit.json'), join(other, 'link.json'));        // 檔案連結 → 正式資料檔
+    symlinkSync(root, join(other, 'repo'));                                       // 資料夾連結 → repo 根目錄
+    symlinkSync(join(root, 'archive'), join(other, 'arc'));
+    symlinkSync(join(root, 'data-new.json'), join(other, 'dangling.json'));       // 指向還不存在的 data-*.json
+    for (const p of [join(root, 'data.json'), join(root, 'DATA-FRUIT.JSON'), join(root, 'Data-x.Json'), join(root, 'ARCHIVE', 'x.json'), join(root, 'Archive'),
+                     join(other, 'link.json'), join(other, 'repo', 'data-fruit.json'), join(other, 'repo', 'Archive', 'y.json'), join(other, 'arc', 'z.json'),
+                     join(other, 'dangling.json'), join(root, 'docs', '..', 'data.json')])
+      assert.ok(blockedOut(p, root), `應該擋下 ${p}`);
+    for (const p of [join(other, 'export.json'), join(root, 'docs', 'data.json'), join(root, 'backup-data.json'), join(other, 'repo', 'exports', 'x.json')])
+      assert.equal(blockedOut(p, root), null, `不該擋 ${p}`);
+    assert.equal(readFileSync(join(root, 'data-fruit.json'), 'utf8'), '{}');
   });
 });
