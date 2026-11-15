@@ -23,6 +23,7 @@ document.addEventListener("click",async e=>{
     if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);state.events.forEach(e=>{e.report=false});newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
   /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
   if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
+  if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有總管理員能刪（規則） */
   if(t.closest("#addWeek")){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
     const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:"",ph:"貼上本週概述文字"}],{wide:true});
@@ -30,7 +31,7 @@ document.addEventListener("click",async e=>{
 
   const wk=t.closest("[data-week]");
   if(wk&&t.closest("[data-editweek]")){const w=state.weeks.find(x=>x.id===wk.dataset.week);
-    const v=await ask("編輯週報",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:"刪除此週"});
+    const v=await ask("編輯週報",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:fsDelOk()?"刪除此週":undefined});
     if(v)await settingSave(()=>{if(v==="delete")state.weeks=state.weeks.filter(x=>x!==w);else Object.assign(w,{date:v.date||w.date,text:v.text})},v==="delete"?"已刪除週報":"已更新週報");return}
   if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的週報？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除週報");return}
 

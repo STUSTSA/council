@@ -10,7 +10,7 @@
     "test:migrate": "firebase emulators:exec --only firestore --project demo-stustsa-board \"node --test tests/migrate.test.js\"",
     "migrate:dry": "node migrate/cli.js --dry-run",
     "migrate:emulator": "firebase emulators:exec --only firestore --project demo-stustsa-board \"node migrate/cli.js --emulator\"",
-    "test:web": "firebase emulators:exec --only firestore,auth --project demo-stustsa-board \"node ../tools/tests/fs1.js && node ../tools/tests/acc1.js\""
+    "test:web": "firebase emulators:exec --only firestore,auth --project demo-stustsa-board \"node ../tools/tests/fs1.js && node ../tools/tests/acc1.js && node ../tools/tests/fw1.js\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",

@@ -354,7 +354,7 @@ const SET_HUBS={
     {k:"report",ic:"doc",t:"工作報告",sub:"選期間、補寫內容，再存成 PDF",flow:()=>reportDialog()}]),
   backup:()=>hubRun("備份",()=>[
     {k:"export",ic:"download",t:"匯出備份",sub:"把目前的看板內容存成 JSON 檔，之後可以再匯入",act:()=>exportBackup()},
-    {k:"import",ic:"upload",t:"匯入備份",sub:"用備份檔取代目前的看板內容（會先問一次）",act:()=>$("#importFile").click()}]),
+    ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",sub:"用備份檔取代目前的看板內容（會先問一次）",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代，D2 的回復路徑另做） */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
     return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${esc(n)}（登入時勾選「在這個裝置上記住密碼」）`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]},
     "<b>安裝成 App</b><br>全會共用一個 App「學生會看板」，打開就是各部門總覽，從那裡選部門。以前每個部門各裝一個的，建議刪掉重裝。<br>iPhone：用 Safari 打開 → 分享 → 加入主畫面。<br>Android／電腦：瀏覽器選單裡的「安裝」。"),

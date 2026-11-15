@@ -2,9 +2,10 @@
 const MIN_PW=12;
 const ME_KEY="workboard:me:"+state.id;
 let meId="",sharedPwSession="";   /* 只存在記憶體，不寫進資料 */
-const meMember=()=>state.members.find(x=>x.id===meId)||null;
-const meName=()=>(meMember()||{}).name||"";
-const isAdmin=()=>(meMember()||{}).role==="admin";
+/* 02D：firestore 模式不用舊身分（members、密碼）：誰能編輯看 Google 登入的角色（store.js 的 fsWriter／fsAdmin），名字用 profiles（account.js 的 acctName） */
+const meMember=()=>fsMode()?null:state.members.find(x=>x.id===meId)||null;
+const meName=()=>fsMode()?acctName():(meMember()||{}).name||"";
+const isAdmin=()=>fsMode()?fsAdmin():(meMember()||{}).role==="admin";
 const adminCount=()=>state.members.filter(m=>m.role==="admin").length;
 /* 記住這台裝置：只存身分和「密碼雜湊的指紋」（不存密碼、不上傳）；密碼一改指紋就對不上，自動失效 */
 const REM_KEY="workboard:remember:"+state.id;
@@ -20,9 +21,10 @@ async function remLogin(){
   meId=m.id;try{localStorage.setItem(ME_KEY,m.id)}catch(_){}
   return true;
 }
-const loggedIn=()=>!!meMember();
+const loggedIn=()=>fsMode()?fsWriter():!!meMember();
 /* 需要登入的操作（進入編輯、設定頁各項）共用：這次已經登入就直接通過 */
 async function ensureLogin(){
+  if(fsMode()){if(fsBusy)toast("儲存中，請稍候");return fsWriter()&&!fsBusy}
   if(loggedIn())return true;
   if(await remLogin()){toast(`已用這台裝置記住的身分登入：${meName()}`);return true}
   return unlockEdit();

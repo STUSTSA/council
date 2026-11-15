@@ -128,6 +128,8 @@ function importing() {
 3. 順序與節奏見 [github-token-retirement.md](github-token-retirement.md) 第 2 節第二段。
 4. 舊資料檔留在 repo 當唯讀備份，不刪。
 
+02D 起 `firestore` 模式可以編輯：有這個部門角色（編輯者、管理員）或總管理員的 Google 帳號，看板的「儲存」寫進 Firestore（`core/js/store-write.js`，寫法見 [permissions.md](permissions.md) 第 5.1d 節）；沒有角色的人唯讀。網頁的寫入跟遷移共用 `store-map.js` 的欄位對照（`desired` 是 `toState` 的反方向，畫面上沒有的欄位如 `importBatch`、`legacyDesc`、`createdAt` 沿用原文件）。`firestore` 模式不讀寫本機暫存的看板資料，讀取失敗就保持唯讀，不會把空白或舊的畫面存回去。
+
 `frozen` 的好處是凍結不靠資料檔裡的 `locked`（那要寫資料檔），只靠程式設定，所以凍結本身不會碰正式資料。
 
 ## 6. 驗證清單

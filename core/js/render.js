@@ -32,8 +32,11 @@ const canEdit=()=>loggedIn()&&!readOnly();
 const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${key}">${ico("edit")}編輯</button>`;
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */
+/* 02D：firestore 模式整區編輯的限制——甘特圖時間軸、會長室追蹤、文件連結寫的是部門設定（部門管理員以上）；
+   秘書處會議編輯寫別的部門（還在 GitHub），firestore 模式不開放 */
+const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
-  if(editing||!(await ensureLogin()))return false;
+  if(editing||!fsSecOk(key)||!(await ensureLogin()))return false;
   morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();render()});
   const box=document.querySelector(`[data-edbox="${key}"]`);   /* 剛打開的那張，編輯工具淡入（board.css「編輯／檢視切換時的動畫」段的 .sec-anim） */
   if(box&&!reduceMotion()){box.classList.remove("sec-anim");void box.offsetWidth;box.classList.add("sec-anim");clearTimeout(box._sa);box._sa=setTimeout(()=>box.classList.remove("sec-anim"),900)}
@@ -43,6 +46,7 @@ function cancelEdit(){morph(()=>{if(CFG.meeting)mtDiscard();if(dirty)state=norma
 /* 固定在頁面上的整區（追蹤、會議編輯、甘特圖時間軸）：編輯中加 .sec-edit、最下面補上「取消｜儲存」；卡片本身（即時回報、議題、完成紀錄）每次重畫時自己帶 */
 function renderSecEdit(){
   document.body.classList.toggle("authed",canEdit());
+  if(fsMode())document.querySelectorAll('[data-edit="s:follow"],[data-edit="s:docs"]').forEach(b=>{b.hidden=!fsSecOk(b.dataset.edit)});   /* 甘特圖在 views.js、會議編輯在 meeting.js */
   document.querySelectorAll("[data-edit]:not(:has(.ico))").forEach(b=>b.insertAdjacentHTML("afterbegin",ico("edit")));   /* 骨架（shell.js）裡的編輯鈕載入時還沒有 icon 可用，第一次畫時補上 */
   document.querySelectorAll("[data-edbox^='s:']").forEach(b=>{const on=editing&&cardEdit===b.dataset.edbox,bar=b.querySelector(":scope>.card-edbar");
     b.classList.toggle("sec-edit",on);if(on&&!bar)b.insertAdjacentHTML("beforeend",editBarHTML());else if(!on&&bar)bar.remove()});

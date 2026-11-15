@@ -52,7 +52,7 @@ function renderMeet(){
   const ms=[...MT.depts.values()],has=ms.filter(m=>mtEvs(m).length),none=ms.filter(m=>m.data&&!mtEvs(m).length),errs=ms.filter(m=>!m.data&&m.err!=="還沒有資料");
   if(!has.some(m=>m.id===MTS.sel))MTS.sel=has[0]?has[0].id:"";
   const g=mtGrant(),btn=edp.querySelector("[data-edit]");
-  btn.hidden=!g;   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段） */
+  btn.hidden=!g||fsMode();   /* firestore 模式不開放會議編輯（render.js 的 fsSecOk） */   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段） */
   /* 狀態只寫一行短的 */
   $("#meetEdSt").innerHTML=g?`<span class="grant-on">開放修改中</span> · ${esc(g.by||"會長室")} ${esc((g.at||"").slice(11,16))} 開，今天有效`
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
@@ -87,9 +87,10 @@ const grantOn=()=>!!(state.meetGrant&&state.meetGrant.date===today());
 function renderGrant(){
   const p=$("#grantPanel");if(!p)return;p.hidden=!CFG.grant;if(!CFG.grant)return;
   const sw=$("#grantSw"),on=grantOn(),g=state.meetGrant;
-  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);
+  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);sw.disabled=fsMode();   /* firestore 模式：授權存在 grants/meetingEdit（只有總管理員＋稽核），這個開關還沒接上 */
   $("#grantSt").textContent=on?`今天開放中（${g.by||""} ${(g.at||"").slice(11,16)} 開，23:59 自動關閉）`:"關閉：秘書處只能看各部門的報告事項";
   if(!sw._wired){sw._wired=true;sw.addEventListener("click",async()=>{
+    if(fsMode())return;
     const want=!grantOn();sw.classList.toggle("on",want);
     if(readOnly()||!(await ensureLogin())){renderGrant();return}
     await settingSave(()=>{state.meetGrant=want?{date:today(),by:meName(),at:nowStr()}:null},want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");

@@ -41,18 +41,28 @@ function acctRoleSub(){
   if(acctSuper())r.unshift("總管理員");
   return r.length?r.join("、"):"唯讀";
 }
-function acctChanged(){if(typeof renderSettings==="function")renderSettings()}
+/* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
+let acctCanW="";
+function acctChanged(){
+  if(typeof renderSettings==="function")renderSettings();
+  const w=`${fsWriter()}|${fsAdmin()}|${fsDelOk()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render()}
+}
+/* 登入狀態與第一次的角色都讀到了（boot.js 等它再決定要不要提示唯讀） */
+let acctKnownOk;const acctKnown=new Promise(r=>acctKnownOk=r);
+/* firestore 模式畫面上的名字（工作報告封面、儲存者）：profiles 的名稱，沒有就用 Google 名稱 */
+const acctName=()=>acct.user?(acct.names[acct.user.uid]||acct.user.name||acct.user.email||""):"";
 async function acctStart(){
-  if(!FB_ON||!(acctOn()||joinToken()))return;
-  let A;try{A=await acctLoad()}catch(_){return}
+  if(!FB_ON||!(acctOn()||joinToken())){acctKnownOk();return}
+  let A;try{A=await acctLoad()}catch(_){acctKnownOk();return}
   A.onUser(u=>{
     const first=acctUid===undefined,uid=u?u.uid:null;
+    if(!u)acctKnownOk();
     if(uid===acctUid){acct.user=u;return}
     acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&acctOn())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
@@ -62,8 +72,8 @@ async function acctStart(){
 let acctReloadSeq=0;
 function acctReload(){
   const my=++acctReloadSeq;
-  storeFsLoad().then(d=>{if(my!==acctReloadSeq)return;storeFsErr=null;state=normalize(d);render()})
-    .catch(e=>{if(my!==acctReloadSeq)return;storeFsErr=e;state=normalize({});render();if(e&&e.code==="permission-denied")toast("這個部門要登入才能看")});
+  storeFsLoad().then(r=>{if(my!==acctReloadSeq)return;storeFsErr=null;storeFsUse(r);render()})
+    .catch(e=>{if(my!==acctReloadSeq)return;storeFsErr=e;storeFsBase=null;state=normalize({});render();if(e&&e.code==="permission-denied")toast("這個部門要登入才能看")});
 }
 /* 收掉帳號與會長室管理的面板（登出、換帳號、失去總管理員時） */
 function acctCloseAdmin(){if(typeof setOpen!=="undefined"&&setOpen&&(acctPanels.length||paneKey==="council"||paneKey==="acct"||subOpen))paneClose().catch(()=>{})}
@@ -95,7 +105,12 @@ function acctSettingsInner(){
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
   if(!acct.user)return setSec(wk)+acctGateHTML();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
-  return setSec(wk)+setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))
+  /* 02D：有這個部門角色的人多報告、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
+  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
+      +setRow("labels","tag","標籤",state.labels.length?`人事時地物 ${state.labels.length} 個`:"人事時地物，還沒有建立")
+      +setRow("backup","download","備份","匯出看板內容（JSON 檔）")):"";
+  return setSec(fsWriter()?setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`):wk)
+    +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理","人員、QR 邀請、申請、紀錄")):"");
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
@@ -318,7 +333,7 @@ function requestsPanel(){
 }
 
 /* 紀錄：最近 50 筆、翻頁；by.roles＝某人的權限歷史（附檢查連號）、by.actor＝某人做過什麼 */
-const ACT_T={create:"建立邀請",redeem:"QR 加入",revoke:"撤銷",request:"申請",approve:"核准",reject:"拒絕",cancel:"撤回",invite:"QR 加入",manual:"手動調整",claim:"認領舊身分",purge:"刪除卡片",bootstrap:"建立總管理員"};
+const ACT_T={update:"修改",create:"建立邀請",redeem:"QR 加入",revoke:"撤銷",request:"申請",approve:"核准",reject:"拒絕",cancel:"撤回",invite:"QR 加入",manual:"手動調整",claim:"認領舊身分",purge:"刪除卡片",bootstrap:"建立總管理員"};
 function auditWhat(l){
   if(l.col==="roles"){
     const b=l.before||{},a=l.after||{},bd=b.depts||{},ad=a.depts||{},ch=[];

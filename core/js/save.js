@@ -6,6 +6,7 @@ function selfDoc(){
   return `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${reset}</style></head><body>${body}</body></html>`;
 }
 async function persist(msg){
+  if(fsMode())return fsPersist(msg);   /* 02D：firestore 模式寫進新資料庫（store.js） */
   if(storeLocked()){toast(STORE_NOTE[storeSource()]);return false}   /* 搬家中或已搬到新資料庫：不寫資料檔（store.js） */
   if(artifactNS){
     try{await artifactNS.publish(selfDoc());toast(msg||"已發布，所有人都會看到最新版");return true}
@@ -26,8 +27,20 @@ async function persist(msg){
 }
 function save(){
   state.savedAt=nowStr();if(meName())state.savedBy=meName();
+  if(fsMode())return fsSave();
   editing=false;dirty=false;render();
   persist().then(()=>{if(CFG.meeting)mtPushAll()});   /* 秘書處：改過的其他部門各自寫回 */
+}
+/* 02D：firestore 模式的儲存。先結束編輯、寫入；失敗時保留畫面上的修改、回到編輯中（取消＝還原到編輯前）。
+   編輯中的那張已經不在畫面上（例如永久刪除失敗）就還原成編輯前，卡片照舊在 */
+async function fsSave(){
+  const key=editing?cardEdit:"",snap=snapshot;
+  editing=false;dirty=false;render();
+  if(await persist())return;
+  if(!key){dirty=true;return}
+  const id=key.slice(2),alive=key.startsWith("s:")||(key[0]==="e"?state.events:state.issues).some(x=>x.id===id);
+  if(!alive){state=normalize(JSON.parse(snap));render();return}
+  editing=true;cardEdit=key;snapshot=snap;dirty=true;render();
 }
 /* 匯出備份：JSON（只有資料，用「匯入備份」還原） */
 async function exportBackup(){

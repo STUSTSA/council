@@ -161,11 +161,73 @@
     return s;
   }
 
+  /* ===== 畫面 → 文件內容（02D：網頁在 firestore 模式的寫入，core/js/store-write.js） =====
+     s：畫面上的部門資料（schemaVersion 13）；raw：上次讀回來的文件（toState 的 src），用來保留畫面上沒有的欄位
+     （importBatch、legacyDesc、createdAt、行的 id 等）；uid：新卡片的 createdBy。
+     回傳每份文件「應該是什麼內容」（不含 updatedAt／updatedBy／version／rev）。store-write.js 對「上次讀回來時的畫面資料」
+     與「現在的畫面資料」各算一次，只寫內容不一樣的文件，所以 normalize 補上的預設值不會讓沒改的文件被重寫。
+     新文件的 ID 跟遷移一樣是 {deptId}__{畫面上的 ID}（讀回來時 oid 拿掉前綴，畫面上的 ID 不變）。 */
+  function desired(dept, s, raw, uid) {
+    const by = k => new Map(((raw && raw[k]) || []).map(d => [d.id, d]));
+    const R = { cards: by("cards"), issues: by("issues"), weeks: by("weeks"), labels: by("labels"), events: by("events") };
+    const keep = (r, keys) => { const o = {}; if (r) keys.forEach(k => { if (k in r) o[k] = copy(r[k]); }); return o; };
+    const mem = new Set((s.members || []).map(m => m.id));
+    const staff = a => (a || []).map(x => mem.has(x) ? legacyStaff(dept, x) : x);
+    const ids = a => (a || []).map(x => nid(dept, x));
+    /* 排序值：照畫面順序，原本的值還是遞增就沿用，否則接在前一張後面（只動到順序真的變了的文件） */
+    const ordered = (list, M) => { let last = null; return list.map(id => { const r = M.get(id);
+      const o = r && typeof r.order === "number" && (last === null || r.order > last) ? r.order : last === null ? 0 : last + 1000; last = o; return o; }); };
+    const out = { labels: {}, issues: {}, weeks: {}, cards: {}, events: {}, settings: null };
+
+    (s.labels || []).forEach(l => { const id = nid(dept, l.id);
+      out.labels[id] = clean({ deptId: dept, kind: l.kind, name: String(l.name || ""), ...keep(R.labels.get(id), ["importBatch"]) }); });
+
+    const isIds = (s.issues || []).map(i => nid(dept, i.id)), iord = ordered(isIds, R.issues);
+    (s.issues || []).forEach((i, k) => { const id = isIds[k], a = parseTaipei(i.start), b = parseTaipei(i.end);
+      out.issues[id] = clean({ deptId: dept, title: String(i.title || ""), cur: +i.cur || 0, start: i.start || "", end: i.end || "",
+        startAt: a ? ts(a.ms) : null, endAt: b ? ts(b.ms) : null, note: i.note || "", tags: copy(i.tags || []), labels: ids(i.labels),
+        links: copy(i.links || []), staff: staff(i.staff),
+        markers: (i.markers || []).map(m => clean({ ...copy(m), evId: m.evId ? nid(dept, m.evId) : m.evId, tmId: m.tmId ? nid(dept, m.tmId) : m.tmId })),
+        doneAt: i.doneAt || null, order: iord[k], ...keep(R.issues.get(id), ["importBatch"]) }); });
+
+    (s.weeks || []).forEach(w => { const id = nid(dept, w.id), r = R.weeks.get(id);
+      out.weeks[id] = clean({ deptId: dept, date: w.date || "", text: String(w.text || ""), auto: !!w.auto,
+        ...(r ? keep(r, ["createdAt", "importBatch"]) : { createdAt: NOW }) }); });
+
+    const evIds = (s.events || []).map(e => nid(dept, e.id)), cord = ordered(evIds, R.cards);
+    (s.events || []).forEach((e, k) => {
+      const id = evIds[k], r = R.cards.get(id), st = e.doneAt ? "done" : "open", rb = (r && r.blocks) || [];
+      const blocks = String(e.desc || "").split("\n").map((text, n) => { const b = rb[n];
+        return b && b.text === text ? copy(b) : { id: (b && b.id) || `${id}_L${n}`, text, check: b && b.check !== undefined ? copy(b.check) : null, timeId: b && b.timeId !== undefined ? b.timeId : null }; });
+      const times = e.times || [];
+      const c = { deptId: dept, title: String(e.name || ""), blocks, timeIds: times.map(t => nid(dept, t.id)),
+        issueId: e.issueId ? nid(dept, e.issueId) : null, staff: staff(e.staff), labels: ids(e.labels), links: copy(e.links || []),
+        report: !!e.report, state: st, order: cord[k], round: e.round, roundAt: e.roundAt, touched: copy(e.touched), touchedAt: e.touchedAt,
+        fromEv: e.fromEv ? nid(dept, e.fromEv) : undefined,
+        ...keep(r, ["createdAt", "createdBy", "importBatch", "legacyDesc", "purgeLog", "deletedAt", "deletedBy"]) };
+      /* 結案時間只能是伺服器時間（規則 stateMove）：狀態沒變就沿用原本的值，剛結案＝伺服器時間，移回＝null */
+      if (!r) Object.assign(c, { doneAt: st === "done" ? NOW : null, deletedAt: null, deletedBy: null, createdAt: NOW, createdBy: uid });
+      else if (r.state === st) Object.assign(c, keep(r, ["doneAt"]));
+      else c.doneAt = st === "done" ? NOW : null;
+      out.cards[id] = clean(c);
+      times.forEach(t => { const eid = nid(dept, t.id), r2 = R.events.get(eid), a = parseTaipei(t.start), b = parseTaipei(t.end) || a;
+        out.events[eid] = clean({ deptId: dept, cardId: id, blockId: r2 && r2.blockId !== undefined ? r2.blockId : null, label: t.label || "",
+          start: a ? ts(a.ms) : null, end: a ? ts(Math.max(b.ms, a.ms)) : null, startRaw: t.start || "", endRaw: t.end || "",
+          allDay: a ? a.allDay : true, place: t.place || "", toIssue: !!t.toIssue,
+          scope: (r2 && r2.scope) || "dept", visibility: (r2 && r2.visibility) || "internal", ...keep(r2, ["title", "summary", "importBatch"]) }); });
+    });
+
+    const rb = s.reportBase ? { date: s.reportBase.date || "", issues: Object.fromEntries(Object.entries(s.reportBase.issues || {}).map(([k, v]) => [nid(dept, k), copy(v)])) } : null;
+    out.settings = clean({ title: String(s.title || ""), range: copy(s.range || null), reportBase: rb,
+      follows: dept === "president" ? (s.follows || []).map(f => ({ ...copy(f), ref: nid(f.dept, f.ref) })) : undefined, docs: copy(s.docs || []) });
+    return out;
+  }
+
   /* Firestore 讀回來的值 → 這裡的格式：Timestamp（有 toMillis）換成 {__ts}，其他原樣 */
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, nid, oid, plain };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);

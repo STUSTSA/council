@@ -2,7 +2,7 @@
 function renderHeader(){
   document.title=state.title;renderHero();
   $("#saveInfo").textContent=readOnly()?`更新於 ${fmt(state.savedAt)||"—"}`
-    :(state.savedAt?`上次儲存 ${state.savedAt}${state.savedBy?`（${state.savedBy}）`:""}`:"尚未儲存")+(cloudOn()?` · ${({ok:"雲端已同步",empty:"雲端尚無資料，儲存後建立",offline:"離線中",limited:"GitHub 讀取次數暫時用完",error:"雲端讀取失敗"})[cloud.status]||"連線雲端中…"}${cloudOn()&&!ghToken()&&loggedIn()?" · 這台裝置沒有連上雲端，儲存只會留在這台裝置":""}`:"")+(localOK?"":" · 這個瀏覽器無法本機保存，請用「匯出備份」");
+    :fsMode()?"":(state.savedAt?`上次儲存 ${state.savedAt}${state.savedBy?`（${state.savedBy}）`:""}`:"尚未儲存")+(cloudOn()?` · ${({ok:"雲端已同步",empty:"雲端尚無資料，儲存後建立",offline:"離線中",limited:"GitHub 讀取次數暫時用完",error:"雲端讀取失敗"})[cloud.status]||"連線雲端中…"}${cloudOn()&&!ghToken()&&loggedIn()?" · 這台裝置沒有連上雲端，儲存只會留在這台裝置":""}`:"")+(localOK?"":" · 這個瀏覽器無法本機保存，請用「匯出備份」");
   offlinePill();notiBadge();if(notiOpen)renderNoti();
   /* 2026-11-06：頁首的「編輯／取消／儲存」拿掉，改成每張卡片自己的「編輯」與「取消｜儲存」（render.js 的單卡編輯） */
 }
@@ -22,7 +22,7 @@ function renderWeeks(){
   if(!openWeeks&&ws.length)openWeeks=new Set([ws[0].id]);
   const lines=t=>String(t||"").split("\n").map(l=>`<span class="wl">${l.trim()?esc(l):"&nbsp;"}</span>`).join("");
   $("#weekList").innerHTML=ws.map((w,k)=>`<details class="week ${w.id===newWeekId?"new":""}" data-week="${w.id}" ${openWeeks&&openWeeks.has(w.id)?"open":""}>
-      <summary><span class="num">${fmt(w.date)}</span>${k===0?'<span class="badge">最新</span>':""}<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${fmt(w.date)} 的週報">刪除</button></summary>
+      <summary><span class="num">${fmt(w.date)}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${fmt(w.date)} 的週報">刪除</button>`:""}</summary>
       <div class="week-tools"><button type="button" class="icon" data-copyweek>複製文字</button><button type="button" class="icon auth-only" data-editweek>${ico("edit")}編輯</button></div>
       <div class="week-text">${lines(w.text)}</div></details>`).join("")
     ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
@@ -122,7 +122,7 @@ function cardHTML(it,open,pane,sel){
   return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${it.id}"`} data-issue="${it.id}" data-edbox="i:${it.id}"${sel?' aria-current="true"':""}>
     <div class="card-top">
       <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct title="時程：設定的期間已經過的比例">${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
-      ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button><button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button></div>
+      ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
     ${open?`
     ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${fmt(it.start)} – ${fmt(it.end)}`:"未排入甘特圖"}</span></div>
@@ -174,7 +174,7 @@ function doneFieldsHTML(o,isEv){
   const opts=[["","（不連結）"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   return `<div class="evfs">
       ${F(nk,"名稱",`<b>${esc(o[nk])}</b>`,()=>`<input data-e="${nk}" value="${esc(o[nk])}">`)}
-      ${F("done","完成日期",`<span class="num">${fmt(o.doneAt)||"—"}</span>`,()=>`<input type="date" data-e="done" value="${o.doneAt||""}">`)}
+      ${isEv&&fsMode()?"":F("done","完成日期",`<span class="num">${fmt(o.doneAt)||"—"}</span>`,()=>`<input type="date" data-e="done" value="${o.doneAt||""}">`)}
       ${F(dk,"說明",o[dk]?`<span class="evf-desc">${esc(o[dk])}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="${dk}" rows="3">${esc(o[dk]||"")}</textarea>`)}
       ${isEv?F("issue","母議題",par?esc(par.title):noneTxt("不連結"),()=>fieldHTML({name:"evIssue",label:"完成紀錄會寫進這個議題的處理紀錄",type:"select",value:o.issueId||"",options:opts})):""}
     </div>`;
@@ -184,7 +184,7 @@ function renderCards(){
   if(!editing)ifFld=null;
   const it=progOpen&&activeIssues().find(i=>i.id===progOpen);
   if(progOpen&&!it)progOpen=null;
-  $("#ganttEdBtn").hidden=!!it;   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現 */
+  $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
   $("#pvBack").innerHTML=ico("prev","sm")+"返回甘特圖";
   $("#cardDetail").innerHTML=it?cardHTML(it,true,true,false):"";
   $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
@@ -345,7 +345,7 @@ function renderDone(){
   /* 每一筆拆成：屬性、標題、副標、內容，膠囊與右側詳情共用。內容最下面「編輯」（登入才看得到）；
      編輯中（cardEd）名稱、完成日期、說明（即時回報多母議題）換成逐欄編輯（doneFieldsHTML），最下面「取消｜儲存」 */
   const tail=(key,ed)=>ed?editBarHTML():`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
-  const items=ds.map(it=>{const ed=cardEd("i",it.id);return {id:it.id,ed,key:"i:"+it.id,d:it.doneAt||"",attr:`data-issue="${it.id}"`,title:esc(it.title),sub:`${fmt(it.doneAt)||"—"} · 議題`,del:`data-deldone aria-label="刪除「${esc(it.title)}」"`,
+  const items=ds.map(it=>{const ed=cardEd("i",it.id);return {id:it.id,ed,key:"i:"+it.id,d:it.doneAt||"",attr:`data-issue="${it.id}"`,title:esc(it.title),sub:`${fmt(it.doneAt)||"—"} · 議題`,del:fsDelOk()?`data-deldone aria-label="刪除「${esc(it.title)}」"`:"",
     body:`${ed?doneFieldsHTML(it,false):""}${hasDates(it)?`<div class="sub">期間 ${fmt(it.start)} – ${fmt(it.end)}</div>`:""}
         ${!ed&&it.note?`<p style="margin:0;white-space:pre-wrap">${esc(it.note)}</p>`:""}
         ${it.tags.length?`<div class="tags">${it.tags.map((g,k)=>`<span class="tag ${k===it.cur?"cur":k<it.cur?"past":""}">${esc(g)}</span>`).join("")}</div>`:""}
@@ -364,7 +364,7 @@ function renderDone(){
   $("#doneCount").textContent=items.length;
   const nextDone=md?(items[items.findIndex(y=>y.id===selDone)+1]||{}).id:null;
   const cap=x=>`<details class="ev done-ev ${dnew(x.id)} ${md&&x.id===selDone?"sel":""} ${x.id===nextDone?"next":""} ${x.ed?"sec-edit":""}" data-done="${x.id}" data-edbox="${x.key}" ${x.attr} data-st="done" ${!md&&(openDone.has(x.id)||x.ed)?"open":""}${md&&x.id===selDone?' aria-current="true"':""}>
-      <summary><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b><button type="button" class="ev-del edit-only" ${x.del}>${ico("close","solo")}</button><span class="ev-chev" aria-hidden="true">▾</span></summary>
+      <summary><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${x.del?`<button type="button" class="ev-del edit-only" ${x.del}>${ico("close","solo")}</button>`:""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><p class="ev-meta">${x.sub}</p><div class="done-body">${md&&x.id===selDone?"":x.body}</div></div></details>`;   /* 左右兩欄時被選到的那顆只是空位，內容（含編輯欄位）只畫在右側詳情 */
   $("#doneList").innerHTML=items.map(cap).join("")||`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`;
   if(md){const x=items.find(y=>y.id===selDone);

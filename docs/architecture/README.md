@@ -3,6 +3,7 @@
 - 產出日期：2026-11-11。分支 `claude/cool-ramanujan-qg4y8o`，疊在階段 00（[#52](https://github.com/LinkMasterKing/-/pull/52)，`docs/upgrade-plan.md`）之上。
 - **01A-R（架構驗收修正）**：同日依審查意見補強，修改內容與待驗證項目見 [review-01A-R.md](review-01A-R.md)。
 - 本階段只有設計文件：沒有改網站功能、沒有碰 `data*.json`、沒有建立 Firebase 專案、沒有開始 01B。
+- **02D D1（`firestore` 模式的看板寫入）已在模擬器完成**（2026-11-15）：有部門角色的 Google 帳號可以編輯，規則不變，寫法與每批讀取次數見 [permissions.md](permissions.md) 第 5.1d 節。
 - **02B（Google 登入、角色、QR 邀請、撤權、稽核紀錄、卡片刪除紀錄）已在模擬器完成**（2026-11-13）：實作見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 9.6 節、卡片刪除紀錄見 [permissions.md](permissions.md) 第 5.1c 節，實測見 [verification.md](verification.md) 第 8 節。規則**還沒部署**到開發專案（等你同意）。
 - **02A（02B 開工前的缺口）已完成**：寫入四項已定決策（下方「02A 定案」）、補 02B 的登入／角色／QR／撤權／稽核畫面流程（[invitations-roles-audit.md](invitations-roles-audit.md) 第 9 節）、規則負面測試 N-01～N-17（[permissions.md](permissions.md) 第 5.1b 節）、repo 移轉檢查清單（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節）。實測見 [verification.md](verification.md) 第 7 節。
 - **01B（模擬器實作）已完成**：正式規則 `backend/firestore.rules`、索引、遷移程式、規則與遷移測試、網頁的資料來源開關（`dept/config.js` 的 `source`，預設全部 `github`）。實測結果見 [verification.md](verification.md) 第 6 節；01B 對設計的調整見下方「01B 實作調整」。
@@ -87,7 +88,7 @@
 | R4 | D6「有部門角色的人才能申請預約」寫進 `bookings` 的建立規則（`hasDeptRole()`） | 設計稿的規則草稿早於 D6 定案 |
 | R5 | ~~時間事件一律有 `cardDeleted`~~（02A 隨 D14 取消；改成屬於卡片的時間事件必須列在卡片 `timeIds`） | 永久刪除靠 `timeIds` 確認全部刪光 |
 | R6 | 欄位補充：`issues.startAt`／`endAt`（原字串另存時間）、`weeks.updatedAt`、`meetingMinutes.deptId` | 對照時發現需要；白名單已含 |
-| R7 | 網頁的 `firestore` 模式在 02 之前只能檢視（沒有登入，正式專案上會被規則擋下，畫面提示要登入）；總覽、追蹤、各部門彙整這些「讀別的部門」的功能仍讀 GitHub 上的資料檔 | 登入與寫入是 02 的範圍；跨部門讀取在 02D 逐部門切換時一起改 |
+| R7 | 網頁的 `firestore` 模式在 02 之前只能檢視（沒有登入，正式專案上會被規則擋下，畫面提示要登入；02B 起 Google 登入，02D 起有部門角色的人可以編輯，見 [permissions.md](permissions.md) 第 5.1d 節）；總覽、追蹤、各部門彙整這些「讀別的部門」的功能仍讀 GitHub 上的資料檔 | 登入與寫入是 02 的範圍；跨部門讀取在 02D 逐部門切換時一起改 |
 
 ### 待辦（不擋 01B）
 
@@ -124,7 +125,7 @@
 | 開發專案的 `departments` 十個部門文件（邀請與申請的規則要求部門存在）：用遷移程式只匯入部門、或在主控台手動建 | 部署後、實測前 | 你決定方式 |
 | 第一位總管理員（[第 7 節](invitations-roles-audit.md)）：先登入一次取得 UID，再在主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1` | 實測前 | 你 |
 | 實機測試要一個 `source: "firestore"` 的部門：把水果部切成 `firestore`（一行的 PR；水果部在開發專案沒有資料，看板會是空的） | 實測前 | 你決定 |
-| 看板內容在 `firestore` 模式的寫入（卡片新增、修改、永久刪除的前端，照 `purgeCard` 的順序）還沒接上，02D 切換正式資料前要有 | 02D 之前，哪個階段做待定 | 你決定 |
+| ~~看板內容在 `firestore` 模式的寫入~~ | 02D D1 完成（模擬器）：[permissions.md](permissions.md) 第 5.1d 節 | |
 | 彈出視窗被擋時的轉址登入在 Safari／iPhone 安裝版是否可用（`authDomain` 與網站不同網域） | 實機測試 | 02 驗收 |
 | `dept/config.js` 現在填的是開發專案的網頁設定：這串 PR 合併進 main 之前要換成正式專案的設定（否則正式網站的 QR、角色會寫進開發專案） | 進 main 之前 | 你決定 |
 | 核銷後原始權杖會寫進 `invitations.token`（已核准設計第 2 節：規則靠它驗證；用過的權杖沒有作用）。驗收條件「資料庫不存權杖」若要照字面，要改成另一種驗證方式 | 方便時 | 你確認是否接受 |
