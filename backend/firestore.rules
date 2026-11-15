@@ -2,7 +2,7 @@ rules_version = '2';
 // 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-08、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -182,10 +182,19 @@ service cloud.firestore {
     match /roleRequests/{id} {
       allow get:  if signedIn() && (resource.data.uid == me() || isSuper());
       allow list: if isSuper() || (signedIn() && resource.data.uid == me());
+      // 02B：ID 一定是 SDK 產生的 20 碼英數字（ID 會出現在會長室的畫面上，不接受自訂 ID）；
+      // 舊身分只能是同一個部門、而且存在的那一筆（核准時會替申請人認領）
+      function legacyOk() {
+        return !d().keys().hasAny(['legacyRef'])
+          || (d().legacyRef is string && d().legacyRef.matches(d().deptId + '__[A-Za-z0-9_-]{1,80}')
+              && exists(doc('legacyIdentities', d().legacyRef)));
+      }
       allow create: if signedIn() && d().uid == me() && d().status == 'pending' && d().rev == 1
+        && id.matches('^[A-Za-z0-9]{20}$')
         && d().keys().hasOnly(['uid', 'deptId', 'role', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy'])
         && d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()   // 02A：不再申請檢視資格
-        && exists(doc('departments', d().deptId))
+        && exists(doc('departments', d().deptId)) && legacyOk()
+        && (!d().keys().hasAny(['note']) || (d().note is string && d().note.size() <= 200))
         && d().createdAt == request.time && stamped() && auditAfter('roleRequests', id, 1);
       allow update: if revNext() && auditAfter('roleRequests', id, d().rev) && stamped() && (
           (resource.data.uid == me() && resource.data.status == 'pending' && d().status == 'cancelled'

@@ -1,4 +1,4 @@
-// 02B 卡片刪除紀錄 D-01～D-07（permissions.md 第 5.1c 節）：
+// 02B 卡片刪除紀錄 D-01～D-07（permissions.md 第 5.1c 節）＋權限申請的輸入限制 R-01～R-03（審查發現）：
 // 卡片永久刪除後版本也一起消失，所以「開始永久刪除」那一批一定要新建一筆刪除紀錄（誰、何時、卡片標題），
 // 不能略過、不能沿用舊的、內容要等於被刪的卡片、事後任何人都不能改或刪；只有總管理員讀得到。
 import { describe, it, before, after, beforeEach } from 'node:test';
@@ -142,3 +142,33 @@ describe('D-01～D-07 卡片刪除紀錄', () => {
     await assertSucceeds(editCard(x, 'ed', 'c1', await readDoc(t, 'cards/c1'), { title: '改' }));
   });
 });
+
+// 審查發現（P0）：申請的文件 ID 會出現在會長室的畫面上。不能讓一般帳號用自訂 ID（例如塞 HTML）建申請；
+// 舊身分只能是同部門、存在的那一筆；備註最多 200 字
+describe('R-01～R-03 權限申請的輸入限制', () => {
+  const req = (u, id, o = {}) => [[`roleRequests/${id}`, { uid: u, deptId: 'rights', role: 'editor', note: '', status: 'pending', rev: 1, createdAt: NOW(), updatedAt: NOW(), updatedBy: u, ...o }],
+    [`auditLogs/roleRequests_${id}_1`, { col: 'roleRequests', docId: id, rev: 1, action: 'request', actor: u, at: NOW(), before: {}, after: { status: 'pending' }, ref: '' }]];
+  const OK_ID = 'AbCdEfGhIjKlMnOpQrSt';
+  it('R-01 申請的文件 ID 不是 SDK 的 20 碼英數字（含 HTML、引號、太短、太長）：拒絕', async () => {
+    for (const id of ['q" autofocus onfocus="alert(1)" x="', 'x"><img src=x onerror=alert(1)>', 'short', OK_ID + 'X', 'AbCdEfGhIjKlMnOpQr-t'])
+      await assertFails(commit(db('gen'), req('gen', id))).catch(e => { throw new Error(id + ' ' + e.message); });
+    await assertSucceeds(commit(db('gen'), req('gen', OK_ID)));
+  });
+  it('R-02 舊身分：別部門的、不存在的、含斜線的：拒絕；同部門存在的：允許', async () => {
+    await seed(t, async d => {
+      await d.doc('legacyIdentities/rights__m1').set({ deptId: 'rights', name: '舊', oldRole: 'member', claimedBy: null, rev: 1 });
+      await d.doc('legacyIdentities/events__m2').set({ deptId: 'events', name: '舊二', oldRole: 'member', claimedBy: null, rev: 1 });
+    });
+    const ids = ['A0000000000000000001', 'A0000000000000000002', 'A0000000000000000003', 'A0000000000000000004'];
+    await assertFails(commit(db('gen'), req('gen', ids[0], { legacyRef: 'events__m2' })));
+    await assertFails(commit(db('gen'), req('gen', ids[1], { legacyRef: 'rights__nope' })));
+    await assertFails(commit(db('gen'), req('gen', ids[2], { legacyRef: 'rights__m1/x' })));
+    await assertSucceeds(commit(db('gen'), req('gen', ids[3], { legacyRef: 'rights__m1' })));
+  });
+  it('R-03 備註超過 200 字或不是字串：拒絕', async () => {
+    await assertFails(commit(db('gen'), req('gen', 'B0000000000000000001', { note: 'x'.repeat(201) })));
+    await assertFails(commit(db('gen'), req('gen', 'B0000000000000000002', { note: { html: '<b>' } })));
+    await assertSucceeds(commit(db('gen'), req('gen', 'B0000000000000000003', { note: 'x'.repeat(200) })));
+  });
+});
+

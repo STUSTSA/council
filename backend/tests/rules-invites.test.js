@@ -169,7 +169,7 @@ describe('邀請核銷 I-01～I-22、I-31～I-36', () => {
     for (const [i, x] of ctxs.entries()) {
       const u = 'x' + i;
       await assertFails(x.doc(`users/${u}`).set({ email: `${u}@example.test`, createdAt: NOW(), lastLoginAt: NOW() }));
-      await assertFails(commit(x, requestWrites(u, 'rq' + i)));
+      await assertFails(commit(x, requestWrites(u, ('rq' + i).padEnd(20, '0'))));
       await assertFails(commit(x, redeemWrites(u, k, null, { depts: { rights: 'editor' } })));
       await assertFails(x.doc(`invitations/${k.h}`).get());
     }
@@ -209,8 +209,8 @@ describe('邀請核銷 I-01～I-22、I-31～I-36', () => {
 describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
   async function pending(u, id, o) { await assertSucceeds(commit(db(u), requestWrites(u, id, o))); return readDoc(t, `roleRequests/${id}`); }
   it('I-30 申請 → 核准；撤權', async () => {
-    const req = await pending('u1', 'q1');
-    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1')]));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')]));
     let r = await roleOf('u1');
     assert.equal(r.depts.rights, 'editor');
     await assertSucceeds(commit(db('boss'), superRoleWrites('boss', 'u1', r, { depts: {} }, 'revoke', 'rv1')));
@@ -219,11 +219,11 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
     assert.equal(r.rev, 2);
   });
   it('I-23 申請人自己核准：拒絕', async () => {
-    const req = await pending('u1', 'q1');
-    await assertFails(commit(db('u1'), decideWrites('u1', 'q1', req, 'approved')));
-    await assertFails(commit(db('u1'), [...decideWrites('u1', 'q1', req, 'approved'), ...superRoleWrites('u1', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1')]));
-    await assertSucceeds(commit(db('u1'), [[`roleRequests/q1`, { ...req, status: 'cancelled', rev: 2, updatedAt: NOW(), updatedBy: 'u1' }],
-      [auditId('roleRequests', 'q1', 2), { col: 'roleRequests', docId: 'q1', rev: 2, action: 'cancel', actor: 'u1', at: NOW(), before: { status: 'pending' }, after: { status: 'cancelled' }, ref: '' }]]));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertFails(commit(db('u1'), decideWrites('u1', 'q1000000000000000000', req, 'approved')));
+    await assertFails(commit(db('u1'), [...decideWrites('u1', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('u1', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')]));
+    await assertSucceeds(commit(db('u1'), [[`roleRequests/q1000000000000000000`, { ...req, status: 'cancelled', rev: 2, updatedAt: NOW(), updatedBy: 'u1' }],
+      [auditId('roleRequests', 'q1000000000000000000', 2), { col: 'roleRequests', docId: 'q1000000000000000000', rev: 2, action: 'cancel', actor: 'u1', at: NOW(), before: { status: 'pending' }, after: { status: 'cancelled' }, ref: '' }]]));
   });
   it('I-24 撤權後下一次寫入卡片：拒絕', async () => {
     await seedRole(t, 'u1', { depts: { rights: 'editor' } });
@@ -237,11 +237,11 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
     await assertSucceeds(commit(db('boss'), superRoleWrites('boss', 'boss2', await roleOf('boss2'), { super: false }, 'revoke')));
   });
   it('I-26 以申請為名但申請沒核准、或部門角色不符：拒絕', async () => {
-    const req = await pending('u1', 'q1');
-    await assertFails(commit(db('boss'), superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1')));
-    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'admin' } }, 'request', 'q1')]));
-    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { events: 'editor' } }, 'request', 'q1')]));
-    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'rejected'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1')]));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertFails(commit(db('boss'), superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')));
+    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'admin' } }, 'request', 'q1000000000000000000')]));
+    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { events: 'editor' } }, 'request', 'q1000000000000000000')]));
+    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'rejected'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')]));
   });
   it('I-27 認領邀請以外的舊身分、認領已被認領的舊身分：拒絕；正常認領成功', async () => {
     const mk = (id, claimedBy = null) => seed(t, d => d.doc(`legacyIdentities/${id}`).set({ deptId: 'rights', name: id, oldRole: 'member', createdAt: '', claimedBy, claimedAt: null, rev: 1, updatedAt: TS.now(), updatedBy: 'boss' }));
@@ -296,26 +296,26 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
     await assertSucceeds(db('boss').collection('auditLogs').orderBy('at', 'desc').limit(50).get());
   });
   it('I-37 核准但同批沒寫 roles；I-38 用早就核准過的申請重放：拒絕', async () => {
-    const req = await pending('u1', 'q1');
-    await assertFails(commit(db('boss'), decideWrites('boss', 'q1', req, 'approved')));
-    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1')]));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertFails(commit(db('boss'), decideWrites('boss', 'q1000000000000000000', req, 'approved')));
+    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')]));
     let r = await roleOf('u1');
     await assertSucceeds(commit(db('boss'), superRoleWrites('boss', 'u1', r, { depts: {} }, 'revoke')));
     r = await roleOf('u1');
-    await assertFails(commit(db('boss'), superRoleWrites('boss', 'u1', r, { depts: { rights: 'editor' } }, 'request', 'q1')));
+    await assertFails(commit(db('boss'), superRoleWrites('boss', 'u1', r, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')));
   });
   it('I-39 核准時多加部門、改別的部門、設 super：拒絕', async () => {
     await seedRole(t, 'u1', { depts: { events: 'editor' } });
-    const req = await pending('u1', 'q1');
+    const req = await pending('u1', 'q1000000000000000000');
     const cur = await roleOf('u1');
     for (const next of [{ depts: { events: 'editor', rights: 'editor', pr: 'editor' } }, { depts: { events: 'admin', rights: 'editor' } },
                         { depts: { events: 'editor', rights: 'editor' }, super: true }, { depts: { events: 'editor', rights: 'editor' }, viewer: true }])
-      await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', cur, next, 'request', 'q1')]));
-    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u1', cur, { depts: { events: 'editor', rights: 'editor' } }, 'request', 'q1')]));
+      await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', cur, next, 'request', 'q1000000000000000000')]));
+    await assertSucceeds(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u1', cur, { depts: { events: 'editor', rights: 'editor' } }, 'request', 'q1000000000000000000')]));
   });
   it('I-40 核准 A 的申請卻寫到 B 的 roles：拒絕', async () => {
-    const req = await pending('u1', 'q1');
-    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1', req, 'approved'), ...superRoleWrites('boss', 'u2', null, { depts: { rights: 'editor' } }, 'request', 'q1')]));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertFails(commit(db('boss'), [...decideWrites('boss', 'q1000000000000000000', req, 'approved'), ...superRoleWrites('boss', 'u2', null, { depts: { rights: 'editor' } }, 'request', 'q1000000000000000000')]));
   });
   it('I-41 撤權時新增部門、改角色值、把 super 改成 true、寫入已取消的 viewer 欄位：拒絕', async () => {
     await seedRole(t, 'u1', { depts: { rights: 'admin', events: 'editor' } });
@@ -332,16 +332,16 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
     await assertFails(commit(db('boss'), patch(superRoleWrites('boss', 'u1', cur, { depts: {} }, 'revoke', 'r1'), 1, { ref: 'r2' })));
   });
   it('I-43 申請、邀請的稽核 before／after.status 跟實際不符：拒絕', async () => {
-    await assertFails(commit(db('u1'), patch(requestWrites('u1', 'q1'), 1, { after: { status: 'approved' } })));
-    const req = await pending('u1', 'q1');
-    await assertFails(commit(db('boss'), [...patch(decideWrites('boss', 'q1', req, 'rejected'), 1, { before: { status: 'approved' } })]));
+    await assertFails(commit(db('u1'), patch(requestWrites('u1', 'q1000000000000000000'), 1, { after: { status: 'approved' } })));
+    const req = await pending('u1', 'q1000000000000000000');
+    await assertFails(commit(db('boss'), [...patch(decideWrites('boss', 'q1000000000000000000', req, 'rejected'), 1, { before: { status: 'approved' } })]));
     await assertFails(commit(db('boss'), patch(inviteWrites('boss', newToken().h), 1, { after: { status: 'used' } })));
     const k = await invite();
     await assertFails(commit(db('u1'), patch(redeemWrites('u1', k, null, { depts: { rights: 'editor' } }), 1, { after: { status: 'revoked' } })));
   });
   it('I-44 申請人取消與總管理員核准同時發生：恰好一筆成功，失敗那筆整批沒寫入', async () => {
     for (let i = 0; i < 5; i++) {
-      const u = 'p' + i, id = 'q' + i;
+      const u = 'p' + i, id = ('q' + i).padEnd(20, '0');
       const req = await pending(u, id);
       const res = await Promise.allSettled([
         commit(db(u), [[`roleRequests/${id}`, { ...req, status: 'cancelled', rev: 2, updatedAt: NOW(), updatedBy: u }],
@@ -359,12 +359,12 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
     await assertSucceeds(commit(db('boss'), superRoleWrites('boss', 'u1', null, { depts: { rights: 'editor' } }, 'manual')));
   });
   it('I-46（02A 修正）申請 super、申請檢視資格（viewer，已取消）、申請不存在的部門、替別人申請：拒絕', async () => {
-    await assertFails(commit(db('u1'), requestWrites('u1', 'q1', { role: 'super' })));
-    await assertFails(commit(db('u1'), requestWrites('u1', 'q2', { role: 'viewer', deptId: 'rights' })));
-    await assertFails(commit(db('u1'), requestWrites('u1', 'q5', { role: 'viewer', deptId: null })));
-    await assertFails(commit(db('u1'), requestWrites('u1', 'q3', { deptId: 'nope' })));
-    await assertFails(commit(db('u1'), requestWrites('u1', 'q4', { uid: 'u2' })));
-    await assertSucceeds(commit(db('u1'), requestWrites('u1', 'q6')));
+    await assertFails(commit(db('u1'), requestWrites('u1', 'q1000000000000000000', { role: 'super' })));
+    await assertFails(commit(db('u1'), requestWrites('u1', 'q2000000000000000000', { role: 'viewer', deptId: 'rights' })));
+    await assertFails(commit(db('u1'), requestWrites('u1', 'q5000000000000000000', { role: 'viewer', deptId: null })));
+    await assertFails(commit(db('u1'), requestWrites('u1', 'q3000000000000000000', { deptId: 'nope' })));
+    await assertFails(commit(db('u1'), requestWrites('u1', 'q4000000000000000000', { uid: 'u2' })));
+    await assertSucceeds(commit(db('u1'), requestWrites('u1', 'q6000000000000000000')));
   });
   it('I-47（02A 修正）一般登入者不用申請就讀得到看板、不能寫；總管理員不能再授予 viewer 欄位', async () => {
     await seedRole(t, 'ed', { depts: { rights: 'editor' } });
@@ -382,10 +382,10 @@ describe('角色、申請、撤權 I-23～I-29、I-37～I-49', () => {
   it('I-49（02A 修正）一般登入者送出部門申請後：讀得到看板與自己的申請，讀不到別人的申請', async () => {
     await seedRole(t, 'ed', { depts: { rights: 'editor' } });
     await createCard(db('ed'), 'ed', 'c1');
-    await pending('u1', 'q1');
+    await pending('u1', 'q1000000000000000000');
     await assertSucceeds(db('u1').doc('cards/c1').get());
-    await assertSucceeds(db('u1').doc('roleRequests/q1').get());
+    await assertSucceeds(db('u1').doc('roleRequests/q1000000000000000000').get());
     await assertSucceeds(db('u1').collection('roleRequests').where('uid', '==', 'u1').get());
-    await assertFails(db('u2').doc('roleRequests/q1').get());
+    await assertFails(db('u2').doc('roleRequests/q1000000000000000000').get());
   });
 });
