@@ -7,6 +7,7 @@
    4. 衝突（別人剛存過）：不寫入、畫面上的修改留著、可以重新載入
    5. 撤權：畫面即時變回唯讀；編輯中按儲存被規則擋下、修改留著；直接呼叫寫入也被拒
    6. 其他部門的 Firestore 文件前後完全相同；沒有頁面錯誤
+   7. 編輯紀錄（版本歷史；總管理員加上稽核紀錄）、會長室在 firestore 模式的各部門編輯量（讀不到的部門顯示「—」）（02D D3，跑在第 6 段之前）
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');
@@ -49,18 +50,18 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
 
   const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
   const pages=[];
-  const open=async()=>{
+  const open=async(dept=DEPT,fsDepts=[DEPT])=>{
     const ctx=await b.newContext({viewport:{width:900,height:850},serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
     await ctx.route('https://www.gstatic.com/firebasejs/**',r=>{const f=path.join(ROOT,'backend/node_modules/firebase',r.request().url().split('/').pop());r.fulfill({contentType:'text/javascript',body:fs.readFileSync(f,'utf8')})});
     const puts=[];await ctx.route('https://api.github.com/**',r=>{if(r.request().method()!=='GET')puts.push(r.request().url());r.fulfill({status:404,body:'{}'})});
-    await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc.replace(new RegExp(`(\\{ id: "${DEPT}",[^\\n]*?)( \\},?\\n)`),`$1, source: "firestore"$2`);
+    await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc;for(const x of fsDepts)s=s.replace(new RegExp(`(\\{ id: "${x}",[^\\n]*?)( \\},?\\n)`),`$1, source: "firestore"$2`);
       s=s.replace(/firebase: \{[^}]*\}/,`firebase: { apiKey: "demo-key", authDomain: "", projectId: "${PROJECT}", appId: "", emulator: { host: "${h}", port: ${pt}, auth: "http://${AEMU}" } }`);
       r.fulfill({contentType:'text/javascript',body:s})});
     const p=await ctx.newPage();p.errs=[];p.toasts=[];p.puts=puts;p.on('pageerror',e=>p.errs.push(e.message));
     await p.exposeFunction('__toast',m=>p.toasts.push(m));
     await p.addInitScript(()=>{new MutationObserver(()=>{const t=document.querySelector('#toast');if(t&&t.textContent&&t.classList.contains('show'))window.__toast(t.textContent)}).observe(document,{subtree:true,childList:true,characterData:true,attributes:true})});
-    await p.goto(`${BASE}/index.html?d=${DEPT}`);
+    await p.goto(`${BASE}/index.html?d=${dept}`);
     await p.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await p.waitForTimeout(1500);
     p.ctx=ctx;pages.push(p);return p};
   const signIn=async(p,sub)=>{await p.evaluate(async sub=>{const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
@@ -231,6 +232,29 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const direct=await ed.evaluate(async()=>{const n=JSON.parse(JSON.stringify(state));n.events[0].name+='（繞過畫面）';
     try{await window.BoardStoreWrite.saveDept(CFG.firebase,CFG.deptId,storeFsBase,n,{admin:true,super:true});return 'ok'}catch(e){return e.code}});
   ok(direct==='permission-denied',`撤權：直接呼叫寫入也被規則拒絕（${direct}）`);
+
+  /* ---------- 7. 編輯紀錄與會長室的各部門編輯量（02D D3：版本歷史＋總管理員的稽核紀錄） ---------- */
+  const logText=async p=>{await openSet(p);await p.click('[data-set="log"]');
+    await until(()=>p.evaluate(()=>!logState.busy&&(logState.items.length||document.querySelector('#logMsg').textContent)));await sleep(300);
+    const r=await p.evaluate(()=>({t:document.querySelector('#logList').innerText,who:[...document.querySelectorAll('#logList .lg-who')].map(x=>x.textContent),msg:document.querySelector('#logMsg').textContent}));
+    await p.evaluate(()=>closeLog(true));await closeSet(p);return r};
+  {const r=await logText(ad);
+    ok(r.t.includes('即時回報\n新增｜FW 新卡片')&&r.t.includes('即時回報\n修改｜FW 新卡片')&&r.t.includes('遷移\n匯入｜')&&r.who.includes('ed 同學'),'編輯紀錄（管理員）：版本歷史（新增、修改、遷移匯入）、名字');
+    ok(!r.t.includes('設定\n')&&!r.t.includes('刪除｜'),'編輯紀錄（管理員）：沒有稽核紀錄（部門設定、卡片刪除只有總管理員讀得到）');}
+  await openSet(gen);ok(!(await setText(gen)).includes('編輯紀錄'),'一般登入者：設定頁沒有編輯紀錄');await closeSet(gen);
+  ok(await gen.evaluate(async()=>{try{await (await storeFsGet()).versionsPage(CFG.firebase,CFG.deptId,null,5);return 'ok'}catch(e){return e.code}})==='permission-denied','一般登入者：直接查版本歷史被規則拒絕');
+  const su2=await open();const suUid=await signIn(su2,'su2');await setRole(suUid,{},true);await until(async()=>!(await ui(su2)).locked);
+  {const r=await logText(su2);
+    ok(r.t.includes('設定\n看板名稱')&&r.t.includes(`即時回報\n刪除｜${del.name}`)&&r.t.includes('即時回報\n修改｜FW 新卡片'),'編輯紀錄（總管理員）：加上稽核紀錄（看板名稱、卡片刪除）');}
+  /* 會長室（firestore 模式）的各部門編輯量：權益部＝不是匯入的版本＋稽核紀錄；還在 GitHub、沒有設定 repo 的部門＝讀不到（—） */
+  let want=0;await admin(async d=>{want=(await d.collectionGroup('versions').where('deptId','==',DEPT).get()).docs.filter(x=>!x.data().imported).length
+    +(await d.collection('auditLogs').get()).docs.map(x=>x.data()).filter(a=>a.col==='deptSettings'&&a.action==='update'&&a.docId===DEPT||a.col==='cards'&&a.action==='purge'&&a.before.deptId===DEPT).length});
+  const actOf=async p=>{await p.evaluate(()=>actLoad(true));await until(()=>p.evaluate(()=>ACT.rows&&!ACT.busy));
+    return p.evaluate(()=>({rows:Object.fromEntries(ACT.rows.map(r=>[r.id,r.fail?'—':r.sum])),leg:(document.querySelector('[data-ack="rights"] .num')||{}).textContent}))};
+  const ps=await open('president',[DEPT,'president']);await signIn(ps,'su2');await until(async()=>!(await ui(ps)).locked);
+  {const a=await actOf(ps);ok(a.rows.rights===want&&want>10&&a.rows.president===0&&a.rows.events==='—',`會長室（總管理員）：權益部 ${a.rows.rights} 項（版本＋稽核紀錄 ${want}）、會長室 0、還在 GitHub 的部門 —`);}
+  const pe=await open('president',[DEPT,'president']);const peUid=await signIn(pe,'pe');await setRole(peUid,{president:'editor'});await until(async()=>!(await ui(pe)).locked);
+  {const a=await actOf(pe);ok(a.rows.rights==='—'&&a.leg==='—'&&a.rows.president===0,`會長室（會長室編輯者）：讀不到權益部的版本歷史（—）、會長室 0（${JSON.stringify(a.rows)}）`);}
 
   /* ---------- 6. 其他部門不受影響、沒有頁面錯誤 ---------- */
   const after=await others();

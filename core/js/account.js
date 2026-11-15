@@ -40,7 +40,8 @@ function acctRoleSub(){
 let acctCanW="";
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
-  const w=`${fsWriter()}|${fsAdmin()}|${fsDelOk()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render()}
+  const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
+    if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
 }
 /* 登入狀態與第一次的角色都讀到了（boot.js 等它再決定要不要提示唯讀） */
 let acctKnownOk;const acctKnown=new Promise(r=>acctKnownOk=r);
@@ -100,11 +101,11 @@ function acctSettingsInner(){
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
   if(!acct.user)return setSec(wk)+acctGateHTML();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
-  /* 02D：有這個部門角色的人多報告、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
+  /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
       +setRow("labels","tag","標籤",state.labels.length?`人事時地物 ${state.labels.length} 個`:"人事時地物，還沒有建立")
       +setRow("backup","download","備份","匯出看板內容（JSON 檔）")):"";
-  return setSec(fsWriter()?setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`):wk)
+  return setSec(fsWriter()?setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`)+setRow("log","history","編輯紀錄","誰在什麼時候改了什麼"):wk)
     +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理","人員、QR 邀請、申請、紀錄")):"");
 }

@@ -28,10 +28,10 @@ function storeModLoad(file,ev,name){
     document.head.append(s);
   });
 }
-function storeFsLoad(){
-  if(!storeFsMod)storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore");
-  return storeFsMod.then(fs=>fs.loadDept(CFG.firebase,CFG.deptId));
-}
+const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
+function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
+/* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除＝卡片的部門；其他（角色、邀請、遷移）不算 */
+const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId:a.col==="cards"&&a.action==="purge"?(a.before||{}).deptId||"":"";
 /* 讀到的內容放上畫面，並記下這一份（寫入時拿它跟畫面比對，只寫改過的文件）；讀取失敗時 storeFsBase＝null（唯讀，不會把空白或舊的畫面存回去） */
 let storeFsBase=null;
 function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.orig,state:JSON.parse(JSON.stringify(state))}}

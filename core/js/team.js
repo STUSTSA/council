@@ -319,6 +319,7 @@ function renderLog(msg){
 }
 async function loadLog(){
   if(logState.busy||logState.done)return;
+  if(fsMode())return fsLoadLog();
   if(!cloudOn()){renderLog("這個看板沒有連上 GitHub，所以沒有編輯紀錄");return}
   logState.busy=true;renderLog();
   const c=cloudCfg(),h={Accept:"application/vnd.github+json"};if(ghToken())h.Authorization="Bearer "+ghToken();
@@ -330,6 +331,32 @@ async function loadLog(){
   }catch(_){msg="連不上 GitHub（離線中？）"}
   logState.busy=false;renderLog(msg);
 }
+/* 02D：firestore 模式的編輯紀錄＝這個部門的版本歷史（卡片每存一版一筆，遷移產生的第 1 版是「匯入」）＋總管理員才讀得到的稽核紀錄
+   （部門設定的修改、卡片刪除）。同一個人相隔 10 秒內的寫入併成一筆（一次儲存可能分成好幾批）。版本歷史只有總管理員與這個部門的編輯者讀得到 */
+const fsLog={vers:[],cur:null,audits:[]};
+const FS_FIELD={title:"看板名稱",range:"時間軸",reportBase:"週報基準",docs:"文件",follows:"追蹤"};
+const fsLogLine=x=>x.kind==="ver"?`${x.imported?"遷移｜匯入":x.version===1?"即時回報｜新增":"即時回報｜修改"}｜${x.title}`
+  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
+function fsLogItems(rows){
+  const out=[];
+  rows.slice().sort((a,b)=>b.t-a.t).forEach(x=>{const g=out[out.length-1];
+    if(g&&g.by===x.by&&g.t0-x.t<=1e4){g.lines.push(fsLogLine(x));return}
+    out.push({by:x.by,t0:x.t,date:new Date(x.t),old:false,who:acct.names[x.by]||x.by.slice(0,8),lines:[fsLogLine(x)]})});
+  out.forEach(g=>g.lines.reverse());
+  return out;
+}
+async function fsLoadLog(){
+  logState.busy=true;renderLog();
+  let msg="";
+  try{
+    const F=await storeFsGet(),r=await F.versionsPage(CFG.firebase,CFG.deptId,fsLog.cur,50);
+    fsLog.vers.push(...r.rows);fsLog.cur=r.cursor;logState.done=!r.more;
+    if(fsRole()==="super"){const from=logState.done||!fsLog.vers.length?0:Math.min(...fsLog.vers.map(v=>v.t));
+      fsLog.audits=(await F.auditSince(CFG.firebase,from)).filter(a=>fsAuditDept(a)===CFG.deptId)}
+    logState.items=fsLogItems([...fsLog.vers,...fsLog.audits]);
+  }catch(e){msg=e&&e.code==="permission-denied"?"沒有權限":"讀取失敗"}
+  logState.busy=false;renderLog(msg);
+}
 /* host：設定頁桌面版的右側面板（沒有就是全螢幕）。回傳的 Promise 在關閉時完成 */
 let logDone=null;
 function openLog(host){
@@ -338,7 +365,7 @@ function openLog(host){
     <div class="anim-top"><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b><span class="sub">每次「儲存並同步」都會留下一筆</span></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
     <div class="log-scroll"><div class="log-inner"><ol class="log-list" id="logList"></ol><p class="sub log-msg" id="logMsg"></p><button type="button" class="ghost log-more" id="logMore">載入更早的紀錄</button></div></div></div>`);
     ov=$("#logOv");$("#logClose").onclick=closeLog;elastic(ov.querySelector(".log-scroll"),ov.querySelector(".log-inner"));$("#logMore").onclick=loadLog;}
-  Object.assign(logState,{page:0,done:false,busy:false,items:[]});
+  Object.assign(logState,{page:0,done:false,busy:false,items:[]});Object.assign(fsLog,{vers:[],cur:null,audits:[]});
   ov.classList.toggle("in-pane",!!host);const at=host||document.body;if(ov.parentNode!==at)at.append(ov);
   const from=host?null:pageUnder(ov);
   ov.hidden=false;if(!host){document.body.classList.add("log-open");Back.layers.log()}
