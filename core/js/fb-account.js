@@ -41,7 +41,7 @@ function init(cfg) { if (!db) ({ db, auth } = fb(cfg)); serverSkew(); return api
 let fresh = false, ensuring = Promise.resolve();
 function onUser(cb) {
   return onAuthStateChanged(auth, u => {
-    if (u) { const f = fresh; fresh = false; ensuring = ensureUser(f).catch(() => {}); }
+    if (u) { const f = fresh; fresh = false; ensuring = ensureUser(f).catch(() => new Promise(r => setTimeout(r, 3000)).then(() => ensureUser(f)).catch(() => {})); }   /* 失敗隔 3 秒重試一次 */
     cb(u ? { uid: u.uid, email: u.email || "", name: u.displayName || "", photo: u.photoURL || "" } : null);
   });
 }
@@ -114,7 +114,7 @@ async function sha256hex(s) {
 const tokenOk = t => typeof t === "string" && /^[A-Za-z0-9_-]{43}$/.test(t);
 function inviteData(o, exp) {
   const me = uid();
-  return { deptId: o.deptId, role: o.role, ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}), ...(o.boundEmail ? { boundEmail: o.boundEmail } : {}),
+  return { deptId: o.deptId, role: o.role, ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}), ...(o.boundEmail ? { boundEmail: String(o.boundEmail).trim().toLowerCase() } : {}),
     status: "active", rev: 1, createdBy: me, createdAt: NOW(), expiresAt: Timestamp.fromMillis(exp), updatedAt: NOW(), updatedBy: me };
 }
 async function newInvite() {
@@ -165,17 +165,27 @@ async function inviteList() {
 const ms = t => (t && t.toMillis ? t.toMillis() : 0);
 const plainInv = d => ({ deptId: d.deptId, role: d.role, status: d.status, boundEmail: d.boundEmail || "", legacyRef: d.legacyRef || "",
   createdBy: d.createdBy, createdAt: ms(d.createdAt), expiresAt: ms(d.expiresAt), usedBy: d.usedBy || "", usedAt: ms(d.usedAt), revokedAt: ms(d.revokedAt) });
-/* 預覽：讀不到（已使用、已撤銷、不存在）或已過期一律回傳 null，不區分原因 */
+/* 預覽：讀不到（已使用、已撤銷、不存在）或已過期一律回傳 null，不區分原因。
+   網路不穩這類暫時的錯誤要丟出去（畫面保留權杖、請對方再試），不能當成失效。
+   綁定的舊身分已被別人認領時這張邀請核銷不了（規則要求認領者是自己）：回傳 legacyTaken */
 async function invitePreview(token) {
   if (!tokenOk(token)) return null;
   await serverSkew();
-  try {
-    const s = await getDoc(ref("invitations", await sha256hex(token)));
-    if (!s.exists()) return null;
-    const v = plainInv(s.data());
-    return v.status === "active" && v.expiresAt > serverNow() ? v : null;
-  } catch (_) { return null; }
+  await ensuring;
+  let s;
+  try { s = await getDoc(ref("invitations", await sha256hex(token))); }
+  catch (e) { if (e.code === "permission-denied" || e.code === "not-found") return null; throw fail(codeOf(e)); }
+  if (!s.exists()) return null;
+  const v = plainInv(s.data());
+  if (!(v.status === "active" && v.expiresAt > serverNow())) return null;
+  if (v.legacyRef) {
+    const l = await getDoc(ref("legacyIdentities", v.legacyRef)).catch(() => null);
+    if (l && l.exists() && l.data().claimedBy && l.data().claimedBy !== uid()) return { ...v, legacyTaken: true };
+  }
+  return v;
 }
+/* 總管理員看著的那一張：被用掉或撤銷時畫面跟著變 */
+function inviteWatch(h, cb) { return onSnapshot(ref("invitations", h), s => cb(s.exists() ? plainInv(s.data()) : null), () => {}); }
 /* 核銷：交易內重讀邀請與自己的角色；同一批寫邀請（used＋權杖）、roles、兩筆稽核，有舊身分再加認領＋稽核 */
 async function inviteRedeem(token) {
   if (!tokenOk(token)) throw fail("invalid");
@@ -188,11 +198,11 @@ async function inviteRedeem(token) {
       if (!inv.exists()) throw fail("invalid");
       const v = inv.data();
       if (v.status !== "active" || ms(v.expiresAt) <= serverNow()) throw fail("invalid");
-      if (v.boundEmail && v.boundEmail !== email) throw fail("bound");
+      if (v.boundEmail && v.boundEmail !== String(email || "").toLowerCase()) throw fail("bound");
       const rs = await tx.get(ref("roles", me)), cur = rs.exists() ? rs.data() : null, before = cur ? plainRole(cur) : null;
       if (before && before.depts[v.deptId]) throw Object.assign(fail("already"), { deptId: v.deptId, role: before.depts[v.deptId] });
       let leg = null;
-      if (v.legacyRef) { const ls = await tx.get(ref("legacyIdentities", v.legacyRef)); leg = ls.exists() ? ls.data() : null; if (leg && leg.claimedBy) leg = null; }
+      if (v.legacyRef) { const ls = await tx.get(ref("legacyIdentities", v.legacyRef)); leg = ls.exists() ? ls.data() : null; if (leg && leg.claimedBy) throw fail("legacy"); }
       const irev = v.rev + 1, rrev = cur ? cur.rev + 1 : 1;
       const after = { super: before ? before.super : false, depts: { ...(before ? before.depts : {}), [v.deptId]: v.role } };
       tx.update(ref("invitations", h), { status: "used", usedBy: me, usedAt: NOW(), token, rev: irev, updatedAt: NOW(), updatedBy: me });
@@ -207,7 +217,7 @@ async function inviteRedeem(token) {
       result = { deptId: v.deptId, role: v.role };
     });
   } catch (e) {
-    if (["invalid", "bound", "already"].includes(e.code)) throw e;
+    if (["invalid", "bound", "already", "legacy"].includes(e.code)) throw e;
     throw fail(e.code === "permission-denied" ? "invalid" : codeOf(e));
   }
   return result;
@@ -298,7 +308,7 @@ async function auditChain(col, id) {
 }
 
 const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList,
-  inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem,
+  inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
   rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };
 window.BoardAccount = api;

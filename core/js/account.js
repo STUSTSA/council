@@ -50,16 +50,23 @@ async function acctStart(){
     if(uid===acctUid){acct.user=u;return}
     acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
+    if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid===uid){acct.roles=r;acctChanged()}});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&acctOn())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
   });
 }
+/* 先發出的讀取比較晚回來時不能蓋掉後來的（快速登入又登出） */
+let acctReloadSeq=0;
 function acctReload(){
-  storeFsLoad().then(d=>{storeFsErr=null;state=normalize(d);render()}).catch(e=>{storeFsErr=e;state=normalize({});render();if(e&&e.code==="permission-denied")toast("這個部門要登入才能看")});
+  const my=++acctReloadSeq;
+  storeFsLoad().then(d=>{if(my!==acctReloadSeq)return;storeFsErr=null;state=normalize(d);render()})
+    .catch(e=>{if(my!==acctReloadSeq)return;storeFsErr=e;state=normalize({});render();if(e&&e.code==="permission-denied")toast("這個部門要登入才能看")});
 }
+/* 收掉帳號與會長室管理的面板（登出、換帳號、失去總管理員時） */
+function acctCloseAdmin(){if(typeof setOpen!=="undefined"&&setOpen&&(acctPanels.length||paneKey==="council"||paneKey==="acct"||subOpen))paneClose().catch(()=>{})}
 const SIGNIN_ERR={"auth/unauthorized-domain":"這個網址還沒開放登入","auth/network-request-failed":"沒有連上網路，稍後再試","auth/operation-not-allowed":"還沒開放 Google 登入","auth/user-disabled":"這個帳號已停用"};
 async function acctSignIn(){
   const A=await acctLoad();acct.err="";acctChanged();
@@ -114,10 +121,10 @@ function acctPanel(title,draw){
     const prev=acctPanels[acctPanels.length-1],depth=acctPanels.length;
     const box=document.createElement("div");box.className="set-hub acct-panel";
     if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
-    let alive=true;const timers=[];
-    const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},
+    let alive=true;const timers=[],ends=[];
+    const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},onEnd(fn){ends.push(fn)},
       head:(extra="")=>`<b class="set-hub-t">${esc(title)}</b>${extra}`};
-    p.end=()=>{if(!alive)return;alive=false;timers.forEach(clearInterval);
+    p.end=()=>{if(!alive)return;alive=false;timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;
       if(depth)Back.closed("acct"+depth);acctPanelSync();res()};
     acctPanels.push(p);acctPanelSync();
@@ -239,22 +246,28 @@ async function qrSvg(text){const q=(await qrLoad())(0,"M");q.addData(text);q.mak
 function invitePanel(){
   return acctPanel("QR 邀請",async p=>{
     const A=await acctLoad();
-    let cur=null,list=[],busy=false;
+    let cur=null,list=[],busy=false,curOff=null;
     const left=()=>cur?cur.expiresAt-A.serverNow():0;
+    const live=()=>!!cur&&cur.status==="active"&&left()>0;
+    const curText=()=>cur.status==="used"?`已使用 · ${esc(nameOf(cur.usedBy))}`:cur.status==="revoked"?"已撤銷":left()>0?mmss(left()):"已過期";
+    /* 面板上這一張被別人用掉或撤銷：跟著變（監聽這一份邀請；換一張或收掉面板就解除） */
+    const watch=()=>{if(curOff){curOff();curOff=null}if(!cur)return;cur.status="active";const h=cur.h;
+      curOff=A.inviteWatch(h,v=>{if(!cur||cur.h!==h||!v||v.status===cur.status)return;Object.assign(cur,{status:v.status,usedBy:v.usedBy});load().then(draw)})};
+    p.onEnd(()=>{if(curOff)curOff()});
     const statusOf=i=>i.status==="used"?`已使用 · ${esc(nameOf(i.usedBy))} · ${hm(i.usedAt)}`:i.status==="revoked"?"已撤銷":i.expiresAt<=A.serverNow()?"已過期":`剩 ${mmss(i.expiresAt-A.serverNow())}`;
     const load=async()=>{list=await A.inviteList().catch(()=>list)};
     const draw=async()=>{
       if(!p.alive)return;
       const qr=cur?await qrSvg(joinUrl(cur.token,cur.deptId)):"";
-      p.box.innerHTML=p.head()+(cur?`<div class="acct-qr${left()<=0?" off":""}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
-          <b>${esc(deptNameOf(cur.deptId))}・${ROLE_T[cur.role]}</b><span class="acct-qr-t num">${left()>0?mmss(left()):"已過期"}</span>
-          <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${left()>0?`<button type="button" class="danger" data-revoke="${esc(cur.h)}">撤銷</button>`:""}</div></div>`
+      p.box.innerHTML=p.head()+(cur?`<div class="acct-qr${live()?"":" off"}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
+          <b>${esc(deptNameOf(cur.deptId))}・${ROLE_T[cur.role]}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
+          <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke="${esc(cur.h)}">撤銷</button>`:""}</div></div>`
         :`<button type="button" class="primary acct-new" data-new>產生 QR</button>`)
         +`<div class="set-list acct-invites">${list.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${ROLE_T[i.role]||esc(i.role)}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&i.expiresAt>A.serverNow()&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>`;
     };
     p.every(()=>{
       const t=p.box.querySelector(".acct-qr-t");
-      if(t&&cur){if(left()>0)t.textContent=mmss(left());else if(!p.box.querySelector(".acct-qr.off"))draw()}
+      if(t&&cur&&cur.status==="active"){if(left()>0)t.textContent=mmss(left());else if(!p.box.querySelector(".acct-qr.off"))draw()}
       p.box.querySelectorAll("[data-left]").forEach(x=>{const e=+x.dataset.left;if(e)x.textContent=e>A.serverNow()?`剩 ${mmss(e-A.serverNow())}`:"已過期"});
     },1000);
     p.box.addEventListener("click",async e=>{
@@ -268,12 +281,12 @@ function invitePanel(){
             {name:"email",label:"綁定信箱（選填）",type:"email",value:""},
             ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[])],
             {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
-          if(v){try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email,legacyRef:v.legacy||""})}catch(err){toast(acctErr(err))}}
+          if(v){try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email,legacyRef:v.legacy||""});watch()}catch(err){toast(acctErr(err))}}
         }else if(b.hasAttribute("data-regen")&&cur){
-          try{cur=await A.inviteRegen(cur.h)}catch(err){toast(acctErr(err))}
+          try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}
         }else if(b.dataset.revoke){
           const h=b.dataset.revoke,v=await ask("撤銷這張 QR",[],{danger:"撤銷"});
-          if(v==="delete"&&await acctTry(()=>A.inviteRevoke(h),"已撤銷")&&cur&&cur.h===h)cur=null;
+          if(v==="delete"&&await acctTry(()=>A.inviteRevoke(h),"已撤銷")&&cur&&cur.h===h){cur=null;watch()}
         }else return;
         await load();await draw();
       }finally{busy=false}
@@ -360,11 +373,13 @@ async function joinFlow(){
       for(let i=0;i<50&&!acct.user;i++)await new Promise(r=>setTimeout(r,100));   /* 等登入狀態傳到 acct（onUser） */
       if(!acct.user)return;
     }
-    const inv=await A.invitePreview(token);
+    let inv;
+    try{inv=await A.invitePreview(token)}catch(_){toast("沒有連上網路，稍後再試");return}   /* 暫時的錯誤：權杖留著，重新整理或重新登入會再試 */
     if(!inv){joinClear();await ask("這張邀請已失效",[],{});return}
+    if(inv.legacyTaken){joinClear();await ask("這張邀請綁定的舊身分已經被認領",[],{});return}
     const has=acctDepts()[inv.deptId];
     if(has){joinClear();await ask(`你已經是${deptNameOf(inv.deptId)}的${ROLE_T[has]}`,[],{});return}
-    if(inv.boundEmail&&inv.boundEmail!==acct.user.email){joinClear();await ask("這張邀請只限指定的帳號使用",[],{});return}
+    if(inv.boundEmail&&inv.boundEmail!==String(acct.user.email||"").toLowerCase()){joinClear();await ask("這張邀請只限指定的帳號使用",[],{});return}
     const tick=setInterval(()=>{const n=$("#dlgForm .dlg-note");if(n)n.textContent=`剩 ${mmss(inv.expiresAt-A.serverNow())}`},1000);
     const v=await ask(`加入${deptNameOf(inv.deptId)}・${ROLE_T[inv.role]}`,[],{note:`剩 ${mmss(inv.expiresAt-A.serverNow())}`});
     clearInterval(tick);
@@ -375,7 +390,7 @@ async function joinFlow(){
       if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
     }catch(e){
       joinClear();
-      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${ROLE_T[e.role]}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
+      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${ROLE_T[e.role]}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
     }
   }finally{joinBusy=false}
 }

@@ -64,6 +64,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     await p.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await p.waitForTimeout(1500);
     p.ctx=ctx;return p};
   /* Auth 模擬器接受未簽章的 Google ID token：同一個 sub＝同一個帳號 */
+  /* 掃 QR 的真正流程：對話框按「確定」→ account.js 的 acctSignIn → BoardAccount.signIn（彈出視窗）。
+     測試把彈出視窗那一步換成同一個帳號的 signInWithCredential，其餘照正式程式走 */
+  const stubPopup=(p,sub)=>p.waitForFunction(()=>!!window.BoardAccount,null,{timeout:10000}).then(()=>p.evaluate(sub=>{window.BoardAccount.signIn=async()=>{
+    const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
+    await m.signInWithCredential(m.getAuth(),m.GoogleAuthProvider.credential(JSON.stringify({sub,email:`${sub}@example.test`,email_verified:true,name:`${sub} 同學`})));return ""}},sub));
   const signIn=(p,sub)=>p.evaluate(async sub=>{const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
     await m.signInWithCredential(m.getAuth(),m.GoogleAuthProvider.credential(JSON.stringify({sub,email:`${sub}@example.test`,email_verified:true,name:`${sub} 同學`})))},sub);
   const uidOf=p=>p.waitForFunction(()=>acct.user&&acct.user.uid,null,{timeout:10000}).then(x=>x.jsonValue());
@@ -92,6 +97,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const line=await open(`${BASE}/index.html?d=fruit`,{ua:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Line/14.0.0'});
   await openSet(line);s=await setText(line);
   ok(s.includes('用瀏覽器開啟')&&s.includes('複製網址')&&!s.includes('用 Google 登入'),'LINE 內建瀏覽器：顯示「用瀏覽器開啟」與「複製網址」、不嘗試登入');
+  ok(await toastHas(line,'請用瀏覽器開啟'),'LINE 內建瀏覽器：看板上提示要用瀏覽器開啟');
   await line.click('[data-fb-copy]');await line.waitForTimeout(300);
   ok((await line.evaluate(()=>navigator.clipboard.readText()))===`${BASE}/index.html?d=fruit`,'LINE 內建瀏覽器：複製的網址保留 ?d=');
   await line.ctx.close();
@@ -134,6 +140,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>(await read(`invitations/${sha(tok2)}`)).status==='revoked')&&!(await boss.$('.acct-qr')),'撤銷：邀請改成 revoked、QR 收起');
   ok((await paneText(boss)).includes('已撤銷'),'邀請清單：列出已撤銷的邀請');
   /* 再產生一張給 u1 掃（活動部編輯者＋舊身分） */
+  /* 綁定信箱存成小寫（Google 回傳的信箱是小寫，規則用 == 比對） */
+  await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'pr',role:'editor',email:'Someone@Example.TEST'});await dlgAct(boss,'ok');
+  await boss.waitForSelector('.acct-qr svg');const tokB=(await boss.evaluate(()=>window.__qrText)).split('#join=')[1];
+  ok((await read(`invitations/${sha(tokB)}`)).boundEmail==='someone@example.test','綁定信箱：存成小寫');
+  await boss.click('.acct-qr [data-revoke]');await dlg(boss);await dlgAct(boss,'delete');await until(async()=>!(await boss.$('.acct-qr')));
   await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'events',role:'editor',legacy:'events__m1'});await dlgAct(boss,'ok');
   await boss.waitForSelector('.acct-qr svg');const tok3=(await boss.evaluate(()=>window.__qrText)).split('#join=')[1];
 
@@ -141,7 +152,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const u1=await open(`${BASE}/index.html?d=fruit#join=${tok3}`);
   ok((await u1.evaluate(()=>location.hash))===''&&(await u1.evaluate(()=>sessionStorage.getItem('workboard:join')))===tok3,'掃 QR：權杖一讀到就從網址列拿掉、暫存在這個分頁');
   ok((await dlg(u1))==='用 Google 登入','掃 QR：沒登入先要求登入');
-  await signIn(u1,'u1');const u1Uid=await uidOf(u1);await dlgAct(u1,'ok');
+  await stubPopup(u1,'u1');await dlgAct(u1,'ok');const u1Uid=await uidOf(u1);
   ok((await dlg(u1))==='加入活動部・編輯者'&&/剩 0?9:\d\d/.test(await u1.textContent('#dlgForm .dlg-note')),'掃 QR：預覽部門、角色與剩餘時間');
   await dlgAct(u1,'ok');
   ok(await toastHas(u1,'已加入活動部（編輯者）'),'加入：提示已加入');
@@ -153,9 +164,18 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(!!(await read(`auditLogs/invitations_${sha(tok3)}_2`))&&!!(await read(`auditLogs/roles_${u1Uid}_1`))&&!!(await read('auditLogs/legacyIdentities_events__m1_2')),'加入：邀請、角色、舊身分各有一筆稽核');
   ok(!(await u1.evaluate(()=>sessionStorage.getItem('workboard:join'))),'加入：權杖從這個分頁清掉');
   ok(!u1.errs.length,`掃 QR：沒有頁面錯誤 ${u1.errs.join(' | ')}`);
+  ok(await until(async()=>(await boss.textContent('.acct-qr-t').catch(()=>'')).includes('已使用'))&&!(await boss.$('.acct-qr [data-revoke]')),'會長室：面板上那張 QR 被用掉後顯示「已使用」、不能再撤銷');
+  /* 暫時的錯誤（網路不穩）不能當成失效：權杖留著 */
+  {const tkT=crypto.randomBytes(32).toString('base64url');
+    await admin(d=>d.doc(`invitations/${sha(tkT)}`).set({deptId:'events',role:'editor',status:'active',rev:1,createdBy:bossUid,createdAt:TS.now(),expiresAt:TS.fromMillis(Date.now()+300000),updatedAt:TS.now(),updatedBy:bossUid}));
+    const p=await open(`${BASE}/index.html?d=fruit#join=${tkT}`);await dlg(p);await stubPopup(p,'u3');
+    await p.evaluate(()=>{const A=window.BoardAccount,real=A.invitePreview;A.invitePreview=async()=>{A.invitePreview=real;throw Object.assign(new Error('unavailable'),{code:'unavailable'})}});
+    await dlgAct(p,'ok');
+    ok(await toastHas(p,'沒有連上網路')&&(await p.evaluate(()=>sessionStorage.getItem('workboard:join')))===tkT&&!(await p.$('#dlg[open]')),'掃 QR：暫時的錯誤只提示重試、權杖留著');
+    await p.ctx.close();}
   /* 重放、過期、綁定信箱、已有角色 */
   const scan=async(sub,token,expect,label)=>{const p=await open(`${BASE}/index.html?d=fruit#join=${token}`);
-    if(await p.evaluate(()=>!acct.user)){await dlg(p);await signIn(p,sub);await uidOf(p);await dlgAct(p,'ok')}
+    if(await p.evaluate(()=>!acct.user)){await dlg(p);await stubPopup(p,sub);await dlgAct(p,'ok');await uidOf(p)}
     const title=await dlg(p);ok(title===expect,`${label}：「${title}」`);await dlgAct(p,'ok');await p.ctx.close()};
   await scan('u2',tok3,'這張邀請已失效','重放已使用的 QR（別人）');
   await scan('u1',tok3,'這張邀請已失效','重放已使用的 QR（本人）');

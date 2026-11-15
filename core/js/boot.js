@@ -51,6 +51,6 @@ if(HOSTED)(async()=>{
   render();
 })();
 boardSplashOut();
-if(storeLocked())setTimeout(()=>toast(storeFsErr&&storeFsErr.code==="permission-denied"?"這個部門要登入才能看":STORE_NOTE[storeSource()]),1200);
+if(storeLocked())setTimeout(()=>toast(storeFsErr&&storeFsErr.code==="permission-denied"?(inAppBrowser()?"這個部門要登入才能看：請用瀏覽器開啟":"這個部門要登入才能看"):STORE_NOTE[storeSource()]),1200);   /* LINE 等內建瀏覽器不能用 Google 登入（account.js） */
 if(MIGRATE_NOTE.staffDropped)setTimeout(()=>toast(`專員改成引用帳號：有 ${MIGRATE_NOTE.staffDropped} 筆專員標記找不到同名帳號，已拿掉（儲存後生效）`),4200);
 });
