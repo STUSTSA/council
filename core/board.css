@@ -310,9 +310,9 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 @media (prefers-reduced-motion:reduce){
   .ev:hover{transform:none}
 }
-/* --- 編輯中拖曳排序 --- */
-/* 編輯中拖曳排序（events.js 的「即時回報排序」）：標題可抓，拖著的那顆浮在最上面、跟著指標走 */
-body.authed:not(.edit) #events .events>.ev>summary{cursor:grab;-webkit-touch-callout:none}   /* 登入後可以拖曳排序（放開直接儲存，events.js） */
+/* --- 拖曳排序 --- */
+/* 拖曳排序（events.js 的「即時回報排序」）：登入、沒有卡片在編輯時標題可抓，放開直接儲存；拖著的那顆浮在最上面、跟著指標走 */
+body.authed:not(.edit) #events .events>.ev>summary{cursor:grab;-webkit-touch-callout:none}
 .ev.ev-dragging{z-index:5;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.35);transition:none}
 html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}
 /* --- 左右兩欄：清單＋右半邊詳情卡 --- */
@@ -354,8 +354,8 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .evd-gap{flex:1}
 .evd-round{display:grid;gap:4px;padding:4px 14px 14px;border:1px solid var(--hair);border-radius:14px;margin-bottom:6px}
 .evd-round[hidden]{display:none}
-/* 逐欄編輯（編輯中，膠囊與右側詳情共用；views.js 的 evFieldsHTML）：每一欄一列「標題｜內容｜鉛筆」，
-   打開的那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
+/* 逐欄編輯（編輯中，膠囊與右側詳情共用；views.js 的 evFieldsHTML）：每一欄一列「標題｜內容」，內容本身就是按鈕，
+   點了那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
 .evfs{display:grid;margin-top:12px}
 .evf{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:4px 10px;min-height:42px;padding:3px 0;border-bottom:1px solid var(--hair);font-size:14px}
 .evf-l{font-size:12px;color:var(--muted);letter-spacing:.04em}

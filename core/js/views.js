@@ -249,9 +249,7 @@ function evTimeEditor(ev,tm){
           <span class="evd-place">${inp("place",tm&&tm.place,"地點（選填，例如：學生會辦公室）")}${placeQuickHTML()}</span>
           ${par?`<label class="fld-check"><input type="checkbox" data-e="toIssue" ${tm&&tm.toIssue?"checked":""}><span>也寫進母議題的處理紀錄</span></label>`:""}`;
 }
-/* 連結的輸入框（顏色、名稱、網址） */
-function evLinkEditor(ev,l){return linkEditorHTML(l,ev.links.length,"evfx")}
-/* 連結輸入框（即時回報、議題共用）：n＝目前幾個連結（新增時輪流選顏色），fx＝按鈕的 data 屬性名 */
+/* 連結的輸入框（顏色、名稱、網址；即時回報、議題共用）：n＝目前幾個連結（新增時輪流選顏色），fx＝按鈕的 data 屬性名 */
 function linkEditorHTML(l,n,fx){
   const c=l?l.color:COLORS[n%COLORS.length];
   return `<span class="evd-row evd-link"><button type="button" class="evd-sw" style="background:${esc(c)}" data-${fx}="color" data-c="${esc(c)}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
@@ -272,11 +270,11 @@ function evFieldsHTML(ev){
         ${ts.map(t=>evFieldHTML(ev,"t:"+t.id,"",evTimeView(t,par),()=>evTimeEditor(ev,t))).join("")}
         ${evFldOpen(ev,"t:+")?evFieldHTML(ev,"t:+","",'',()=>evTimeEditor(ev,null)):`<button type="button" class="ghost evd-add" data-evpen="t:+">${ico("calendar")}+ 時間</button>`}</div>
       <div class="evf-group"><span class="evf-l">超連結</span>
-        ${ev.links.map(l=>evFieldHTML(ev,"l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>evLinkEditor(ev,l))).join("")}
-        ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>evLinkEditor(ev,null)):`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`}</div>
+        ${ev.links.map(l=>evFieldHTML(ev,"l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,ev.links.length,"evfx"))).join("")}
+        ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`}</div>
     </div>`;
 }
-/* 展開膠囊裡的動作列（編輯中）：欄位改用鉛筆，這裡只剩整筆的動作 */
+/* 展開膠囊裡的動作列（編輯中）：欄位在上面逐欄改，這裡只剩整筆的動作 */
 function evToolsHTML(ev){
   return `<span class="ev-tools"><button type="button" class="icon" data-evrep aria-pressed="${ev.report}">${ev.report?"取消報告":"會議要報告"}</button><button type="button" class="icon" data-evround>${ico("progress")}完成這一段</button><button type="button" class="icon" data-evdone>${ico("check")}結案</button></span>`;
 }
@@ -326,7 +324,7 @@ function renderEvents(){
   if(!editing)evFld=null;
   const o={md,sel:selEv,next:md?(live[live.findIndex(e=>e.id===selEv)+1]||{}).id:null};   /* next：畫面順序裡的下一顆，加「下一個」記號 */
   const cap=ev=>evCapHTML(ev,o);
-  const addBtn=`<button type="button" class="ghost auth-only add-row" id="addEvent">+ 新增即時回報</button>`;   /* 新增鈕排在格子最後一格，跟一顆膠囊一樣大（登入、沒有卡片在編輯時顯示） */
+  const addBtn=`<button type="button" class="ghost auth-only add-row" id="addEvent">+ 新增即時回報</button>`;   /* 新增鈕在清單最後自己一行（不佔一顆膠囊的格子；登入、沒有卡片在編輯時顯示） */
   const empty=`<p class="empty">${boardLocked()?"目前沒有即時回報。":"需要即時回報的事項放這裡，只要名稱和說明。登入後按「+ 新增即時回報」。"}</p>`;
   /* 2026-11-06 使用者從預覽選 D：報告區不寫區名（每顆膠囊右邊自己標「報告」），其他回報上面一條細線、中間小字區名 */
   const zone=(k,h,list,tail)=>`<div class="ev-zone" data-zone="${k}">${h?`<div class="ev-zone-h"><span>${h}</span></div>`:""}<div class="events">${list.length?list.map(cap).join(""):h?"":empty}${tail}</div></div>`;
@@ -357,7 +355,7 @@ function renderDone(){
         ${evTimesHTML(ev)}
         ${ev.fromEv?"":`<span class="edit-only" style="gap:6px"><button type="button" class="icon" data-evundo>移回即時回報</button></span>`}${tail("e:"+ev.id,ed)}`}}))
   .sort((a,b)=>b.d.localeCompare(a.d));
-  /* 跟即時回報同一套膠囊與左右兩欄（class ev＋done-ev、data-st="done"）：收合是空心綠框綠字，展開跟即時回報一樣；data-done＝這一筆的 id */
+  /* 跟即時回報同一套膠囊與左右兩欄（class ev＋done-ev、data-st="done"）：外觀跟即時回報一樣，只有燈號是綠色；data-done＝這一筆的 id */
   if(!items.some(x=>x.id===selDone))selDone=null;
   const md=mdOn("done")&&!!selDone,pane=$("#doneDetail");mdLast.done=mdOn("done");
   $("#doneMD").classList.toggle("split",md);
