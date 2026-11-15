@@ -9,6 +9,8 @@
    6. 其他部門的 Firestore 文件前後完全相同；沒有頁面錯誤
    7. 編輯紀錄（版本歷史；總管理員加上稽核紀錄）、會長室在 firestore 模式的各部門編輯量（讀不到的部門顯示「—」）（02D D3，跑在第 6 段之前）
    8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：ID 不合格的文件不顯示、欄位值跳脫，總管理員打開看板不執行（跑在第 6 段之前）
+   9. 中斷的永久刪除（timeIds 有不存在的時間標記）不擋別的修改、會接著清完；兩個編輯者同時接著清不會卡住（02D 審查 P1）
+   10. 分批儲存中途失敗（route 擋下第二個 commit）：重新讀、只補寫剩下的，完成這一段的時間標記不重複（02D 審查 P1）
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');
@@ -277,6 +279,49 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await xs.hover('[data-issue="xssi"] [data-marker]',{force:true}).catch(()=>{});await xs.waitForTimeout(300);
     ok(await xs.evaluate(()=>window.__xss===undefined),'滑過註記也沒有執行');
     await admin(async d=>{for(const p of [`cards/${BAD}`,`weeks/${DEPT}__<img src=x onerror=window.__xss=2>`,`labels/${DEPT}__l" onfocus="window.__xss=3`,`issues/${DEPT}__xssi`])await d.doc(p).delete()});}
+
+  /* ---------- 9. 中斷的永久刪除（02D 審查 P1）：timeIds 有不存在的時間標記 → 編輯者照常存得進別的修改，刪除也接著清完；兩個人同時接著清不會卡住 ---------- */
+  const e2=await open();const e2Uid=await signIn(e2,'ed2');await setRole(e2Uid,{[DEPT]:'editor'});await until(async()=>!(await ui(e2)).locked);
+  {const TSN=TS.now();
+    const mkPurging=(id,real,ghost,vers)=>admin(async d=>{
+      await d.doc(C(id)).set({deptId:DEPT,title:'中斷的刪除',blocks:[{id:'b',text:'x',check:null,timeId:null}],timeIds:[...real,...ghost].map(x=>`${DEPT}__${x}`),issueId:null,staff:[],labels:[],links:[],report:false,
+        state:'purging',doneAt:null,deletedAt:TSN,deletedBy:'x',purgeLog:'abcdef123456',order:1,version:vers,createdAt:TSN,createdBy:'x',updatedAt:TSN,updatedBy:'x'});
+      for(let v=1;v<=vers;v++)await d.doc(`${C(id)}/versions/${v}`).set({cardId:`${DEPT}__${id}`,deptId:DEPT,version:v,title:'中斷的刪除',blocks:[],times:[],state:'open',by:'x',at:TSN,imported:false});
+      for(const x of real)await d.doc(`events/${DEPT}__${x}`).set({deptId:DEPT,cardId:`${DEPT}__${id}`,blockId:null,label:'x',start:TSN,end:TSN,startRaw:'2026-11-20',endRaw:'',allDay:true,place:'',toIssue:false,scope:'dept',visibility:'internal',rev:1,updatedAt:TSN,updatedBy:'x'});
+    });
+    const gone=async(id,real,vers)=>(await Promise.all([read(C(id)),...real.map(x=>read(`events/${DEPT}__${x}`)),...Array.from({length:vers},(_,i)=>read(`${C(id)}/versions/${i+1}`))])).every(x=>!x);
+    await mkPurging('pg1',['pgA'],['pgGhost'],2);
+    const tgt=await e2.evaluate(()=>state.events.filter(e=>!e.doneAt)[0].id);
+    await editCard(e2,tgt,ev=>{ev.desc='中斷刪除後的修改'});await settled(e2);
+    ok((await read(C(tgt))).blocks.some(b=>b.text==='中斷刪除後的修改'),'有中斷的刪除（timeIds 裡有不存在的時間標記）：編輯者別的修改照常存得進去');
+    ok(await gone('pg1',['pgA'],2),'中斷的刪除接著清完：存在的時間標記刪掉、不存在的只從清單拿掉、版本與卡片都刪掉');
+    /* 兩個編輯者同時儲存、同時接著清同一張（5 個時間標記＋2 個不存在的、5 個版本，要好幾批） */
+    const e3=await open();const e3Uid=await signIn(e3,'ed3');await setRole(e3Uid,{[DEPT]:'editor'});await until(async()=>!(await ui(e3)).locked);
+    await mkPurging('pg2',['pgB1','pgB2','pgB3','pgB4','pgB5'],['pgG1','pgG2'],5);
+    const [ta,tb]=await e3.evaluate(()=>state.events.filter(e=>!e.doneAt).slice(1,3).map(e=>e.id));
+    await Promise.all([editCard(e2,ta,ev=>{ev.desc='同時接著清 A'}),editCard(e3,tb,ev=>{ev.desc='同時接著清 B'})]);await settled(e2);await settled(e3);
+    const [ca,cb]=await Promise.all([read(C(ta)),read(C(tb))]);
+    ok(ca.blocks.some(b=>b.text==='同時接著清 A')&&cb.blocks.some(b=>b.text==='同時接著清 B'),'兩個編輯者同時儲存（都會接著清同一張中斷的刪除）：兩邊的修改都存得進去');
+    ok(await gone('pg2',['pgB1','pgB2','pgB3','pgB4','pgB5'],5)||(await e2.evaluate(async id=>{await startEdit('e:'+id);state.events.find(e=>e.id===id).desc+='。';dirty=true;await saveFlow()},ta),await settled(e2),await gone('pg2',['pgB1','pgB2','pgB3','pgB4','pgB5'],5)),
+      '兩個人同時接著清：不會卡住，最後全部清完');
+    await e3.ctx.close();}
+
+  /* ---------- 10. 分批儲存中途失敗（02D 審查 P1）：前面的批已寫入 → 重新讀一次、只補寫剩下的；完成這一段的時間標記不會重複 ---------- */
+  {await e2.click('#addEvent');await dlg(e2);await dlgSet(e2,{name:'FW 分批',desc:''});await dlgAct(e2,'ok');await settled(e2);
+    const pid=await e2.evaluate(()=>state.events.find(e=>e.name==='FW 分批').id);
+    await editCard(e2,pid,ev=>{ev.times.push({id:'tpart1',label:'分批一',start:'2020-01-01',end:'',place:'',toIssue:false},{id:'tpart2',label:'分批二',start:'2020-01-02',end:'',place:'',toIssue:false})});await settled(e2);
+    let n=0,failed=0;
+    await e2.ctx.route(/documents:commit/,r=>{n++;if(n===2){failed++;return r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({error:{code:403,message:'test',status:'PERMISSION_DENIED'}})})}return r.continue()});
+    const had=await e2.evaluate(()=>state.events.map(e=>e.id));e2.toasts.length=0;
+    await e2.evaluate(async id=>{await startEdit('e:'+id);evRoundDone(state.events.find(e=>e.id===id),'分批完成','下一段');if(fldCommitOpen())await saveFlow()},pid);await settled(e2);
+    await e2.ctx.unroute(/documents:commit/);
+    const rec=await e2.evaluate(([id,had])=>{const r=state.events.find(e=>e.fromEv===id&&!had.includes(e.id));return r&&r.id},[pid,had]);
+    const rc=rec&&await read(C(rec)),pc=await read(C(pid));
+    let evs=[];await admin(async d=>{evs=(await d.collection('events').where('deptId','==',DEPT).get()).docs.map(s=>({id:s.id,...s.data()})).filter(x=>['分批一','分批二'].includes(x.label))});
+    ok(failed===1&&n>=3&&await toastHas(e2,'部分修改已寫入，正在補寫'),`第二批被擋下（模擬）：提示部分已寫入、正在補寫（commit ${n} 次）`);
+    ok(rc&&rc.state==='done'&&rc.version===2&&pc.timeIds.length===0&&evs.length===2&&evs.every(x=>x.cardId===`${DEPT}__${rec}`)&&!(await read(`events/${DEPT}__tpart1`)),
+      `補寫後收斂：完成紀錄 done（第 2 版）、原卡片的時間標記拿掉、時間標記只有 2 份都在完成紀錄（${evs.length} 份，沒有重複）`);
+    ok(await e2.evaluate(()=>!editing&&!document.querySelector('#dlg[open]')),'補寫成功：結束編輯、沒有跳出儲存失敗');}
 
   /* ---------- 6. 其他部門不受影響、沒有頁面錯誤 ---------- */
   const after=await others();

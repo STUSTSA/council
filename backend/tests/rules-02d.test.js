@@ -1,10 +1,12 @@
 // 02D 獨立審查的修正（permissions.md 第 5.1e 節）：
 // S-01～S-04 文件 ID 限制：卡片、時間事件、議題、週報、標籤的文件 ID 只能是英數、底線、連字號（1～120 字）。
 //   網頁讀回來時會把 ID 放進畫面的屬性，不限制的話，有部門角色的人用 SDK 建一份 ID 帶引號的文件，就能在總管理員的畫面上執行程式。
+// P-01～P-02 中斷的永久刪除：timeIds 裡沒有文件的 ID（中斷過的寫入留下的）可以只從清單拿掉；編輯者刪不存在的時間事件會被拒絕
+//   （前端接續清除時要先確認文件在不在，store-write.js 的 resumeUnits）。
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { env, google, seedRole, seedDepts, assertSucceeds, assertFails, NOW,
-         createCard, cardData, verData, eventData, commit } from './helpers.js';
+import { env, google, seed, seedRole, seedDepts, assertSucceeds, assertFails, NOW,
+         createCard, cardData, verData, eventData, readDoc, commit, purgeStartWrites, purgeCard } from './helpers.js';
 
 let t;
 const U = { boss: { super: true }, ed: { depts: { rights: 'editor' } } };
@@ -60,5 +62,34 @@ describe('S-01～S-04 文件 ID 限制（02D 審查 P0：防止 ID 帶進畫面�
     assert.ok(ids.length > 0);
     const bad = ids.filter(id => !/^[A-Za-z0-9_-]{1,120}$/.test(`secretariat__${id}`));
     assert.deepEqual(bad, []);
+  });
+});
+
+describe('P-01～P-02 中斷的永久刪除（02D 審查 P1）', () => {
+  it('P-01 timeIds 裡有沒有文件的 ID：清除時只從清單拿掉（不刪）可以；同一批刪存在的事件也可以', async () => {
+    const c = cardData('ed', { timeIds: ['rights__ghost', 'rights__t1'] });
+    await commit(db('ed'), [['cards/c1', c], ['cards/c1/versions/1', verData('ed', 'c1', c)]]);
+    await seed(t, d => d.doc('events/rights__t1').set(eventData('ed', 'c1')));   // 只有 t1 有文件，ghost 是中斷過的寫入留下的
+    await commit(db('ed'), purgeStartWrites(await readDoc(t, 'cards/c1'), 'ed', 'c1'));
+    const x = db('ed'), b = x.batch();
+    b.delete(x.doc('events/rights__t1'));
+    b.update(x.doc('cards/c1'), { timeIds: [], updatedAt: NOW(), updatedBy: 'ed' });
+    await assertSucceeds(b.commit());
+    assert.deepEqual((await readDoc(t, 'cards/c1')).timeIds, []);
+  });
+  it('P-02 編輯者刪不存在的時間事件：拒絕（所以接續清除前要先確認文件在不在）；總管理員可以', async () => {
+    const c = cardData('ed', { timeIds: ['rights__ghost'] });
+    await commit(db('ed'), [['cards/c1', c], ['cards/c1/versions/1', verData('ed', 'c1', c)]]);
+    await commit(db('ed'), purgeStartWrites(await readDoc(t, 'cards/c1'), 'ed', 'c1'));
+    const x = db('ed'), b = x.batch();
+    b.delete(x.doc('events/rights__ghost'));
+    b.update(x.doc('cards/c1'), { timeIds: [], updatedAt: NOW(), updatedBy: 'ed' });
+    await assertFails(b.commit());
+    const y = db('ed'), b2 = y.batch();   // 只從清單拿掉：可以，之後整張清完
+    b2.update(y.doc('cards/c1'), { timeIds: [], updatedAt: NOW(), updatedBy: 'ed' });
+    await assertSucceeds(b2.commit());
+    await purgeCard(db('ed'), 'ed', 'c1');
+    assert.equal(await readDoc(t, 'cards/c1'), undefined);
+    await assertSucceeds(db('boss').doc('events/rights__nothing').delete());
   });
 });

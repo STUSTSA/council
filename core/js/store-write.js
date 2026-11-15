@@ -5,7 +5,10 @@
      只換順序＝只改 order；結案時間＝伺服器時間。新建就是完成的卡片（完成這一段）先建成進行中，下一批再結案。
    - 時間標記（events）一定列在卡片的 timeIds；換到別張卡片的時間標記（完成這一段）用新的 ID 重建。
    - 永久刪除：開始（purging＋刪除紀錄，亂數 nonce）→ 時間標記每批 3 個 → 版本由新往舊每批 3 個 → 最後一批刪卡片。
-   - 部門設定：rev +1＋同一批稽核紀錄 auditLogs/deptSettings_{部門}_{rev}；只有部門管理員與總管理員寫（編輯者改到的週報基準不寫）。
+   - 部門設定：rev +1＋同一批稽核紀錄 auditLogs/deptSettings_{部門}_{rev}；只有部門管理員與總管理員寫（編輯者的畫面不改週報基準，weekly.js 的 snapshotBase）。
+   - 上次中斷的永久刪除（卡片停在 purging）：先查哪些時間標記與版本還在，用自己的一輪寫入接著清（失敗不擋這次的儲存）。
+   - 前面的批已寫入、後面失敗：e.committed＞0，並帶 e.draft（換過 ID 的畫面資料）與 e.intended（這次要寫的文件）。store.js 重新讀一次後，
+     用 opt.only＝e.intended、opt.prev＝上次讀到的原始文件再呼叫一次，只補寫還沒寫進去的；期間被別人改過的文件不寫（e.blocked）。
    - 每一批規則讀取不超過 20 次（照 permissions.md 的算法、不依賴快取），用交易：先讀要改的文件，版本號（version、rev、updatedAt）
      跟上次讀到的不同就整批不寫（conflict），不會蓋掉別人剛存的內容。
    錯誤一律丟出帶 code 的 Error（conflict、permission-denied、unavailable、badtime…）；e.committed＝失敗前已經寫入的批數。 */
@@ -69,32 +72,45 @@ function purgeUnits(dept, id, card, versions, { start, srcEvents }) {
         before: { title: card.title, deptId: card.deptId, state: card.state }, after: { state: "purging" }, ref: nonce } }],
       [{ path: cp, ok: s => s && s.version === card.version && (s.state === "open" || s.state === "done") }]));
   }
-  const left = [...(card.timeIds || [])];
+  /* 交易裡先確認：卡片的 timeIds 還是算的時候那一份、要刪的時間標記與版本都還在（兩個人同時接著清時，後到的整批不寫、重算） */
+  const left = [...(card.timeIds || [])], exists = p => ({ path: p, ok: s => !!s });
   while (left.length) {
-    const gone = left.splice(0, 3), rest = left.slice();
-    const dels = gone.filter(e => srcEvents.has(e));   /* timeIds 裡沒有文件的 ID（中斷過的寫入）只從清單拿掉 */
+    const was = left.slice(), gone = left.splice(0, 3), rest = left.slice();
+    const dels = gone.filter(e => srcEvents.has(e));   /* timeIds 裡沒有文件的 ID（中斷過的寫入）只從清單拿掉（規則 onlyShrinks 允許） */
     out.push(unit(COST.sweepCard + COST.ev * dels.length,
       [...dels.map(e => ({ path: `events/${e}`, op: "delete" })), { path: cp, op: "update", data: { timeIds: rest, ...stamp() } }],
-      [{ path: cp, ok: s => s && s.state === "purging" }]));
+      [{ path: cp, ok: s => s && s.state === "purging" && stable(s.timeIds || []) === stable(was) }, ...dels.map(e => exists(`events/${e}`))]));
   }
   const vs = versions.slice().sort((a, b) => b - a);
-  while (vs.length > 3) out.push(unit(COST.verDel * 3, vs.splice(0, 3).map(v => ({ path: `${cp}/versions/${v}`, op: "delete" }))));
+  while (vs.length > 3) { const part = vs.splice(0, 3);
+    out.push(unit(COST.verDel * 3, part.map(v => ({ path: `${cp}/versions/${v}`, op: "delete" })), part.map(v => exists(`${cp}/versions/${v}`)))); }
   out.push(unit(COST.verDel * vs.length + COST.cardDel, [...vs.map(v => ({ path: `${cp}/versions/${v}`, op: "delete" })), { path: cp, op: "delete" }],
-    [{ path: cp, ok: s => s && s.state === "purging" }]));
+    [{ path: cp, ok: s => s && s.state === "purging" && !(s.timeIds || []).length }, ...vs.map(v => exists(`${cp}/versions/${v}`))]));
   return out;
 }
 
-/* 上次中斷的永久刪除（卡片停在 purging）：同部門的編輯者下次儲存時接著清完 */
+/* 上次中斷的永久刪除（卡片停在 purging）：同部門的編輯者下次儲存時接著清完。
+   timeIds 裡的 ID 不一定有文件（中斷過的寫入）：規則不允許編輯者刪不存在的時間標記（rules-02d P-02），所以先查這張卡片現存的時間標記，
+   不在的只從清單拿掉（P-01）。版本也照現存的刪。 */
 async function resumeUnits(dept) {
   const out = [];
   const qs = await getDocs(query(collection(db, "cards"), where("deptId", "==", dept), where("state", "==", "purging")));
   for (const s of qs.docs) {
     const c = s.data(), ids = new Set();
-    for (const e of c.timeIds || []) ids.add(e);   /* 清單上的都當成存在：查不到的會被規則擋下，下次再試 */
+    const have = new Set((await getDocs(query(collection(db, "events"), where("cardId", "==", s.id)))).docs.map(x => x.id));
+    for (const e of c.timeIds || []) if (have.has(e)) ids.add(e);
     const vs = (await getDocs(collection(db, `cards/${s.id}/versions`))).docs.map(v => +v.id).filter(Number.isFinite);
     out.push(...purgeUnits(dept, s.id, c, vs, { start: false, srcEvents: ids }));
   }
   return out;
+}
+/* 接續清除用自己的一輪寫入：失敗（別人同時在清＝conflict）就重新查、再試，最多 3 次；其他錯誤丟給呼叫端（呼叫端不擋這次的儲存） */
+async function resume(dept) {
+  for (let i = 0; i < 3; i++) {
+    const units = await resumeUnits(dept);
+    if (!units.length) return;
+    try { await run(units); return; } catch (e) { if (e.code !== "conflict") throw e; }
+  }
 }
 
 async function saveDept(cfg, dept, base, next, opt = {}) {
@@ -110,9 +126,23 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
   const R = { cards: rawOf("cards"), issues: rawOf("issues"), weeks: rawOf("weeks"), labels: rawOf("labels"), events: rawOf("events") };
   const units = [];
   const ts = t => { if (!t.start || !t.end) throw fail("badtime"); return t; };
+  /* 這次要寫哪些文件（失敗時給 store.js 補寫用）。補寫（opt.only）時只寫清單上的；上次讀到之後被別人改過或刪掉的不寫，記進 blocked */
+  const want = new Set(), blocked = [], P = opt.prev || null;
+  const stampOf = d => stable([d.version, d.rev, d.updatedAt, d.state]);
+  const pick = (kind, id, inN = true) => {
+    const key = kind === "deptSettings" ? `deptSettings/${dept}` : `${kind}/${id}`;
+    if (opt.only) {
+      if (!opt.only.has(key)) return false;
+      const was = kind === "deptSettings" ? P.settings : (P[kind] || []).find(d => d.id === id);
+      const now = kind === "deptSettings" ? src.settings : R[kind].get(id);
+      if (was && !now) { if (inN) blocked.push(key); return false; }
+      if (was && now && stampOf(was) !== stampOf(now) && now.updatedBy !== me) { blocked.push(key); return false; }
+    }
+    want.add(key); return true;
+  };
 
   /* ---- 部門設定（管理員以上；稽核鏈） ---- */
-  if (stable(B.settings) !== stable(N.settings) && opt.admin) {
+  if (stable(B.settings) !== stable(N.settings) && opt.admin && pick("deptSettings", dept)) {
     const r = src.settings, o = orig.settings[dept];
     if (!r && !opt.super) throw fail("permission-denied");
     const rev = r ? r.rev + 1 : 1, keys = Object.keys({ ...B.settings, ...N.settings }).filter(k => stable(B.settings[k]) !== stable(N.settings[k]));
@@ -128,11 +158,14 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
     const rev = kind === "issues";
     for (const [id, d] of Object.entries(N[kind])) {
       const b = B[kind][id], p = `${kind}/${id}`, r = R[kind].get(id), o = orig[kind][id];
+      if (b && stable(b) === stable(d)) continue;
+      if (!pick(kind, id)) continue;
       if (!b) units.push(unit(COST.simple, [{ path: p, op: "set", data: { ...typed(d), ...(rev ? { rev: 1 } : {}), ...stamp() } }]));
-      else if (stable(b) !== stable(d)) units.push(unit(COST.simple, [{ path: p, op: "set", data: { ...finalize(d, o), ...(rev ? { rev: r.rev + 1 } : {}), ...stamp() } }],
+      else units.push(unit(COST.simple, [{ path: p, op: "set", data: { ...finalize(d, o), ...(rev ? { rev: r.rev + 1 } : {}), ...stamp() } }],
         [{ path: p, ok: s => s && (rev ? s.rev === r.rev : sameTs(s.updatedAt, o && o.updatedAt)) }]));
     }
     for (const id of Object.keys(B[kind])) if (!N[kind][id]) {
+      if (!pick(kind, id, false)) continue;
       if (!opt.super) throw fail("permission-denied");
       const r = R[kind].get(id), o = orig[kind][id];
       units.push(unit(COST.simple, [{ path: `${kind}/${id}`, op: "delete" }],
@@ -149,8 +182,10 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
     for (const [eid, e] of Object.entries(N.events)) {
       if (e.cardId !== id) continue;
       const b = B.events[eid], r = R.events.get(eid);
+      if (b && stable(b) === stable(e)) continue;
+      if (!pick("events", eid)) continue;
       if (!b) out.push(unit(COST.ev, [{ path: `events/${eid}`, op: "set", data: { ...typed(ts(e)), rev: 1, ...stamp() } }]));
-      else if (stable(b) !== stable(e)) out.push(unit(COST.ev, [{ path: `events/${eid}`, op: "set", data: { ...finalize(ts(e), orig.events[eid]), rev: r.rev + 1, ...stamp() } }],
+      else out.push(unit(COST.ev, [{ path: `events/${eid}`, op: "set", data: { ...finalize(ts(e), orig.events[eid]), rev: r.rev + 1, ...stamp() } }],
         [{ path: `events/${eid}`, ok: s => s && s.rev === r.rev }]));
     }
     return out;
@@ -159,6 +194,7 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
   const cardOrder = Object.entries(N.cards).sort(([a], [b]) => (B.cards[a] ? 1 : 0) - (B.cards[b] ? 1 : 0));
   for (const [id, d] of cardOrder) {
     const b = B.cards[id], cp = `cards/${id}`;
+    if ((!b || stable(b) !== stable(d)) && !pick("cards", id)) continue;   /* 補寫時被別人改過的卡片：連它的時間標記都不寫 */
     if (!b) {   /* 新增：卡片＋第 1 版（一定是進行中）；時間標記接在後面；完成這一段產生的完成紀錄再結案（第 2 版） */
       const c1 = { ...d, state: "open", doneAt: null };
       units.push(unit(COST.cardNew + COST.ver, [{ path: cp, op: "set", data: { ...typed(c1), version: 1, ...stamp() } }, verDoc(id, c1, 1, timesOf(N, id, d))]));
@@ -196,12 +232,21 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
   }
   /* 畫面上刪掉的卡片：永久刪除（版本是連續的 1～version） */
   for (const id of Object.keys(B.cards)) if (!N.cards[id]) {
+    if (!pick("cards", id, false)) continue;
     const r = R.cards.get(id);
     units.push(...purgeUnits(dept, id, r, Array.from({ length: r.version }, (_, i) => i + 1), { start: true, srcEvents: R.events }));
   }
 
-  units.unshift(...await resumeUnits(dept));
-  return run(units);
+  /* 中斷的永久刪除先接著清（自己的一輪；失敗不擋這次的儲存，下次再試） */
+  try { await resume(dept); } catch (_) { /* 下次儲存再試 */ }
+  let done;
+  try {
+    done = await run(units);
+  } catch (e) {
+    throw Object.assign(e, { draft, intended: opt.only || want, blocked });
+  }
+  if (blocked.length) throw Object.assign(fail("conflict"), { committed: done.batches, draft, intended: opt.only || want, blocked });
+  return done;
 }
 
 /* 依序裝進每一批（規則讀取 ≤ 20、同一份文件一批只寫一次），每一批一個交易 */

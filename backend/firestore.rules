@@ -2,7 +2,7 @@ rules_version = '2';
 // 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 

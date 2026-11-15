@@ -15,6 +15,7 @@
 | Q3 | 部門看板：進行中 | `cards` where `deptId == X` and `state == 'open'` order by `order` | `deptId ASC, state ASC, order ASC` | L1 |
 | Q4 | 部門看板：已完成（分頁） | `cards` where `deptId == X` and `state == 'done'` order by `doneAt DESC` limit 20 | `deptId ASC, state ASC, doneAt DESC` | L1 |
 | Q5 | 接續未完成的永久刪除（02A 修正：沒有「最近刪除」了） | `cards` where `deptId == X` and `state == 'purging'` | 兩個等號條件，免複合索引（02A 拿掉 `deptId, state, deletedAt` 索引；`events` 的兩個 `cardDeleted` 索引也一起拿掉） | 部門編輯者以上 |
+| Q5b | 接續永久刪除時查這張卡片現存的時間事件（02D 審查） | `events` where `cardId == X` | 單一欄位，免複合索引 | L1 |
 | Q6 | 秘書處會議報告事項 | `cards` where `report == true` and `state == 'open'` | `report ASC, state ASC, deptId ASC` | L1 |
 | Q7 | 母議題底下的卡片 | `cards` where `issueId == X` and `state in ['open','done']` | `issueId ASC, state ASC` | L1 |
 | Q8 | 卡片版本歷史 | `cards/X/versions` order by `version DESC`（01A-R 改成子集合） | 單一欄位，免複合索引 | 卡片可讀時（刪除中的卡片只有 L2，用來由新往舊清除） |

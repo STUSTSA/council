@@ -38,25 +38,63 @@ function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.ori
 
 /* ---------- 02D：firestore 模式的儲存（save.js 的 persist 交給這裡） ----------
    store-write.js 算出改了哪些文件、照規則要求的形狀分批寫入（每批規則讀取不超過 20 次）；每一批用交易，先確認文件還是上次讀到的版本，
-   別人改過就整批不寫（不會互相蓋掉）。成功後重新讀這個部門。失敗：畫面上的修改留著，提示原因並可以重新載入。 */
+   別人改過就整批不寫（不會互相蓋掉）。成功後重新讀這個部門。失敗：畫面上的修改留著，提示原因並可以重新載入。
+   02D 審查：前面的批已寫入、後面失敗（e.committed＞0）時，重新讀一次，用新讀到的內容當比對基準，只補寫這次要寫、還沒寫進去的文件
+   （fsFinish；最多試 3 輪）。期間被別人改過的文件不寫，比對基準留在舊的那一份（下次儲存照樣被版本檢查擋下，不會蓋掉別人的）。 */
 let storeWriteMod=null,fsBusy=false;
 const FS_ERR={conflict:"資料剛被別人改過，沒有儲存","permission-denied":"沒有權限，沒有儲存",unavailable:"沒有連上網路，沒有儲存",badtime:"時間格式不正確，沒有儲存"};
+const FS_PART={conflict:"部分修改已寫入；有的資料剛被別人改過，那部分沒有儲存（還在畫面上）","permission-denied":"部分修改已寫入；其餘沒有權限、沒有儲存（還在畫面上）",
+  unavailable:"部分修改已寫入；其餘因為沒有連上網路沒有儲存（還在畫面上）"};
 async function fsPersist(msg){
   if(fsBusy){toast("儲存中，請稍候");return false}
   if(!storeFsBase){toast(STORE_NOTE.firestore);return false}
   fsBusy=true;
+  const opt={admin:fsAdmin(),super:fsRole()==="super"};
+  let err=null,W=null;
   try{
     if(!storeWriteMod)storeWriteMod=storeModLoad("store-write.js","board-store-write-ready","BoardStoreWrite");
-    const W=await storeWriteMod;
-    await W.saveDept(CFG.firebase,CFG.deptId,storeFsBase,state,{admin:fsAdmin(),super:fsRole()==="super"});
-  }catch(e){
+    W=await storeWriteMod;
+    await W.saveDept(CFG.firebase,CFG.deptId,storeFsBase,state,opt);
+  }catch(e){err=e}
+  if(err&&err.committed>0&&err.draft){toast("部分修改已寫入，正在補寫其餘的修改…");err=await fsFinish(W,err,opt)}
+  if(err){
     fsBusy=false;
-    const m=(FS_ERR[e&&e.code]||"儲存失敗")+(e&&e.committed?"（部分修改已寫入）":"");
+    const m=err.part?(FS_PART[err.code]||"部分修改已寫入；其餘沒有儲存（還在畫面上）"):(FS_ERR[err&&err.code]||"儲存失敗");
     toast(m);setTimeout(()=>fsFailAsk(m),0);
     return false;
   }
   try{storeFsUse(await storeFsLoad())}catch(_){storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
   fsBusy=false;render();toast(msg||"已儲存");return true;
+}
+/* 補寫：e.draft＝這次要存的畫面資料（完成這一段換過 ID 的時間標記用新的 ID，重試不會再建一份）、e.intended＝這次要寫的文件。
+   回傳 null＝全部寫完；否則回傳錯誤（e.part＝已經寫入一部分）。畫面上的修改一律留著 */
+async function fsFinish(W,e,opt){
+  const prev=storeFsBase,only=e.intended,draft=e.draft;
+  state=draft;
+  for(let i=0;i<3;i++){
+    let r;try{r=await storeFsLoad()}catch(_){return Object.assign(e,{part:true})}   /* 讀不到：比對基準不變，提示後由使用者重新載入 */
+    storeFsBase={src:r.src,orig:r.orig,state:JSON.parse(JSON.stringify(normalize(r.data)))};
+    try{await W.saveDept(CFG.firebase,CFG.deptId,storeFsBase,state,{...opt,only,prev:prev.src});return null}
+    catch(e2){
+      if(e2.draft)state=e2.draft;
+      if(e2.blocked&&e2.blocked.length){fsHold(prev,e2.blocked);return Object.assign(e2,{part:true,code:"conflict"})}
+      if(!(e2.committed>0))return Object.assign(e2,{part:true});
+      e=e2;   /* 又寫進去一部分：再讀一次、繼續補 */
+    }
+  }
+  return Object.assign(e,{part:true});
+}
+/* 被別人改過、這次沒寫的文件：比對基準換回上次讀到的那一份（下次儲存時版本不同＝被擋下，不會蓋掉別人剛存的內容） */
+function fsHold(prev,paths){
+  const b=storeFsBase;
+  for(const p of paths){
+    const [col,id]=p.split("/");
+    if(col==="deptSettings"){b.src.settings=prev.src.settings;b.orig.settings=prev.orig.settings;continue}
+    const old=(prev.src[col]||[]).find(d=>d.id===id),list=(b.src[col]||[]).filter(d=>d.id!==id);
+    b.src[col]=old?list.concat([old]):list;
+    if(prev.orig[col]&&prev.orig[col][id])b.orig[col][id]=prev.orig[col][id];
+  }
+  b.state=JSON.parse(JSON.stringify(normalize(StoreMap.toState(CFG.deptId,b.src))));   /* 比對的畫面資料也照這一份重算（被別人刪掉的不會被當成新的再建一次） */
 }
 /* 失敗時：重新載入＝放棄畫面上的修改、讀最新的內容；取消＝留在原畫面（修改還在） */
 async function fsFailAsk(m){
