@@ -231,19 +231,26 @@ document.addEventListener("pointerup",async()=>{
 /* import data from a backup / older version file */
 $("#importFile").addEventListener("change",async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
+  if(storeSource()!=="github"){toast(fsMode()?"新資料庫的看板不能匯入備份（會整份取代）":STORE_NOTE.frozen);return}   /* 鈕在這兩個模式不出現；這裡再擋一次 */
   try{
     const txt=await f.text();
     const m=txt.match(/<script id="state" type="application\/json">([\s\S]*?)<\/script>/);
     const raw=JSON.parse(m?m[1]:txt);
     if(!raw||!Array.isArray(raw.issues))throw 0;
+    const has=new Set(Object.keys(raw)),memHas=new Map((Array.isArray(raw.members)?raw.members:[]).map(m=>[m&&m.id,new Set(Object.keys(m||{}))]));   /* normalize 會補預設值（例如 minutes:[]），先記下備份裡原本有哪些欄位 */
     const data=normalize(raw);
     const v=await ask(`匯入「${f.name}」？`,[],{});
     if(v===null)return;
     data.locked=false;data.id=state.id;
     /* 02D：從新資料庫匯出的備份（切換後退回 GitHub 的回復路徑，docs/architecture/migration.md 第 7 節）沒有只在 GitHub 模式有的欄位：
-       雲端設定與權杖、共用密碼、身分的密碼與權杖、會議紀錄。備份裡沒有的就沿用目前看板的值，匯入不會把它們清掉 */
-    for(const k of ["sync","pwKdf","pwHash","minutes"])if(!(k in raw)&&state[k]!==undefined)data[k]=state[k];
-    data.members.forEach(m=>{const o=(state.members||[]).find(x=>x.id===m.id);if(o)["kdf","tok"].forEach(k=>{if(!(k in m)&&o[k]!==undefined)m[k]=o[k]})});
+       雲端設定與權杖、共用密碼、身分的密碼與權杖、會議紀錄。備份裡沒有的就沿用目前看板的值，匯入不會把它們清掉。
+       權杖（sync）是用共用密碼加密的，所以 sync、pwKdf、pwHash 是一組，看備份裡有沒有 sync 決定：有＝整組用備份的；沒有＝整組沿用目前的
+       （不會把現在的權杖配上備份裡舊的密碼，也不會留下對不上的組合）。每個身分的 kdf、tok 也是一組（02D 審查） */
+    const PW=["sync","pwKdf","pwHash"];
+    if(!has.has("sync"))PW.forEach(k=>{if(state[k]!==undefined)data[k]=JSON.parse(JSON.stringify(state[k]));else delete data[k]});
+    if(!has.has("minutes")&&state.minutes!==undefined)data.minutes=JSON.parse(JSON.stringify(state.minutes));
+    data.members.forEach(m=>{const o=(state.members||[]).find(x=>x.id===m.id),r=memHas.get(m.id)||new Set();
+      if(o&&!r.has("kdf")&&!r.has("tok"))["kdf","tok"].forEach(k=>{if(o[k]!==undefined)m[k]=o[k]})});
     state=data;state.savedAt=nowStr();
     editing=false;dirty=false;progOpen=null;render();await persist(`已匯入並${HOSTED?'發布':'儲存'}`);
     toast(`已匯入：${state.issues.length} 個議題、${state.events.length} 則即時回報、${state.weeks.length} 份週報`);

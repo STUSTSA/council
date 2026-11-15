@@ -6,9 +6,11 @@
       3. 看板把這個部門切成 firestore（route 掉 dept/config.js，其他部門照舊 github），用 Auth 模擬器以這個部門的編輯者登入
       4. 新增一張卡片並儲存 → Firestore 裡有這張卡片＋第 1 版
       5. 其他部門的 Firestore 文件在匯入與編輯前後雜湊相同；另一個還在 github 模式的部門讀到的內容＝資料檔複本；GitHub 沒有任何寫入
-   B. 水果部完整回復：在 firestore 模式再改內容（多行說明、時間標記、標籤）→ 看板「匯出備份」＝命令列 --export（同一個 toState）
-      → 切回 github（測試設定，GitHub API 用 route 模擬）→ 用看板「匯入備份」寫回 → 攔下 PUT 的內容
-      → 寫回的內容＝切換前的資料檔＋firestore 模式裡的修改（語意比對，不比的欄位見 backend/migrate/compare.js）；雲端設定、權杖等只在 GitHub 模式有的欄位沿用原本的
+   B. 回復演練（權益部＝內容最多的部門，水果部＝幾乎是空的；docs/遷移步驟.md 第 4 節的順序）：在 firestore 模式改內容（多行說明、時間標記、標籤；
+      權益部再改一張原本就有時間標記的卡片）→ 總管理員撤銷這個部門的角色（還開著的編輯者分頁寫不進去）→ 總管理員「匯出備份」＝命令列 --export
+      → firestore 模式觸發匯入備份被擋下 → 切回 github（GitHub API 用 route 模擬）→ 主控台檢查匯出後沒有新寫入（[0, 0]，塞一筆版本後抓得到）
+      → 用看板「匯入備份」寫回 → 攔下 PUT 的內容 → 寫回的內容＝切換前的資料檔＋firestore 模式裡的修改（語意比對，不比的欄位見 backend/migrate/compare.js）；
+      雲端設定、共用密碼、會議紀錄（權益部加一筆合成的）、每個成員的密碼與權杖沿用原本的（只比雜湊，不印出）
    最後確認 repo 裡的資料檔沒有被動過。執行（會自己開模擬器與網站）：cd backend && npm run test:web */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');const os=require('os');
 const {createRequire}=require('module');const {spawnSync}=require('child_process');
@@ -117,53 +119,94 @@ const t0=Date.now();
   }
   ok(!puts.length,`十個部門的演練都沒有寫 GitHub（${puts.length} 次）`);
 
-  /* ---------- B. 水果部完整回復 ---------- */
-  const F='fruit';
-  const p=await open(F,[F]);await signIn(p,`ed-${F}`);await until(()=>p.evaluate(()=>!boardLocked()));
-  const fid=await p.evaluate(()=>state.events.find(e=>e.name==='SW fruit 演練卡片').id);
-  await editCard(p,fid,ev=>{ev.desc='演練的第一行\n第二行（firestore 模式改的）';ev.times.push({id:'tsw1',label:'演練開會',start:'2026-12-01T10:00',end:'2026-12-01T12:00',place:'學生會',toIssue:false})});await settled(p);
-  const sid=await addCard(p,'SW 第二張卡片','');
-  await p.click('#setBtn');await p.waitForTimeout(700);await p.click('[data-set="labels"]');await p.waitForSelector('[data-newlbl="人"]',{timeout:8000});
-  await p.fill('[data-newlbl="人"]','SW 演練標籤');await p.click('[data-x="add"][data-k="人"]');await p.click('[data-x="done"]');await settled(p);
-  const lid=await p.evaluate(()=>(state.labels.find(l=>l.name==='SW 演練標籤')||{}).id);
-  ok(!!lid&&!!sid&&(await read(`events/${F}__tsw1`))&&(await read(`cards/${F}__${fid}`)).version===2,'水果部：firestore 模式改說明、加時間標記、新增卡片與標籤都寫進 Firestore');
-  /* 看板的「匯出備份」 */
-  await p.evaluate(()=>{window.showSaveFilePicker=undefined});
-  const [dl]=await Promise.all([p.waitForEvent('download',{timeout:10000}),p.evaluate(()=>exportBackup())]);
-  const boardFile=path.join(TMP,'fruit-board-export.json');await dl.saveAs(boardFile);await p.ctx.close();
-  const boardExp=JSON.parse(fs.readFileSync(boardFile,'utf8'));
-  /* 命令列的匯出 */
-  const cliFile=path.join(TMP,'fruit-cli-export.json');
-  const cr=spawnSync(process.execPath,[path.join(ROOT,'backend/migrate/cli.js'),'--emulator','--export=fruit',`--out=${cliFile}`],{cwd:path.join(ROOT,'backend'),env:process.env,encoding:'utf8'});
-  const cliExp=cr.status===0?JSON.parse(fs.readFileSync(cliFile,'utf8')):null;
-  const de=cliExp?diffPaths(canon(boardExp,F),canon(cliExp,F)):['命令列失敗'];
-  ok(!de.length,`看板「匯出備份」＝命令列 --export${de.length?'；不同：'+de.join('、'):''}`);
-  ok(!('minutes' in boardExp)&&!('sync' in boardExp)&&!('pwKdf' in boardExp)&&boardExp.members.every(m=>!('kdf' in m)&&!('tok' in m)),'匯出的備份沒有只在 GitHub 模式有的欄位（會議紀錄、雲端設定、密碼）');
-  /* 切回 github（測試設定）：GitHub API 用 route 模擬，資料檔＝切換前的複本 */
-  const fileB64=fs.readFileSync(path.join(TMP,pathOf(F))).toString('base64');const ghPuts=[];
-  const gh=r=>{const q=r.request(),u=q.url();
-    if(q.method()==='PUT'){ghPuts.push({url:u,body:JSON.parse(q.postData())});return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({content:{sha:'rehearsal-sha-2'}})})}
-    if(u.includes(`/contents/${pathOf(F)}`))return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha:'rehearsal-sha-1',content:fileB64,encoding:'base64'})});
-    if(u.includes('/commits'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
-    r.fulfill({status:404,body:'{}'})};
-  const g=await open(F,[],{repo:true,gh});
-  ok(await g.evaluate(()=>storeSource()==='github'&&cloudOn()&&cloud.sha==='rehearsal-sha-1'),'水果部切回 github：讀到 GitHub 上（模擬）的資料檔');
-  await g.setInputFiles('#importFile',boardFile);await g.waitForSelector('#dlg[open]',{timeout:8000});await dlgAct(g,'ok');
-  await until(()=>ghPuts.length>0,10000);await g.waitForTimeout(500);
-  const put=ghPuts[0],restored=put?JSON.parse(Buffer.from(put.body.content,'base64').toString('utf8')):null;
-  ok(ghPuts.length===1&&put.url.endsWith(`/contents/${pathOf(F)}`)&&put.body.sha==='rehearsal-sha-1'&&/Board-Log: 1/.test(put.body.message),'匯入備份：寫回 GitHub 一次（data-fruit.json，帶原本的 sha 與編輯紀錄）');
-  const dr=restored?diffPaths(canon(restored,F),canon(cliExp,F)):['沒有 PUT'];
-  ok(!dr.length,`寫回的內容＝從 Firestore 匯出的內容${dr.length?'；不同：'+dr.join('、'):''}`);
-  /* 寫回的內容拿掉 firestore 模式的修改＝切換前的資料檔；修改本身都在 */
-  if(restored){
-    const ev=restored.events.find(e=>e.id===fid),ev2=restored.events.find(e=>e.id===sid);
-    ok(ev&&ev.desc==='演練的第一行\n第二行（firestore 模式改的）'&&ev.times.length===1&&ev.times[0].start==='2026-12-01T10:00'&&ev2&&restored.labels.some(l=>l.id===lid&&l.name==='SW 演練標籤'),'寫回的內容有 firestore 模式的修改（說明、時間標記、新卡片、標籤）');
-    const base={...restored,events:restored.events.filter(e=>e.id!==fid&&e.id!==sid),labels:restored.labels.filter(l=>l.id!==lid)};
-    const db2=diffPaths(canon(base,F),canon(orig[F],F));
-    ok(!db2.length,`寫回的內容拿掉這些修改＝切換前的資料檔${db2.length?'；不同：'+db2.join('、'):''}`);
-    ok(stable(restored.sync)===stable(orig[F].sync)&&stable(restored.pwKdf)===stable(orig[F].pwKdf)&&stable(restored.minutes||[])===stable(orig[F].minutes||[]),'只在 GitHub 模式有的欄位（雲端設定與權杖、共用密碼、會議紀錄）沿用原本的值');
-  }
-  await g.ctx.close();
+  /* ---------- B. 回復演練（docs/遷移步驟.md 第 4 節）：權益部（內容最多：成員的密碼與權杖、共用密碼、卡片、時間標記、議題註記）與水果部 ----------
+     順序照手冊：firestore 模式改內容 → 總管理員撤銷這個部門的角色（還開著的編輯者分頁寫不進去）→ 總管理員匯出備份（記時間）
+     → 切回 github → 主控台檢查匯出後沒有新寫入（[0, 0]；再塞一筆版本確認檢查抓得到）→ 匯入備份寫回 → 比對。
+     GitHub 上的資料檔（route 模擬）＝暫存複本；權益部另外加一筆合成的會議紀錄（資料檔裡沒有，用來確認會議紀錄沿用）。機密欄位只比雜湊，不印出 */
+  const rollback=async(D,{rich})=>{
+    const remote=JSON.parse(fs.readFileSync(path.join(TMP,pathOf(D)),'utf8'));
+    if(rich)remote.minutes=[{date:'2026-11-01',dept:D,items:['演練用的會議紀錄（合成）']}];
+    const H=v=>sha(stable(v===undefined?null:v));
+    const p=await open(D,[D]);const edUid=await signIn(p,`ed-${D}`);await until(()=>p.evaluate(()=>!boardLocked()));
+    const fid=await p.evaluate(D=>state.events.find(e=>e.name===`SW ${D} 演練卡片`).id,D);
+    await editCard(p,fid,ev=>{ev.desc='演練的第一行\n第二行（firestore 模式改的）';ev.times.push({id:'tsw1',label:'演練開會',start:'2026-12-01T10:00',end:'2026-12-01T12:00',place:'學生會',toIssue:false})});await settled(p);
+    /* 原本就有、帶時間標記的卡片：改說明（時間標記、母議題的註記都要原樣回去） */
+    const o0=rich?await p.evaluate(()=>{const e=state.events.find(e=>e.times.length&&!e.doneAt);return e&&JSON.parse(JSON.stringify({id:e.id,desc:e.desc,touched:e.touched,touchedAt:e.touchedAt}))}):null;
+    if(o0)await editCard(p,o0.id,ev=>{ev.desc=ev.desc+'\n（firestore 模式加的一行）'});await settled(p);
+    const sid=await addCard(p,'SW 第二張卡片','');
+    await p.click('#setBtn');await p.waitForTimeout(700);await p.click('[data-set="labels"]');await p.waitForSelector('[data-newlbl="人"]',{timeout:8000});
+    await p.fill('[data-newlbl="人"]','SW 演練標籤');await p.click('[data-x="add"][data-k="人"]');await p.click('[data-x="done"]');await settled(p);
+    const lid=await p.evaluate(()=>(state.labels.find(l=>l.name==='SW 演練標籤')||{}).id);
+    ok(!!lid&&!!sid&&(await read(`events/${D}__tsw1`))&&(await read(`cards/${D}__${fid}`)).version===2&&(!o0||(await read(`cards/${D}__${o0.id}`)).version>=2),
+      `${D}：firestore 模式改說明${o0?'（含原本的卡片）':''}、加時間標記、新增卡片與標籤都寫進 Firestore`);
+    /* 撤銷角色：還開著的編輯者分頁（舊設定）按儲存被規則擋下 */
+    await setRole(edUid,{});await until(()=>p.evaluate(()=>boardLocked()));
+    const before=await read(`cards/${D}__${fid}`);
+    const blocked=await p.evaluate(async()=>{const n=JSON.parse(JSON.stringify(state));n.events[0].name+='（撤權後）';
+      try{await window.BoardStoreWrite.saveDept(CFG.firebase,CFG.deptId,storeFsBase,n,{admin:true,super:false});return 'ok'}catch(e){return e.code}});
+    ok(blocked==='permission-denied'&&(await read(`cards/${D}__${fid}`)).version===before.version,`${D}：撤銷角色後，還開著的編輯者分頁寫不進去（${blocked}）`);
+    await p.ctx.close();
+    /* 總管理員匯出（看板「匯出備份」） */
+    const sp=await open(D,[D]);const suUid=await signIn(sp,`su-${D}`);
+    await admin(d=>d.doc(`roles/${suUid}`).set({super:true,depts:{},rev:1,lastVia:'manual',lastRef:'bootstrap',updatedAt:TS.now(),updatedBy:'su'}));
+    await until(()=>sp.evaluate(()=>!boardLocked()));
+    await sp.evaluate(()=>{window.showSaveFilePicker=undefined});
+    const since=Date.now();
+    const [dl]=await Promise.all([sp.waitForEvent('download',{timeout:10000}),sp.evaluate(()=>exportBackup())]);
+    const boardFile=path.join(TMP,`${D}-board-export.json`);await dl.saveAs(boardFile);
+    /* firestore 模式不能匯入備份（鈕不出現，直接觸發也擋下） */
+    const fsImp=await sp.evaluate(async()=>{const before=JSON.stringify(state),d0=!!document.querySelector('#dlg[open]'),t0=d0?document.querySelector('#dlgForm b').textContent:'';const dt=new DataTransfer();dt.items.add(new File(['{"issues":[]}'],'x.json',{type:'application/json'}));
+      const i=document.querySelector('#importFile');i.files=dt.files;i.dispatchEvent(new Event('change'));await new Promise(r=>setTimeout(r,500));
+      const d1=!!document.querySelector('#dlg[open]');return {same:JSON.stringify(state)===before,dlg:d1&&(!d0||document.querySelector('#dlgForm b').textContent!==t0),t:document.querySelector('#toast').textContent,d0,t0}});
+    ok(fsImp.same&&!fsImp.dlg&&fsImp.t.includes('不能匯入備份'),`${D}：firestore 模式的看板觸發匯入備份也被擋下（${fsImp.t}；內容不變 ${fsImp.same}、沒有新的對話框 ${!fsImp.dlg}${fsImp.d0?'、原本開著：'+fsImp.t0:''}）`);
+    await sp.ctx.close();
+    const boardExp=JSON.parse(fs.readFileSync(boardFile,'utf8'));
+    const cliFile=path.join(TMP,`${D}-cli-export.json`);
+    const cr=spawnSync(process.execPath,[path.join(ROOT,'backend/migrate/cli.js'),'--emulator',`--export=${D}`,`--out=${cliFile}`],{cwd:path.join(ROOT,'backend'),env:process.env,encoding:'utf8'});
+    const cliExp=cr.status===0?JSON.parse(fs.readFileSync(cliFile,'utf8')):null;
+    const de=cliExp?diffPaths(canon(boardExp,D),canon(cliExp,D)):['命令列失敗'];
+    ok(!de.length,`${D}：看板「匯出備份」＝命令列 --export${de.length?'；不同：'+de.join('、'):''}`);
+    ok(!('minutes' in boardExp)&&!('sync' in boardExp)&&!('pwKdf' in boardExp)&&!('pwHash' in boardExp)&&boardExp.members.every(m=>!('kdf' in m)&&!('tok' in m)),`${D}：匯出的備份沒有只在 GitHub 模式有的欄位（會議紀錄、雲端設定、密碼）`);
+    /* 切回 github（測試設定）：GitHub API 用 route 模擬 */
+    const fileB64=Buffer.from(JSON.stringify(remote,null,1)).toString('base64');const ghPuts=[];
+    const gh=r=>{const q=r.request(),u=q.url();
+      if(q.method()==='PUT'){ghPuts.push({url:u,body:JSON.parse(q.postData())});return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({content:{sha:'rehearsal-sha-2'}})})}
+      if(u.includes(`/contents/${pathOf(D)}`))return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha:'rehearsal-sha-1',content:fileB64,encoding:'base64'})});
+      if(u.includes('/commits'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
+      r.fulfill({status:404,body:'{}'})};
+    const g=await open(D,[],{repo:true,gh});
+    ok(await g.evaluate(()=>storeSource()==='github'&&cloudOn()&&cloud.sha==='rehearsal-sha-1'),`${D} 切回 github：讀到 GitHub 上（模擬）的資料檔`);
+    /* 手冊第 4 節第 5 步的主控台指令（總管理員在同一個瀏覽器用 Google 登入過；這裡先登入同一個帳號） */
+    const check=()=>g.evaluate(async([D,since,sub])=>{const F=await storeFsGet();
+      if(!window.__signed){try{await F.versionsSince(CFG.firebase,D,0)}catch(_){}const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
+        await m.signInWithCredential(m.getAuth(),m.GoogleAuthProvider.credential(JSON.stringify({sub,email:`${sub}@example.test`,email_verified:true,name:'x'})));window.__signed=true}
+      return [(await F.versionsSince(CFG.firebase,D,since)).length,(await F.auditSince(CFG.firebase,since)).filter(a=>fsAuditDept(a)===D).length]},[D,since,`su-${D}`]);
+    const c0=await check();
+    await admin(d=>d.doc(`cards/${D}__ctl/versions/1`).set({cardId:`${D}__ctl`,deptId:D,version:1,title:'x',blocks:[],times:[],state:'open',by:'x',at:TS.now(),imported:false}));
+    const c1=await check();await admin(d=>d.doc(`cards/${D}__ctl/versions/1`).delete());
+    ok(stable(c0)==='[0,0]'&&c1[0]===1,`${D}：匯出後沒有新寫入（主控台檢查 ${stable(c0)}；塞一筆版本後抓得到 ${stable(c1)}）`);
+    await g.setInputFiles('#importFile',boardFile);await g.waitForSelector('#dlg[open]',{timeout:8000});await dlgAct(g,'ok');
+    await until(()=>ghPuts.length>0,10000);await g.waitForTimeout(500);
+    const put=ghPuts[0],restored=put?JSON.parse(Buffer.from(put.body.content,'base64').toString('utf8')):null;
+    ok(ghPuts.length===1&&put.url.endsWith(`/contents/${pathOf(D)}`)&&put.body.sha==='rehearsal-sha-1'&&/Board-Log: 1/.test(put.body.message),`${D}：匯入備份寫回 GitHub 一次（${pathOf(D)}，帶原本的 sha 與編輯紀錄）`);
+    const dr=restored?diffPaths(canon(restored,D),canon(cliExp,D)):['沒有 PUT'];
+    ok(!dr.length,`${D}：寫回的內容＝從 Firestore 匯出的內容${dr.length?'；不同：'+dr.join('、'):''}`);
+    if(restored){
+      const ev=restored.events.find(e=>e.id===fid),ev2=restored.events.find(e=>e.id===sid),e0=o0&&restored.events.find(e=>e.id===o0.id);
+      ok(ev&&ev.desc==='演練的第一行\n第二行（firestore 模式改的）'&&ev.times.length===1&&ev.times[0].start==='2026-12-01T10:00'&&ev2&&restored.labels.some(l=>l.id===lid&&l.name==='SW 演練標籤')
+        &&(!o0||(e0&&e0.desc===o0.desc+'\n（firestore 模式加的一行）')),`${D}：寫回的內容有 firestore 模式的修改（說明、時間標記、新卡片、標籤）`);
+      const base={...restored,events:restored.events.filter(e=>e.id!==fid&&e.id!==sid).map(e=>{if(!o0||e.id!==o0.id)return e;const x={...e,desc:o0.desc,touched:o0.touched,touchedAt:o0.touchedAt};for(const k of ['touched','touchedAt'])if(x[k]===undefined)delete x[k];return x}),labels:restored.labels.filter(l=>l.id!==lid)};
+      const db2=diffPaths(canon(base,D),canon(remote,D));
+      ok(!db2.length,`${D}：寫回的內容拿掉這些修改＝切換前的資料檔${db2.length?'；不同：'+db2.join('、'):''}`);
+      const kept=['sync','pwKdf','pwHash'].every(k=>H(restored[k])===H(remote[k]))&&H(restored.minutes||[])===H(remote.minutes||[]);   /* minutes：看板讀檔時沒有就補 []，同義 */
+      const mem=remote.members.length===restored.members.length&&remote.members.every(m=>{const r=restored.members.find(x=>x.id===m.id);return r&&H(r.kdf)===H(m.kdf)&&H(r.tok)===H(m.tok)});
+      const has=rich?!!remote.pwKdf&&!!remote.sync&&remote.minutes.length===1&&remote.members.length>0&&remote.members.every(m=>m.kdf&&m.tok):true;
+      ok(kept&&mem&&has,`${D}：只在 GitHub 模式有的欄位沿用原本的值（雲端設定與權杖、共用密碼、會議紀錄、${remote.members.length} 個成員的密碼與權杖；只比雜湊）`);
+    }
+    await g.ctx.close();
+  };
+  await rollback('rights',{rich:true});
+  await rollback('fruit',{rich:false});
 
   ok(!errs.length,`沒有頁面錯誤 ${errs.join(' | ')}`);
   const still=depts.every(d=>sha(fs.readFileSync(path.join(ROOT,d.path)))===repoHash[d.path]);
