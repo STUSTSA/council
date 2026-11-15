@@ -297,7 +297,6 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .ev-times li::before{content:"";position:absolute;left:-16.5px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--ink)}
 .ev-t-when{flex:none;font-size:12.5px}
 .ev-t-label{flex:0 1 auto;min-width:0;word-break:break-word}
-.ev-times .icon{min-height:24px;width:24px;padding:0;align-self:center}
 .ev-tools{display:flex;gap:6px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap}
 .ev-links{margin-top:10px}
 .ev .staff-row{margin-top:10px}
@@ -342,10 +341,8 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .evd .ev-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:8px 0 0;font-size:12px;color:var(--muted)}
 .evd-par{margin:12px 0 0}
 .evd-desc{margin:12px 0 0;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
-.evd-hint{margin:18px 0 0;font-size:12px}
 .evd-f,.evd .fld,.evd fieldset.multi{display:grid;gap:4px;margin-top:14px;font-size:12.5px;color:var(--muted)}
 .evd-sec{display:grid;gap:8px;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
-.evd-sec .att-h .sub{margin-left:6px;font-size:11.5px}
 .evd-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
 .evd-row>input{flex:1 1 180px;min-width:0}
 .evd-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
@@ -1785,18 +1782,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @keyframes dropIn{from{opacity:0;transform:translateY(-10px)}}
 
 /* ===== 編輯／檢視切換時的動畫 ===== */
-body.edit-anim #actions button,body.view-anim #actions button{animation:fadeSlide .45s var(--ease) both}
-body.edit-anim #actions button:nth-child(1){animation-delay:0.05s}
-body.edit-anim #actions button:nth-child(2){animation-delay:0.10s}
-body.edit-anim #actions button:nth-child(3){animation-delay:0.15s}
-body.edit-anim #actions button:nth-child(4){animation-delay:0.20s}
-body.edit-anim #actions button:nth-child(5){animation-delay:0.25s}
-body.edit-anim #actions button:nth-child(6){animation-delay:0.30s}
-body.view-anim #actions button:nth-child(1){animation-delay:0.05s}
-body.view-anim #actions button:nth-child(2){animation-delay:0.10s}
-body.view-anim #actions button:nth-child(3){animation-delay:0.15s}
 /* 按了卡片的「編輯」：那張卡片（或那一區）的編輯工具淡入（render.js 的 startEdit 加 .sec-anim） */
-.sec-anim .evfs,.sec-anim .range,.sec-anim .add-row,.sec-anim .card-tools,.sec-anim .ev-tools,.sec-anim .ev-del,.sec-anim .done-del,.sec-anim .done-body .edit-only,.sec-anim .evd.editing{animation:fadeSlide .5s .05s var(--ease) both}
+.sec-anim .evfs,.sec-anim .range,.sec-anim .add-row,.sec-anim .card-tools,.sec-anim .ev-tools,.sec-anim .ev-del,.sec-anim .done-body .edit-only,.sec-anim .evd.editing{animation:fadeSlide .5s .05s var(--ease) both}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}}
 @keyframes fadeIn{from{opacity:0}}
 
@@ -1815,7 +1802,7 @@ body.no-done .layout{grid-template-columns:minmax(0,1fr)}
 
 /* ===== 一般螢幕：圓角補半像素 ===== */
 @media (max-resolution:1.99dppx){
-  :where(.chev-btn,.tag,.kid-ev,.ev-parent,.count,.badge,.circ,.tm-pill:not(.on),.lg-cat,.csel-btn,.tm-row,.gen-btn,.week-top button,.panel:not(#livePanel):not(#donePanel),.week,.edit-block,.note,.pill,.set-list,.staff-chip,.lg-item:not(.old),.chip span,input,textarea,select,button.icon:not(.ghost),.dlg-actions button:not(.ghost):not(.primary):not(.danger-solid),.anim-ctl button,.edit-block button:not(.ghost),.actions button:not(.ghost):not(.primary)){box-shadow:0 0 0 .5px var(--line)}
+  :where(.chev-btn,.tag,.kid-ev,.ev-parent,.count,.badge,.circ,.tm-pill:not(.on),.lg-cat,.csel-btn,.tm-row,.gen-btn,.week-top button,.panel:not(#livePanel):not(#donePanel),.week,.note,.pill,.set-list,.staff-chip,.lg-item:not(.old),.chip span,input,textarea,select,button.icon:not(.ghost),.dlg-actions button:not(.ghost):not(.primary):not(.danger-solid),.anim-ctl button,.actions button:not(.ghost):not(.primary)){box-shadow:0 0 0 .5px var(--line)}
   :where(.lg-cat){box-shadow:0 0 0 .5px var(--red)}
 }
 
