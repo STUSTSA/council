@@ -102,11 +102,11 @@ function acctSettingsInner(){
   if(!acct.user)return setSec(wk)+acctGateHTML();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
-  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
+  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
       +setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")
       +setRow("backup","download","備份")):"";
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
-    +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
+    +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
@@ -152,9 +152,9 @@ async function acctHub(){
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
   return hubRun("帳號",()=>[
-    {k:"name",ic:"edit",t:"名稱",sub:esc(acct.names[acct.user.uid]||acct.user.name||""),flow:acctRename},
+    {k:"name",ic:"edit",t:"名稱",sub:acct.names[acct.user.uid]||acct.user.name||"",flow:acctRename},
     {k:"req",ic:"doc",t:"申請編輯權限",sub:"",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
-    ...pend().map(q=>({k:"rq-"+esc(q.id),ic:"history",t:`${esc(deptNameOf(q.deptId))}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}]);

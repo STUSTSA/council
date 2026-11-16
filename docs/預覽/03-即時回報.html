@@ -2759,11 +2759,11 @@ function acctSettingsInner(){
   if(!acct.user)return setSec(wk)+acctGateHTML();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
-  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
+  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
       +setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")
       +setRow("backup","download","備份")):"";
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
-    +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
+    +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
@@ -2809,9 +2809,9 @@ async function acctHub(){
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
   return hubRun("帳號",()=>[
-    {k:"name",ic:"edit",t:"名稱",sub:esc(acct.names[acct.user.uid]||acct.user.name||""),flow:acctRename},
+    {k:"name",ic:"edit",t:"名稱",sub:acct.names[acct.user.uid]||acct.user.name||"",flow:acctRename},
     {k:"req",ic:"doc",t:"申請編輯權限",sub:"",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
-    ...pend().map(q=>({k:"rq-"+esc(q.id),ic:"history",t:`${esc(deptNameOf(q.deptId))}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}]);
@@ -3965,7 +3965,7 @@ function issueFieldsHTML(it){
       ${F("title","名稱",`<b>${esc(it.title)}</b>`,()=>`<input data-e="title" value="${esc(it.title)}">`)}
       ${F("stage","階段",it.tags.length?`<span class="tags">${tagsHTML(it)}</span>`:noneTxt("沒有階段"),()=>stageEditorHTML(it))}
       ${F("note","目前進度",it.note?`<span class="evf-desc">${esc(it.note)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="note" rows="3">${esc(it.note||"")}</textarea>`)}
-      ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evf-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
+      ${F("dates","期間",hasDates(it)?`<span class="num">${esc(fmt(it.start))} – ${esc(fmt(it.end))}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evf-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
       <div class="evf-group"><span class="evf-l">超連結</span>
@@ -6864,7 +6864,8 @@ document.addEventListener("click",e=>{
 /* 登入前整頁只顯示鎖頭；桌面（900px 以上）點了有下一層的項目，清單往左滑、右側面板顯示內容；手機照舊跳出對話框 */
 const SR_CHEV='<span class="sr-chev" aria-hidden="true"><svg viewBox="0 0 8 14" width="7" height="12"><path d="M1.5 1.5 6.5 7l-5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 /* 一列：k＝項目代號；attr＝"set"（設定清單）或 "hub"（合併頁裡的一列） */
-const setRow=(k,ic,t,sub,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${k}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><span class="sr-t"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${off?"":SR_CHEV}</button>`;
+/* 設定列：k、標題 t、小字 sub 一律在這裡跳脫（03 審查 P2-3），呼叫端傳純文字、不傳 HTML */
+const setRow=(k,ic,t,sub,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${esc(k)}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><span class="sr-t"><b>${esc(t)}</b>${sub?`<small>${esc(sub)}</small>`:""}</span>${off?"":SR_CHEV}</button>`;
 const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div></section>`;
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=>w.date).sort().pop())}`:"還沒有週報";
@@ -6878,12 +6879,12 @@ function settingsInner(){
   if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"));
   const rem=remRead(),remName=rem&&(state.members.find(m=>m.id===rem.id)||{}).name,t=termCfg();
   return setSec(setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"))+
-    setSec(setRow("title","edit","看板名稱",esc(state.title))+
+    setSec(setRow("title","edit","看板名稱",state.title)+
       setRow("team","people","人員",`${state.members.length} 個身分`)+
       setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")+
-      (termOwn()?setRow("term","calendar","學年與開學日",`${esc(t.yearLabel||"學年未設定")}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"}`):""))+
+      (termOwn()?setRow("term","calendar","學年與開學日",`${t.yearLabel||"學年未設定"}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"}`):""))+
     setSec(setRow("backup","download","備份")+
-      setRow("device","device","這台裝置",remName?`記住：${esc(remName)}`:"沒有記住身分"))+
+      setRow("device","device","這台裝置",remName?`記住：${remName}`:"沒有記住身分"))+
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"");
 }
 /* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
@@ -7047,14 +7048,14 @@ const SET_HUBS={
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
-    return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${esc(n)}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]}),
+    return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]}),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
-    {k:"year",ic:"cap",t:"學年",sub:esc((state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||"")),flow:()=>editBoardInfo("year")},
+    {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
     {k:"term",ic:"flag",t:"開學日",sub:state.termStart?fmt(state.termStart):"未設定",flow:()=>editBoardInfo("term")}]),
   /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列 */
   site:()=>hubRun("網站管理",()=>{const c=cloudCfg();return [
-    {k:"cloud",ic:"cloud",t:"雲端同步",sub:cloudOn()?`${esc(c.owner)}/${esc(c.repo)} · ${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定",
+    {k:"cloud",ic:"cloud",t:"雲端同步",sub:cloudOn()?`${c.owner}/${c.repo} · ${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定",
       flow:async()=>{const before=JSON.stringify(state);const ok=await cloudSettings();if(ok&&!editing&&JSON.stringify(state)!==before)await settingSave(()=>{},"雲端設定已更新");else render()}},
     {k:"share",ic:"share",t:"分享預覽",flow:()=>shareSettings()},
     /* 全會密碼與自動開通、重置測試部門（provision.js） */
