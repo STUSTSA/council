@@ -5,6 +5,7 @@
    4. 復原這次修改：存回原本的 desc
    5. 母議題、超連結在原位改（03 T7），點外面跟其他修改一起存回資料檔
    7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
+   9. 03 審查 P1-3：右側詳情的「完成這一段」預填按下當下的內容；超過行數、字數上限不寫入
    8. 03 審查 P1-2：原位編輯打字中關分頁會跳 beforeunload，只點進編輯沒改不擋
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
@@ -85,6 +86,29 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await p.keyboard.press('End');await p.keyboard.type(' ');await p.click(`.ev[data-ev="${id}"] .kp [data-kpck="a2"]`);await p.waitForTimeout(200);
     await sv();g=await got();
     ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字']),`P0-1 編輯中切換時間行勾選＋行尾空白：時間行不變、時間標記名稱沒有多空白（${show(g.e)}）`);
+  }
+  /* 9. 03 審查 P1-3：右側詳情（1300）的「完成這一段」用按下當下的內容（不是開始編輯前的）；超過行數上限不寫入 */
+  {
+    const id=src.id;await p.setViewportSize({width:1300,height:900});
+    await p.evaluate(i=>{setSection('live',{instant:true});selEv=i;render()},id);await p.waitForTimeout(600);
+    await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(500);
+    await p.fill('#evDetail [data-kptx="a1"]','剛剛改的新內容 ');
+    await p.click('#evDetail [data-evd="round"]');await p.waitForTimeout(400);
+    const ta=await p.evaluate(()=>$('#evDetail [data-rf="done"]').value);
+    ok(ta==='☑ 剛剛改的新內容\n☐ 開會\n純文字',`P1-3 按「完成這一段」時預填目前的內容（${JSON.stringify(ta)}）`);
+    const n0=await p.evaluate(()=>state.events.length);
+    await p.fill('#evDetail [data-rf="done"]',Array.from({length:51},(_,i)=>'第 '+i+' 行').join('\n'));
+    await p.click('#evDetail [data-evd="roundok"]');await p.waitForTimeout(300);
+    ok(await p.evaluate(n=>state.events.length===n&&editing&&$('#toast').textContent.includes('最多 50 行'),n0),'P1-3 超過 50 行：不寫進完成紀錄、提示「最多 50 行」');
+    await p.fill('#evDetail [data-rf="done"]','x'.repeat(1001));await p.click('#evDetail [data-evd="roundok"]');await p.waitForTimeout(300);
+    ok(await p.evaluate(n=>state.events.length===n&&$('#toast').textContent.includes('每行最多 1000 字'),n0),'P1-3 一行超過 1000 字：不寫進完成紀錄、提示');
+    await p.click('#evDetail [data-evd="round"]');await p.waitForTimeout(300);
+    await p.click('#evDetail [data-evd="roundok"]');await p.waitForTimeout(400);
+    const rec=await p.evaluate(i=>{const r=state.events.filter(e=>e.fromEv===i).pop();return r&&r.desc},id);
+    ok(rec==='☑ 剛剛改的新內容\n☐ 開會\n純文字',`P1-3 完成紀錄存的是按下當下的內容（${JSON.stringify(rec)}）`);
+    await p.click('#evH');await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
+    const r=remote();ok(r.events.some(e=>e.fromEv===id&&e.desc===rec),'P1-3 點外面：完成紀錄寫回資料檔');
+    await p.evaluate(()=>{selEv=null;render()});await p.setViewportSize({width:900,height:900});await p.waitForTimeout(400);
   }
   /* 8. 03 審查 P1-2：原位編輯打字中關分頁（或重新整理）會跳 beforeunload；只點進編輯、沒改不擋（用合成的 beforeunload 事件看有沒有 preventDefault） */
   {

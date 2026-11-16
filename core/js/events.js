@@ -74,9 +74,12 @@ document.addEventListener("click",async e=>{
   /* 右側詳情（編輯中）：完成這一段的展開框 */
   const evd=t.closest("#evDetail [data-evd]");
   if(evd){const ev=evOf(evd),k=evd.dataset.evd,box=$("#evDetail .evd-round");
-    if(k==="round"){Anim.show(box,"down");box.querySelector("textarea").focus();return}
+    /* 展開的當下才用目前的逐行內容填「這一段完成了什麼」（畫面是開始編輯時畫的，之後打的字不會在裡面；03 審查 P1-3） */
+    if(k==="round"){const ta=box.querySelector('[data-rf="done"]');ta.value=kpDescNow(ev);Anim.show(box,"down");ta.focus();return}
     if(k==="roundcancel"){Anim.hide(box);return}
-    if(k==="roundok"){evRoundDone(ev,box.querySelector('[data-rf="done"]').value.trim(),box.querySelector('[data-rf="next"]').value.trim());return}
+    if(k==="roundok"){const f=n=>box.querySelector(`[data-rf="${n}"]`),d=f("done").value.trim(),nx=f("next").value.trim(),m=descTooBig(d)?"done":descTooBig(nx)?"next":"";
+      if(m){toast(descTooBig(m==="done"?d:nx));f(m).focus();return}   /* 行數、每行字數的上限跟膠囊的對話框同一組（descTooBig） */
+      evRoundDone(ev,d,nx);return}
     return}
   /* 會議要報告：只是標記，不算「更新」（不改燈號） */
   const evRep=t.closest("[data-evrep]");if(evRep){const ev=evOf(evRep);ev.report=!ev.report;changed();   /* 移到上／下區的動畫由動畫規則 2（data-flip）自動處理 */toast(ev.report?"已標記會議要報告":"已取消報告標記");return}
@@ -84,7 +87,7 @@ document.addEventListener("click",async e=>{
   const evRound=t.closest("[data-evround]");
   if(evRound){const ev=evOf(evRound);
     const v=await ask(`完成「${ev.name}」第 ${ev.round} 段`,[
-      {name:"done",label:"這一段完成了什麼（存進完成紀錄）",type:"textarea",rows:4,value:ev.desc||""},
+      {name:"done",label:"這一段完成了什麼（存進完成紀錄）",type:"textarea",rows:4,value:kpDescNow(ev)},
       {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3}],{validate:o=>descTooBig(o.done)||descTooBig(o.next)});
     if(!v)return;
     evRoundDone(ev,v.done||"",v.next||"");return}
@@ -208,6 +211,8 @@ const kpBusy=()=>kpSaving||(typeof fsBusy!=="undefined"&&fsBusy);
 const kpEv=()=>kp&&state.events.find(e=>e.id===kp.id);
 /* 每次改到逐行內容就同步 desc：其他存檔路徑（結案、完成這一段…）以 blocks 為準，desc 一定要跟上（store-map.js 的 blocksOf 看到兩邊不同會照 desc 重建） */
 const kpSync=ev=>{ev.desc=StoreMap.descOf(ev.blocks);syncLink(ev)};   /* 母議題的處理紀錄（寫進母議題的時間）也跟著 */
+/* 完成這一段要預填的內容：目前的逐行內容攤平（每行去掉前後空白，跟存檔時一樣） */
+const kpDescNow=ev=>StoreMap.descOf((ev.blocks||[]).map(b=>({...b,text:String(b.text||"").trim()})));
 const descTooBig=t=>{const L=String(t||"").split("\n");return L.length>StoreMap.BLK_MAX?`最多 ${StoreMap.BLK_MAX} 行`:L.some(l=>l.length>StoreMap.TXT_MAX)?`每行最多 ${StoreMap.TXT_MAX} 字`:""};
 /* 開始編輯 id 這張：o.focus＝行 id／"title"／""（第一行；沒有內容就新增一行），o.toggle＝要切換勾選的行 */
 async function kpStart(id,o={}){
