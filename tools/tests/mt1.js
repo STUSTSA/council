@@ -32,8 +32,8 @@ p=await mk('?d=finance');const f0=await p.evaluate(()=>[state.title,document.que
 A(f0[2]===0&&f0[3]===0&&f0[4]==='data-finance.json','finance blank board');
 await p.screenshot({path:'m2_fin.png'});
 await login(p);await p.click('#addEvent');await p.waitForTimeout(800);
-await p.fill('#evDetail .evf.open [data-e=name]','預算表彙整');await p.click('#evDetail [data-evpen=desc]');await p.waitForTimeout(300);await p.fill('#evDetail .evf.open [data-e=desc]','等各部門回傳');await p.click('#evDetail .evf.open [data-evfx=ok]');await p.waitForTimeout(300);
-await p.click('#evDetail [data-edsave]');await p.waitForTimeout(2500);
+await p.fill('#evDetail [data-kptitle]','預算表彙整');await p.click('#evDetail [data-kpadd]');await p.waitForTimeout(300);await p.keyboard.type('等各部門回傳');   /* 03：原位編輯器 */
+await p.click('#evDetail [data-kpsave]');await p.waitForTimeout(2500);
 console.log('finance saved',commits[0],Object.keys(files));console.log('fin errs',p.errs);
 A(/^data-finance\.json :: /.test(commits[0]||'')&&files['data-finance.json']&&files['data-finance.json'].events.some(e=>e.name==='預算表彙整'&&e.desc==='等各部門回傳'),'finance event saved to data-finance.json');A(!p.errs.length,'finance errors');
 // president

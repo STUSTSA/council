@@ -1,6 +1,6 @@
 /* 單卡編輯（2026-11-06，render.js 的 cardEdit）：頁首沒有「編輯」；沒登入看不到任何編輯鈕與新增鈕；
    登入後：即時回報要展開才有「編輯」→ 只有那張進入編輯（逐欄、取消｜儲存），其他編輯鈕藏起來；改名稱 → 儲存（寫一筆 commit）；
-   取消會還原；新增議題 → 開始編輯空白議題，取消就不留；甘特圖時間軸、議題詳情、完成紀錄各自的「編輯」。手機 412 與桌面 1300。固定 8300 埠 */
+   取消會還原（03 起即時回報卡沒有取消：沒改就點外面只收合）；新增議題 → 開始編輯空白議題，取消就不留；甘特圖時間軸、議題詳情、完成紀錄各自的「編輯」。手機 412 與桌面 1300。固定 8300 埠 */
 const c=require('./common');(async()=>{
 const vis=(p,sel)=>p.evaluate(s=>[...document.querySelectorAll(s)].filter(e=>e.offsetParent!==null&&getComputedStyle(e).display!=="none").length,sel);
 const S=p=>p.evaluate(()=>({editing,cardEdit,dirty,bars:document.querySelectorAll('.card-edbar').length,secEdit:[...document.querySelectorAll('.sec-edit')].map(e=>e.dataset.edbox)}));
@@ -20,13 +20,16 @@ for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login,st}=await c.
   await p.click(btn);await p.waitForTimeout(700);
   console.log(w,'editing',JSON.stringify(await S(p)),'other edit btns visible',await vis(p,'.card-edit-btn'),'add visible',await vis(p,'#addEvent'));
   const box=w<1000?`.ev[data-ev="${id}"]`:'#evDetail';
-  await p.click(`${box} [data-evpen=name]`);await p.waitForTimeout(300);await p.fill(`${box} .evf.open [data-e=name]`,'改過的名稱');await p.click(`${box} [data-evfx=ok]`);await p.waitForTimeout(300);
-  await p.click(`${box} [data-edsave]`);await p.waitForTimeout(3200);
+  /* 03：即時回報卡是原位編輯器（名稱直接改），「儲存」在儲存回饋那一列 */
+  await p.fill(`${box} [data-kptitle]`,'改過的名稱');await p.waitForTimeout(200);
+  await p.click(`${box} [data-kpsave]`);await p.waitForTimeout(3200);
   await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(400);   /* 存完 2.6 秒後會跳「共用密碼太短」提醒（測試資料是 0000），關掉 */
   console.log(w,'saved',JSON.stringify(await S(p)),await p.evaluate(i=>state.events.find(e=>e.id===i).name,id),'commit:',(st.commits[0]||'').split('\n')[0]);
   /* 取消會還原 */
-  if(w>=1000){await p.click('#evDetail .card-edit-btn');await p.waitForTimeout(600);await p.click('#evDetail [data-evpen=desc]');await p.fill('#evDetail .evf.open [data-e=desc]','不要存');await p.click('#evDetail [data-evfx=ok]');await p.waitForTimeout(300);
-    await p.click('#evDetail [data-edcancel]');await p.waitForTimeout(800);console.log(w,'cancel reverted',await p.evaluate(i=>state.events.find(e=>e.id===i).desc!=='不要存',id),JSON.stringify(await S(p)))}
+  /* 03：即時回報卡沒有「取消」（點外面＝儲存並收合，存好後可以「復原這次修改」，kp1.js 測）：沒改就點外面＝只收合、不寫 commit */
+  if(w>=1000){const n=st.commits.length;await p.click('#evDetail .card-edit-btn');await p.waitForTimeout(600);
+    console.log(w,'no cancel on live card',!(await p.$('#evDetail [data-edcancel]')));
+    await p.click('#evH');await p.waitForTimeout(800);console.log(w,'outside without change: no commit',st.commits.length===n,JSON.stringify(await S(p)))}
   /* 進度：新增議題＝開始編輯空白議題；取消就不留 */
   await p.evaluate(()=>{setSection('progress',{instant:true});progShow(null)});await p.waitForTimeout(700);
   const n0=await p.evaluate(()=>state.issues.length);

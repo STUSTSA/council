@@ -37,15 +37,21 @@ document.addEventListener("click",async e=>{
 
   /* small events（即時回報） */
   /* 新增即時回報：左右兩欄時直接開始編輯一筆空白的（選到它、在右側填名稱，取消就不留）；其他時候填一個小表單，按確定直接儲存 */
-  if(t.closest("#addEvent")&&!editing&&mdOn("live")){const ev={id:uid("e"),name:"新的即時回報",desc:"",createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
-    if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);selEv=ev.id;evFld={ev:ev.id,k:"name"};dirty=true})){mdPaneIn($("#evDetail"));const n=$('#evDetail .evf.open [data-e="name"]');n?.focus();n?.select()}return}
-  if(t.closest("#addEvent")&&!editing){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱",ph:"例如：飲水機故障通報"},{name:"desc",label:"說明",type:"textarea",ph:"簡短說明"},...staffField([])]);
-    if(v&&v.name)await settingSave(()=>{const ev={id:uid("e"),name:v.name,desc:v.desc||"",createdAt:today(),staff:v.staff||[],links:[],times:[],round:1,touched:[]};evTouch(ev);state.events.push(ev)},"已新增即時回報");return}
+  if(t.closest("#addEvent")&&!editing&&mdOn("live")){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
+    if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);selEv=ev.id;dirty=true})){mdPaneIn($("#evDetail"));kpFocus("title",true)}return}
+  if(t.closest("#addEvent")&&!editing){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱",ph:"例如：飲水機故障通報"},{name:"desc",label:"說明",type:"textarea",ph:"簡短說明"},...staffField([])],{validate:o=>descTooBig(o.desc)});
+    if(v&&v.name)await settingSave(()=>{const ev={id:uid("e"),name:v.name,createdAt:today(),staff:v.staff||[],links:[],times:[],round:1,touched:[]};evSetDesc(ev,v.desc||"");evTouch(ev);state.events.push(ev)},"已新增即時回報");return}
   /* 新增議題：開始編輯一個空白議題、換到它的詳情並打開名稱欄（取消就不留） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
     if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);ifFld={t:"i",id:it.id,k:"title"};dirty=true}))progShow(it.id,ifFldFocus);return}
+  /* 原位編輯器（檢視中）：有權限的人點一行、名稱或「沒有說明」＝開始編輯這張並把游標放在那裡；點核取框＝開始編輯並切換勾選；存好後的「復原這次修改」 */
+  if(t.closest("[data-kpundo]")){kpUndo();return}
+  if(!editing){const go=t.closest("[data-kpgo]"),ck=t.closest("[data-kpck]");
+    if((go||ck)&&canEdit()){e.preventDefault();const id=t.closest("[data-ev]").dataset.ev;
+      if(ck)await kpStart(id,{toggle:ck.dataset.kpck,focus:ck.dataset.kpck});else await kpStart(id,{focus:go.dataset.kpgo});return}}
   /* 以下都是編輯中那張卡片裡的工具 */
   if(!editing)return;
+  if(kp&&t.closest(".kp,.kp-bar")&&kpClick(t,e))return;
 
   const evAct=t.closest("[data-evdone],[data-evundo],[data-evdel]");
   if(evAct){e.preventDefault();const ev=evOf(evAct);
@@ -79,7 +85,7 @@ document.addEventListener("click",async e=>{
   if(evRound){const ev=evOf(evRound);
     const v=await ask(`完成「${ev.name}」第 ${ev.round} 段`,[
       {name:"done",label:"這一段完成了什麼（存進完成紀錄）",type:"textarea",rows:4,value:ev.desc||""},
-      {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3,ph:"例如：等總務處回覆維修時程"}]);
+      {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3,ph:"例如：等總務處回覆維修時程"}],{validate:o=>descTooBig(o.done)||descTooBig(o.next)});
     if(!v)return;
     evRoundDone(ev,v.done||"",v.next||"");return}
 
@@ -95,15 +101,18 @@ document.addEventListener("click",async e=>{
   if(mv){const list=activeIssues();const k=list.indexOf(it),o=list[k+(+mv.dataset.move)];if(o){const a=state.issues.indexOf(it),b=state.issues.indexOf(o);[state.issues[a],state.issues[b]]=[o,it];changed()}return}
   if(t.closest("[data-addmarker]")){const tr=t.closest("[data-issue]").querySelector(".c-track");tr.scrollIntoView({behavior:"smooth",block:"center"});makePending(tr,schedPct(it)??50);toast("把虛線標記拖到想要的位置後放開");return}
 });
-document.addEventListener("toggle",e=>{const d=e.target;if(d.classList&&d.classList.contains("week")&&!d.classList.contains("closing")){openWeeks=openWeeks||new Set();d.open?openWeeks.add(d.dataset.week):openWeeks.delete(d.dataset.week)}if(d.classList&&d.dataset.done){const id=d.dataset.issue||d.dataset.ev;d.open?openDone.add(id):openDone.delete(id)}if(d.classList&&d.classList.contains("ev")&&!d.dataset.done){d.open?openEv.add(d.dataset.ev):openEv.delete(d.dataset.ev)}},true);
+document.addEventListener("toggle",e=>{const d=e.target;if(d.classList&&d.classList.contains("week")&&!d.classList.contains("closing")){openWeeks=openWeeks||new Set();d.open?openWeeks.add(d.dataset.week):openWeeks.delete(d.dataset.week)}if(d.classList&&d.dataset.done){const id=d.dataset.issue||d.dataset.ev;d.open?openDone.add(id):openDone.delete(id)}if(d.classList&&d.classList.contains("ev")&&!d.dataset.done){d.open?openEv.add(d.dataset.ev):openEv.delete(d.dataset.ev);
+    if(!d.open&&kpSt&&kpSt.id===d.dataset.ev&&!editing){kpSt=null;d.querySelector(".kp-done")?.remove()}}},true);   /* 收合＝「復原這次修改」消失 */
 ["rStart","rEnd"].forEach(id=>$("#"+id).addEventListener("change",e=>{const k=id==="rStart"?"start":"end";if(e.target.value){state.range[k]=e.target.value;if(state.range.end<state.range.start)state.range.end=state.range.start;changed()}}));
 
 const evOf=el=>{const m=mtOf(el);return (m?m.data:state).events.find(x=>x.id===el.closest("[data-ev]").dataset.ev)};   /* 元素所在的即時回報（膠囊、完成紀錄、右側詳情都帶 data-ev）；秘書處面板裡的卡片屬於別的部門（meeting.js） */
 /* 完成這一段：把這段的內容複製一份到完成紀錄（已經過去的時間標記跟著走），卡片留著進入下一段 */
 function evRoundDone(ev,done,next){
   const now=nowStr().replace(" ","T"),past=ev.times.filter(x=>x.start<=now);
-  const rec={id:uid("e"),name:ev.name,desc:done||"",createdAt:ev.createdAt,doneAt:today(),issueId:ev.issueId||null,links:ev.links.map(l=>({...l})),staff:[...ev.staff],labels:[...(ev.labels||[])],times:past,round:ev.round,fromEv:ev.id};
-  ev.times=ev.times.filter(x=>!past.includes(x));ev.round+=1;ev.roundAt=now;if(next)ev.desc=next;evTouch(ev);
+  const rec={id:uid("e"),name:ev.name,createdAt:ev.createdAt,doneAt:today(),issueId:ev.issueId||null,links:ev.links.map(l=>({...l})),staff:[...ev.staff],labels:[...(ev.labels||[])],times:past,round:ev.round,fromEv:ev.id};
+  evSetDesc(rec,done||"");
+  ev.times=ev.times.filter(x=>!past.includes(x));ev.round+=1;ev.roundAt=now;if(next)evSetDesc(ev,next);else evBlocksFix(ev);evTouch(ev);
+  if(kp&&kp.id===ev.id)kp.noUndo=true;   /* 這次修改還動到完成紀錄：不提供「復原這次修改」 */
   state.events.push(rec);syncLink(ev);syncLink(rec);openEv.add(ev.id);changed();
   toast(`第 ${rec.round} 段已存進完成紀錄，接著追第 ${ev.round} 段`);
 }
@@ -112,7 +121,7 @@ function evRoundDone(ev,done,next){
 function evFldFocus(){fldFocus($("#evDetail .evf.open")||document.querySelector("#events .evf.open"))}
 function ifFldFocus(){fldFocus($("#doneDetail .evf.open")||document.querySelector(".evf.open[data-iffk]"))}
 /* 點別欄時，先把目前打開的那一欄存回（即時回報或進度／完成紀錄）；填錯回傳 false、停在原欄 */
-function fldCommitOpen(){const cur=document.querySelector(".evf.open");if(!cur)return true;return cur.dataset.iffk!==undefined?ifFldWrite(cur):evFldCommit(cur)}
+function fldCommitOpen(){if(kp&&kpTp&&!tpApply())return false;const cur=document.querySelector(".evf.open");if(!cur)return true;return cur.dataset.iffk!==undefined?ifFldWrite(cur):evFldCommit(cur)}
 function fldFocus(box){
   if(!box)return;
   const f=box.querySelector("[data-e],.csel-btn,input[type=checkbox]");if(f){f.focus({preventScroll:true});if(f.select&&f.type!=="date")f.select()}
@@ -138,7 +147,7 @@ function evFldWrite(box){
   const ev=evOf(box),k=box.dataset.evfk,g=n=>box.querySelector(`[data-e="${n}"]`),before=JSON.stringify(ev);
   const tid=k.startsWith("t:")?k.slice(2):null,lid=k.startsWith("l:")?k.slice(2):null;
   if(k==="name"){const v=g("name").value.trim();if(!v){toast("請填名稱");g("name").classList.add("bad");return false}ev.name=v}
-  else if(k==="desc")ev.desc=g("desc").value.trim();
+  else if(k==="desc")evSetDesc(ev,g("desc").value.trim());   /* 秘書處會議卡的說明欄：照文字重建逐行內容，沒改的行沿用 */
   else if(k==="issue"){const v=box.querySelector('input[name="evIssue"]').value||null;if(v!==(ev.issueId||null)){ev.issueId=v;toast(v?`已連結到「${parentOf(ev).title}」`:"已取消連結")}}
   else if(k==="staff")ev.staff=[...box.querySelectorAll('input[name="staff"]:checked')].map(x=>x.value);
   else if(k==="labels")ev.labels=[...box.querySelectorAll('input[name="labels"]:checked')].map(x=>x.value);
@@ -170,7 +179,8 @@ function ifFldWrite(box){
   const o=ifObj(box);if(!o)return true;
   const k=box.dataset.iffk,g=n=>box.querySelector(`[data-e="${n}"]`),before=JSON.stringify(o),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
-  else if(k==="note"||k==="desc")o[k]=g(k).value.trim();
+  else if(k==="note")o.note=g(k).value.trim();
+  else if(k==="desc")evSetDesc(o,g(k).value.trim());   /* 完成紀錄裡的即時回報：照文字重建逐行內容 */
   else if(k==="dates"){const a=g("start").value,b=g("end").value;if(a&&b&&b<a){toast("結束日不能早於開始日");return bad("end")}o.start=a;o.end=b}
   else if(k==="stage"){const rows=[...box.querySelectorAll(".stg-row")].map(r=>({n:r.querySelector("input").value.trim(),cur:r.querySelector(".stg-cur").getAttribute("aria-pressed")==="true"})).filter(r=>r.n);
     o.tags=rows.map(r=>r.n);o.cur=Math.max(0,rows.findIndex(r=>r.cur))}
@@ -185,8 +195,186 @@ function ifFldWrite(box){
   if(box.dataset.ift==="e")syncLink(o);
   dirty=true;return true;
 }
+/* ---------- 原位編輯器（03，Keep 式；畫面在 views.js 的 kpEditorHTML、evLinesHTML、tpHTML） ----------
+   - 開始：點一行／名稱／核取框（kpStart）或卡片的「編輯」（render.js 的 startEdit 記下 kp）。一次一張，跟其他卡片的單卡編輯共用 editing／cardEdit。
+   - 打字直接寫進 state（不重畫）；換種類、新增、刪除一行才重畫，游標由 render 前後的 kpFocusGet／kpFocusSet 放回原位。
+   - 點卡片外面、按「儲存」、Esc＝kpCommit：沒改就只收合；改了就收合並儲存（kpSave）。儲存中／成功／失敗顯示在卡片上；
+     失敗＝回到編輯、保留草稿，可以再按「儲存」。成功後「復原這次修改」把這張卡片存回修改前的內容（一樣走 kpSave），收合或開始下一次編輯後就消失。
+   - 新增的空白卡片（名稱沒改、沒有內容）點外面就不留。 */
+let kpSaving=false;
+const kpBusy=()=>kpSaving||(typeof fsBusy!=="undefined"&&fsBusy);
+const kpEv=()=>kp&&state.events.find(e=>e.id===kp.id);
+/* 每次改到逐行內容就同步 desc：其他存檔路徑（結案、完成這一段…）以 blocks 為準，desc 一定要跟上（store-map.js 的 blocksOf 看到兩邊不同會照 desc 重建） */
+const kpSync=ev=>{ev.desc=StoreMap.descOf(ev.blocks);syncLink(ev)};   /* 母議題的處理紀錄（寫進母議題的時間）也跟著 */
+const descTooBig=t=>{const L=String(t||"").split("\n");return L.length>StoreMap.BLK_MAX?`最多 ${StoreMap.BLK_MAX} 行`:L.some(l=>l.length>StoreMap.TXT_MAX)?`每行最多 ${StoreMap.TXT_MAX} 字`:""};
+/* 開始編輯 id 這張：o.focus＝行 id／"title"／""（第一行；沒有內容就新增一行），o.toggle＝要切換勾選的行 */
+async function kpStart(id,o={}){
+  if(kpBusy())return false;
+  if(!(await startEdit("e:"+id,()=>{if(o.toggle){const b=(state.events.find(e=>e.id===id)?.blocks||[]).find(x=>x.id===o.toggle);if(b)b.check=!b.check}})))return false;
+  openEv.add(id);
+  const ev=kpEv();if(!ev)return true;
+  if(o.focus==="title")kpFocus("title");
+  else if(o.focus)kpFocus(o.focus);
+  else if(ev.blocks.length)kpFocus(ev.blocks[0].id);
+  else kpAdd(ev,0);
+  return true;
+}
+/* 游標放到某一行（或名稱）的文字最後；sel＝true 時全選（新卡片的名稱） */
+function kpFocus(id,sel){
+  const el=id==="title"?document.querySelector("[data-kptitle]"):document.querySelector(`[data-kptx="${CSS.escape(id)}"]`);if(!el)return;
+  el.focus({preventScroll:true});if(sel)el.select();else{const n=el.value.length;el.setSelectionRange(n,n)}
+  el.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
+}
+function kpFocusGet(){const a=document.activeElement;if(!kp||!a||!a.closest||!a.closest(".kp"))return null;
+  const k=["kptx","kplb","tpf"].find(x=>a.dataset[x]!==undefined);
+  return {sel:a.dataset.kptitle!==undefined?"[data-kptitle]":k?`[data-${k}="${CSS.escape(a.dataset[k])}"]`:null,s:a.selectionStart,e:a.selectionEnd}}
+function kpFocusSet(f){if(!f||!f.sel||!kp)return;const el=document.querySelector(".kp "+f.sel);if(!el||el===document.activeElement)return;
+  el.focus({preventScroll:true});try{if(f.s!=null)el.setSelectionRange(f.s,f.e)}catch(_){}}
+/* 新增一行（在第 at 個位置），種類跟著 like（核取→核取、時間→核取、文字→文字） */
+function kpAdd(ev,at,like){
+  if(ev.blocks.length>=StoreMap.BLK_MAX){kpSay("bad",`最多 ${StoreMap.BLK_MAX} 行`);return}
+  const b={id:uid("b"),text:"",check:like&&like.check!==null?false:null,timeId:null};
+  ev.blocks.splice(at,0,b);kpSync(ev);render();kpFocus(b.id);
+}
+function kpDel(ev,id){
+  const i=ev.blocks.findIndex(b=>b.id===id);if(i<0)return;const b=ev.blocks[i];
+  if(b.timeId){ev.times=ev.times.filter(t=>t.id!==b.timeId);if(kpTp===b.timeId)kpTp=null}
+  ev.blocks.splice(i,1);kpSync(ev);render();
+  const p=ev.blocks[Math.max(0,i-1)];if(p)kpFocus(p.id);
+}
+/* 換種類：文字（拿掉勾選與時間）、核取（拿掉時間）、時間（新增一個時間標記並打開時間選取器） */
+function kpSetType(ev,id,k){
+  const b=ev.blocks.find(x=>x.id===id);if(!b||kpType(b)===k)return;
+  if(k!=="time"&&b.timeId){ev.times=ev.times.filter(t=>t.id!==b.timeId);if(kpTp===b.timeId)kpTp=null;b.timeId=null}
+  if(k==="text")b.check=null;
+  else{if(b.check===null)b.check=false;
+    if(k==="time"){const t={id:uid("t"),label:b.text,start:today(),end:"",place:"",toIssue:false};ev.times.push(t);b.timeId=t.id;kpTp=t.id}}
+  kpSync(ev);render();if(k!=="time")kpFocus(id);
+}
+function kpSay(st,msg){const s=document.querySelector(".kp-bar .kp-st");kpSt={id:kp&&kp.id,st,msg};if(s){s.dataset.st=st;s.textContent=msg}}
+/* 編輯中卡片裡的點擊（回傳 true＝處理掉了） */
+function kpClick(t,e){
+  const ev=kpEv();if(!ev)return false;
+  const ck=t.closest("[data-kpck]");if(ck){const b=ev.blocks.find(x=>x.id===ck.dataset.kpck);if(b)b.check=ck.checked;kpSync(ev);ck.closest(".kp-line")?.querySelector(".kp-tx")?.focus({preventScroll:true});return true}
+  if(t.closest("[data-kpsave]")){kpCommit(true);return true}
+  if(t.closest("[data-kpadd]")){kpAdd(ev,ev.blocks.length,ev.blocks[ev.blocks.length-1]);return true}
+  const del=t.closest("[data-kpdel]");if(del){kpDel(ev,del.dataset.kpdel);return true}
+  const tdel=t.closest("[data-kptdel]");if(tdel){ev.times=ev.times.filter(x=>x.id!==tdel.dataset.kptdel);if(kpTp===tdel.dataset.kptdel)kpTp=null;kpSync(ev);render();return true}
+  const tm=t.closest("[data-kptm]");if(tm){if(kpTp&&kpTp!==tm.dataset.kptm&&!tpApply())return true;kpTp=kpTp===tm.dataset.kptm?null:tm.dataset.kptm;render();return true}
+  const tp=t.closest(".tp");if(tp){tpClick(ev,tp,t);return true}
+  return false;
+}
+/* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行、Esc＝收起時間選取器或儲存並收合 */
+function kpKey(e){
+  const ev=kpEv(),a=e.target;if(!ev)return false;
+  if(e.key==="Escape"){e.preventDefault();e.stopPropagation();if(kpTp){if(tpApply()){kpTp=null;render()}}else kpCommit(true);return true}
+  if(e.isComposing)return false;
+  if(e.key==="Enter"&&a.dataset.kptitle!==undefined){e.preventDefault();if(ev.blocks.length)kpFocus(ev.blocks[0].id);else kpAdd(ev,0);return true}
+  const id=a.dataset.kptx;if(id===undefined)return false;
+  const i=ev.blocks.findIndex(b=>b.id===id);
+  if(e.key==="Enter"){e.preventDefault();kpAdd(ev,i+1,ev.blocks[i]);return true}
+  if(e.key==="Backspace"&&!a.value&&ev.blocks.length>1){e.preventDefault();kpDel(ev,id);return true}
+  return false;
+}
+document.addEventListener("input",e=>{
+  const a=e.target,ev=kp&&a.closest&&a.closest(".kp")&&kpEv();if(!ev)return;
+  if(a.dataset.kptitle!==undefined)ev.name=a.value;
+  else if(a.dataset.kptx!==undefined){const b=ev.blocks.find(x=>x.id===a.dataset.kptx);if(b){b.text=a.value.replace(/[\r\n]+/g," ");const t=b.timeId&&ev.times.find(x=>x.id===b.timeId);if(t)t.label=b.text}}
+  else if(a.dataset.kplb!==undefined){const t=ev.times.find(x=>x.id===a.dataset.kplb);if(t)t.label=a.value}
+  kpSync(ev);
+});
+/* 種類選單（自製下拉 .csel，選了在隱藏 input 觸發 change） */
+document.addEventListener("change",e=>{
+  const a=e.target;if(!kp||a.name!=="kpType"||!a.closest(".kp"))return;
+  const ev=kpEv(),ln=a.closest(".kp-line");if(ev&&ln)kpSetType(ev,ln.dataset.blk,a.value);
+});
+/* 時間選取器：狀態放在 .tp 的 data-st（還沒按「完成」前不寫進 state），每次點選重畫選取器本身 */
+const tpState=tp=>{const st=JSON.parse(tp.dataset.st);tp.querySelectorAll("[data-tpf]").forEach(i=>{st[i.dataset.tpf]=i.type==="checkbox"?i.checked:i.value.trim()});return st};
+function tpClick(ev,tp,t){
+  const st=tpState(tp),tm=ev.times.find(x=>x.id===tp.dataset.tp);if(!tm)return;
+  const d=t.closest("[data-tpd]"),m=t.closest("[data-tpm]"),end=t.closest("[data-tpend]");
+  if(d){const v=d.dataset.tpd;if(st.pick==="e"){st.ed=v<st.sd?st.sd:v===st.ed?"":v}else{st.sd=v;if(st.ed&&st.ed<v)st.ed=""}}
+  else if(m){const [y,mo]=st.m.split("-").map(Number),x=new Date(y,mo-1+(+m.dataset.tpm),1);st.m=ym(x)}
+  else if(end){st.pick=end.dataset.tpend;const v=st.pick==="e"?st.ed||st.sd:st.sd;if(v)st.m=v.slice(0,7)}
+  else if(t.closest("[data-tpclr]")){st.ed="";st.pick="s"}
+  else if(t.closest("[data-tpok]")){if(tpApply()){kpTp=null;render();kpFocusTime(ev,tm.id)}return}
+  else if(t.closest("[data-place]"))return;   /* 地點快速選項：labels.js 填進地點欄 */
+  else return;
+  tp.outerHTML=tpHTML(ev,tm,st);
+}
+const kpFocusTime=(ev,tid)=>{const b=ev.blocks.find(x=>x.timeId===tid);if(b)kpFocus(b.id)};
+/* 把打開的時間選取器寫回那個時間標記；格式不對就在選取器裡顯示、回傳 false */
+function tpApply(){
+  const tp=document.querySelector(".kp .tp"),ev=kpEv();if(!tp||!ev)return true;
+  const tm=ev.times.find(x=>x.id===tp.dataset.tp);if(!tm)return true;
+  const st=tpState(tp),r=evTimeParts({label:"-",sd:st.sd,st:st.sh,ed:st.ed,et:st.eh});
+  if(r.msg){const p=tp.querySelector(".tp-err");p.textContent=r.msg;p.hidden=false;return false}
+  Object.assign(tm,{start:r.start,end:r.end,place:st.place||"",toIssue:!!st.toIssue});kpSync(ev);
+  return true;
+}
+/* 收合：沒改就只結束編輯；改了就儲存。force＝按「儲存」或 Esc（跟點外面一樣） */
+async function kpCommit(){
+  if(!kp||!editing||cardEdit!=="e:"+kp.id||kpBusy())return true;
+  if(!fldCommitOpen())return false;   /* 母議題、專員、標籤、超連結還開著：先存回（填錯就停在原欄） */
+  if(kpTp){if(!tpApply())return false;kpTp=null}
+  const ev=kpEv();
+  if(!ev){morph(()=>{editing=false;cardEdit="";kp=null;render()});return true}
+  ev.name=ev.name.trim();
+  if(!ev.name){kpSay("bad","請填名稱");document.querySelector("[data-kptitle]")?.focus();return false}
+  ev.times.forEach(t=>{const b=ev.blocks.find(x=>x.timeId===t.id);if(b)t.label=b.text.trim()});   /* 時間＋核取那一行的文字就是時間標記的名稱 */
+  ev.blocks.forEach(b=>{b.text=b.text.trim()});
+  evBlocksFix(ev);
+  const core=x=>JSON.stringify({...x,report:0,touched:0,touchedAt:0});
+  const before=kp.before,was=before&&JSON.parse(before);
+  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.length&&!ev.times.length&&!(ev.links||[]).length){   /* 新增後什麼都沒填：不留 */
+    morph(()=>{state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;kp=null;selEv=null;render()});return true}
+  if(was&&JSON.stringify(ev)===before&&!dirtyOthers()){morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;render()});return true}
+  if(!was||core(ev)!==core(was))evTouch(ev);
+  syncLink(ev);dirty=true;
+  return kpSave();
+}
+/* 這次編輯有沒有動到這張以外的資料（完成這一段的完成紀錄、母議題的處理紀錄…） */
+const dirtyOthers=()=>{const a=JSON.parse(snapshot);a.events=a.events.filter(e=>e.id!==kp.id);const b={...state,events:state.events.filter(e=>e.id!==kp.id)};return JSON.stringify(a)!==JSON.stringify(JSON.parse(JSON.stringify(b)))};
+/* 收合並儲存；失敗時回到編輯、保留草稿 */
+async function kpSave(){
+  const id=kp.id,key=cardEdit,snap=snapshot,draft=kp,undoable=!!kp.before&&!kp.noUndo&&!dirtyOthers();
+  if(!fsMode()&&!(await prepareSave())){kpSay("fail",KP_MSG.fail);return false}
+  kpSaving=true;
+  morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;kpTp=null;kpSt={id,st:"saving"};state.savedAt=nowStr();if(meName())state.savedBy=meName();render()});
+  let ok=false;
+  try{ok=fsMode()?await fsPersist("",{quiet:true}):await persist()}catch(_){ok=false}
+  kpSaving=false;
+  if(ok){const ev=state.events.find(e=>e.id===id);kpSt={id,st:"ok",before:undoable?draft.before:null,after:ev?JSON.stringify(ev):""};render();
+    if(!fsMode()&&CFG.meeting)mtPushAll();return true}
+  /* 失敗：草稿還在 state（firestore 模式的補寫也把畫面資料留著），回到編輯 */
+  if(!state.events.some(e=>e.id===id))state=normalize(JSON.parse(snap));
+  editing=true;cardEdit=key;snapshot=snap;dirty=true;kp=draft;
+  kpSt={id,st:"fail",msg:fsMode()&&fsLastErr?`${KP_MSG.fail}：${fsLastErr}`:KP_MSG.fail};render();
+  return false;
+}
+/* 復原這次修改：卡片換回修改前的內容，當成一次編輯儲存（不再提供復原）；這張在那之後被改過（重新讀到別人的修改）就不復原 */
+async function kpUndo(){
+  const s=kpSt;if(!s||s.st!=="ok"||!s.before||editing||kpBusy())return;
+  const i=state.events.findIndex(e=>e.id===s.id);if(i<0)return;
+  if(JSON.stringify(state.events[i])!==s.after){kpSt={id:s.id,st:"fail",msg:"這張卡片已有新的修改，無法復原"};render();return}
+  if(!fsMode()&&!(await ensureLogin()))return;
+  snapshot=JSON.stringify(state);
+  const prev=JSON.parse(s.before);evBlocksFix(prev);state.events[i]=prev;syncLink(prev);
+  editing=true;cardEdit="e:"+s.id;dirty=true;kp={id:s.id,before:s.after,noUndo:true};
+  await kpSave();
+}
+/* 點卡片外面＝儲存並收合（捕獲階段先處理，點擊照常往下傳；對話框、下拉選單、提示訊息不算外面）。
+   同一張卡片的標題列（收合膠囊）、左右兩欄的「收起」「上一個／下一個」也算 */
+document.addEventListener("click",e=>{
+  if(!kp||!editing||cardEdit!=="e:"+kp.id)return;
+  const t=e.target;if(!t.closest||t.closest("#dlg,.csel-list,#toast"))return;
+  const box=t.closest(`[data-edbox="e:${CSS.escape(kp.id)}"]`);
+  if(box&&!t.closest("[data-mdclose],[data-mdstep]")&&!(t.closest("summary")&&!t.closest("button")))return;
+  kpCommit();
+},true);
 /* 打開的欄位（即時回報、進度、完成紀錄）：Esc＝取消；Enter（說明欄 Ctrl／⌘＋Enter）＝完成 */
 document.addEventListener("keydown",e=>{
+  if(kp&&e.target.closest&&e.target.closest(".kp")&&!document.querySelector(".csel.open")&&kpKey(e))return;
   const box=e.target.closest&&e.target.closest(".evf.open");if(!box||document.querySelector(".csel.open"))return;
   if(e.key==="Escape"){e.preventDefault();e.stopPropagation();evFld=null;ifFld=null;render();return}
   const ok=box.querySelector('[data-evfx="ok"],[data-iffx="ok"]');if(!ok)return;

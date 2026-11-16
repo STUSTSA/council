@@ -41,13 +41,15 @@ function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.ori
    別人改過就整批不寫（不會互相蓋掉）。成功後重新讀這個部門。失敗：畫面上的修改留著，提示原因並可以重新載入。
    02D 審查：前面的批已寫入、後面失敗（e.committed＞0）時，重新讀一次，用新讀到的內容當比對基準，只補寫這次要寫、還沒寫進去的文件
    （fsFinish；最多試 3 輪）。期間被別人改過的文件不寫，比對基準留在舊的那一份（下次儲存照樣被版本檢查擋下，不會蓋掉別人的）。 */
-let storeWriteMod=null,fsBusy=false;
+let storeWriteMod=null,fsBusy=false,fsLastErr="";
 const FS_ERR={conflict:"資料剛被別人改過，沒有儲存","permission-denied":"沒有權限，沒有儲存",unavailable:"沒有連上網路，沒有儲存",badtime:"時間格式不正確，沒有儲存"};
 const FS_PART={conflict:"部分修改已寫入；有的資料剛被別人改過，那部分沒有儲存（還在畫面上）","permission-denied":"部分修改已寫入；其餘沒有權限、沒有儲存（還在畫面上）",
   unavailable:"部分修改已寫入；其餘因為沒有連上網路沒有儲存（還在畫面上）"};
-async function fsPersist(msg){
-  if(fsBusy){toast("儲存中，請稍候");return false}
-  if(!storeFsBase){toast(STORE_NOTE.firestore);return false}
+/* o.quiet（03 原位編輯器）：成功、失敗都不跳提示與對話框，失敗原因放在 fsLastErr（畫面在卡片上顯示儲存回饋） */
+async function fsPersist(msg,o={}){
+  fsLastErr="";
+  if(fsBusy){if(!o.quiet)toast("儲存中，請稍候");fsLastErr="儲存中";return false}
+  if(!storeFsBase){if(!o.quiet)toast(STORE_NOTE.firestore);fsLastErr="只能檢視";return false}
   fsBusy=true;
   const opt={admin:fsAdmin(),super:fsRole()==="super"};
   let err=null,W=null;
@@ -60,11 +62,12 @@ async function fsPersist(msg){
   if(err){
     fsBusy=false;
     const m=err.part?(FS_PART[err.code]||"部分修改已寫入；其餘沒有儲存（還在畫面上）"):(FS_ERR[err&&err.code]||"儲存失敗");
-    toast(m);setTimeout(()=>fsFailAsk(m),0);
+    fsLastErr=err.part?"部分修改已寫入":({conflict:"資料剛被別人改過","permission-denied":"沒有權限",unavailable:"沒有連上網路",badtime:"時間格式不正確"})[err&&err.code]||"";
+    if(!o.quiet){toast(m);setTimeout(()=>fsFailAsk(m),0)}
     return false;
   }
   try{storeFsUse(await storeFsLoad())}catch(_){storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
-  fsBusy=false;render();toast(msg||"已儲存");return true;
+  fsBusy=false;render();if(!o.quiet)toast(msg||"已儲存");return true;
 }
 /* 補寫：e.draft＝這次要存的畫面資料（完成這一段換過 ID 的時間標記用新的 ID，重試不會再建一份）、e.intended＝這次要寫的文件。
    回傳 null＝全部寫完；否則回傳錯誤（e.part＝已經寫入一部分）。畫面上的修改一律留著 */

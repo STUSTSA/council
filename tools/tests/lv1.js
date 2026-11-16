@@ -1,4 +1,5 @@
 /* lv1：即時回報桌面左右兩欄（選取、單卡編輯直接在右側改名稱／說明／母議題／時間／連結、一次只開一欄、完成這一段、儲存）、手機不分欄。用 data_v5.json，固定 8300 埠
+   2026-11-16（03 T6）：名稱、說明、時間改用原位編輯器（逐行、自製時間選取器），「儲存」在儲存回饋那一列；母議題、標籤、連結照舊一欄一欄
    2026-11-15（03 T4）：入口改成單卡編輯——從設定頁鎖頭登入（common.js 的 login）後按詳情卡自己的「編輯」（.card-edit-btn），存檔按那張的「儲存」；
    原本按頁首「編輯」（#editBtn，11-06 已拿掉）、最後按 #saveBtn。改成用 ok() 判斷、壞了以非 0 結束 */
 const c=require('./common');
@@ -23,19 +24,22 @@ r=await p.evaluate(()=>[editing,cardEdit,!!$('#evDetail .evd.editing'),!!documen
 ok(r[0]&&r[1]==='e:'+id&&r[2]&&!r[3],'單卡編輯：只有這一筆、右側變成逐欄編輯、沒有「編輯這區」 '+JSON.stringify(r));
 await p.screenshot({path:'lv_edit.png'});
 const fld=async(k,fn)=>{await p.click(`#evDetail [data-evpen="${k}"]`);await p.waitForTimeout(300);await fn('#evDetail .evf.open ');await p.click('#evDetail .evf.open [data-evfx=ok]');await p.waitForTimeout(300)};
-await fld('name',async b=>p.fill(b+'[data-e=name]','改名測試'));
-await fld('desc',async b=>p.fill(b+'[data-e=desc]','新的說明'));
+/* 03：名稱、說明（逐行內容）、時間在原位編輯器；母議題、標籤、連結照舊一欄一欄 */
+await p.fill('#evDetail [data-kptitle]','改名測試');await p.waitForTimeout(200);
+while(await p.$('#evDetail .kp-lines [data-kpdel]')){await p.click('#evDetail .kp-lines [data-kpdel]');await p.waitForTimeout(150)}
+await p.click('#evDetail [data-kpadd]');await p.waitForTimeout(200);await p.keyboard.type('新的說明');await p.keyboard.press('Enter');await p.keyboard.type('開會');
+await p.click('#evDetail .kp-line:nth-child(2) .kp-type .csel-btn');await p.waitForTimeout(200);await p.click('#evDetail .kp-line:nth-child(2) .csel-opt[data-v="time"]');await p.waitForTimeout(300);
+await p.fill('#evDetail .tp [data-tpf=sh]','1400');await p.fill('#evDetail .tp [data-tpf=eh]','1530');await p.click('#evDetail .tp [data-tpok]');await p.waitForTimeout(300);
 ok(await p.evaluate(()=>document.querySelector('#events .ev.sel b').textContent)==='改名測試','改名後清單裡那顆跟著改');
-/* 一次只開一欄：開說明時名稱關著 */
-await p.click('#evDetail [data-evpen=name]');await p.waitForTimeout(200);await p.click('#evDetail [data-evpen=desc]');await p.waitForTimeout(200);
-ok(await p.evaluate(()=>[...document.querySelectorAll('#evDetail .evf.open')].map(x=>x.dataset.evfk).join())==='desc','一次只開一欄');
+/* 一次只開一欄：開標籤時母議題關著 */
+await p.click('#evDetail [data-evpen=issue]');await p.waitForTimeout(200);await p.click('#evDetail [data-evpen=labels]');await p.waitForTimeout(200);
+ok(await p.evaluate(()=>[...document.querySelectorAll('#evDetail .evf.open')].map(x=>x.dataset.evfk).join())==='labels','一次只開一欄');
 await p.click('#evDetail .evf.open [data-evfx=cancel]');await p.waitForTimeout(200);
 await fld('issue',async b=>{await p.click(b+'.csel-btn');await p.waitForTimeout(200);await p.click(b+'.csel-opt:nth-child(2)')});
-await fld('t:+',async b=>{await p.fill(b+'[data-e=label]','開會');await p.fill(b+'[data-e=st]','1400');await p.fill(b+'[data-e=et]','1530')});
 await fld('l:+',async b=>{await p.fill(b+'[data-e=name]','公文');await p.fill(b+'[data-e=url]','https://example.com')});
 const ev=await p.evaluate(i=>{const e=state.events.find(x=>x.id===i);return {name:e.name,desc:e.desc,issue:e.issueId,times:e.times.map(t=>t.label+' '+t.start+'~'+t.end),links:e.links.map(l=>l.name+' '+l.url)}},id);
 console.log('edited',JSON.stringify(ev));
-ok(ev.name==='改名測試'&&ev.desc==='新的說明'&&!!ev.issue&&ev.times.some(t=>/^開會 .*T14:00~.*T15:30$/.test(t))&&ev.links.includes('公文 https://example.com'),'名稱、說明、母議題、時間、連結都寫回');
+ok(ev.name==='改名測試'&&ev.desc==='新的說明\n☐ 開會'&&!!ev.issue&&ev.times.some(t=>/^開會 .*T14:00~.*T15:30$/.test(t))&&ev.links.includes('公文 https://example.com'),'名稱、說明（逐行）、母議題、時間、連結都寫回');
 /* 完成這一段（右側展開框） */
 const round0=await p.evaluate(i=>state.events.find(x=>x.id===i).round,id);
 await p.click('#evDetail [data-evd=round]');await p.waitForTimeout(300);await p.fill('#evDetail [data-rf=next]','下一段');await p.click('#evDetail [data-evd=roundok]');await p.waitForTimeout(600);
@@ -43,7 +47,7 @@ r=await p.evaluate(i=>{const e=state.events.find(x=>x.id===i);return [e.round,e.
 ok(r[0]===round0+1&&r[1]==='下一段'&&r[2]===1,'完成這一段：進入下一段、說明換成下一段、完成紀錄多一筆 '+JSON.stringify(r));
 await p.screenshot({path:'lv_edit2.png'});
 /* 儲存 */
-await p.click('#evDetail [data-edsave]');await p.waitForTimeout(3200);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
+await p.click('#evDetail [data-kpsave]');await p.waitForTimeout(3200);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
 console.log('commit',(st.commits[0]||'').split('\n').slice(0,6).join(' | '));
 ok(!(await p.evaluate(()=>editing))&&/改名/.test(st.commits[0]||''),'儲存：結束編輯、寫一筆 commit');
 ok(!p.errs.length,'沒有錯誤 '+p.errs.join(' | '));

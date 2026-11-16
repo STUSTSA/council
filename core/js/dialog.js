@@ -6,8 +6,7 @@ function fieldHTML(x){
   if(x.type==="stepper")return `<div class="fld"><span class="fld-l">${esc(x.label)}</span><div class="stepper" data-min="${x.min??-1e9}" data-max="${x.max??1e9}"><button type="button" data-step="-1" aria-label="減一">−</button><span class="stepper-v"><span class="stepper-n num" aria-live="polite">${+x.value||0}</span>${x.suffix?`<span class="stepper-s">${esc(x.suffix)}</span>`:""}</span><button type="button" data-step="1" aria-label="加一">＋</button><input type="hidden" name="${x.name}" value="${+x.value||0}"></div></div>`;
   if(x.type==="check")return `<label class="fld-check"><input type="checkbox" name="${x.name}" ${x.value?"checked":""}><span>${esc(x.label)}</span></label>`;
   if(x.type==="textarea")return `<label>${esc(x.label)}<textarea name="${x.name}" rows="${x.rows||16}" placeholder="${esc(x.ph||"")}">${esc(x.value||"")}</textarea></label>`;
-  if(x.type==="select"){const cur=x.options.find(o=>o[0]===x.value)||x.options[0]||["",""];
-    return `<div class="fld"><span class="fld-l">${esc(x.label)}</span><div class="csel"><input type="hidden" name="${x.name}" value="${esc(cur[0])}"><button type="button" class="csel-btn" aria-haspopup="listbox" aria-expanded="false"><span class="csel-v">${esc(cur[1])}</span><svg class="csel-chev" viewBox="0 0 12 8" width="11" height="7" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="csel-list" role="listbox" hidden>${x.options.map(([v,t])=>`<button type="button" role="option" class="csel-opt" data-v="${esc(v)}" aria-selected="${v===cur[0]}">${esc(t)}</button>`).join("")}</div></div></div>`}
+  if(x.type==="select")return `<div class="fld"><span class="fld-l">${esc(x.label)}</span>${cselHTML(x)}</div>`;
   if(x.type==="color")return `<label>${esc(x.label)}<span class="swatches">${(x.palette||COLORS).map(c=>`<button type="button" style="background:${c}" data-sw="${c}" aria-pressed="${c===x.value}" aria-label="顏色 ${c}"></button>`).join("")}<input type="color" name="${x.name}" value="${esc(x.value)}" style="width:46px;height:32px;padding:2px" aria-label="自訂顏色"></span></label>`;
   const t=x.type==="url"||x.type==="time"?"text":(x.type||"text");
   return `<label>${esc(x.label)}<input name="${x.name}" type="${t}" value="${esc(x.value??"")}" ${x.ph?`placeholder="${esc(x.ph)}"`:""} ${x.type==="url"?'inputmode="url"':x.type==="time"?'inputmode="numeric" autocomplete="off"':""} ${t==="number"?'min="0" max="100"':""}></label>`;
@@ -82,6 +81,9 @@ function evTimeParts({label,sd,st,ed,et}){
 }
 
 /* ---------- 自製下拉選單：外觀在每個瀏覽器都一樣 ---------- */
+/* x＝{name,value,options:[[值,文字]],cls（外框多帶的 class）,label（沒有欄位標題時給按鈕的 aria-label）}；選了會在隱藏的 input 觸發 change */
+function cselHTML(x){const cur=x.options.find(o=>o[0]===x.value)||x.options[0]||["",""];
+  return `<div class="csel${x.cls?" "+x.cls:""}"><input type="hidden" name="${esc(x.name)}" value="${esc(cur[0])}"><button type="button" class="csel-btn" aria-haspopup="listbox" aria-expanded="false"${x.aria?` aria-label="${esc(x.aria)}"`:""}><span class="csel-v">${esc(cur[1])}</span><svg class="csel-chev" viewBox="0 0 12 8" width="11" height="7" aria-hidden="true"><path d="M1.5 1.5 6 6l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="csel-list" role="listbox" hidden>${x.options.map(([v,t])=>`<button type="button" role="option" class="csel-opt" data-v="${esc(v)}" aria-selected="${v===cur[0]}">${esc(t)}</button>`).join("")}</div></div>`}
 function cselClose(c,focus){
   const l=c.querySelector(".csel-list"),b=c.querySelector(".csel-btn");if(!c.classList.contains("open"))return;
   c.classList.remove("open");b.setAttribute("aria-expanded","false");

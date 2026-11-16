@@ -20,7 +20,7 @@ const id=await p.evaluate(()=>liveOrder()[0].id);await p.evaluate(i=>startEdit('
 const v2=await m();console.log(tag,'editing',JSON.stringify(v2));ok(!v2.shown,tag+' 編輯中藏起來');
 await p.evaluate(()=>cancelEdit());await p.waitForTimeout(700);
 await p.click('#addEvent');await p.waitForTimeout(700);
-const r=await p.evaluate(()=>({dlg:$('#dlg').open?$('#dlgForm b').textContent:null,editing,sel:selEv&&(state.events.find(e=>e.id===selEv)||{}).name,split:$('#liveMD').classList.contains('split'),nameOpen:!!document.querySelector('#evDetail .evf.open [data-e=name]')}));
+const r=await p.evaluate(()=>({dlg:$('#dlg').open?$('#dlgForm b').textContent:null,editing,sel:selEv&&(state.events.find(e=>e.id===selEv)||{}).name,split:$('#liveMD').classList.contains('split'),nameOpen:document.activeElement===document.querySelector('#evDetail [data-kptitle]')}));   /* 03：原位編輯器的名稱欄（游標在裡面） */
 console.log(tag,'after click',JSON.stringify(r),'errs',p.errs);
 if(w>=1000)ok(!r.dlg&&r.editing&&r.sel==='新的即時回報'&&r.split&&r.nameOpen,tag+' 桌面：開始編輯一筆空白的並選到');
 else ok(r.dlg==='新增即時回報'&&!r.editing,tag+' 手機：開對話框');

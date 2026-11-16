@@ -63,8 +63,8 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  const ev0=await p.$(`.ev[data-ev="${eid}"]`);const op0=await ev0.evaluate(d=>d.open);await p.click('#evDetail [data-evdel]');await p.waitForTimeout(500);
  const dt=await dlgTitle(p),op1=await ev0.evaluate(d=>d.open);log('D ev delete dlg:',dt,'| opened?',op0,'→',op1);A(/^刪除「/.test(dt||'')&&op0===op1,'delete asks first, capsule not toggled');
  await p.keyboard.press('Escape');await p.waitForTimeout(500);
- await p.click('#evDetail [data-edcancel]');await p.waitForTimeout(900);
- const ac=await p.evaluate(i=>({editing,cardEdit,still:!!state.events.find(e=>e.id===i)}),eid);log('D after cancel:',ac);A(!ac.editing&&!ac.cardEdit&&ac.still,'cancel ends editing, event kept');
+ await p.click('#evH');await p.waitForTimeout(900);   /* 03：即時回報卡沒有「取消」，點卡片外面＝收合（沒改就不存） */
+ const ac=await p.evaluate(i=>({editing,cardEdit,still:!!state.events.find(e=>e.id===i)}),eid);log('D after click outside:',ac);A(!ac.editing&&!ac.cardEdit&&ac.still,'click outside ends editing, event kept');
  log('D errs:',p.errs);A(!p.errs.length,'desktop errors');
  // 重新整理：第一個身分建立時預設記住這台裝置 → 重新整理後自動登入（boot.js 的 remBoot）
  await p.go();await p.waitForTimeout(600);

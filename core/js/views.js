@@ -208,11 +208,11 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
    哪一顆在編輯由 cardEd("e",id) 決定（展開後按那顆的「編輯」；render.js 的單卡編輯），編輯中逐欄修改。 */
 /* 狀態列：狀態標籤、第幾段、最後更新（膠囊與右側詳情共用） */
 function evMetaHTML(ev,st){
-  return `<p class="ev-meta"><span class="ev-st">${EV_ST[st]}</span>${ev.round>1?`<span>第 ${ev.round} 段</span>`:""}${ev.touchedAt?`<span>最後更新 <span class="num">${fmt(ev.touchedAt).slice(5)} ${ev.touchedAt.slice(11,16)}</span></span>`:""}</p>`;
+  return `<p class="ev-meta"><span class="ev-st">${EV_ST[st]}</span>${ev.round>1?`<span>第 ${ev.round} 段</span>`:""}${ev.touchedAt?`<span>最後更新 <span class="num">${esc(fmt(ev.touchedAt).slice(5))} ${esc(String(ev.touchedAt).slice(11,16))}</span></span>`:""}</p>`;
 }
-/* 時間標記清單（即時回報區、完成紀錄共用） */
-function evTimesHTML(ev){
-  const par=parentOf(ev),ts=evTimesSorted(ev);if(!ts.length)return "";
+/* 時間標記清單（即時回報區、完成紀錄、秘書處會議卡共用）；free＝只列沒有連到任何一行的（即時回報：連到行的畫在那一行上） */
+function evTimesHTML(ev,free){
+  const par=parentOf(ev),ts=free?evFreeTimes(ev):evTimesSorted(ev);if(!ts.length)return "";
   return `<ol class="ev-times">${ts.map(t=>`<li>${evTimeView(t,par)}</li>`).join("")}</ol>`;
 }
 /* 連結按鈕列 */
@@ -238,7 +238,7 @@ function fldRowHTML(o){
 function evFieldHTML(ev,k,label,view,editor){return fldRowHTML({open:evFldOpen(ev,k),k,label,view,editor,del:/^[tl]:(?!\+)/.test(k),key:"evfk",pen:"evpen",fx:"evfx"})}
 /* 時間的文字：「日期 時刻 名稱 期間 · 地點」（顯示與編輯中共用） */
 function evTimeView(t,par){const x=evTimeText(t);
-  return `<span class="num ev-t-when">${x.when}</span><span class="ev-t-label">${esc(t.label)}</span>${x.span?`<span class="sub num">${x.span}</span>`:""}${t.place?`<span class="ev-t-place">· ${esc(t.place)}</span>`:""}${t.toIssue&&par?`<span class="sub" title="這筆也寫進母議題的處理紀錄">（母議題）</span>`:""}`}
+  return `<span class="num ev-t-when">${esc(x.when)}</span><span class="ev-t-label">${esc(t.label)}</span>${x.span?`<span class="sub num">${esc(x.span)}</span>`:""}${t.place?`<span class="ev-t-place">· ${esc(t.place)}</span>`:""}${t.toIssue&&par?`<span class="sub" title="這筆也寫進母議題的處理紀錄">（母議題）</span>`:""}`}
 /* 時間標記的輸入框（名稱、日期、時刻、結束、地點、寫進母議題） */
 function evTimeEditor(ev,tm){
   const par=parentOf(ev),sp=x=>[(x||"").slice(0,10),(x||"").slice(11,16)],[sd,st]=tm?sp(tm.start):[today(),""],[ed,et]=tm?sp(tm.end):["",""];
@@ -254,21 +254,22 @@ function linkEditorHTML(l,n,fx){
   const c=l?l.color:COLORS[n%COLORS.length];
   return `<span class="evd-row evd-link"><button type="button" class="evd-sw" style="background:${esc(c)}" data-${fx}="color" data-c="${esc(c)}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
 }
-/* 編輯中的內容：每一欄各自可以點 */
-function evFieldsHTML(ev){
-  const par=parentOf(ev),ts=evTimesSorted(ev);
+/* 編輯中的內容：每一欄各自可以點。kp＝即時回報卡的原位編輯器（名稱、逐行內容、時間在 kpEditorHTML，這裡只剩母議題、專員、標籤、超連結）；
+   秘書處會議卡照舊用全部欄位（名稱、說明、時間標記也在這裡） */
+function evFieldsHTML(ev,kp){
+  const par=parentOf(ev),ts=evTimesSorted(ev),so=staffOptsFor(ev);
   const opts=[["","（不連結）"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   const staffChips=staffNames(ev.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("");
   const lblChips=labelChipsHTML(ev.labels);
   return `<div class="evfs">
-      ${evFieldHTML(ev,"name","名稱",`<b>${esc(ev.name)}</b>`,()=>`<input data-e="name" value="${esc(ev.name)}">`)}
-      ${evFieldHTML(ev,"desc","說明",ev.desc?`<span class="evf-desc">${esc(ev.desc)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="desc" rows="4" placeholder="簡短說明">${esc(ev.desc||"")}</textarea>`)}
+      ${kp?"":evFieldHTML(ev,"name","名稱",`<b>${esc(ev.name)}</b>`,()=>`<input data-e="name" value="${esc(ev.name)}">`)}
+      ${kp?"":evFieldHTML(ev,"desc","說明",ev.desc?`<span class="evf-desc">${esc(ev.desc)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="desc" rows="4" placeholder="簡短說明">${esc(ev.desc||"")}</textarea>`)}
       ${evFieldHTML(ev,"issue","母議題",par?esc(par.title):noneTxt("不連結"),()=>fieldHTML({name:"evIssue",label:"結案或完成一段時，會自動寫進這個議題的處理紀錄",type:"select",value:ev.issueId||"",options:opts}))}
-      ${state.members.length?evFieldHTML(ev,"staff","專員",staffChips||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:ev.staff||[],options:staffOpts()})):""}
+      ${so.length||(ev.staff||[]).length?evFieldHTML(ev,"staff","專員",staffChips||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:fsMode()?"可複選":"從本看板的身分挑選，可複選",type:"multi",value:ev.staff||[],options:so.map(o=>[o[0],o[1]])})):""}
       ${evFieldHTML(ev,"labels","標籤",lblChips||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",ev.labels))}
-      <div class="evf-group"><span class="evf-l">時間標記</span>
+      ${kp?"":`<div class="evf-group"><span class="evf-l">時間標記</span>
         ${ts.map(t=>evFieldHTML(ev,"t:"+t.id,"",evTimeView(t,par),()=>evTimeEditor(ev,t))).join("")}
-        ${evFldOpen(ev,"t:+")?evFieldHTML(ev,"t:+","",'',()=>evTimeEditor(ev,null)):`<button type="button" class="ghost evd-add" data-evpen="t:+">${ico("calendar")}+ 時間</button>`}</div>
+        ${evFldOpen(ev,"t:+")?evFieldHTML(ev,"t:+","",'',()=>evTimeEditor(ev,null)):`<button type="button" class="ghost evd-add" data-evpen="t:+">${ico("calendar")}+ 時間</button>`}</div>`}
       <div class="evf-group"><span class="evf-l">超連結</span>
         ${ev.links.map(l=>evFieldHTML(ev,"l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,ev.links.length,"evfx"))).join("")}
         ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`}</div>
@@ -278,14 +279,68 @@ function evFieldsHTML(ev){
 function evToolsHTML(ev){
   return `<span class="ev-tools"><button type="button" class="icon" data-evrep aria-pressed="${ev.report}">${ev.report?"取消報告":"會議要報告"}</button><button type="button" class="icon" data-evround>${ico("progress")}完成這一段</button><button type="button" class="icon" data-evdone>${ico("check")}結案</button></span>`;
 }
-/* 一顆膠囊。o：md＝左右兩欄中、sel＝被選到、next＝「下一個」記號。展開後最下面一顆「編輯」（登入才看得到）；編輯中換成逐欄編輯＋整筆動作＋「取消｜儲存」 */
+/* ---------- 原位編輯器（03，Keep 式；events.js 的「原位編輯器」段） ----------
+   有編輯權限的人點卡片的一行（或名稱、核取框）就在原位改：名稱、逐行內容（純文字／核取／時間＋核取，可以切換、新增、刪除）、
+   時間（自製的時間選取器 tpHTML）。點卡片外面＝儲存並收合；存好後提供「復原這次修改」。kp＝{id,before}：正在編輯的那張與開始前的內容 */
+let kp=null,kpSt=null,kpTp=null;   /* kpSt＝{id,st:"saving"|"ok"|"fail"|"bad",msg,before,after}：儲存回饋；kpTp＝打開時間選取器的時間標記 id */
+const KP_TYPES=[["text","文字"],["check","核取"],["time","時間"]];
+const kpType=b=>b.timeId?"time":b.check===null?"text":"check";
+/* 沒有連到任何一行的時間標記（03 以前的舊資料）：照舊列在逐行內容下面 */
+const evFreeTimes=ev=>{const on=new Set((ev.blocks||[]).map(b=>b.timeId).filter(Boolean));return evTimesSorted(ev).filter(t=>!on.has(t.id))};
+const kpCan=()=>canEdit()&&!editing&&!kpBusy();
+/* 檢視時的逐行內容：核取框（沒有權限的人不能按）、時間、文字；有權限的人點一行＝從那一行開始編輯 */
+function evLinesHTML(ev){
+  const can=canEdit(),tm=new Map((ev.times||[]).map(t=>[t.id,t]));
+  if(!(ev.blocks||[]).length)return can?`<button type="button" class="kp-empty sub" data-kpgo="">沒有說明</button>`:`<p class="sub">沒有說明</p>`;
+  return `<ul class="kp-view">${ev.blocks.map(b=>{const t=b.timeId&&tm.get(b.timeId);
+    return `<li class="kp-vl" data-k="${kpType(b)}">${b.check===null?"":`<label class="fld-check kp-ck"><input type="checkbox" data-kpck="${esc(b.id)}"${b.check?" checked":""}${can?"":" disabled"} aria-label="完成"></label>`}${t?`<span class="kp-tm num">${esc(evTimeText(t).when)}</span>`:""}<span class="kp-tx${b.check?" done":""}"${can?` data-kpgo="${esc(b.id)}"`:""}>${esc(b.text)}</span></li>`}).join("")}</ul>`;
+}
+/* 編輯中：名稱、每一行（種類、核取框、時間、文字、刪除）、沒有連到行的舊時間標記、「+ 一行」 */
+function kpEditorHTML(ev){
+  const tm=new Map(ev.times.map(t=>[t.id,t])),max=StoreMap.TXT_MAX;
+  const tp=t=>kpTp===t.id?tpHTML(ev,t):"";
+  const row=b=>{const k=kpType(b),t=b.timeId&&tm.get(b.timeId);
+    return `<div class="kp-line" data-blk="${esc(b.id)}" data-k="${k}">${cselHTML({name:"kpType",value:k,options:KP_TYPES,cls:"kp-type",aria:"這一行的種類"})}${k==="text"?"":`<label class="fld-check kp-ck"><input type="checkbox" data-kpck="${esc(b.id)}"${b.check?" checked":""} aria-label="完成"></label>`}${t?`<button type="button" class="kp-tm num" data-kptm="${esc(t.id)}" aria-expanded="${kpTp===t.id}">${esc(evTimeText(t).when)}</button>`:""}<input class="kp-tx" data-kptx="${esc(b.id)}" value="${esc(b.text)}" maxlength="${max}" aria-label="內容"><button type="button" class="icon kp-del" data-kpdel="${esc(b.id)}" aria-label="刪除這一行">${ico("close","solo")}</button></div>${t?tp(t):""}`};
+  const free=t=>`<div class="kp-line kp-free" data-k="time"><button type="button" class="kp-tm num" data-kptm="${esc(t.id)}" aria-expanded="${kpTp===t.id}">${esc(evTimeText(t).when)}</button><input class="kp-tx" data-kplb="${esc(t.id)}" value="${esc(t.label)}" maxlength="${max}" aria-label="時間標記名稱"><button type="button" class="icon kp-del" data-kptdel="${esc(t.id)}" aria-label="刪除這個時間標記">${ico("close","solo")}</button></div>${tp(t)}`;
+  const fr=evFreeTimes(ev);
+  return `<div class="kp" data-kp="${esc(ev.id)}"><input class="kp-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">
+      <div class="kp-lines">${ev.blocks.map(row).join("")}</div>${fr.length?`<div class="kp-lines kp-frees">${fr.map(free).join("")}</div>`:""}
+      ${ev.blocks.length<StoreMap.BLK_MAX?`<button type="button" class="ghost evd-add kp-add" data-kpadd>+ 一行</button>`:""}</div>`;
+}
+/* 儲存回饋：編輯中＝狀態＋「儲存」（失敗時保留草稿、可以再按）；存好後（檢視）＝已儲存＋「復原這次修改」 */
+function kpBarHTML(ev){const s=kpSt&&kpSt.id===ev.id?kpSt:null;
+  return `<div class="card-edbar kp-bar"><span class="kp-st" role="status"${s?` data-st="${s.st}"`:""}>${s?esc(s.msg||KP_MSG[s.st]||""):""}</span><button type="button" class="primary" data-kpsave>儲存</button></div>`}
+const KP_MSG={saving:"儲存中…",ok:"已儲存",fail:"儲存失敗",bad:""};
+function kpStatusHTML(ev){const s=kpSt&&kpSt.id===ev.id&&!editing?kpSt:null;if(!s)return "";
+  return `<div class="kp-bar kp-done"><span class="kp-st" role="status" data-st="${s.st}">${esc(s.msg||KP_MSG[s.st]||"")}</span>${s.st==="ok"&&s.before?`<button type="button" class="icon" data-kpundo>復原這次修改</button>`:""}</div>`}
+/* 自製時間選取器（逐欄編輯段的 .tp）：月曆選開始日（切到「結束」選結束日）、開始／結束時刻、地點、寫進母議題。按「完成」或點卡片外面時寫回 */
+const TP_WD=["日","一","二","三","四","五","六"];
+function tpHTML(ev,t,st){
+  const sp=x=>[(x||"").slice(0,10),(x||"").slice(11,16)],[sd,sh]=sp(t.start),[ed,eh]=sp(t.end);
+  st=st||{sd:sd||today(),ed,sh,eh,place:t.place||"",toIssue:!!t.toIssue,m:(sd||today()).slice(0,7),pick:"s"};
+  const [y,mo]=st.m.split("-").map(Number),first=new Date(y,mo-1,1),n=new Date(y,mo,0).getDate(),lead=first.getDay();
+  const day=d=>{const v=`${st.m}-${pad(d)}`,on=v===st.sd||v===st.ed,mid=st.ed&&v>st.sd&&v<st.ed;
+    return `<button type="button" class="tp-d${v===today()?" now":""}${mid?" mid":""}" data-tpd="${esc(v)}" aria-pressed="${on}">${d}</button>`};
+  const par=parentOf(ev),md=v=>v?esc(fmt(v).slice(5)):"—";
+  return `<div class="tp" data-tp="${esc(t.id)}" data-st="${esc(JSON.stringify(st))}">
+    <div class="tp-ends"><button type="button" class="tp-end" data-tpend="s" aria-pressed="${st.pick==="s"}">開始 <span class="num">${md(st.sd)}</span></button><button type="button" class="tp-end" data-tpend="e" aria-pressed="${st.pick==="e"}">結束 <span class="num">${md(st.ed)}</span></button>${st.ed?`<button type="button" class="icon tp-clr" data-tpclr aria-label="清除結束日">${ico("close","solo")}</button>`:""}</div>
+    <div class="tp-mon"><button type="button" class="icon" data-tpm="-1" aria-label="上個月">${ico("prev")}</button><b class="num">${esc(y)} 年 ${esc(mo)} 月</b><button type="button" class="icon" data-tpm="1" aria-label="下個月">${ico("next")}</button></div>
+    <div class="tp-grid">${TP_WD.map(w=>`<span class="tp-w">${w}</span>`).join("")}${"<span></span>".repeat(lead)}${Array.from({length:n},(_,i)=>day(i+1)).join("")}</div>
+    <div class="tp-row"><label>開始時刻<input data-tpf="sh" value="${esc(st.sh)}" inputmode="numeric" autocomplete="off"></label><label>結束時刻<input data-tpf="eh" value="${esc(st.eh)}" inputmode="numeric" autocomplete="off"></label></div>
+    <label class="tp-place">地點<input data-tpf="place" value="${esc(st.place)}">${placeQuickHTML()}</label>
+    ${par?`<label class="fld-check"><input type="checkbox" data-tpf="toIssue"${st.toIssue?" checked":""}><span>也寫進母議題的處理紀錄</span></label>`:""}
+    <p class="tp-err" role="alert" hidden></p>
+    <div class="evf-btns"><button type="button" class="primary" data-tpok>完成</button></div></div>`;
+}
+/* 一顆膠囊。o：md＝左右兩欄中、sel＝被選到、next＝「下一個」記號。展開後最下面一顆「編輯」（登入才看得到）；
+   編輯中換成原位編輯器＋其他欄位＋整筆動作＋儲存回饋 */
 function evCapHTML(ev,o){
   const st=evStatus(ev),par=parentOf(ev),sel=o.md&&ev.id===o.sel,ed=cardEd("e",ev.id);
   /* 左右兩欄時被選到的那顆只是清單裡的空位，內容在右側詳情，不重複畫編輯欄位 */
-  const body=ed&&!sel?`${evMetaHTML(ev,st)}${evFieldsHTML(ev)}${evToolsHTML(ev)}${editBarHTML()}`
-    :`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${evMetaHTML(ev,st)}${ev.desc?`<p>${esc(ev.desc)}</p>`:`<p class="sub">沒有說明</p>`}
-        ${evTimesHTML(ev)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
-        ${evLinksHTML(ev)}${sel?"":`<div class="ev-edrow">${editBtnHTML("e:"+ev.id)}</div>`}`;
+  const body=ed&&!sel?`${evMetaHTML(ev,st)}${kpEditorHTML(ev)}${evFieldsHTML(ev,true)}${evToolsHTML(ev)}${kpBarHTML(ev)}`
+    :`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${evMetaHTML(ev,st)}${evLinesHTML(ev)}
+        ${evTimesHTML(ev,true)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
+        ${evLinksHTML(ev)}${sel?"":kpStatusHTML(ev)}${sel?"":`<div class="ev-edrow">${editBtnHTML("e:"+ev.id)}</div>`}`;
   return `<details class="ev ${sel?"sel":""} ${ev.id===o.next?"next":""} ${ed?"sec-edit":""}" data-ev="${esc(ev.id)}" data-edbox="e:${esc(ev.id)}" data-st="${st}" ${!o.md&&(openEv.has(ev.id)||ed)?"open":""}${sel?' aria-current="true"':""}>
       <summary><span class="live-dot" aria-hidden="true"></span><b>${esc(ev.name)}</b>${par?`<span class="ev-parent">→ ${esc(par.title)}</span>`:""}${ev.report?'<span class="ev-rep">報告</span>':""}<button type="button" class="ev-del edit-only" data-evdel aria-label="刪除「${esc(ev.name)}」">${ico("close","solo")}</button><span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body">${body}</div>
@@ -294,21 +349,21 @@ function evCapHTML(ev,o){
 /* 右側詳情（桌面、即時回報被選到時）：檢視時只看內容，標題列有「編輯」；編輯中一次改一欄，最下面「取消｜儲存」 */
 function evDetailHTML(ev){
   const st=evStatus(ev),par=parentOf(ev),ed=cardEd("e",ev.id);
-  const head=`<div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${esc(ev.name)}</b>${ev.report?'<span class="ev-rep">報告</span>':""}${editBtnHTML("e:"+ev.id)}${mdStepHTML("live",liveOrder().map(e=>e.id),ev.id)}<button type="button" class="icon md-close" data-mdclose="live" aria-label="收起右側">${ico("close")}收起</button></div>
+  const head=`<div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b${!ed&&canEdit()?` data-kpgo="title"`:""}>${esc(ev.name)}</b>${ev.report?'<span class="ev-rep">報告</span>':""}${editBtnHTML("e:"+ev.id)}${mdStepHTML("live",liveOrder().map(e=>e.id),ev.id)}<button type="button" class="icon md-close" data-mdclose="live" aria-label="收起右側">${ico("close")}收起</button></div>
     ${evMetaHTML(ev,st)}`;
   if(!ed)return `<div class="evd" data-ev="${esc(ev.id)}" data-st="${st}">${head}
     ${par?`<p class="sub evd-par">母議題：${esc(par.title)}</p>`:""}
-    ${ev.desc?`<p class="evd-desc">${esc(ev.desc)}</p>`:`<p class="sub">沒有說明</p>`}
-    ${evTimesHTML(ev)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
-    ${evLinksHTML(ev)}</div>`;
+    <div class="evd-desc">${evLinesHTML(ev)}</div>
+    ${evTimesHTML(ev,true)}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}
+    ${evLinksHTML(ev)}${kpStatusHTML(ev)}</div>`;
   return `<div class="evd editing sec-edit" data-ev="${esc(ev.id)}" data-edbox="e:${esc(ev.id)}" data-st="${st}">${head}
-    ${evFieldsHTML(ev)}
+    ${kpEditorHTML(ev)}${evFieldsHTML(ev,true)}
     <section class="evd-sec evd-acts">
       <div class="evd-round" hidden><label class="evd-f">這一段完成了什麼（存進完成紀錄）<textarea data-rf="done" rows="3">${esc(ev.desc||"")}</textarea></label>
         <label class="evd-f">下一段要追蹤什麼（取代說明；留空就沿用）<textarea data-rf="next" rows="2" placeholder="例如：等總務處回覆維修時程"></textarea></label>
-        <div class="evd-btns"><button type="button" class="ghost" data-evd="roundcancel">取消</button><button type="button" class="primary" data-evd="roundok">完成第 ${ev.round} 段</button></div></div>
-      <div class="evd-btns evd-main"><button type="button" class="icon danger" data-evdel>刪除</button><span class="evd-gap"></span><button type="button" class="icon" data-evrep aria-pressed="${ev.report}">${ev.report?"取消報告":"會議要報告"}</button><button type="button" class="icon" data-evd="round">${ico("progress")}完成這一段</button><button type="button" class="icon" data-evdone>${ico("check")}結案</button></div>
-    </section>${editBarHTML()}</div>`;
+        <div class="evd-btns"><button type="button" class="ghost" data-evd="roundcancel">取消</button><button type="button" class="primary" data-evd="roundok">完成第 ${esc(ev.round)} 段</button></div></div>
+      <div class="evd-btns evd-main"><button type="button" class="icon danger" data-evdel>刪除</button><span class="evd-gap"></span><button type="button" class="icon" data-evrep aria-pressed="${!!ev.report}">${ev.report?"取消報告":"會議要報告"}</button><button type="button" class="icon" data-evd="round">${ico("progress")}完成這一段</button><button type="button" class="icon" data-evdone>${ico("check")}結案</button></div>
+    </section>${kpBarHTML(ev)}</div>`;
 }
 /* 左右兩欄詳情卡上的「上一個／下一個」（開會時照清單順序一路講下去；鍵盤左右鍵同功能，見 motion.js） */
 function mdStepHTML(k,ids,id){const i=ids.indexOf(id);
@@ -321,7 +376,7 @@ function renderEvents(){
   /* 左右兩欄只在點選一筆之後才出現；沒選的時候照常排成膠囊格 */
   const md=mdOn("live")&&!!selEv,pane=$("#evDetail");mdLast.live=mdOn("live");
   $("#liveMD").classList.toggle("split",md);
-  if(!editing)evFld=null;
+  if(!editing){evFld=null;kp=null;kpTp=null;if(kpSt&&kpSt.st!=="saving"&&(md?selEv!==kpSt.id:!openEv.has(kpSt.id)))kpSt=null}   /* 收合（或右側換成別張）＝儲存回饋與「復原這次修改」消失 */
   const o={md,sel:selEv,next:md?(live[live.findIndex(e=>e.id===selEv)+1]||{}).id:null};   /* next：畫面順序裡的下一顆，加「下一個」記號 */
   const cap=ev=>evCapHTML(ev,o);
   const addBtn=`<button type="button" class="ghost auth-only add-row" id="addEvent">+ 新增即時回報</button>`;   /* 新增鈕在清單最後自己一行（不佔一顆膠囊的格子；登入、沒有卡片在編輯時顯示） */
