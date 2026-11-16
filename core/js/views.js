@@ -160,7 +160,7 @@ function issueFieldsHTML(it){
       ${F("title","名稱",`<b>${esc(it.title)}</b>`,()=>`<input data-e="title" value="${esc(it.title)}">`)}
       ${F("stage","階段",it.tags.length?`<span class="tags">${tagsHTML(it)}</span>`:noneTxt("沒有階段"),()=>stageEditorHTML(it))}
       ${F("note","目前進度",it.note?`<span class="evf-desc">${esc(it.note)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="note" rows="3" placeholder="例如：已和總務處確認，等待書面回覆">${esc(it.note||"")}</textarea>`)}
-      ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evd-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
+      ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evf-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
       <div class="evf-group"><span class="evf-l">超連結</span>
@@ -244,15 +244,15 @@ function evTimeEditor(ev,tm){
   const par=parentOf(ev),sp=x=>[(x||"").slice(0,10),(x||"").slice(11,16)],[sd,st]=tm?sp(tm.start):[today(),""],[ed,et]=tm?sp(tm.end):["",""];
   const inp=(k,v,ph,type)=>`<input ${type?`type="${type}"`:""} data-e="${k}" value="${esc(v||"")}" ${ph?`placeholder="${esc(ph)}"`:""}>`;
   return `${inp("label",tm&&tm.label,"這個時間是什麼（例如：與總務處開會）")}
-          <span class="evd-when">${inp("sd",sd,"","date")}${inp("st",st,"時刻")}<span class="sub">～</span>${inp("ed",ed,"","date")}${inp("et",et,"時刻")}</span>
+          <span class="evf-when">${inp("sd",sd,"","date")}${inp("st",st,"時刻")}<span class="sub">～</span>${inp("ed",ed,"","date")}${inp("et",et,"時刻")}</span>
           <span class="sub evf-hint">只填日期＝一個日子；加時刻＝具體時間；填結束＝一段期間</span>
-          <span class="evd-place">${inp("place",tm&&tm.place,"地點（選填，例如：學生會辦公室）")}${placeQuickHTML()}</span>
+          <span class="evf-place">${inp("place",tm&&tm.place,"地點（選填，例如：學生會辦公室）")}${placeQuickHTML()}</span>
           ${par?`<label class="fld-check"><input type="checkbox" data-e="toIssue" ${tm&&tm.toIssue?"checked":""}><span>也寫進母議題的處理紀錄</span></label>`:""}`;
 }
 /* 連結的輸入框（顏色、名稱、網址；即時回報、議題共用）：n＝目前幾個連結（新增時輪流選顏色），fx＝按鈕的 data 屬性名 */
 function linkEditorHTML(l,n,fx){
   const c=l?l.color:COLORS[n%COLORS.length];
-  return `<span class="evd-row evd-link"><button type="button" class="evd-sw" style="background:${esc(c)}" data-${fx}="color" data-c="${esc(c)}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
+  return `<span class="evf-row"><button type="button" class="evf-sw" style="background:${esc(c)}" data-${fx}="color" data-c="${esc(c)}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
 }
 /* 編輯中的內容：每一欄各自可以點。kp＝即時回報卡的原位編輯器（名稱、逐行內容、時間在 kpEditorHTML，這裡只剩母議題、專員、標籤、超連結）；
    秘書處會議卡照舊用全部欄位（名稱、說明、時間標記也在這裡） */
@@ -287,7 +287,6 @@ const KP_TYPES=[["text","文字"],["check","核取"],["time","時間"]];
 const kpType=b=>b.timeId?"time":b.check===null?"text":"check";
 /* 沒有連到任何一行的時間標記（03 以前的舊資料）：照舊列在逐行內容下面 */
 const evFreeTimes=ev=>{const on=new Set((ev.blocks||[]).map(b=>b.timeId).filter(Boolean));return evTimesSorted(ev).filter(t=>!on.has(t.id))};
-const kpCan=()=>canEdit()&&!editing&&!kpBusy();
 /* 檢視時的逐行內容：核取框（沒有權限的人不能按）、時間、文字；有權限的人點一行＝從那一行開始編輯 */
 function evLinesHTML(ev){
   const can=canEdit(),tm=new Map((ev.times||[]).map(t=>[t.id,t]));

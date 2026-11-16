@@ -379,7 +379,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 /* 清單裡「下一個」記號：開會時台下先知道接下來看哪一顆（即時回報、完成紀錄共用） */
 .events .ev.next>summary::after{content:"下一個";flex:none;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;line-height:18px;letter-spacing:.04em;background:#111114;color:#fff;animation:nextIn .3s var(--ease)}
 @keyframes nextIn{from{opacity:0;transform:translateX(-4px)}}
-@media (hover:hover){#evDetail button:hover,#doneDetail button:hover{box-shadow:0 0 0 1px var(--ink),0 0 10px rgba(255,255,255,.18)}}   /* 右側會捲動，外散的光暈會被邊緣切掉：改成貼著按鈕的小光暈 */
+@media (hover:hover){:is(#evDetail,#doneDetail) button:not(.csel-opt):hover{box-shadow:0 0 0 1px var(--ink),0 0 10px rgba(255,255,255,.18)}}   /* 右側會捲動，外散的光暈會被邊緣切掉：改成貼著按鈕的小光暈 */
 .evd-head b{font-weight:700;min-width:0;overflow-wrap:anywhere}
 .evd .ev-meta{margin:8px 0 0}
 .evd-par{margin:12px 0 0}
@@ -432,14 +432,14 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .evf-group .evf:last-of-type:not(.open){border-bottom:0}
 .evf-group .evd-add{margin:6px 0 10px}
 /* --- 時間標記、超連結的輸入框（views.js 的 evTimeEditor、linkEditorHTML；議題的超連結也用） --- */
-.evd-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
-.evd-row>input{flex:1 1 180px;min-width:0}
-.evd-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evd-when input[type=date]{width:auto}
-.evd-when input:not([type]){width:72px}
-.evd-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.evd-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evd-place input{flex:1 1 180px}
+.evf-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.evf-row>input{flex:1 1 180px;min-width:0}
+.evf-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evf-when input[type=date]{width:auto}
+.evf-when input:not([type]){width:72px}
+.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.evf-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evf-place input{flex:1 1 180px}
 .place-quick{display:flex;flex-wrap:wrap;gap:4px}
 /* --- 議題的「階段」欄 --- */
 /* 議題的「階段」欄（進度的逐欄編輯，views.js 的 stageEditorHTML）：一列一個階段＝「目前」鈕＋名稱＋刪除 */
@@ -1041,16 +1041,16 @@ label.fld-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:
 .fld-check input:checked{background:var(--ink);border-color:var(--ink)}
 .fld-check input:checked::after{transform:translateY(-1px) rotate(-45deg) scale(1)}
 .csel{position:relative;font-size:15px}
-.csel-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0;padding:8px 14px!important;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left;font:inherit}
-.csel-btn:hover{transform:none!important}
+.csel-btn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:0;padding:8px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left;font:inherit}
+.csel-btn:hover{transform:none}
 .csel-v{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .csel-chev{flex:none;opacity:.7;transition:transform .3s cubic-bezier(.2,.9,.25,1)}
 .csel.open .csel-chev{transform:rotate(180deg)}
 .csel-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;display:grid;gap:2px;padding:6px;max-height:min(280px,50vh);overflow:auto;border-radius:16px;transform-origin:top center;background:var(--pop);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:var(--pop-sh)}   /* 底色、光影用 --pop／--pop-sh：跟著所在位置（深色頁面裡的淺色卡片也會是淺色），文字才看得清楚 */
 .csel.up .csel-list{top:auto;bottom:calc(100% + 6px);transform-origin:bottom center}
 .csel-list[hidden]{display:none}
-.csel-opt{display:flex;justify-content:flex-start;width:100%;min-height:0;padding:9px 14px!important;border:0!important;border-radius:11px;background:transparent;color:var(--ink);text-align:left;font:inherit;box-shadow:none!important}
-.csel-opt:hover,.csel-opt:focus-visible{background:rgba(127,127,127,.18);transform:none!important;outline:none}
+.csel-opt{display:flex;justify-content:flex-start;width:100%;min-height:0;padding:9px 14px;border:0;border-radius:11px;background:transparent;color:var(--ink);text-align:left;font:inherit;box-shadow:none}
+.csel-opt:hover,.csel-opt:focus-visible{background:rgba(127,127,127,.18);transform:none;box-shadow:none;outline:none}
 .csel-opt[aria-selected="true"]{background:var(--ink);color:var(--surface)}
 dialog#dlg:has(.csel.open){overflow:visible}
 /* 放在設定頁右側面板裡（.in-pane，非強制回應）：不是浮起來的玻璃視窗，而是面板本身的內容 */
