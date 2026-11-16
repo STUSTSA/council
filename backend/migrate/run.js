@@ -40,14 +40,15 @@ export function loadSources({ commit, dir, dept } = {}) {
   return { depts, commit: head, dir: dir ? path.resolve(dir) : null, only: dept || null, files };
 }
 
-// 產生所有文件（不寫入）。schemaVersion 不是 13 的檔案直接停下來（不猜舊格式）。只匯入一個部門時，departments 只寫那一個
+// 產生所有文件（不寫入）。schemaVersion 不是 13 或 14 的檔案直接停下來（不猜舊格式；14＝13＋即時回報的 blocks，03 起 GitHub 模式存的檔案）。
+// 只匯入一個部門時，departments 只寫那一個
 export function plan(src, { batch, uid }) {
   const out = [], reports = [];
   src.depts.forEach((d, i) => { if (!src.only || d.id === src.only) out.push({ kind: 'departments', path: `departments/${d.id}`,
     data: { name: d.name, order: i, active: !d.test, updatedAt: { __now: true }, updatedBy: uid } }); });
   for (const f of src.files) {
     const v = +f.state.schemaVersion || +f.state.v || 0;
-    if (v !== 13) throw new Error(`${f.path} 的 schemaVersion 是 ${v}，不是 13：請先用看板開啟並儲存一次（core/js/state.js 的 migrate）再遷移`);
+    if (v !== 13 && v !== 14) throw new Error(`${f.path} 的 schemaVersion 是 ${v}，不是 13 或 14：請先用看板開啟並儲存一次（core/js/state.js 的 migrate）再遷移`);
     const r = MAP.toDocs(f.dept, f.state, { batch, uid });
     out.push(...r.docs);
     reports.push(r.report);
@@ -212,11 +213,11 @@ export async function verify(db, src, p, { dept = src.only } = {}) {
   for (const [kind, docs] of Object.entries(all)) docs.forEach(d => { const k = `${kind}/${kind === 'departments' || kind === 'deptSettings' ? '-' : (d.deptId || d.id)}`; have[k] = (have[k] || 0) + 1; });
   const diff = Object.keys({ ...want, ...have }).filter(k => (want[k] || 0) !== (have[k] || 0) && !k.startsWith('org/') && !k.startsWith('grants/'));
   diff.length ? fail('V1', '筆數不符：' + diff.map(k => `${k} 來源 ${want[k] || 0}／寫入 ${have[k] || 0}`).join('；')) : pass('V1', `${Object.keys(want).length} 組集合×部門筆數相同`);
-  // V2 多行說明：blocks 接回去＝legacyDesc＝原始 desc
+  // V2 多行說明：blocks 接回去（攤平成 desc，03）＝legacyDesc＝原始 desc
   const srcCards = new Map();
   src.files.forEach(f => (f.state.events || []).forEach(e => srcCards.set(`${f.dept}__${e.id}`, String(e.desc || ''))));
   let multi = 0; const bad2 = [];
-  for (const c of all.cards) { const joined = (c.blocks || []).map(b => b.text).join('\n'), orig = srcCards.get(c.id);
+  for (const c of all.cards) { const joined = MAP.descOf(MAP.fromFsBlocks(c.deptId, c.blocks)), orig = srcCards.get(c.id);
     if (orig != null && orig.includes('\n') && joined === orig) multi++;
     if (joined !== orig || c.legacyDesc !== orig) bad2.push(c.id); }
   bad2.length ? fail('V2', '還原不符：' + bad2.join(', ')) : pass('V2', `${all.cards.length} 張卡片還原相同，其中多行 ${multi} 張`);

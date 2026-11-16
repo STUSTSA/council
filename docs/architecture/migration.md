@@ -10,7 +10,7 @@
 
 | 舊欄位 | 去處 | 備註 |
 |---|---|---|
-| `schemaVersion`、`v` | 不搬；記進 `migrations/{batch}.report` | 匯入前先用現有 `migrate`／`normalize` 升到 13 |
+| `schemaVersion`、`v` | 不搬；記進 `migrations/{batch}.report` | 匯入前先用現有 `migrate`／`normalize` 升到 13（03 起 GitHub 模式存的 14 也收：14＝13＋即時回報的 `blocks`） |
 | `id` | 不搬 | 看板 ID，新架構用部門代號 |
 | `title` | `deptSettings/{dept}.title` | |
 | `range.start`、`range.end` | `deptSettings/{dept}.range` | |
@@ -32,7 +32,7 @@
 |---|---|---|
 | `id` | 文件 ID 的後半 | |
 | `name` | `title` | |
-| `desc` | `blocks` ＋ `legacyDesc` | 依 `\n` 切行；每行 `{id: '{卡片ID}_L{序號}', text, check: null, timeId: null}`；空白行保留成空字串；`legacyDesc` 存原文 |
+| `desc` | `blocks` ＋ `legacyDesc` | 依 `\n` 切行，每行一個純文字行（行 ID `{卡片ID}_L{序號}`，`check: null`、`time: null`）；空白行保留成空字串；`legacyDesc` 存原文。03：`blocks` 是 `{id, text, check, time}` 四個陣列（[data-model.md](data-model.md) 第 3 節）；03 之後 GitHub 模式存的檔案（schemaVersion 14）有 `blocks`，照它搬（勾選、時間行、事件的 `blockId`），`desc` 跟 `blocks` 對不上時照 `desc` 重建、對得上的行沿用 |
 | `issueId` | `issueId` | 改 `{dept}__{issueId}`；找不到的保留原值並列進報告 |
 | `staff[]`（舊身分 ID） | `staff[]` | 改 `legacy:{dept}__{id}` |
 | `labels[]` | `labels[]` | 改新 ID |
@@ -145,7 +145,7 @@ function importing() {
 | # | 檢查 |
 |---|---|
 | V1 | 每個集合、每個部門的來源筆數＝寫入筆數 |
-| V2 | 20 筆多行說明：`blocks[].text` 用 `\n` 接回去＝`legacyDesc`＝原始 `desc` |
+| V2 | 20 筆多行說明：`blocks` 攤平（`store-map.js` 的 `descOf`，核取變成「☑ 」「☐ 」開頭）接回去＝`legacyDesc`＝原始 `desc` |
 | V3 | 連結：`issueId`、`markers[].evId／tmId`、`follows[].ref`、`fromEv`、`labels`、`staff` 全部指得到；斷掉的列出，不丟棄 |
 | V4 | 時間：每個 `events` 的 `startRaw` 重新解析＝`start`；全天事件的日期在台灣時間沒有偏一天 |
 | V5 | 重跑一次：文件數相同、每份文件內容雜湊相同 |

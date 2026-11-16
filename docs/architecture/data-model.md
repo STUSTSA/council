@@ -83,8 +83,8 @@
 |---|---|
 | `deptId` | 建立後不能改 |
 | `title` | 名稱（`name`） |
-| `blocks` | 逐行內容 `[{id, text, check: null \| {done, doneAt, doneBy}, timeId: null \| string}]`（由 `desc` 依換行切開；03 才用到核取方塊） |
-| `timeIds` | 這張卡片的**全部**時間事件 ID（`times[]` 搬到 `events` 後的 ID；行層級的也列在這裡，`blocks[].timeId` 指向其中一個）。02A：規則要求屬於卡片的時間事件一定列在這裡，永久刪除靠它確認全部刪光 |
+| `blocks` | 逐行內容（03 定稿）：四個一樣長的陣列 `{id: [], text: [], check: [], time: []}`，第 n 行＝四個陣列的第 n 個。`id`＝行 ID（`safeId`、同一張卡片裡不重複；插入、刪除一行時勾選與時間跟著 ID 走）；`text`＝文字（每行最多 1000 字、不能有換行）；`check`＝`null`（純文字）、`false`／`true`（核取，沒勾／勾了）；`time`＝`null` 或這張卡片 `timeIds` 裡的一個時間事件 ID（時間＋核取；那份事件的 `blockId` 指回這一行）。最多 50 行。遷移的舊卡片由 `desc` 依換行切開，每行一個純文字行（`{卡片ID}_L{序號}`）。不用「每行一個物件的陣列」：規則沒有迴圈，逐行檢查形狀的運算式數量跟行數成正比，模擬器實測十行就超過每個請求 1000 個運算式的上限；四個陣列可以整欄一次檢查（`firestore.rules` 的 `blocksOk`）。02D 遷移寫的是 `[{id, text, check: null, timeId: null}]`：網頁讀得到，改內容時換成新格式（規則接受舊格式原樣留著，改了 `blocks` 就要是新格式）。不記勾選的人與時間（版本歷史有誰在何時改過） |
+| `timeIds` | 這張卡片的**全部**時間事件 ID（`times[]` 搬到 `events` 後的 ID；行層級的也列在這裡，`blocks.time[n]` 指向其中一個）。02A：規則要求屬於卡片的時間事件一定列在這裡，永久刪除靠它確認全部刪光 |
 | `issueId` | 母議題（`issueId`，改新 ID） |
 | `staff` | 負責人：UID 或 `legacy:{deptId}__{舊身分ID}`（`staff[]`） |
 | `labels` | 標籤 ID（`labels[]`，改新 ID） |
@@ -103,7 +103,7 @@
 
 ### `cards/{cardId}/versions/{version}`：跟母卡片同一個讀取條件；只能新增，只能隨永久刪除刪掉
 （01A-R：從頂層 `cardVersions/{cardId}_{version}` 改成子集合，讀取條件跟著母卡片。02A：永久刪除時由新往舊一起刪掉，見 [permissions.md](permissions.md) 第 5.1 節。）
-`cardId`、`deptId`、`version`、`title`、`blocks`、`times`（當時的時間值快照）、`state`、`by`、`at`、`imported`（遷移產生的第 1 版為 true）、`importBatch`（只有遷移產生的第 1 版有，等於母卡片的批次；01B R1）。`title`、`blocks`、`state`、`deptId`、`by`、`at` 由規則比對批次後的卡片。
+`cardId`、`deptId`、`version`、`title`、`blocks`、`times`（當時的時間值快照）、`state`、`by`、`at`、`imported`（遷移產生的第 1 版為 true）、`importBatch`（只有遷移產生的第 1 版有，等於母卡片的批次；01B R1）。`title`、`blocks`、`state`、`deptId`、`by`、`at` 由規則比對批次後的卡片；03 起 `blocks` 也照卡片的 `blocksOk` 檢查形狀。
 
 ### `issues/{id}`：母議題
 `deptId`、`title`、`cur`（目前階段）、`start`、`end`（原字串＋時間）、`note`、`tags`、`labels`、`links`、`staff`、`markers`（陣列，保留舊結構，`evId`／`tmId` 改新 ID）、`doneAt`、`order`、`rev`、`updatedAt`、`updatedBy`。
@@ -118,7 +118,7 @@
 | 欄位 | 說明（舊欄位） |
 |---|---|
 | `deptId` | |
-| `cardId`、`blockId` | 來源卡片與行（舊資料只有 `cardId`）。02A：有 `cardId` 時必須列在那張卡片的 `timeIds`、跟卡片同部門；`cardId` 建立後不能改 |
+| `cardId`、`blockId` | 來源卡片與行（舊資料只有 `cardId`；03：時間＋核取那一行的行 ID，規則只檢查是 `null` 或 `safeId`）。02A：有 `cardId` 時必須列在那張卡片的 `timeIds`、跟卡片同部門；`cardId` 建立後不能改 |
 | `label` | 標記名稱（`times[].label`） |
 | `start`、`end` | Timestamp；`startRaw`、`endRaw` 原字串 |
 | `allDay` | 只有日期 |

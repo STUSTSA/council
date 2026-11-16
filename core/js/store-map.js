@@ -38,6 +38,69 @@
   const clean = o => { Object.keys(o).forEach(k => o[k] === undefined && delete o[k]); return o; };
   const copy = v => v == null ? v : JSON.parse(JSON.stringify(v));
 
+  /* ===== 卡片的逐行內容（03） =====
+     畫面上（state、GitHub 模式的資料檔）：ev.blocks＝[{id, text, check, timeId}]，每一行三種之一：
+       純文字（check null）、核取（check false／true）、時間＋核取（check＋timeId 指向這張卡片的一個時間標記 times[].id）。
+     id＝行 ID（只在這張卡片裡不重複），插入、刪除一行時其他行的勾選與時間跟著 ID 走，不會掛錯行。
+     desc 由 blocks 衍生（descOf，核取攤成「☑ 」「☐ 」開頭的文字）：搜尋、會議紀錄、舊網站、回復匯出都讀 desc。
+     Firestore 的 cards.blocks（與版本）是四個一樣長的陣列 {id:[], text:[], check:[], time:[]}（fsBlocks／fromFsBlocks；
+     規則要逐行檢查形狀，陣列才能整欄一次檢查，見 firestore.rules 的 blocksOk）。02D 遷移的舊卡片是 [{id, text, check, timeId}]，讀得到，存檔時換成新格式。
+     上限跟規則相同：最多 BLK_MAX 行、每行最多 TXT_MAX 字。 */
+  const BLK_MAX = 50, TXT_MAX = 1000, CHK = { done: "☑ ", todo: "☐ " };
+  const lineOf = b => (b && typeof b.check === "boolean" ? (b.check ? CHK.done : CHK.todo) : "") + String((b && b.text) || "");
+  const descOf = blocks => (blocks || []).map(lineOf).join("\n");
+  /* 新的行 ID：決定性（L0、L1…），跟這張卡片已有的 ID 撞到就加後綴 */
+  const freshId = (seen, n) => { let id = `L${n}`, k = 0; while (seen.has(id)) id = `L${n}_${++k}`; seen.add(id); return id; };
+  const checkOf = c => typeof c === "boolean" ? c : c && typeof c === "object" ? !!c.done : null;   /* 舊的 {done} 物件也接受 */
+  /* 整理一份 blocks：形狀不對的修好（行 ID 不合格或重複就換新的、文字去掉換行、check 只能是 null／true／false）；
+     timeIds＝這張卡片的時間標記 ID（Set），不在裡面或被前面的行用過的 timeId 改成 null；有 timeId 一定有 check */
+  function cleanBlocks(list, timeIds) {
+    const seen = new Set(), used = new Set(), out = [];
+    (Array.isArray(list) ? list : []).forEach(b => {
+      if (!b || typeof b !== "object") return;
+      const id = typeof b.id === "string" && SAFE_ID.test(b.id) && !seen.has(b.id) ? b.id : null;
+      if (id) seen.add(id);
+      const t = typeof b.timeId === "string" && timeIds && timeIds.has(b.timeId) && !used.has(b.timeId) ? b.timeId : null;
+      if (t) used.add(t);
+      const c = checkOf(b.check);
+      out.push({ id, text: String(b.text == null ? "" : b.text).replace(/[\r\n]+/g, " "), check: c === null && t ? false : c, timeId: t });
+    });
+    out.forEach((b, n) => { if (!b.id) b.id = freshId(seen, n); });
+    return out;
+  }
+  /* 從 desc 重建 blocks：跟舊的某一行（攤平後）完全相同的沿用那一行（ID、勾選、時間），其他是純文字的新行。
+     舊卡片（只有 desc）、舊網站或會議編輯只改了 desc 的資料都走這裡 */
+  function blocksFromDesc(desc, old) {
+    const pool = new Map(), keep = new Set();
+    (old || []).forEach(b => { const k = lineOf(b); if (!pool.has(k)) pool.set(k, []); pool.get(k).push(b); });
+    const out = (desc ? String(desc).split("\n") : []).map(line => {
+      const m = (pool.get(line) || []).shift();
+      if (m) { keep.add(m.id); return copy(m); }
+      return { id: null, text: line.replace(/\r/g, ""), check: null, timeId: null };
+    });
+    out.forEach((b, n) => { if (!b.id) b.id = freshId(keep, n); });
+    return out;
+  }
+  /* 一張卡片（畫面上的格式：e.times、e.blocks、e.desc）的 blocks 與 desc 對齊：沒有 blocks＝每行純文字；
+     desc 跟 blocks 攤平後不同（舊網站、會議編輯改了 desc）＝照 desc 重建、能對上的行沿用。回傳整理好的 blocks（不改 e） */
+  function blocksOf(e) {
+    const tids = new Set((e.times || []).map(t => t.id));
+    const hasDesc = typeof e.desc === "string";
+    if (!Array.isArray(e.blocks)) return cleanBlocks(blocksFromDesc(hasDesc ? e.desc : "", []), tids);
+    const b = cleanBlocks(e.blocks, tids);
+    return hasDesc && descOf(b) !== e.desc ? cleanBlocks(blocksFromDesc(e.desc, b), tids) : b;
+  }
+  /* 畫面 → Firestore（timeId 加部門前綴） */
+  const fsBlocks = (dept, list) => ({ id: list.map(b => b.id), text: list.map(b => b.text), check: list.map(b => b.check),
+    time: list.map(b => b.timeId ? nid(dept, b.timeId) : null) });
+  /* Firestore → 畫面（timeId 拿掉部門前綴）：新格式（四個陣列）或 02D 遷移的舊格式（每行一個物件） */
+  function fromFsBlocks(dept, v) {
+    const tid = x => typeof x === "string" ? oid(dept, x) : null;
+    if (Array.isArray(v)) return v.filter(b => b && typeof b === "object").map(b => ({ id: b.id, text: b.text, check: checkOf(b.check), timeId: tid(b.timeId) }));
+    if (!v || typeof v !== "object" || !Array.isArray(v.id)) return [];
+    return v.id.map((id, n) => ({ id, text: (v.text || [])[n], check: checkOf((v.check || [])[n]), timeId: tid((v.time || [])[n]) }));
+  }
+
   /* ===== 舊 → 新 =====
      state：已經是 schemaVersion 13 的部門資料；dept：部門代號；opt：{batch, uid}
      回傳 {docs:[{path, data, kind}], report}；kind 決定寫入順序與分批（遷移程式用） */
@@ -79,7 +142,10 @@
       const id = nid(dept, e.id), desc = String(e.desc || "");
       const lines = desc.split("\n");
       if (lines.length > 1) report.multiline++;
-      const blocks = lines.map((text, n) => ({ id: `${id}_L${n}`, text, check: null, timeId: null }));
+      /* 舊資料（只有 desc）：每行一個純文字行（ID {卡片}_L{n}）。03 之後 GitHub 模式存的檔案有 blocks：照 blocks 搬（timeId 加部門前綴） */
+      const own = Array.isArray(e.blocks) ? blocksOf(e) : lines.map((text, n) => ({ id: `${id}_L${n}`, text, check: null, timeId: null }));
+      const blocks = fsBlocks(dept, own);
+      const blockOfTime = new Map(own.filter(b => b.timeId).map(b => [nid(dept, b.timeId), b.id]));
       link("card.issueId", e.id, e.issueId, isIds.has(e.issueId));
       link("card.fromEv", e.id, e.fromEv, evIds.has(e.fromEv));
       (e.staff || []).forEach(s => link("card.staff", e.id, s, memIds.has(s)));
@@ -102,7 +168,7 @@
         const st = parseTaipei(t.start), en = parseTaipei(t.end) || st;
         if (!st) { report.badTimes.push({ what: "time.start", id: t.id, value: t.start }); return; }
         add("events", `events/${nid(dept, t.id)}`, {
-          deptId: dept, cardId: id, blockId: null, label: t.label || "", start: ts(st.ms), end: ts(Math.max(en.ms, st.ms)),
+          deptId: dept, cardId: id, blockId: blockOfTime.get(nid(dept, t.id)) || null, label: t.label || "", start: ts(st.ms), end: ts(Math.max(en.ms, st.ms)),
           startRaw: t.start || "", endRaw: t.end || "", allDay: st.allDay, place: t.place || "", toIssue: !!t.toIssue,
           scope: "dept", visibility: "internal", rev: 1, importBatch: B, ...stamp });
       });
@@ -156,7 +222,9 @@
     s.events = (src.cards || []).filter(c => c.state === "open" || c.state === "done").sort(byOrder).map(c => {
       const ev = evByCard[c.id] || [], order = c.timeIds || [];
       ev.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-      return clean({ id: oid(dept, c.id), name: c.title, desc: (c.blocks || []).map(b => b.text).join("\n"),
+      /* 03：逐行內容原樣帶進畫面（timeId 拿掉部門前綴）；desc 由 blocks 衍生（舊網站、回復匯出讀的是 desc） */
+      const blocks = fromFsBlocks(dept, c.blocks);
+      return clean({ id: oid(dept, c.id), name: c.title, desc: descOf(blocks), blocks,
         issueId: c.issueId ? oid(dept, c.issueId) : null, staff: (c.staff || []).map(x => fromStaff(dept, x)),
         labels: (c.labels || []).map(x => oid(dept, x)), links: copy(c.links || []), report: !!c.report,
         times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: e.startRaw || fmtTaipei(e.start.__ts, e.allDay),
@@ -202,9 +270,10 @@
 
     const evIds = (s.events || []).map(e => nid(dept, e.id)), cord = ordered(evIds, R.cards);
     (s.events || []).forEach((e, k) => {
-      const id = evIds[k], r = R.cards.get(id), st = e.doneAt ? "done" : "open", rb = (r && r.blocks) || [];
-      const blocks = String(e.desc || "").split("\n").map((text, n) => { const b = rb[n];
-        return b && b.text === text ? copy(b) : { id: (b && b.id) || `${id}_L${n}`, text, check: b && b.check !== undefined ? copy(b.check) : null, timeId: b && b.timeId !== undefined ? b.timeId : null }; });
+      const id = evIds[k], r = R.cards.get(id), st = e.doneAt ? "done" : "open";
+      /* 03：以 e.blocks 為準（行 ID 穩定，勾選與時間跟著行走）；只改了 desc 的（舊流程）照 desc 對齊，見 blocksOf */
+      const own = blocksOf(e), blocks = fsBlocks(dept, own);
+      const blockOfTime = new Map(own.filter(b => b.timeId).map(b => [nid(dept, b.timeId), b.id]));
       const times = e.times || [];
       const c = { deptId: dept, title: String(e.name || ""), blocks, timeIds: times.map(t => nid(dept, t.id)),
         issueId: e.issueId ? nid(dept, e.issueId) : null, staff: staff(e.staff), labels: ids(e.labels), links: copy(e.links || []),
@@ -217,7 +286,7 @@
       else c.doneAt = st === "done" ? NOW : null;
       out.cards[id] = clean(c);
       times.forEach(t => { const eid = nid(dept, t.id), r2 = R.events.get(eid), a = parseTaipei(t.start), b = parseTaipei(t.end) || a;
-        out.events[eid] = clean({ deptId: dept, cardId: id, blockId: r2 && r2.blockId !== undefined ? r2.blockId : null, label: t.label || "",
+        out.events[eid] = clean({ deptId: dept, cardId: id, blockId: blockOfTime.get(eid) || null, label: t.label || "",
           start: a ? ts(a.ms) : null, end: a ? ts(Math.max(b.ms, a.ms)) : null, startRaw: t.start || "", endRaw: t.end || "",
           allDay: a ? a.allDay : true, place: t.place || "", toIssue: !!t.toIssue,
           scope: (r2 && r2.scope) || "dept", visibility: (r2 && r2.visibility) || "internal", ...keep(r2, ["title", "summary", "importBatch"]) }); });
@@ -233,7 +302,7 @@
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);

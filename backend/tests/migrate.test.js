@@ -5,7 +5,7 @@ import { env, google, anon, seed, seedRole, assertFails, assertSucceeds, FV, TS 
 import { loadSources, runImport, finishImport, rollbackImport, setMigrationStatus, verify, fromFirestore, MAP } from '../migrate/run.js';
 import { editCard, readDoc } from './helpers.js';
 import { canon } from '../migrate/compare.js';
-import { deptReport, exportDept, roundTrip, ROOT, blockedOut } from '../migrate/run.js';
+import { deptReport, exportDept, roundTrip, ROOT, blockedOut, plan } from '../migrate/run.js';
 import { mkdtempSync, copyFileSync, readFileSync, existsSync, mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -255,6 +255,40 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.deepEqual(s.events[0].times, []);
     assert.deepEqual(s.issues.map(i => i.id), ['i1']);
     assert.deepEqual([s.weeks.length, s.labels.length, s.members.length], [0, 0, 0]);
+  });
+
+  it('03 逐行內容：schemaVersion 14 的檔案照 blocks 搬（行 ID、勾選、時間行與事件的 blockId）；讀回來 desc 攤平、仍是 schemaVersion 13', () => {
+    const st = { schemaVersion: 14, title: 't', members: [], labels: [], issues: [], weeks: [], events: [
+      { id: 'e1', name: '卡', desc: '純文字\n☐ 核取\n☑ 開會', times: [{ id: 't1', label: '開會', start: '2026-11-20T10:00', end: '', place: '', toIssue: false }],
+        blocks: [{ id: 'a', text: '純文字', check: null, timeId: null }, { id: 'b', text: '核取', check: false, timeId: null }, { id: 'c', text: '開會', check: true, timeId: 't1' }] },
+      { id: 'e2', name: '舊卡', desc: '第一行\n第二行', times: [] }] };
+    const { docs } = MAP.toDocs('rights', st, { batch: 'b', uid: 'u' });
+    const card = docs.find(d => d.path === 'cards/rights__e1').data, ev = docs.find(d => d.path === 'events/rights__t1').data;
+    assert.deepEqual(card.blocks, { id: ['a', 'b', 'c'], text: ['純文字', '核取', '開會'], check: [null, false, true], time: [null, null, 'rights__t1'] });
+    assert.equal(ev.blockId, 'c');
+    assert.deepEqual(docs.find(d => d.path === 'cards/rights__e1/versions/1').data.blocks, card.blocks);
+    const old = docs.find(d => d.path === 'cards/rights__e2').data;
+    assert.deepEqual(old.blocks, { id: ['rights__e2_L0', 'rights__e2_L1'], text: ['第一行', '第二行'], check: [null, null], time: [null, null] });
+    // desc 跟 blocks 對不上（舊網站改過 desc）：照 desc 重建，對得上的行沿用 ID 與勾選
+    const st2 = JSON.parse(JSON.stringify(st)); st2.events[0].desc = '純文字\n新的一行\n☑ 開會';
+    const c2 = MAP.toDocs('rights', st2, { batch: 'b', uid: 'u' }).docs.find(d => d.path === 'cards/rights__e1').data;
+    assert.deepEqual([c2.blocks.id[0], c2.blocks.id[2], c2.blocks.check, c2.blocks.time], ['a', 'c', [null, null, true], [null, null, 'rights__t1']]);
+    // 讀回來（新網站的 firestore 模式、回復匯出）：schemaVersion 13、desc 攤平（核取變成文字）、blocks 是多出來的欄位
+    const back = MAP.toState('rights', { settings: { title: 't' }, cards: [{ id: 'rights__e1', ...card }, { id: 'rights__e2', ...old }],
+      events: [{ id: 'rights__t1', ...ev, start: { __ts: 0 }, end: { __ts: 0 } }] });
+    assert.equal(back.schemaVersion, 13);
+    assert.equal(back.events[0].desc, '純文字\n☐ 核取\n☑ 開會');
+    assert.deepEqual(back.events[0].blocks[2], { id: 'c', text: '開會', check: true, timeId: 't1' });
+    assert.equal(back.events[1].desc, '第一行\n第二行');
+    // 02D 遷移的舊格式（每行一個物件）也讀得到
+    const legacy = MAP.toState('rights', { settings: {}, cards: [{ id: 'rights__e3', title: 'x', state: 'open', blocks: [{ id: 'rights__e3_L0', text: '舊', check: null, timeId: null }] }] });
+    assert.equal(legacy.events[0].desc, '舊');
+    assert.equal(canon(back, 'rights').events[0].desc, '純文字\n☐ 核取\n☑ 開會');
+  });
+  it('03：schemaVersion 14 可以遷移、15 停下來', () => {
+    const f = v => ({ depts: [], only: null, files: [{ dept: 'rights', path: 'x.json', state: { schemaVersion: v, events: [], issues: [], weeks: [], labels: [], members: [] } }] });
+    assert.ok(plan(f(14), { batch: 'b', uid: 'u' }).docs.length > 0);
+    assert.throws(() => plan(f(15), { batch: 'b', uid: 'u' }), /不是 13 或 14/);
   });
 
   it('匯出位置檢查（02D 審查）：大小寫不分、解開符號連結（檔案或資料夾）；只在暫存的假 repo 裡測，不碰正式資料檔', () => {

@@ -1,8 +1,8 @@
 rules_version = '2';
-// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D 修正）
+// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D、03 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、L-01～L-11、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -33,6 +33,28 @@ service cloud.firestore {
     // 02D 審查（P0）：看板內容的文件 ID 只能是英數、底線、連字號（1～120 字）。網頁讀回來時會拿掉部門前綴、把 ID 放進畫面的屬性，
     // 不限制的話，有部門角色的人用 SDK 建一份 ID 帶引號或 < 的文件，就能在別人（含總管理員）的畫面上執行程式（permissions.md 第 5.1e 節）
     function safeId(x)      { return x is string && x.matches('^[A-Za-z0-9_-]{1,120}$'); }
+    // 03：卡片（與版本）的逐行內容 blocks（data-model.md 第 3 節）。四個一樣長的陣列（第 n 行＝四個陣列的第 n 個）：
+    //   id[]＝行 ID（safeId、不重複）；text[]＝文字（每行最多 1000 字、不能有換行）；check[]＝null（純文字）／false／true（核取）；
+    //   time[]＝null 或這張卡片 timeIds 裡的時間事件 ID（時間＋核取）。最多 50 行（store-map.js 的 BLK_MAX、TXT_MAX 同數字）。
+    // 不用「每行一個物件的陣列」：規則沒有迴圈，逐行檢查的運算式數量跟行數成正比，十行就超過每個請求 1000 個運算式的上限（模擬器實測）；
+    // 平行陣列可以用 join／matches／hasOnly／hasAll 整欄一次檢查，跟行數無關
+    function blocksOk(b, t) {
+      let n = b.id.size();
+      let tt = b.time.removeAll([null]);
+      // 「接起來再切開＝原本的陣列」：每個元素都是字串、而且不含分隔字元（id 不含空白、文字不含換行）；結尾補一個 '.' 免得切開時丟掉結尾的空字串
+      return b is map && b.keys().hasOnly(['id', 'text', 'check', 'time']) && b.keys().hasAll(['id', 'text', 'check', 'time'])
+        && b.id is list && b.text is list && b.check is list && b.time is list && t is list
+        && n <= 50 && b.text.size() == n && b.check.size() == n && b.time.size() == n
+        && b.check.hasOnly([null, true, false])
+        && (n == 0 || ((b.id.join(' ') + ' .').split(' ') == b.id.concat(['.'])
+            && b.id.toSet().size() == n
+            && b.id.join(' ').matches('^[A-Za-z0-9_-]{1,120}( [A-Za-z0-9_-]{1,120})*$')
+            && (b.text.join('\n') + '\n.').split('\n') == b.text.concat(['.'])
+            && b.text.join('\n').matches('^[^\n]{0,1000}(\n[^\n]{0,1000})*$')))
+        && (tt.size() == 0 || ((tt.join(' ') + ' .').split(' ') == tt.concat(['.'])
+            && tt.join(' ').matches('^[A-Za-z0-9_-]{1,120}( [A-Za-z0-9_-]{1,120})*$')
+            && t.hasAll(tt)));
+    }
     // 稽核鏈：同一批寫入裡必須新建 auditLogs/{col}_{id}_{rev}
     function auditAfter(col, id, rev) { return existsAfter(doc('auditLogs', col + '_' + id + '_' + string(rev))); }
     // 遷移：總管理員＋running 的批次（migration.md 第 3 節）
@@ -312,7 +334,7 @@ service cloud.firestore {
         return d().keys().hasOnly(cardKeys())
           && d().keys().hasAll(['deptId', 'title', 'blocks', 'state', 'version', 'report', 'updatedAt', 'updatedBy'])
           && d().deptId in deptIds() && d().title is string && d().title.size() <= 500
-          && d().blocks is list && d().state in ['open', 'done', 'purging']
+          && (d().blocks is map || d().blocks is list) && d().state in ['open', 'done', 'purging']   // list＝02D 遷移的舊格式（沒改內容時照留）
           && d().version is int && d().report is bool
           && d().get('timeIds', []) is list;
       }
@@ -380,8 +402,12 @@ service cloud.firestore {
 
       allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
       allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
-      allow create: if safeId(id) && cardShape() && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
-      allow update: if cardShape() && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
+      // 03：blocks 每一行的形狀（blocksOk）。修改時 blocks、timeIds 都沒變（只換順序）不再檢查；永久刪除中（purging）也不檢查
+      // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）
+      allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', []))
+        && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
+      allow update: if cardShape() && (d().state == 'purging' || unchanged(['blocks', 'timeIds']) || blocksOk(d().blocks, d().get('timeIds', [])))
+        && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
         && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
       allow delete: if purgeFinish() || rollbackDelete();
 
@@ -399,6 +425,7 @@ service cloud.firestore {
             && nv().deptId == cardAfter().deptId
             && nv().title  == cardAfter().title
             && nv().blocks == cardAfter().blocks
+            && blocksOk(nv().blocks, cardAfter().get('timeIds', []))
             && nv().state  == cardAfter().state
             && nv().by == me() && nv().by == cardAfter().updatedBy
             && nv().at == request.time && nv().at == cardAfter().updatedAt;
@@ -473,7 +500,8 @@ service cloud.firestore {
           && d().keys().hasAll(['deptId', 'start', 'end', 'allDay', 'scope', 'visibility', 'rev', 'updatedAt', 'updatedBy'])
           && d().deptId in deptIds() && d().start is timestamp && d().end is timestamp && d().end >= d().start
           && d().allDay is bool
-          && d().scope in ['dept', 'all-activity', 'all-meeting'] && d().visibility in ['internal', 'public'];
+          && d().scope in ['dept', 'all-activity', 'all-meeting'] && d().visibility in ['internal', 'public']
+          && (d().get('blockId', null) == null || safeId(d().blockId));   // 03：指向卡片的一行（行 ID）；規則只檢查形狀
       }
       // 公開事件整份對外公開：只能有公開欄位，不放卡片內文
       function publicShape() {

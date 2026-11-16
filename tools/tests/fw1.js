@@ -84,6 +84,8 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   /* 用畫面的編輯流程改一張卡片：開始編輯 → fn(ev) 改內容 → 按儲存（data-edsave 同一條路） */
   const editCard=(p,id,fn)=>p.evaluate(async([id,fn])=>{await startEdit('e:'+id);const ev=state.events.find(e=>e.id===id);(0,eval)(fn)(ev);evTouch(ev);syncLink(ev);dirty=true;render();if(fldCommitOpen())await saveFlow()},[id,fn.toString()]);
   const C=id=>`cards/${DEPT}__${id}`;
+  /* 卡片每一行的文字（03：Firestore 的 blocks 是 {id,text,check,time} 四個陣列；02D 遷移的舊卡片是每行一個物件） */
+  const txt=c=>Array.isArray(c.blocks)?c.blocks.map(b=>b.text):c.blocks.text;
 
   /* ---------- 1. 未登入、一般登入者：唯讀 ---------- */
   {const p=await open();const u=await ui(p);
@@ -114,7 +116,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   /* b. 改內容 */
   await editCard(ed,nid,ev=>{ev.desc='第一行\n第二行'});await settled(ed);
   c=await read(C(nid));const v2=await read(`${C(nid)}/versions/2`);
-  ok(c.version===2&&c.blocks.length===2&&c.blocks[1].text==='第二行'&&v2&&v2.blocks.length===2&&v2.by===edUid,'改內容：version 2＋第 2 版同批');
+  ok(c.version===2&&c.blocks.text.length===2&&c.blocks.text[1]==='第二行'&&v2&&v2.blocks.text.length===2&&v2.by===edUid,'改內容：version 2＋第 2 版同批');
   ok(await ed.evaluate(()=>!editing&&state.events.find(e=>e.name==='FW 新卡片').desc==='第一行\n第二行'),'改內容：儲存後重新讀回、結束編輯');
   /* c. 加時間標記 */
   await editCard(ed,nid,ev=>{ev.times.push({id:'tfw1',label:'開會',start:'2026-12-01T10:00',end:'2026-12-01T12:00',place:'學生會',toIssue:false})});await settled(ed);
@@ -211,7 +213,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(await toastHas(ed,'資料剛被別人改過'),'衝突：提示資料剛被別人改過');
   ok((await dlg(ed))==='儲存失敗','衝突：可以重新載入');
   ok(await ed.evaluate(id=>editing&&cardEdit==='e:'+id&&state.events.find(e=>e.id===id).desc==='衝突的草稿',cf),'衝突：畫面上的修改留著、仍在編輯中');
-  ok(!(await read(C(cf))).blocks.some(x=>x.text==='衝突的草稿'),'衝突：沒有寫入');
+  ok(!txt(await read(C(cf))).includes('衝突的草稿'),'衝突：沒有寫入');
   await dlgAct(ed,'cancel');ok(await ed.evaluate(id=>editing&&state.events.find(e=>e.id===id).desc==='衝突的草稿',cf),'衝突：取消重新載入後修改還在');
   await ed.evaluate(()=>cancelEdit());await ed.waitForTimeout(400);
   /* 重新載入：放棄草稿、讀最新 */
@@ -229,7 +231,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   await ed.evaluate(async()=>{if(fldCommitOpen())await saveFlow()});
   ok(await toastHas(ed,'沒有權限'),'撤權：編輯中按儲存被規則擋下、提示沒有權限');
   ok(await ed.evaluate(id=>editing&&state.events.find(e=>e.id===id).desc==='撤權前的草稿',rv),'撤權：畫面上的修改留著');
-  ok(!(await read(C(rv))).blocks.some(x=>x.text==='撤權前的草稿'),'撤權：沒有寫入');
+  ok(!txt(await read(C(rv))).includes('撤權前的草稿'),'撤權：沒有寫入');
   await dlgAct(ed,'cancel');await ed.evaluate(()=>cancelEdit());await ed.waitForTimeout(400);
   ok((await ui(ed)).editBtns===0,'撤權：沒有編輯鈕');
   const direct=await ed.evaluate(async()=>{const n=JSON.parse(JSON.stringify(state));n.events[0].name+='（繞過畫面）';
@@ -293,7 +295,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await mkPurging('pg1',['pgA'],['pgGhost'],2);
     const tgt=await e2.evaluate(()=>state.events.filter(e=>!e.doneAt)[0].id);
     await editCard(e2,tgt,ev=>{ev.desc='中斷刪除後的修改'});await settled(e2);
-    ok((await read(C(tgt))).blocks.some(b=>b.text==='中斷刪除後的修改'),'有中斷的刪除（timeIds 裡有不存在的時間標記）：編輯者別的修改照常存得進去');
+    ok(txt(await read(C(tgt))).includes('中斷刪除後的修改'),'有中斷的刪除（timeIds 裡有不存在的時間標記）：編輯者別的修改照常存得進去');
     ok(await gone('pg1',['pgA'],2),'中斷的刪除接著清完：存在的時間標記刪掉、不存在的只從清單拿掉、版本與卡片都刪掉');
     /* 兩個編輯者同時儲存、同時接著清同一張（5 個時間標記＋2 個不存在的、5 個版本，要好幾批） */
     const e3=await open();const e3Uid=await signIn(e3,'ed3');await setRole(e3Uid,{[DEPT]:'editor'});await until(async()=>!(await ui(e3)).locked);
@@ -301,7 +303,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     const [ta,tb]=await e3.evaluate(()=>state.events.filter(e=>!e.doneAt).slice(1,3).map(e=>e.id));
     await Promise.all([editCard(e2,ta,ev=>{ev.desc='同時接著清 A'}),editCard(e3,tb,ev=>{ev.desc='同時接著清 B'})]);await settled(e2);await settled(e3);
     const [ca,cb]=await Promise.all([read(C(ta)),read(C(tb))]);
-    ok(ca.blocks.some(b=>b.text==='同時接著清 A')&&cb.blocks.some(b=>b.text==='同時接著清 B'),'兩個編輯者同時儲存（都會接著清同一張中斷的刪除）：兩邊的修改都存得進去');
+    ok(txt(ca).includes('同時接著清 A')&&txt(cb).includes('同時接著清 B'),'兩個編輯者同時儲存（都會接著清同一張中斷的刪除）：兩邊的修改都存得進去');
     ok(await gone('pg2',['pgB1','pgB2','pgB3','pgB4','pgB5'],5)||(await e2.evaluate(async id=>{await startEdit('e:'+id);state.events.find(e=>e.id===id).desc+='。';dirty=true;await saveFlow()},ta),await settled(e2),await gone('pg2',['pgB1','pgB2','pgB3','pgB4','pgB5'],5)),
       '兩個人同時接著清：不會卡住，最後全部清完');
     await e3.ctx.close();}
