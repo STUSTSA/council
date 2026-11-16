@@ -144,20 +144,8 @@ function evFldCommit(box){
   const r=withState(m.data,()=>evFldWrite(box));if(JSON.stringify(m.data)!==JSON.stringify(m.base))m.dirty=true;return r;   /* 秘書處改別的部門：在那個部門的資料上寫 */
 }
 function evFldWrite(box){
-  const ev=evOf(box),k=box.dataset.evfk,g=n=>box.querySelector(`[data-e="${n}"]`),before=JSON.stringify(ev);
-  const tid=k.startsWith("t:")?k.slice(2):null,lid=k.startsWith("l:")?k.slice(2):null;
-  if(k==="name"){const v=g("name").value.trim();if(!v){toast("請填名稱");g("name").classList.add("bad");return false}ev.name=v}
-  else if(k==="desc")evSetDesc(ev,g("desc").value.trim());   /* 秘書處會議卡的說明欄：照文字重建逐行內容，沒改的行沿用 */
-  else if(k==="issue"){const v=box.querySelector('input[name="evIssue"]').value||null;if(v!==(ev.issueId||null)){ev.issueId=v;toast(v?`已連結到「${parentOf(ev).title}」`:"已取消連結")}}
-  else if(k==="staff")ev.staff=[...box.querySelectorAll('input[name="staff"]:checked')].map(x=>x.value);
-  else if(k==="labels")ev.labels=[...box.querySelectorAll('input[name="labels"]:checked')].map(x=>x.value);
-  else if(tid){const r=evTimeParts({label:g("label").value.trim(),sd:g("sd").value,st:g("st").value,ed:g("ed").value,et:g("et").value});
-    if(r.msg){toast(r.msg);return false}
-    const v={label:g("label").value.trim(),start:r.start,end:r.end,place:(g("place")?g("place").value.trim():""),toIssue:!!(g("toIssue")&&g("toIssue").checked)};
-    if(tid==="+")ev.times.push({id:uid("t"),...v});else Object.assign(ev.times.find(x=>x.id===tid),v)}
-  else if(lid){const v={name:g("name").value.trim(),url:g("url").value.trim(),color:box.querySelector("[data-c]").dataset.c};
-    if(!v.name){toast("請填按鈕名稱");g("name").classList.add("bad");return false}
-    if(lid==="+")ev.links.push({id:uid("l"),...v});else Object.assign(ev.links.find(x=>x.id===lid),v)}
+  const ev=evOf(box),before=JSON.stringify(ev);
+  if(!fldApply(box,ev,box.dataset.evfk))return false;
   if(JSON.stringify(ev)===before)return true;   /* 沒改東西：不算「更新」，燈號不動 */
   evTouch(ev);syncLink(ev);openEv.add(ev.id);dirty=true;return true;
 }
@@ -177,23 +165,35 @@ function ifFldAct(fx){
 /* 把打開的那一欄寫回 state（不重畫；有改才標 dirty）；填錯回傳 false、停在原欄。完成紀錄裡的即時回報改了名稱、日期、母議題，同步母議題的處理紀錄 */
 function ifFldWrite(box){
   const o=ifObj(box);if(!o)return true;
-  const k=box.dataset.iffk,g=n=>box.querySelector(`[data-e="${n}"]`),before=JSON.stringify(o),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
+  const before=JSON.stringify(o);
+  if(!fldApply(box,o,box.dataset.iffk))return false;
+  if(JSON.stringify(o)===before)return true;
+  if(box.dataset.ift==="e")syncLink(o);
+  dirty=true;return true;
+}
+/* 逐欄編輯的寫回（即時回報、議題、完成紀錄、秘書處會議卡共用一份）：把打開的那一欄 k 的值寫進 o；填錯回傳 false、停在原欄。
+   k＝name／title／desc／note／dates／stage／staff／labels／done／issue／t:時間標記 id／l:連結 id（t:+、l:+ 是新增） */
+function fldApply(box,o,k){
+  const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
   else if(k==="note")o.note=g(k).value.trim();
-  else if(k==="desc")evSetDesc(o,g(k).value.trim());   /* 完成紀錄裡的即時回報：照文字重建逐行內容 */
+  else if(k==="desc")evSetDesc(o,g(k).value.trim());   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用 */
   else if(k==="dates"){const a=g("start").value,b=g("end").value;if(a&&b&&b<a){toast("結束日不能早於開始日");return bad("end")}o.start=a;o.end=b}
   else if(k==="stage"){const rows=[...box.querySelectorAll(".stg-row")].map(r=>({n:r.querySelector("input").value.trim(),cur:r.querySelector(".stg-cur").getAttribute("aria-pressed")==="true"})).filter(r=>r.n);
     o.tags=rows.map(r=>r.n);o.cur=Math.max(0,rows.findIndex(r=>r.cur))}
   else if(k==="staff")o.staff=[...box.querySelectorAll('input[name="staff"]:checked')].map(x=>x.value);
   else if(k==="labels")o.labels=[...box.querySelectorAll('input[name="labels"]:checked')].map(x=>x.value);
   else if(k==="done"){const v=g("done").value;if(!v){toast("請選完成日期");return bad("done")}o.doneAt=v}
-  else if(k==="issue")o.issueId=box.querySelector('input[name="evIssue"]').value||null;
+  else if(k==="issue"){const v=box.querySelector('input[name="evIssue"]').value||null;
+    if(v!==(o.issueId||null)){o.issueId=v;if(box.dataset.evfk)toast(v?`已連結到「${parentOf(o).title}」`:"已取消連結")}}
+  else if(k.startsWith("t:")){const tid=k.slice(2),r=evTimeParts({label:g("label").value.trim(),sd:g("sd").value,st:g("st").value,ed:g("ed").value,et:g("et").value});
+    if(r.msg){toast(r.msg);return false}
+    const v={label:g("label").value.trim(),start:r.start,end:r.end,place:(g("place")?g("place").value.trim():""),toIssue:!!(g("toIssue")&&g("toIssue").checked)};
+    if(tid==="+")o.times.push({id:uid("t"),...v});else Object.assign(o.times.find(x=>x.id===tid),v)}
   else if(k.startsWith("l:")){const lid=k.slice(2),v={name:g("name").value.trim(),url:g("url").value.trim(),color:box.querySelector("[data-c]").dataset.c};
     if(!v.name){toast("請填按鈕名稱");return bad("name")}
     if(lid==="+")o.links.push({id:uid("l"),...v});else Object.assign(o.links.find(x=>x.id===lid),v)}
-  if(JSON.stringify(o)===before)return true;
-  if(box.dataset.ift==="e")syncLink(o);
-  dirty=true;return true;
+  return true;
 }
 /* ---------- 原位編輯器（03，Keep 式；畫面在 views.js 的 kpEditorHTML、evLinesHTML、tpHTML） ----------
    - 開始：點一行／名稱／核取框（kpStart）或卡片的「編輯」（render.js 的 startEdit 記下 kp）。一次一張，跟其他卡片的單卡編輯共用 editing／cardEdit。
