@@ -9,6 +9,7 @@
    7. 舊卡片（遷移的只有 desc、02D 舊格式；blocks 沒有行 ID）可讀，每行是純文字；改一行後存成新格式、其他行不變
    8. 跳脫：名稱、行內容、負責人名稱放 <img src=x onerror=…> 與帶引號的字串，沒有執行、原樣顯示
    9. 沒有權限的人只能看：核取框不能按、點一行不會進入編輯；沒有頁面錯誤
+   10. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，重新載入後種類、行 ID、timeId、時間事件的 blockId 不變
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
@@ -210,6 +211,33 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   ok(await ed.evaluate(x=>document.querySelector('[data-kptitle]').value===x&&window.__xss===undefined&&!document.querySelector('#events img'),XSS),'編輯中：輸入框的值原樣、沒有執行');
   await outside(ed);
   c=await read(C(k8));ok(c.title===XSS&&c.blocks.text[0]===XSS&&c.staff.includes(edUid),'寫進 Firestore 的是原本的文字');
+
+  /* ---------- 10. 03 審查 P0-1：編輯器裡以 blocks 為準 ----------
+     檢視時切換勾選、行首尾空白、時間行切換勾選，點外面存好、重新載入後：種類、行 ID、timeId、時間事件的 blockId 都不變 */
+  {
+    const reload=async()=>{await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.length>0,null,{timeout:15000});await ed.waitForTimeout(800);await until(()=>ed.evaluate(()=>!boardLocked()))};
+    const base=await evOf(ed,k2),ids=base.blocks.map(x=>x.id),tid=base.blocks[2].timeId,texts=base.blocks.map(x=>x.text);
+    const check=async(checks,m)=>{await reload();const r=await evOf(ed,k2),c=await read(C(k2)),te=await read(`events/${DEPT}__${tid}`);
+      const got=r.blocks.map(x=>[x.id,x.text,x.check,x.timeId]),exp=ids.map((id,n)=>[id,texts[n],checks[n],n===2?tid:null]);
+      ok(JSON.stringify(got)===JSON.stringify(exp)&&JSON.stringify(c.blocks.id)===JSON.stringify(ids)&&c.blocks.time[2]===`${DEPT}__${tid}`&&te&&te.blockId===ids[2]&&te.label===texts[2]&&r.desc===StoreDesc(r.blocks),
+        `${m}：重新載入後種類、行 ID、timeId、事件 blockId 不變（${JSON.stringify(got)}）`)};
+    const StoreDesc=b=>b.map(x=>(typeof x.check==='boolean'?(x.check?'☑ ':'☐ '):'')+x.text).join('\n');
+    await expand(ed,k2);
+    /* a. 檢視時點核取框（要勾的：勾 → 不勾），點外面 */
+    await ed.click(`${box(k2)} .kp-view [data-kpck="${ids[1]}"]`);await ed.waitForTimeout(400);await outside(ed);
+    await check([null,false,false],'P0-1 檢視時切換勾選後點外面');
+    /* b. 行首、行尾加空白，點外面 */
+    await expand(ed,k2);
+    await ed.click(`${box(k2)} [data-kpgo="${ids[1]}"]`);await ed.waitForTimeout(400);
+    await ed.keyboard.press('Home');await ed.keyboard.type('  ');await ed.keyboard.press('End');await ed.keyboard.type('  ');
+    await ed.click(`${box(k2)} [data-kptx="${ids[2]}"]`);await ed.keyboard.press('End');await ed.keyboard.type(' ');
+    await outside(ed);
+    await check([null,false,false],'P0-1 行首行尾加空白後點外面');
+    /* c. 時間行切換勾選，點外面 */
+    await expand(ed,k2);
+    await ed.click(`${box(k2)} .kp-view [data-kpck="${ids[2]}"]`);await ed.waitForTimeout(400);await outside(ed);
+    await check([null,false,true],'P0-1 時間行切換勾選後點外面');
+  }
 
   /* ---------- 9. 沒有權限的人只能看 ---------- */
   const gen=await open();await signIn(gen,'kpgen');await until(()=>gen.evaluate(()=>state.events.length>0));

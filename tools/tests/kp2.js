@@ -4,6 +4,7 @@
    3. 其他卡片的 desc 跟原本相同；重新讀回來（normalize）blocks 不變
    4. 復原這次修改：存回原本的 desc
    5. 母議題、超連結在原位改（03 T7），點外面跟其他修改一起存回資料檔
+   7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
       確認 window.__x 沒被設定、文字原樣顯示、沒有多出元素、超連結不是 javascript:、可以進入編輯並收合 */
@@ -49,6 +50,40 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
   await p.click('#evH');await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
   const e5=remote().events.find(x=>x.id===src.id),iss=orig.issues[0].id;
   ok(e5&&e5.issueId===iss&&e5.links.some(l=>l.name==='github 連結'&&l.url==='https://example.com/gh'),`點外面：母議題、超連結寫回資料檔（${JSON.stringify(e5&&[e5.issueId,e5.links.map(l=>l.name)])}）`);
+  /* 7. 03 審查 P0-1：編輯器裡以 blocks 為準（勾選、行首尾空白、時間行勾選存回後，種類、行 ID、timeId、時間標記都不變） */
+  {
+    const id=src.id;
+    await p.evaluate(async id=>{const ev=state.events.find(e=>e.id===id);ev.times=[{id:'tq',label:'開會',start:'2026-11-20T14:00',end:'',place:'',toIssue:false}];
+      ev.blocks=[{id:'a1',text:'買水',check:false,timeId:null},{id:'a2',text:'開會',check:false,timeId:'tq'},{id:'a3',text:'純文字',check:null,timeId:null}];ev.desc=StoreMap.descOf(ev.blocks);
+      await persist('x')},id);await p.waitForTimeout(1500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});
+    const sv=async()=>{await p.click('#evH');await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300)};
+    /* 存回的資料檔與重新讀回來（normalize）的那一張 */
+    const got=async()=>{const r=remote(),e=r.events.find(x=>x.id===id),n=await p.evaluate(([j,id])=>normalize(JSON.parse(j)).events.find(x=>x.id===id),[JSON.stringify(r),id]);return {e,n}};
+    const want=(x,checks,texts)=>x&&JSON.stringify(x.blocks.map(b=>[b.id,b.text,b.check,b.timeId]))===JSON.stringify([['a1',texts[0],checks[0],null],['a2',texts[1],checks[1],'tq'],['a3',texts[2],null,null]])
+      &&x.times.length===1&&x.times[0].id==='tq'&&x.times[0].label===texts[1];
+    const show=x=>JSON.stringify(x&&x.blocks.map(b=>[b.id,b.text,b.check,b.timeId]));
+    await p.evaluate(i=>{openEv.add(i);render()},id);await p.waitForTimeout(300);
+    /* a. 檢視時點核取框切換勾選 → 點外面 */
+    await p.click(`.ev[data-ev="${id}"] .kp-view [data-kpck="a1"]`);await p.waitForTimeout(400);
+    ok(await p.evaluate(id=>{const e=state.events.find(x=>x.id===id);return editing&&e.desc===StoreMap.descOf(e.blocks)},id),'P0-1 檢視時切換勾選：進入編輯，desc 跟 blocks 同步');
+    await sv();let g=await got();
+    ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字'])&&g.e.desc==='☑ 買水\n☐ 開會\n純文字',`P0-1 檢視時切換勾選後點外面：還是核取行（勾了）、行 ID 不變；重新讀回來一樣（${show(g.e)}）`);
+    /* b. 行首、行尾有空白 → 點外面 */
+    await p.click(`.ev[data-ev="${id}"] [data-kpgo="a1"]`);await p.waitForTimeout(400);
+    await p.keyboard.press('Home');await p.keyboard.type('  ');await p.keyboard.press('End');await p.keyboard.type('  ');
+    await p.click(`.ev[data-ev="${id}"] [data-kptx="a3"]`);await p.keyboard.press('End');await p.keyboard.type(' ');
+    await sv();g=await got();
+    ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字']),`P0-1 行首行尾加空白後點外面：去掉空白、種類與行 ID 不變；重新讀回來一樣（${show(g.e)}）`);
+    /* c. 時間行切換勾選 → 點外面 */
+    await p.click(`.ev[data-ev="${id}"] .kp-view [data-kpck="a2"]`);await p.waitForTimeout(400);
+    await sv();g=await got();
+    ok(want(g.e,[true,true],['買水','開會','純文字'])&&want(g.n,[true,true],['買水','開會','純文字']),`P0-1 時間行切換勾選後點外面：timeId 與時間標記還在、勾了；重新讀回來一樣（${show(g.e)}）`);
+    /* d. 編輯中切換時間行的勾選、時間行行尾空白 → 點外面 */
+    await p.click(`.ev[data-ev="${id}"] [data-kpgo="a2"]`);await p.waitForTimeout(400);
+    await p.keyboard.press('End');await p.keyboard.type(' ');await p.click(`.ev[data-ev="${id}"] .kp [data-kpck="a2"]`);await p.waitForTimeout(200);
+    await sv();g=await got();
+    ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字']),`P0-1 編輯中切換時間行勾選＋行尾空白：時間行不變、時間標記名稱沒有多空白（${show(g.e)}）`);
+  }
   ok(!p.errs.length,`沒有頁面錯誤（${p.errs.join(' | ')}）`);
   await b.close();
 

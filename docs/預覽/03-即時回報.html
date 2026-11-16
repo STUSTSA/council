@@ -7422,7 +7422,7 @@ const descTooBig=t=>{const L=String(t||"").split("\n");return L.length>StoreMap.
 /* 開始編輯 id 這張：o.focus＝行 id／"title"／""（第一行；沒有內容就新增一行），o.toggle＝要切換勾選的行 */
 async function kpStart(id,o={}){
   if(kpBusy())return false;
-  if(!(await startEdit("e:"+id,()=>{if(o.toggle){const b=(state.events.find(e=>e.id===id)?.blocks||[]).find(x=>x.id===o.toggle);if(b)b.check=!b.check}})))return false;
+  if(!(await startEdit("e:"+id,()=>{if(o.toggle){const ev=state.events.find(e=>e.id===id),b=(ev?.blocks||[]).find(x=>x.id===o.toggle);if(b){b.check=!b.check;kpSync(ev)}}})))return false;   /* 勾選也要同步 desc（03 審查 P0-1） */
   openEv.add(id);
   const ev=kpEv();if(!ev)return true;
   if(o.focus==="title")kpFocus("title");
@@ -7533,19 +7533,30 @@ function tpApply(){
   Object.assign(tm,{start:r.start,end:r.end,place:st.place||"",toIssue:!!st.toIssue});kpSync(ev);
   return true;
 }
-/* 收合：沒改就只結束編輯；改了就儲存。force＝按「儲存」或 Esc（跟點外面一樣） */
+/* 整理這張卡片（點外面、結案、刪除、完成這一段前都走這裡）：去掉前後空白、名稱網址都空的超連結不留、時間行的文字寫進時間標記的名稱。
+   編輯器裡一律以 blocks 為準：trim 之後先用 blocks 重新攤平 desc，再 evBlocksFix（desc 跟 blocks 對不上時 blocksOf 會照 desc 重建，
+   核取行、時間行就變成「☐ …」純文字、行 ID 與時間連結遺失；03 審查 P0-1） */
+function kpTidy(ev){
+  ev.name=ev.name.trim();
+  ev.links.forEach(l=>{l.name=l.name.trim();l.url=l.url.trim()});ev.links=ev.links.filter(l=>l.name||l.url);
+  ev.blocks.forEach(b=>{b.text=b.text.trim()});
+  ev.times.forEach(t=>{const b=ev.blocks.find(x=>x.timeId===t.id);if(b)t.label=b.text});   /* 時間＋核取那一行的文字就是時間標記的名稱 */
+  ev.desc=StoreMap.descOf(ev.blocks);evBlocksFix(ev);
+}
+/* 存檔前的檢查：收起時間選取器（格式不對就停）、整理、名稱與超連結的按鈕名稱不能空白；不合格回傳 false、游標放到那一欄 */
+function kpReady(ev){
+  if(kpTp){if(!tpApply())return false;kpTp=null}
+  kpTidy(ev);
+  if(!ev.name){kpSay("bad","請填名稱");document.querySelector("[data-kptitle]")?.focus();return false}
+  {const l=ev.links.find(x=>!x.name);if(l){kpSay("bad","請填按鈕名稱");document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus();return false}}
+  return true;
+}
+/* 收合：沒改就只結束編輯；改了就儲存（點外面、按「儲存」、Esc 都走這裡） */
 async function kpCommit(){
   if(!kp||!editing||cardEdit!=="e:"+kp.id||kpBusy())return true;
-  if(kpTp){if(!tpApply())return false;kpTp=null}
   const ev=kpEv();
-  if(!ev){morph(()=>{editing=false;cardEdit="";kp=null;render()});return true}
-  ev.name=ev.name.trim();
-  if(!ev.name){kpSay("bad","請填名稱");document.querySelector("[data-kptitle]")?.focus();return false}
-  ev.links.forEach(l=>{l.name=l.name.trim();l.url=l.url.trim()});ev.links=ev.links.filter(l=>l.name||l.url);   /* 名稱、網址都空的超連結不留 */
-  {const l=ev.links.find(x=>!x.name);if(l){kpSay("bad","請填按鈕名稱");document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus();return false}}
-  ev.times.forEach(t=>{const b=ev.blocks.find(x=>x.timeId===t.id);if(b)t.label=b.text.trim()});   /* 時間＋核取那一行的文字就是時間標記的名稱 */
-  ev.blocks.forEach(b=>{b.text=b.text.trim()});
-  evBlocksFix(ev);
+  if(!ev){kpTp=null;morph(()=>{editing=false;cardEdit="";kp=null;render()});return true}
+  if(!kpReady(ev))return false;
   const core=x=>JSON.stringify({...x,report:0,touched:0,touchedAt:0});
   const before=kp.before,was=before&&JSON.parse(before);
   if(!was&&ev.name==="新的即時回報"&&!ev.blocks.length&&!ev.times.length&&!(ev.links||[]).length){   /* 新增後什麼都沒填：不留 */
