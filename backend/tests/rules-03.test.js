@@ -147,6 +147,8 @@ describe('L-12～L-14 卡片超連結 links（03 審查 P1-1）', () => {
     const cur = await readDoc(t, 'cards/c10');
     await assertFails(editCard(db('ed'), 'ed', 'c10', cur, { links: LK(11) }));
     await assertSucceeds(editCard(db('ed'), 'ed', 'c10', cur, { links: LK(9) }));
+    const cur9 = await readDoc(t, 'cards/c10');
+    await assertSucceeds(editCard(db('ed'), 'ed', 'c10', cur9, { links: LK(10), blocks: many(50), title: '同時改 50 行與 10 個超連結' }));
     const b = many(50); b.check[49] = false; b.time[49] = 'c5_t1';
     const c = cardData('ed', { blocks: b, timeIds: ['c5_t1'], links: LK(10) });
     await assertSucceeds(commit(db('ed'), [['cards/c5', c], ['cards/c5/versions/1', verData('ed', 'c5', c)], ['events/c5_t1', eventData('ed', 'c5', { blockId: 'b49' })]]));

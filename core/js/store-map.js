@@ -110,7 +110,7 @@
      回傳 {docs:[{path, data, kind}], report}；kind 決定寫入順序與分批（遷移程式用） */
   function toDocs(dept, state, opt) {
     const B = opt.batch, U = opt.uid;
-    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {} };
+    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {}, tooBig: [] };
     const add = (kind, path, data) => { docs.push({ kind, path, data: clean(data) }); report.counts[kind] = (report.counts[kind] || 0) + 1; };
     const stamp = { updatedAt: NOW, updatedBy: U };
     const evIds = new Set((state.events || []).map(e => e.id));
@@ -149,6 +149,15 @@
       /* 舊資料（只有 desc）：每行一個純文字行（ID {卡片}_L{n}）。03 之後 GitHub 模式存的檔案有 blocks：照 blocks 搬（timeId 加部門前綴） */
       const own = Array.isArray(e.blocks) ? blocksOf(e) : lines.map((text, n) => ({ id: `${id}_L${n}`, text, check: null, timeId: null }));
       const blocks = fsBlocks(dept, own);
+      /* 03 審查（P2-2）：超過規則上限的卡片（行數、每行字數、超連結數與顏色、名稱長度）先列出來；run.js 的 runImport 看到就在寫入前停下，
+         不要讓整個部門寫到一半被規則擋下才發現（要先在看板上改短再匯入） */
+      const lk = Array.isArray(e.links) ? e.links : [], long = own.reduce((n, b) => Math.max(n, String(b.text == null ? "" : b.text).length), 0), why = [];
+      if (own.length > BLK_MAX) why.push(`${own.length} 行（最多 ${BLK_MAX} 行）`);
+      if (long > TXT_MAX) why.push(`最長一行 ${long} 字（每行最多 ${TXT_MAX} 字）`);
+      if (lk.length > LNK_MAX) why.push(`${lk.length} 個超連結（最多 ${LNK_MAX} 個）`);
+      if (lk.some(l => !l || typeof l !== "object" || !HEX.test(l.color))) why.push("超連結的顏色不是 #rrggbb");
+      if (String(e.name || "").length > 500) why.push(`名稱 ${String(e.name).length} 字（最多 500 字）`);
+      if (why.length) report.tooBig.push({ id: e.id, name: String(e.name || "").slice(0, 30), why });
       const blockOfTime = new Map(own.filter(b => b.timeId).map(b => [nid(dept, b.timeId), b.id]));
       link("card.issueId", e.id, e.issueId, isIds.has(e.issueId));
       link("card.fromEv", e.id, e.fromEv, evIds.has(e.fromEv));

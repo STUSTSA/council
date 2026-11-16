@@ -433,7 +433,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .evf.open{position:relative;z-index:3;grid-template-columns:minmax(0,1fr);gap:8px;margin:6px 0;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide .28s var(--ease) both}   /* z-index：打開的欄位疊在下面幾列上，下拉清單才不會被後面的欄位文字穿過去（母議題選單看不清楚的原因） */
 .evf-ed{display:grid;gap:8px;min-width:0}
 .evf-ed input,.evf-ed textarea{width:100%}
-.evf-ed input.bad{border-color:var(--red)}
+.evf-ed input.bad,.evf-ed textarea.bad{border-color:var(--red)}
 .evf-ed .fld,.evf-ed fieldset.multi{margin:0}
 .evf-hint{font-size:11.5px}
 /* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
@@ -2332,7 +2332,7 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
      回傳 {docs:[{path, data, kind}], report}；kind 決定寫入順序與分批（遷移程式用） */
   function toDocs(dept, state, opt) {
     const B = opt.batch, U = opt.uid;
-    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {} };
+    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {}, tooBig: [] };
     const add = (kind, path, data) => { docs.push({ kind, path, data: clean(data) }); report.counts[kind] = (report.counts[kind] || 0) + 1; };
     const stamp = { updatedAt: NOW, updatedBy: U };
     const evIds = new Set((state.events || []).map(e => e.id));
@@ -2371,6 +2371,15 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
       /* 舊資料（只有 desc）：每行一個純文字行（ID {卡片}_L{n}）。03 之後 GitHub 模式存的檔案有 blocks：照 blocks 搬（timeId 加部門前綴） */
       const own = Array.isArray(e.blocks) ? blocksOf(e) : lines.map((text, n) => ({ id: `${id}_L${n}`, text, check: null, timeId: null }));
       const blocks = fsBlocks(dept, own);
+      /* 03 審查（P2-2）：超過規則上限的卡片（行數、每行字數、超連結數與顏色、名稱長度）先列出來；run.js 的 runImport 看到就在寫入前停下，
+         不要讓整個部門寫到一半被規則擋下才發現（要先在看板上改短再匯入） */
+      const lk = Array.isArray(e.links) ? e.links : [], long = own.reduce((n, b) => Math.max(n, String(b.text == null ? "" : b.text).length), 0), why = [];
+      if (own.length > BLK_MAX) why.push(`${own.length} 行（最多 ${BLK_MAX} 行）`);
+      if (long > TXT_MAX) why.push(`最長一行 ${long} 字（每行最多 ${TXT_MAX} 字）`);
+      if (lk.length > LNK_MAX) why.push(`${lk.length} 個超連結（最多 ${LNK_MAX} 個）`);
+      if (lk.some(l => !l || typeof l !== "object" || !HEX.test(l.color))) why.push("超連結的顏色不是 #rrggbb");
+      if (String(e.name || "").length > 500) why.push(`名稱 ${String(e.name).length} 字（最多 500 字）`);
+      if (why.length) report.tooBig.push({ id: e.id, name: String(e.name || "").slice(0, 30), why });
       const blockOfTime = new Map(own.filter(b => b.timeId).map(b => [nid(dept, b.timeId), b.id]));
       link("card.issueId", e.id, e.issueId, isIds.has(e.issueId));
       link("card.fromEv", e.id, e.fromEv, evIds.has(e.fromEv));
@@ -7401,7 +7410,7 @@ function fldApply(box,o,k){
   const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
   else if(k==="note")o.note=g(k).value.trim();
-  else if(k==="desc")evSetDesc(o,g(k).value.trim());   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用 */
+  else if(k==="desc"){const v=g(k).value.trim(),m=descTooBig(v);if(m){toast(m);return bad(k)}evSetDesc(o,v)}   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用；超過行數、字數上限給明確訊息（不然存檔時才被規則擋成「沒有權限」；03 審查 P2-2） */
   else if(k==="dates"){const a=g("start").value,b=g("end").value;if(a&&b&&b<a){toast("結束日不能早於開始日");return bad("end")}o.start=a;o.end=b}
   else if(k==="stage"){const rows=[...box.querySelectorAll(".stg-row")].map(r=>({n:r.querySelector("input").value.trim(),cur:r.querySelector(".stg-cur").getAttribute("aria-pressed")==="true"})).filter(r=>r.n);
     o.tags=rows.map(r=>r.n);o.cur=Math.max(0,rows.findIndex(r=>r.cur))}

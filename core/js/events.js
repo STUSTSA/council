@@ -180,7 +180,7 @@ function fldApply(box,o,k){
   const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
   else if(k==="note")o.note=g(k).value.trim();
-  else if(k==="desc")evSetDesc(o,g(k).value.trim());   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用 */
+  else if(k==="desc"){const v=g(k).value.trim(),m=descTooBig(v);if(m){toast(m);return bad(k)}evSetDesc(o,v)}   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用；超過行數、字數上限給明確訊息（不然存檔時才被規則擋成「沒有權限」；03 審查 P2-2） */
   else if(k==="dates"){const a=g("start").value,b=g("end").value;if(a&&b&&b<a){toast("結束日不能早於開始日");return bad("end")}o.start=a;o.end=b}
   else if(k==="stage"){const rows=[...box.querySelectorAll(".stg-row")].map(r=>({n:r.querySelector("input").value.trim(),cur:r.querySelector(".stg-cur").getAttribute("aria-pressed")==="true"})).filter(r=>r.n);
     o.tags=rows.map(r=>r.n);o.cur=Math.max(0,rows.findIndex(r=>r.cur))}

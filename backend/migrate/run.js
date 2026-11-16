@@ -80,8 +80,13 @@ export function contentHash(data) {
 }
 
 // db：compat Firestore（以總管理員身分登入）；FV／TS：同一個 SDK 的 FieldValue／Timestamp
+// 03 審查（P2-2）：超過規則上限的卡片（store-map.js 的 report.tooBig），一行一張
+export const tooBigLines = reports => reports.flatMap(r => r.tooBig.map(x => `${r.dept}／${x.id}「${x.name}」：${x.why.join('、')}`));
 export async function runImport(db, FV, TS, src, { batch, uid, log = () => {} }) {
   const p = plan(src, { batch, uid });
+  // 有卡片超過規則上限：寫入任何文件（含批次紀錄）之前就停，列出是哪幾張（不讓整個部門寫到一半被規則擋下才發現）
+  const big = tooBigLines(p.reports);
+  if (big.length) throw new Error(`有 ${big.length} 張卡片超過上限，請先在看板上改短再匯入（沒有寫入任何文件）：\n${big.join('\n')}`);
   const counts = {}, written = {}, skipped = {}, conflicts = [];
   p.docs.forEach(d => counts[d.kind] = (counts[d.kind] || 0) + 1);
   const mref = db.doc(`migrations/${batch}`);
@@ -274,20 +279,23 @@ export function sourceCounts(state) {
 export async function deptReport(db, src, dept) {
   const f = src.files.find(x => x.dept === dept);
   if (!f) throw new Error(`來源裡沒有 ${dept}`);
-  const one = { ...src, only: dept, files: [f] };
-  const v = await verify(db, one, plan(one, { batch: 'report', uid: 'report' }), { dept });
+  const one = { ...src, only: dept, files: [f] }, pl = plan(one, { batch: 'report', uid: 'report' });
+  const tooBig = tooBigLines(pl.reports);   // 03 審查（P2-2）：超過規則上限的卡片先列出來（有的話不通過）
+  const v = await verify(db, one, pl, { dept });
   const a = sourceCounts(f.state), b = { ...v.counts, versions: v.counts.importedVersions };
   const rows = REPORT_ROWS.map(([k, label]) => ({ key: k, label, source: a[k], firestore: b[k] || 0, ok: a[k] === (b[k] || 0) }));
-  return { dept, path: f.path, sha256: f.sha256, commit: src.commit, rows, verify: v.items, pending: v.pending, ok: v.ok && rows.every(r => r.ok) };
+  return { dept, path: f.path, sha256: f.sha256, commit: src.commit, tooBig, rows, verify: v.items, pending: v.pending, ok: !tooBig.length && v.ok && rows.every(r => r.ok) };
 }
 const cols = t => [...String(t)].reduce((n, c) => n + (c.codePointAt(0) > 0x2e80 ? 2 : 1), 0);
 const padTo = (t, n) => t + ' '.repeat(Math.max(0, n - cols(t)));
 export function formatReport(r) {
   const w = Math.max(...r.rows.map(x => cols(x.label))) + 2;
-  return [`部門 ${r.dept}（${r.path}，SHA-256 ${r.sha256}）`, `${padTo('項目', w)}資料檔  Firestore  結果`,
+  return [`部門 ${r.dept}（${r.path}，SHA-256 ${r.sha256}）`,
+    ...(r.tooBig && r.tooBig.length ? [`超過上限的卡片 ${r.tooBig.length} 張（匯入會在寫入前停下，請先在看板上改短）：`, ...r.tooBig.map(x => '  ' + x)] : []),
+    `${padTo('項目', w)}資料檔  Firestore  結果`,
     ...r.rows.map(x => `${padTo(x.label, w)}${String(x.source).padStart(6)}  ${String(x.firestore).padStart(9)}  ${x.ok ? '相同' : '不同'}`),
     ...r.verify.map(i => `${i.ok ? '通過' : '失敗'} ${i.id} ${i.msg}`),
-    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列）'].join('\n');
+    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列、超過上限的卡片）'].join('\n');
 }
 
 // ---------- 02D：回復用的匯出（upgrade-plan.md 第 6.6 節第 2 列） ----------

@@ -6,6 +6,7 @@
    5. 母議題、超連結在原位改（03 T7），點外面跟其他修改一起存回資料檔
    7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
    9. 03 審查 P1-3：右側詳情的「完成這一段」預填按下當下的內容；超過行數、字數上限不寫入
+   10. 03 審查 P2-2：完成紀錄的說明欄超過行數、字數上限時給明確訊息、不寫入
    8. 03 審查 P1-2：原位編輯打字中關分頁會跳 beforeunload，只點進編輯沒改不擋
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
@@ -109,6 +110,19 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await p.click('#evH');await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
     const r=remote();ok(r.events.some(e=>e.fromEv===id&&e.desc===rec),'P1-3 點外面：完成紀錄寫回資料檔');
     await p.evaluate(()=>{selEv=null;render()});await p.setViewportSize({width:900,height:900});await p.waitForTimeout(400);
+  }
+  /* 10. 03 審查 P2-2：完成紀錄的說明欄（逐欄編輯 fldApply）超過行數、字數上限：明確的訊息、停在原欄、不寫入 */
+  {
+    const rid=await p.evaluate(i=>{const r=state.events.filter(e=>e.fromEv===i).pop();setSection('done',{instant:true});openDone.add(r.id);render();return r.id},src.id);await p.waitForTimeout(500);
+    const D=`.done-ev[data-done="${rid}"]`,before=await p.evaluate(i=>state.events.find(e=>e.id===i).desc,rid);
+    await p.click(`${D} [data-edit]`);await p.waitForTimeout(500);
+    await p.click(`${D} [data-ifpen="desc"]`);await p.waitForTimeout(300);
+    for(const [txt,msg] of [[Array.from({length:51},(_,i)=>'第 '+i+' 行').join('\n'),'最多 50 行'],['y'.repeat(1001),'每行最多 1000 字']]){
+      await p.fill(`${D} [data-e="desc"]`,txt);await p.click(`${D} [data-iffx="ok"]`);await p.waitForTimeout(300);
+      ok(await p.evaluate(([i,b,msg,D])=>state.events.find(e=>e.id===i).desc===b&&$('#toast').textContent===msg&&!!document.querySelector(`${D} .evf.open [data-e="desc"].bad`),[rid,before,msg,D]),`P2-2 完成紀錄的說明欄 ${msg.includes('行')&&msg.includes('50')?'51 行':'1001 字'}：提示「${msg}」、停在原欄、不寫入`);
+    }
+    await p.click(`${D} [data-iffx="cancel"]`);await p.waitForTimeout(200);await p.click(`${D} [data-edcancel]`);await p.waitForTimeout(400);
+    await p.evaluate(()=>{setSection('live',{instant:true});render()});await p.waitForTimeout(300);
   }
   /* 8. 03 審查 P1-2：原位編輯打字中關分頁（或重新整理）會跳 beforeunload；只點進編輯、沒改不擋（用合成的 beforeunload 事件看有沒有 preventDefault） */
   {
