@@ -20,9 +20,9 @@ const R=p=>p.waitForTimeout(400);
  ok(Object.values(sts).every(v=>v.endsWith('rgb(255, 255, 255)')),'收合的膠囊一律白底');
  await p.screenshot({path:'ev_d_light.png'});
  await login(p);await p.evaluate(()=>setSection('live',{instant:true}));await R(p);
- /* 展開「停車場公告：」→ 膠囊自己的「編輯」 */
+ /* 展開「停車場公告：」→ 點一行開始原位編輯（03 T7 起沒有「編輯」鈕） */
  const N='停車場公告：',C=cap(N);
- await p.click(`${C}>summary`);await p.waitForTimeout(800);await p.click(`${C} .card-edit-btn`);await p.waitForTimeout(700);
+ await p.click(`${C}>summary`);await p.waitForTimeout(800);await p.click(`${C} [data-kpgo]`);await p.waitForTimeout(700);
  ok(await p.evaluate(()=>editing)&&(await p.$$eval(`${C} .ev-tools button`,x=>x.map(b=>b.textContent.trim()))).join()==='會議要報告,完成這一段,結案','單卡編輯：膠囊出現整筆動作（會議要報告、完成這一段、結案）');
  /* 03：時間標記改成原位編輯器的「時間＋核取」行：新增一行、打名稱、種類換成時間、自製時間選取器（月曆、時刻、結束日、寫進母議題）、完成 */
  const lastBlk=async()=>`${C} [data-blk="${(await evOfName(p,N)).blocks.slice(-1)[0].id}"]`;
@@ -63,11 +63,11 @@ const R=p=>p.waitForTimeout(400);
  ok((await p.$eval(`${C}`,e=>e.dataset.st))==='go','完成過一段：燈號變黃（go）');
  /* 結案另一張：直接儲存、離開清單 */
  const n0=await p.$$eval('#events .ev',x=>x.length),R2=cap('狀態測試紅');
- if(!(await p.$eval(R2,e=>e.open)))await p.click(`${R2}>summary`);await p.waitForTimeout(700);await p.click(`${R2} .card-edit-btn`);await p.waitForTimeout(600);
+ if(!(await p.$eval(R2,e=>e.open)))await p.click(`${R2}>summary`);await p.waitForTimeout(700);await p.click(`${R2} [data-kpgo]`);await p.waitForTimeout(600);
  await p.click(`${R2} [data-evdone]`);await p.waitForTimeout(3200);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await R(p);
  ok((await p.$$eval('#events .ev',x=>x.length))===n0-1&&await p.evaluate(()=>!!state.events.find(e=>e.name==='狀態測試紅').doneAt&&!editing),'結案：離開即時回報清單、直接儲存');
  /* 刪除一個時間標記（逐欄的「刪除」） */
- if(!(await p.$eval(C,e=>e.open)))await p.click(`${C}>summary`);await p.waitForTimeout(700);await p.click(`${C} .card-edit-btn`);await p.waitForTimeout(600);
+ if(!(await p.$eval(C,e=>e.open)))await p.click(`${C}>summary`);await p.waitForTimeout(700);await p.click(`${C} [data-kpgo]`);await p.waitForTimeout(600);
  /* 完成這一段換了說明：留下的時間標記不再連到行，列在逐行內容下面，可以刪（data-kptdel） */
  const tid=(await evOfName(p,N)).times[0].id;await p.click(`${C} [data-kptdel="${tid}"]`);await R(p);
  ok((await evOfName(p,N)).times.length===1,'刪除時間標記');

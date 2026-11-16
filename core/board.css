@@ -319,6 +319,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .kp-vl .kp-tx{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
 .kp-vl .kp-tx.done{color:var(--muted);text-decoration:line-through}
 .kp-vl [data-kpgo],.evd-head [data-kpgo]{cursor:text;border-radius:8px;transition:background-color var(--mo-fast) var(--mo-out)}
+.kp-vl [data-kpgo]:focus-visible,.evd-head [data-kpgo]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}   /* 鍵盤也能進入編輯（Enter／空白鍵） */
 @media (hover:hover){.kp-vl [data-kpgo]:hover,.evd-head [data-kpgo]:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}}
 .kp-ck input:disabled{cursor:default;opacity:.75}
 .kp-tm{flex:none;display:inline-flex;align-items:center;min-height:0;padding:0 9px;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink);font-size:12.5px;line-height:22px}
@@ -448,8 +449,9 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .stg-cur{min-height:30px;padding:0 12px;font-size:12px;color:var(--muted);border-color:var(--hair);transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
 .stg-cur[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .stg-del{width:30px;min-height:30px;padding:0}
-/* --- 原位編輯器（即時回報卡，views.js 的 kpEditorHTML；events.js 的「原位編輯器」段） ---
-   名稱一列、每一行＝種類（自製下拉）＋核取框＋時間＋文字＋刪除；最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」 */
+/* --- 原位編輯器（即時回報卡，views.js 的 kpEditorHTML／kpFieldsHTML；events.js 的「原位編輯器」段） ---
+   名稱一列、每一行＝種類（自製下拉）＋核取框＋時間＋文字＋刪除；下面母議題、專員、標籤、超連結（直接改，沒有各自的取消／完成）；
+   最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」 */
 .kp{display:grid;gap:4px;margin-top:10px}
 .kp-title{margin:0 -8px 4px;width:calc(100% + 16px);padding:6px 8px;border:0;border-radius:10px;background:transparent;box-shadow:none;font-size:16px;font-weight:700;line-height:1.4}
 .kp-title:focus{background:color-mix(in srgb,var(--ink) 5%,transparent);outline:none}
@@ -458,19 +460,35 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .kp-line .kp-tx{flex:1;min-width:0;padding:6px 2px;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;box-shadow:none;font-size:14px;transition:border-color var(--mo-fast) var(--mo-out)}
 .kp-line .kp-tx:focus{outline:none;border-bottom-color:var(--ink)}
 .kp-line .kp-ck{flex:none}
-.csel.kp-type{flex:none;width:6.6em;font-size:12px}
-.kp-type .csel-btn{color:var(--muted);border-color:var(--hair)}
+.csel.kp-type{flex:none;width:5.6em;font-size:12px}
+.kp :is(.kp-type,.kp-issue) .csel-btn{border-color:var(--hair)}
+.kp-type .csel-btn{gap:4px;padding:5px 9px;color:var(--muted)}
 .kp-line .kp-tm{cursor:pointer}
 .kp-line .kp-tm[aria-expanded="true"]{background:var(--ink);color:var(--surface)}
 .kp-del,.tp-clr{flex:none;width:28px;min-height:28px;padding:0;border-color:transparent;box-shadow:none;color:var(--muted)}
 .kp-frees{padding-top:6px;border-top:1px dashed var(--hair)}
 .kp-add{margin:6px 0 2px}
+/* 母議題、專員、標籤、超連結：一列「標題｜內容」，內容就是輸入的地方 */
+.kp-flds{display:grid;margin-top:8px;border-top:1px solid var(--hair)}
+.kp-f{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:4px 10px;min-height:46px;padding:7px 0;border-bottom:1px solid var(--hair);font-size:14px}
+.kp-f:last-child{border-bottom:0}
+.kp-f:is([data-kpf="labels"],[data-kpf="links"]){align-items:start}
+.kp-f:is([data-kpf="labels"],[data-kpf="links"]) .kp-fl{padding-top:7px}
+.kp-fl{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.kp-fv{display:grid;gap:6px;min-width:0}
+.csel.kp-issue{font-size:14px}
+.kp-issue .csel-btn{padding:6px 12px}
+.kp-lk{display:flex;align-items:center;gap:6px}
+.kp-lk .evf-row{flex:1;min-width:0}
+.kp-fv .kp-add{margin:0}
 .kp-bar{align-items:center}
-.kp-st{margin-right:auto;font-size:12.5px;color:var(--muted)}
+.kp-st{margin-right:auto;font-size:12.5px;color:var(--muted);transition:color var(--mo-fast) var(--mo-out)}
 .kp-st[data-st="fail"],.kp-st[data-st="bad"]{color:var(--red)}
 .kp-st[data-st="ok"]{color:var(--ink)}
 @media (max-width:640px){
   .kp-line{gap:6px}
+  .kp-f{grid-template-columns:minmax(0,1fr);gap:6px}   /* 手機：標題在上、內容在下 */
+  .kp-f:is([data-kpf="labels"],[data-kpf="links"]) .kp-fl{padding-top:0}
 }
 /* --- 時間選取器（原位編輯器的時間，views.js 的 tpHTML；不用瀏覽器原生的日期、時間彈出） ---
    開始／結束切換、月曆（選到的日子實心、期間淡底、今天細框）、開始與結束時刻、地點、寫進母議題、完成 */
@@ -1865,8 +1883,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @keyframes dropIn{from{opacity:0;transform:translateY(-10px)}}
 
 /* ===== 編輯／檢視切換時的動畫 ===== */
-/* 按了卡片的「編輯」：那張卡片（或那一區）的編輯工具淡入（render.js 的 startEdit 加 .sec-anim） */
-.sec-anim .evfs,.sec-anim .range,.sec-anim .add-row,.sec-anim .card-tools,.sec-anim .ev-tools,.sec-anim .ev-del,.sec-anim .done-body .edit-only,.sec-anim .evd.editing{animation:fadeSlide .5s .05s var(--ease) both}
+/* 按了卡片的「編輯」（即時回報卡：點一行開始原位編輯）：那張卡片（或那一區）的編輯工具淡入（render.js 的 startEdit 加 .sec-anim） */
+.sec-anim .evfs,.sec-anim .kp,.sec-anim .kp-bar,.sec-anim .range,.sec-anim .add-row,.sec-anim .card-tools,.sec-anim .ev-tools,.sec-anim .ev-del,.sec-anim .done-body .edit-only,.sec-anim .evd.editing{animation:fadeSlide .5s .05s var(--ease) both}
 @keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}}
 @keyframes fadeIn{from{opacity:0}}
 

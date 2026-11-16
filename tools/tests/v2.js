@@ -56,7 +56,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  const delVis=()=>p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {ev:[...document.querySelectorAll('[data-evdel]')].filter(V).length,issue:[...document.querySelectorAll('[data-delissue]')].filter(V).length,inner:document.querySelectorAll('.done-body [data-deldone],.done-body [data-evdel],.edit-block [data-delissue],.week-tools [data-delweek]').length}});   /* 桌面左右兩欄時被選到的膠囊只是空位（visibility:hidden），刪除鈕在右側詳情 */
  const d0=await delVis();log('D delete buttons (not editing):',d0);A(!d0.ev&&!d0.issue&&!d0.inner,'no delete buttons before editing');
  const eid=await p.evaluate(()=>liveOrder()[0].id);
- await p.click(`.ev[data-ev="${eid}"]>summary`);await p.waitForTimeout(900);await p.click('#evDetail .card-edit-btn');await p.waitForTimeout(900);
+ await p.click(`.ev[data-ev="${eid}"]>summary`);await p.waitForTimeout(900);await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(900);   /* 03 T7：即時回報卡沒有「編輯」鈕，點名稱開始 */
  const ed=await p.evaluate(()=>({editing,cardEdit}));const d1=await delVis();log('D editing one card:',ed,'| delete buttons:',d1);
  A(ed.editing&&ed.cardEdit==='e:'+eid,'card edit started');A(d1.ev===1&&!d1.inner,'only the edited card has a delete button');
  await p.screenshot({path:'v2_d_edit.png'});

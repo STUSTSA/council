@@ -198,8 +198,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const k8=await newCard(ed,'KP 跳脫');
   await typeLines(ed,k8,[XSS,'第二行 "引號" \'單引號\'']);
   await ed.fill(`${box(k8)} [data-kptitle]`,XSS);
-  await ed.click(`${box(k8)} [data-evpen="staff"]`);await ed.waitForTimeout(300);
-  await ed.evaluate(([s,u])=>document.querySelector(`${s} .evf.open input[name="staff"][value="${u}"]`).click(),[box(k8),edUid]);await ed.click(`${box(k8)} [data-evfx="ok"]`);await ed.waitForTimeout(300);
+  await ed.click(`${box(k8)} [data-kpf="staff"] label.chip:has(input[value="${edUid}"])`);await ed.waitForTimeout(300);   /* 03 T7：專員在原位直接勾選 */
   await outside(ed);
   await expand(ed,k8);
   const x8=await ed.evaluate(id=>{const el=document.querySelector(`.ev[data-ev="${id}"]`);

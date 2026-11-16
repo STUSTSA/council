@@ -1,5 +1,5 @@
 /* se1：編輯的範圍規則。2026-11-06 起是「單卡編輯」（render.js 的 cardEdit）：頁首沒有「編輯」、看板上沒有「編輯這區」；
-   沒登入看不到任何編輯工具；登入後按一張卡片自己的「編輯」→ 只有那一張出現逐欄編輯工具（其他區、其他張都沒有，其他「編輯」鈕藏起來）；
+   沒登入看不到任何編輯工具；登入後按一張卡片自己的「編輯」（即時回報卡 03 T7 起是點一行或名稱，原位編輯器 .kp 也算編輯工具）→ 只有那一張出現編輯工具（其他區、其他張都沒有，其他「編輯」鈕藏起來）；
    甘特圖時間軸是整區編輯（"s:gantt"）；取消（即時回報卡 03 起是點卡片外面）後全部回檢視、再按「編輯」又只在那一張出現。
    （2026-11-11 從「按頁首編輯後三區一起出現」改寫成現在的規則；會長室「追蹤」由 mt1.js 涵蓋）桌面 1300 與手機 412。固定 8300 埠 */
 const c=require('./common');
@@ -14,7 +14,7 @@ const sec=async k=>{await p.evaluate(k=>{setSection(k,{instant:true});if(k==='pr
 const st=async box=>{const r=await p.evaluate(box=>{const V=x=>x.checkVisibility({visibilityProperty:true}),vis=s=>[...document.querySelectorAll(s)].filter(V).length;
   const inBox=x=>box&&(x.closest(`[data-edbox="${box}"]`)||x.closest('#evDetail.sec-edit,#evDetail .sec-edit'));
   return {editing,cardEdit,secBtns:document.querySelectorAll('[data-secedit]').length,headerEdit:!!document.getElementById('editBtn'),
-   pens:[...document.querySelectorAll('[data-evpen],[data-ifpen]')].filter(V).length,pensOut:[...document.querySelectorAll('[data-evpen],[data-ifpen]')].filter(x=>V(x)&&!inBox(x)).length,
+   pens:[...document.querySelectorAll('[data-evpen],[data-ifpen],.kp')].filter(V).length,pensOut:[...document.querySelectorAll('[data-evpen],[data-ifpen],.kp')].filter(x=>V(x)&&!inBox(x)).length,
    evDel:vis('#events [data-evdel],#evDetail [data-evdel]'),editBtns:vis('.card-edit-btn'),addEv:vis('#addEvent'),bars:vis('.card-edbar')}},box);
   if(tag==='m'){const cur=await p.evaluate(()=>curSec);await sec('progress');const r2=await p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {range:[...document.querySelectorAll('.range')].filter(V).length,addIssue:[...document.querySelectorAll('#addIssue')].filter(V).length,ganttBtn:[...document.querySelectorAll('#ganttEdBtn')].filter(V).length}});await sec(cur);return {...r,...r2}}
   return {...r,...await p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {range:[...document.querySelectorAll('.range')].filter(V).length,addIssue:[...document.querySelectorAll('#addIssue')].filter(V).length,ganttBtn:[...document.querySelectorAll('#ganttEdBtn')].filter(V).length}})}};
@@ -23,7 +23,7 @@ await login(p);
 await sec('live');
 const id=await p.evaluate(()=>liveOrder()[0].id);
 let s1=await st();ok(!s1.editing&&s1.pens===0&&s1.addIssue>0&&s1.ganttBtn>0&&s1.secBtns===0,'登入後：還沒有編輯中的卡片，新增鈕與卡片「編輯」出現，沒有「編輯這區」 '+JSON.stringify(s1));
-const startEv=async()=>{await p.click(`.ev[data-ev="${id}"]>summary`);await p.waitForTimeout(800);await p.click(w<1000?`.ev[data-ev="${id}"] .card-edit-btn`:'#evDetail .card-edit-btn');await p.waitForTimeout(800)};
+const startEv=async()=>{await p.click(`.ev[data-ev="${id}"]>summary`);await p.waitForTimeout(800);await p.click(w<1000?`.ev[data-ev="${id}"] [data-kpgo]`:'#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(800)};
 await startEv();
 let s2=await st('e:'+id);ok(s2.editing&&s2.cardEdit==='e:'+id&&s2.pens>0&&s2.pensOut===0&&s2.evDel===1&&s2.bars===1,'按一張即時回報的「編輯」：只有那一張出現編輯工具 '+JSON.stringify(s2));
 ok(s2.editBtns===0&&s2.addEv===0&&s2.addIssue===0&&s2.range===0&&s2.ganttBtn===0,'編輯中：其他「編輯」、新增鈕藏起來，甘特圖時間軸不在編輯');

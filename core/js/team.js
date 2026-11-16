@@ -222,7 +222,7 @@ async function staffPplLoad(){
       staffPpl.roles=rs.filter(r=>(r.depts||{})[CFG.deptId]).map(r=>r.uid);us.forEach(u=>{if(u.email)staffPpl.mail[u.uid]=u.email})}
     else{const F=await storeFsGet(),v=await F.versionsSince(CFG.firebase,CFG.deptId,0);staffPpl.editors=[...new Set(v.filter(x=>!x.imported&&x.by).map(x=>x.by))]}
   }catch(_){staffPpl.key=""}   /* 讀不到：只有已標的與自己，下次開始編輯再試 */
-  if(editing&&evFld&&evFld.k==="staff")render();
+  if(editing&&kp&&!document.querySelector(".csel.open"))render();   /* 原位編輯器的專員選項 */
 }
 function staffHTML(ids){
   const names=staffNames(ids);

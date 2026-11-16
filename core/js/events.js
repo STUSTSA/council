@@ -196,8 +196,10 @@ function fldApply(box,o,k){
   return true;
 }
 /* ---------- 原位編輯器（03，Keep 式；畫面在 views.js 的 kpEditorHTML、evLinesHTML、tpHTML） ----------
-   - 開始：點一行／名稱／核取框（kpStart）或卡片的「編輯」（render.js 的 startEdit 記下 kp）。一次一張，跟其他卡片的單卡編輯共用 editing／cardEdit。
-   - 打字直接寫進 state（不重畫）；換種類、新增、刪除一行才重畫，游標由 render 前後的 kpFocusGet／kpFocusSet 放回原位。
+   - 開始：點一行／名稱／核取框／「沒有說明」（kpStart → render.js 的 startEdit 記下 kp）。即時回報卡沒有「編輯」鈕（03 T7：原位編輯涵蓋全部欄位，
+     那顆是重複的入口）。一次一張，跟其他卡片的單卡編輯共用 editing／cardEdit。
+   - 名稱、逐行內容、時間、母議題、專員、標籤、超連結都直接改：打字、勾選直接寫進 state（不重畫）；換種類、新增、刪除一行、換母議題、
+     新增刪除超連結才重畫，游標由 render 前後的 kpFocusGet／kpFocusSet 放回原位。沒有各欄自己的「取消／完成」。
    - 點卡片外面、按「儲存」、Esc＝kpCommit：沒改就只收合；改了就收合並儲存（kpSave）。儲存中／成功／失敗顯示在卡片上；
      失敗＝回到編輯、保留草稿，可以再按「儲存」。成功後「復原這次修改」把這張卡片存回修改前的內容（一樣走 kpSave），收合或開始下一次編輯後就消失。
    - 新增的空白卡片（名稱沒改、沒有內容）點外面就不留。 */
@@ -226,8 +228,8 @@ function kpFocus(id,sel){
   el.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
 }
 function kpFocusGet(){const a=document.activeElement;if(!kp||!a||!a.closest||!a.closest(".kp"))return null;
-  const k=["kptx","kplb","tpf"].find(x=>a.dataset[x]!==undefined);
-  return {sel:a.dataset.kptitle!==undefined?"[data-kptitle]":k?`[data-${k}="${CSS.escape(a.dataset[k])}"]`:null,s:a.selectionStart,e:a.selectionEnd}}
+  const k=["kptx","kplb","tpf"].find(x=>a.dataset[x]!==undefined),lk=a.dataset.e&&a.closest(".kp-lk");
+  return {sel:a.dataset.kptitle!==undefined?"[data-kptitle]":k?`[data-${k}="${CSS.escape(a.dataset[k])}"]`:lk?`[data-lk="${CSS.escape(lk.dataset.lk)}"] [data-e="${CSS.escape(a.dataset.e)}"]`:null,s:a.selectionStart,e:a.selectionEnd}}
 function kpFocusSet(f){if(!f||!f.sel||!kp)return;const el=document.querySelector(".kp "+f.sel);if(!el||el===document.activeElement)return;
   el.focus({preventScroll:true});try{if(f.s!=null)el.setSelectionRange(f.s,f.e)}catch(_){}}
 /* 新增一行（在第 at 個位置），種類跟著 like（核取→核取、時間→核取、文字→文字） */
@@ -262,6 +264,12 @@ function kpClick(t,e){
   const tdel=t.closest("[data-kptdel]");if(tdel){ev.times=ev.times.filter(x=>x.id!==tdel.dataset.kptdel);if(kpTp===tdel.dataset.kptdel)kpTp=null;kpSync(ev);render();return true}
   const tm=t.closest("[data-kptm]");if(tm){if(kpTp&&kpTp!==tm.dataset.kptm&&!tpApply())return true;kpTp=kpTp===tm.dataset.kptm?null:tm.dataset.kptm;render();return true}
   const tp=t.closest(".tp");if(tp){tpClick(ev,tp,t);return true}
+  /* 超連結：色點換顏色、刪除、「+ 超連結」（名稱、網址打字時在 input 事件寫回） */
+  const lk=t.closest(".kp-lk"),lo=lk&&ev.links.find(x=>x.id===lk.dataset.lk);
+  const sw=t.closest('[data-kplk="color"]');if(sw&&lo){lo.color=COLORS[(COLORS.indexOf(lo.color)+1)%COLORS.length];sw.dataset.c=lo.color;sw.style.background=lo.color;return true}
+  if(t.closest("[data-kplkdel]")&&lo){ev.links=ev.links.filter(x=>x!==lo);render();return true}
+  if(t.closest("[data-kplkadd]")){const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
+    document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus({preventScroll:true});return true}
   return false;
 }
 /* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行、Esc＝收起時間選取器或儲存並收合 */
@@ -281,12 +289,15 @@ document.addEventListener("input",e=>{
   if(a.dataset.kptitle!==undefined)ev.name=a.value;
   else if(a.dataset.kptx!==undefined){const b=ev.blocks.find(x=>x.id===a.dataset.kptx);if(b){b.text=a.value.replace(/[\r\n]+/g," ");const t=b.timeId&&ev.times.find(x=>x.id===b.timeId);if(t)t.label=b.text}}
   else if(a.dataset.kplb!==undefined){const t=ev.times.find(x=>x.id===a.dataset.kplb);if(t)t.label=a.value}
+  else if((a.dataset.e==="name"||a.dataset.e==="url")&&a.closest(".kp-lk")){const l=ev.links.find(x=>x.id===a.closest(".kp-lk").dataset.lk);if(l)l[a.dataset.e]=a.value}
   kpSync(ev);
 });
-/* 種類選單（自製下拉 .csel，選了在隱藏 input 觸發 change） */
+/* 種類選單、母議題（自製下拉 .csel，選了在隱藏 input 觸發 change）、專員與標籤的勾選膠囊 */
 document.addEventListener("change",e=>{
-  const a=e.target;if(!kp||a.name!=="kpType"||!a.closest(".kp"))return;
-  const ev=kpEv(),ln=a.closest(".kp-line");if(ev&&ln)kpSetType(ev,ln.dataset.blk,a.value);
+  const a=e.target,box=kp&&a.closest&&a.closest(".kp"),ev=box&&kpEv();if(!ev)return;
+  if(a.name==="kpType"){const ln=a.closest(".kp-line");if(ln)kpSetType(ev,ln.dataset.blk,a.value);return}
+  if(a.name==="kpIssue"){ev.issueId=a.value||null;kpSync(ev);render();document.querySelector('.kp [data-kpf="issue"] .csel-btn')?.focus({preventScroll:true});return}
+  if(a.name==="kpStaff"||a.name==="kpLabels")ev[a.name==="kpStaff"?"staff":"labels"]=[...box.querySelectorAll(`input[name="${a.name}"]:checked`)].map(x=>x.value);
 });
 /* 時間選取器：狀態放在 .tp 的 data-st（還沒按「完成」前不寫進 state），每次點選重畫選取器本身 */
 const tpState=tp=>{const st=JSON.parse(tp.dataset.st);tp.querySelectorAll("[data-tpf]").forEach(i=>{st[i.dataset.tpf]=i.type==="checkbox"?i.checked:i.value.trim()});return st};
@@ -315,12 +326,13 @@ function tpApply(){
 /* 收合：沒改就只結束編輯；改了就儲存。force＝按「儲存」或 Esc（跟點外面一樣） */
 async function kpCommit(){
   if(!kp||!editing||cardEdit!=="e:"+kp.id||kpBusy())return true;
-  if(!fldCommitOpen())return false;   /* 母議題、專員、標籤、超連結還開著：先存回（填錯就停在原欄） */
   if(kpTp){if(!tpApply())return false;kpTp=null}
   const ev=kpEv();
   if(!ev){morph(()=>{editing=false;cardEdit="";kp=null;render()});return true}
   ev.name=ev.name.trim();
   if(!ev.name){kpSay("bad","請填名稱");document.querySelector("[data-kptitle]")?.focus();return false}
+  ev.links.forEach(l=>{l.name=l.name.trim();l.url=l.url.trim()});ev.links=ev.links.filter(l=>l.name||l.url);   /* 名稱、網址都空的超連結不留 */
+  {const l=ev.links.find(x=>!x.name);if(l){kpSay("bad","請填按鈕名稱");document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus();return false}}
   ev.times.forEach(t=>{const b=ev.blocks.find(x=>x.timeId===t.id);if(b)t.label=b.text.trim()});   /* 時間＋核取那一行的文字就是時間標記的名稱 */
   ev.blocks.forEach(b=>{b.text=b.text.trim()});
   evBlocksFix(ev);
@@ -372,8 +384,10 @@ document.addEventListener("click",e=>{
   if(box&&!t.closest("[data-mdclose],[data-mdstep]")&&!(t.closest("summary")&&!t.closest("button")))return;
   kpCommit();
 },true);
-/* 打開的欄位（即時回報、進度、完成紀錄）：Esc＝取消；Enter（說明欄 Ctrl／⌘＋Enter）＝完成 */
+/* 打開的欄位（秘書處會議卡、進度、完成紀錄）：Esc＝取消；Enter（說明欄 Ctrl／⌘＋Enter）＝完成。
+   即時回報卡（檢視中）的一行、名稱可以用鍵盤進入編輯（Enter／空白鍵，跟點一下一樣） */
 document.addEventListener("keydown",e=>{
+  if(!editing&&(e.key==="Enter"||e.key===" ")&&!e.isComposing&&e.target.matches&&e.target.matches("[data-kpgo][role=button]")){e.preventDefault();e.target.click();return}
   if(kp&&e.target.closest&&e.target.closest(".kp")&&!document.querySelector(".csel.open")&&kpKey(e))return;
   const box=e.target.closest&&e.target.closest(".evf.open");if(!box||document.querySelector(".csel.open"))return;
   if(e.key==="Escape"){e.preventDefault();e.stopPropagation();evFld=null;ifFld=null;render();return}
