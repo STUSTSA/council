@@ -339,8 +339,6 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .kp-tm{flex:none;display:inline-flex;align-items:center;min-height:0;padding:0 9px;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink);font-size:12.5px;line-height:22px}
 .kp-empty{display:block;min-height:0;padding:0;border:0;background:transparent;text-align:left;cursor:text}
 .evd-desc .kp-view{font-size:14px}
-/* 儲存回饋（檢視；存好後的「已儲存」＋「復原這次修改」，編輯中的那一列在「逐欄編輯」段的原位編輯器） */
-.kp-done{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;animation:fadeSlide var(--mo-base) var(--mo-out) both}
 /* --- 展開與收合的內容動畫（motion.js 的 animateDetails 展開時加 .opening；完成紀錄的 .done-body 同一套） --- */
 .opening .ev-body>*,.opening .done-body>*{animation:dropIn .55s var(--ease) both}
 .opening .ev-body>*:nth-child(2){animation-delay:0.14s}
@@ -413,7 +411,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .kid-ev .live-dot{width:7px;height:7px}
 /* --- 列印 --- */
 @media print{
-  .ev-edrow,.kp-done{display:none}
+  .ev-edrow{display:none}
 }
 
 /* ===== 逐欄編輯（即時回報、進度、完成紀錄、秘書處會議卡共用；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML；即時回報卡的原位編輯器與時間選取器在本段後面） =====
@@ -465,7 +463,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .stg-del{width:30px;min-height:30px;padding:0}
 /* --- 原位編輯器（即時回報卡，views.js 的 kpEditorHTML／kpFieldsHTML；events.js 的「原位編輯器」段） ---
    名稱一列、每一行＝種類（自製下拉）＋核取框＋時間＋文字＋刪除；下面母議題、專員、標籤、超連結（直接改，沒有各自的取消／完成）；
-   最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」 */
+   最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」，存好後的「已儲存＋復原這次修改」也在這一段（列印時 .kp-bar 整列不印） */
 .kp{display:grid;gap:4px;margin-top:10px}
 .kp-title{margin:0 -8px 4px;width:calc(100% + 16px);padding:6px 8px;border:0;border-radius:10px;background:transparent;box-shadow:none;font-size:16px;font-weight:700;line-height:1.4}
 .kp-title:focus{background:color-mix(in srgb,var(--ink) 5%,transparent);outline:none}
@@ -495,7 +493,9 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .kp-lk{display:flex;align-items:center;gap:6px}
 .kp-lk .evf-row{flex:1;min-width:0}
 .kp-fv .kp-add{margin:0}
+/* 儲存回饋：編輯中＝狀態＋「儲存」（.card-edbar.kp-bar）；存好後（檢視）＝「已儲存」＋「復原這次修改」（.kp-bar.kp-done，views.js 的 kpStatusHTML） */
 .kp-bar{align-items:center}
+.kp-done{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;animation:fadeSlide var(--mo-base) var(--mo-out) both}
 .kp-st{margin-right:auto;font-size:12.5px;color:var(--muted);transition:color var(--mo-fast) var(--mo-out)}
 .kp-st[data-st="fail"],.kp-st[data-st="bad"]{color:var(--red)}
 .kp-st[data-st="ok"]{color:var(--ink)}
