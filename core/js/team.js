@@ -136,7 +136,7 @@ async function joinDone(first){
     +`其他人加入：請他打開設定 → 登入 →「＋ 新增身分」，輸入學生會給的密碼（各部門都一樣）${first?"。之後也可以到「設定 → 身分與專員」設定只有你們部門知道的共用密碼":""}。`});
 }
 async function createMember(first,title){
-  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）",ph:"例如：王小明"}],
+  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）"}],
     [{name:"rem",label:"在這個裝置上記住密碼（下次不用再輸入）",type:"check",value:true}]);
   if(!v)return false;
   const m={id:uid("m"),name:v.name.trim(),role:first?"admin":"member",kdf:await kdfMake(v.p1),createdAt:nowStr()};

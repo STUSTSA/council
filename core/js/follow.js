@@ -100,7 +100,7 @@ function renderDocs(){
     ||`<p class="empty">還沒有文件。登入後按這區的「編輯」→「+ 新增文件」，貼上文件的網址（例如 Google 雲端硬碟的連結）。</p>`;
 }
 async function docAsk(d){
-  const v=await ask(d?"修改文件":"新增文件",[{name:"name",label:"名稱（按鈕上的字）",value:d?d.name:"",ph:"例如：會議記錄範本"},{name:"url",label:"網址",value:d?d.url:"",ph:"https://…"}],
+  const v=await ask(d?"修改文件":"新增文件",[{name:"name",label:"名稱（按鈕上的字）",value:d?d.name:""},{name:"url",label:"網址",value:d?d.url:""}],
     {note:"網址存在公開的資料檔，任何人都看得到；有權限設定的文件（例如 Google 雲端硬碟）照舊要有權限才打得開。",
      validate:o=>!(o.name||"").trim()?"請填名稱":!(o.url||"").trim()?"請填網址":""});
   return v&&v!=="alt"?{name:v.name.trim(),url:docURL(v.url)}:null;

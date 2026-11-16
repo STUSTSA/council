@@ -159,7 +159,7 @@ function issueFieldsHTML(it){
   return `<div class="evfs">
       ${F("title","名稱",`<b>${esc(it.title)}</b>`,()=>`<input data-e="title" value="${esc(it.title)}">`)}
       ${F("stage","階段",it.tags.length?`<span class="tags">${tagsHTML(it)}</span>`:noneTxt("沒有階段"),()=>stageEditorHTML(it))}
-      ${F("note","目前進度",it.note?`<span class="evf-desc">${esc(it.note)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="note" rows="3" placeholder="例如：已和總務處確認，等待書面回覆">${esc(it.note||"")}</textarea>`)}
+      ${F("note","目前進度",it.note?`<span class="evf-desc">${esc(it.note)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="note" rows="3">${esc(it.note||"")}</textarea>`)}
       ${F("dates","期間",hasDates(it)?`<span class="num">${fmt(it.start)} – ${fmt(it.end)}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evf-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
@@ -243,10 +243,10 @@ function evTimeView(t,par){const x=evTimeText(t);
 function evTimeEditor(ev,tm){
   const par=parentOf(ev),sp=x=>[(x||"").slice(0,10),(x||"").slice(11,16)],[sd,st]=tm?sp(tm.start):[today(),""],[ed,et]=tm?sp(tm.end):["",""];
   const inp=(k,v,ph,type)=>`<input ${type?`type="${type}"`:""} data-e="${k}" value="${esc(v||"")}" ${ph?`placeholder="${esc(ph)}"`:""}>`;
-  return `${inp("label",tm&&tm.label,"這個時間是什麼（例如：與總務處開會）")}
+  return `${inp("label",tm&&tm.label,"名稱")}
           <span class="evf-when">${inp("sd",sd,"","date")}${inp("st",st,"時刻")}<span class="sub">～</span>${inp("ed",ed,"","date")}${inp("et",et,"時刻")}</span>
           <span class="sub evf-hint">只填日期＝一個日子；加時刻＝具體時間；填結束＝一段期間</span>
-          <span class="evf-place">${inp("place",tm&&tm.place,"地點（選填，例如：學生會辦公室）")}${placeQuickHTML()}</span>
+          <span class="evf-place">${inp("place",tm&&tm.place,"地點")}${placeQuickHTML()}</span>
           ${par?`<label class="fld-check"><input type="checkbox" data-e="toIssue" ${tm&&tm.toIssue?"checked":""}><span>也寫進母議題的處理紀錄</span></label>`:""}`;
 }
 /* 連結的輸入框（顏色、名稱、網址；即時回報、議題共用）：n＝目前幾個連結（新增時輪流選顏色），fx＝按鈕的 data 屬性名 */
@@ -263,7 +263,7 @@ function evFieldsHTML(ev,kp){
   const lblChips=labelChipsHTML(ev.labels);
   return `<div class="evfs">
       ${kp?"":evFieldHTML(ev,"name","名稱",`<b>${esc(ev.name)}</b>`,()=>`<input data-e="name" value="${esc(ev.name)}">`)}
-      ${kp?"":evFieldHTML(ev,"desc","說明",ev.desc?`<span class="evf-desc">${esc(ev.desc)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="desc" rows="4" placeholder="簡短說明">${esc(ev.desc||"")}</textarea>`)}
+      ${kp?"":evFieldHTML(ev,"desc","說明",ev.desc?`<span class="evf-desc">${esc(ev.desc)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="desc" rows="4">${esc(ev.desc||"")}</textarea>`)}
       ${evFieldHTML(ev,"issue","母議題",par?esc(par.title):noneTxt("不連結"),()=>fieldHTML({name:"evIssue",label:"結案或完成一段時，會自動寫進這個議題的處理紀錄",type:"select",value:ev.issueId||"",options:opts}))}
       ${so.length||(ev.staff||[]).length?evFieldHTML(ev,"staff","專員",staffChips||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:fsMode()?"可複選":"從本看板的身分挑選，可複選",type:"multi",value:ev.staff||[],options:so.map(o=>[o[0],o[1]])})):""}
       ${evFieldHTML(ev,"labels","標籤",lblChips||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",ev.labels))}
@@ -359,7 +359,7 @@ function evDetailHTML(ev){
     ${kpEditorHTML(ev)}${evFieldsHTML(ev,true)}
     <section class="evd-sec evd-acts">
       <div class="evd-round" hidden><label class="evd-f">這一段完成了什麼（存進完成紀錄）<textarea data-rf="done" rows="3">${esc(ev.desc||"")}</textarea></label>
-        <label class="evd-f">下一段要追蹤什麼（取代說明；留空就沿用）<textarea data-rf="next" rows="2" placeholder="例如：等總務處回覆維修時程"></textarea></label>
+        <label class="evd-f">下一段要追蹤什麼（取代說明；留空就沿用）<textarea data-rf="next" rows="2"></textarea></label>
         <div class="evd-btns"><button type="button" class="ghost" data-evd="roundcancel">取消</button><button type="button" class="primary" data-evd="roundok">完成第 ${esc(ev.round)} 段</button></div></div>
       <div class="evd-btns evd-main"><button type="button" class="icon danger" data-evdel>刪除</button><span class="evd-gap"></span><button type="button" class="icon" data-evrep aria-pressed="${!!ev.report}">${ev.report?"取消報告":"會議要報告"}</button><button type="button" class="icon" data-evd="round">${ico("progress")}完成這一段</button><button type="button" class="icon" data-evdone>${ico("check")}結案</button></div>
     </section>${kpBarHTML(ev)}</div>`;
@@ -379,7 +379,7 @@ function renderEvents(){
   const o={md,sel:selEv,next:md?(live[live.findIndex(e=>e.id===selEv)+1]||{}).id:null};   /* next：畫面順序裡的下一顆，加「下一個」記號 */
   const cap=ev=>evCapHTML(ev,o);
   const addBtn=`<button type="button" class="ghost auth-only add-row" id="addEvent">+ 新增即時回報</button>`;   /* 新增鈕在清單最後自己一行（不佔一顆膠囊的格子；登入、沒有卡片在編輯時顯示） */
-  const empty=`<p class="empty">${boardLocked()?"目前沒有即時回報。":"需要即時回報的事項放這裡，只要名稱和說明。登入後按「+ 新增即時回報」。"}</p>`;
+  const empty=`<p class="empty">目前沒有即時回報。</p>`;   /* 不放教學說明文字（03 暫定決策 f） */
   /* 2026-11-06 使用者從預覽選 D：報告區不寫區名（每顆膠囊右邊自己標「報告」），其他回報上面一條細線、中間小字區名 */
   const zone=(k,h,list,tail)=>`<div class="ev-zone" data-zone="${k}">${h?`<div class="ev-zone-h"><span>${h}</span></div>`:""}<div class="events">${list.length?list.map(cap).join(""):h?"":empty}${tail}</div></div>`;
   $("#events").innerHTML=rep.length?zone("rep","",rep,"")+"\n      "+zone("rest","其他回報",rest,addBtn):zone("rest","",live,addBtn);

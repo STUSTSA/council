@@ -53,7 +53,7 @@ function ask(title,fields,{danger,wide,alt,note,validate}={}){
   });
 }
 const markerFields=(m,it)=>[
-  {name:"text",label:"註記文字",value:m.text||"",ph:"例如：校務會議"},
+  {name:"text",label:"註記文字",value:m.text||""},
   {name:"stage",label:"對應階段（選填）",type:"select",value:m.stage||"",options:[["","（不指定）"],...[...new Set([...it.tags,...(m.stage?[m.stage]:[])])].map(t=>[t,t])]},
   {name:"date",label:hasDates(it)?"日期（決定在時程條與甘特圖上的位置）":"日期（選填，填了也會顯示在甘特圖）",type:"date",value:m.date||today()},
   ...(hasDates(it)?[]:[{name:"at",label:"位置（時程條上的 %；議題填了開始／結束日後改照日期放）",type:"number",value:m.at}]),

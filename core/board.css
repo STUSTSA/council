@@ -288,8 +288,8 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .events .ev.closing>summary .ev-chev{transform:none}
 /* 完成紀錄膠囊：跟即時回報完全同一套（2026-11-06 起；以前收合時是空心綠框綠字），只有燈號是綠色（data-st="done"） */
 .events .done-ev.new{animation:doneIn .9s var(--ease) both}
-/* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數）；詳情卡另外重設 --hair（見「左右兩欄」） */
-.ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
+/* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數，分隔線 --hair 也是淺色那一組） */
+.ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--hair:#e2e2e8;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
 .ev[open]{border-color:var(--surface)}
 /* --- 展開後的內容 --- */
 .ev-body{flex:1;min-width:0;padding:0 18px 12px 37px}   /* 左邊對齊標題文字（標題列內距 18＋燈號＋間距） */
@@ -368,7 +368,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 /* 被選到的那一顆「飛到」右邊：原位留一個虛線空位（其他膠囊不動，位置好記），收起時縮回這個空位、膠囊再出現 */
 .events .ev.sel{border-style:dashed;border-color:color-mix(in srgb,var(--ink) 35%,transparent);background:transparent;box-shadow:none;pointer-events:none}
 .events .ev.sel>*{visibility:hidden}
-#evDetail,#doneDetail{--hair:#e2e2e8;position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px}
+#evDetail,#doneDetail{position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px}
 .evd-head{display:flex;align-items:center;gap:10px;font-size:20px;line-height:1.4}
 .md-close{margin-left:auto;flex:none;font-size:12.5px;font-weight:400}   /* 即時回報、完成紀錄右側的「收起」 */
 /* 詳情卡標題列的「上一個／下一個」：放在收起前面；到頭或到尾時那一顆變淡不能按 */
@@ -915,6 +915,9 @@ a.link:active{transform:scale(.96)}
 .week-wrap{max-width:640px}
 .week-wrap[hidden]{display:none}
 .week-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-14px;background:var(--bg);z-index:5;padding:14px 0 12px;margin:-14px 0 16px;border-bottom:1px solid var(--hair)}   /* 黏住時往上多蓋 14px：面板／子頁上方有留白（.set-pane 14px、.set-sub-body 10px），不蓋住的話捲動時內容會從那段露出來（2026-11-06 使用者回報跑版） */
+/* 捲動時週報卡片從標題列底下滑過：分隔線下面接一段底色往下淡掉（剛好是標題列與第一張卡片之間的 16px），卡片是慢慢淡入標題列底下，
+   不會被分隔線一刀切掉圓角（2026-11-16，03） */
+.week-top::after{content:"";position:absolute;left:0;right:0;top:calc(100% + 1px);height:16px;background:linear-gradient(var(--bg) 25%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
 .week-top h2{flex:1;min-width:0;font-size:20px;letter-spacing:.08em}
 .week-top h2::after{content:none}
 /* 「秘書處調閱 →」：秘書處的看板有「各部門週報」可以調閱每個部門的週報（秘書處自己不顯示） */
@@ -1060,7 +1063,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg.glass>form>:nth-child(3){animation-delay:80ms}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg.glass>form>:nth-child(n+4){animation-delay:120ms}
 @keyframes paneFormIn{from{opacity:0;transform:translateX(22px)}}
-:is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg.glass::after{content:none}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form{gap:14px}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form>b:first-child{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;margin-bottom:4px;border-bottom:1px solid var(--hair)}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg .dlg-actions{margin-top:6px}
@@ -1141,10 +1143,10 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @media (prefers-reduced-motion:no-preference){@keyframes icoX{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg) scale(.85)}}}
 
 /* ===== 液態玻璃材質 ===== */
-/* .glass：毛玻璃（對話框、底部工具列）。背景模糊＋內緣高光＋跟著指標移動的反光（--mx／--my，util.js 的 glassify），不用 SVG 折射
+/* .glass：毛玻璃（對話框、底部工具列、搜尋欄、分段切換；util.js 的 glassify）。背景模糊＋內緣高光，不用 SVG 折射；
+   2026-11-16（03）拿掉跟著指標移動的光點（使用者：對話框上的光點）
    底色用變數：--glass-bg（半透明，配背景模糊）、--glass-solid（純色，手機用，見本段最後）；別的規則要換底色時改這兩個變數，不直接寫 background */
 .glass{--glass-bg:rgba(28,28,30,.34);--glass-solid:#1c1c1e;--glass-sh:inset 0 0 0 .5px rgba(255,255,255,.2),inset 1.5px 1.5px 1px -1px rgba(255,255,255,.6),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.2),inset 0 0 24px rgba(255,255,255,.045),0 14px 34px rgba(0,0,0,.45);position:relative;isolation:isolate;background:var(--glass-bg);-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);box-shadow:var(--glass-sh)}   /* 光影放在 --glass-sh，別的規則要保留它時直接引用 */
-.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(140px circle at var(--mx,28%) var(--my,-30%),rgba(255,255,255,.13),transparent 70%)}
 :root:not([data-theme="dark"]) .glass{--glass-sh:inset 0 0 0 .5px rgba(0,0,0,.1),inset 1.5px 1.5px 1px -1px rgba(255,255,255,.95),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.6),inset 0 0 22px rgba(255,255,255,.35),0 12px 30px rgba(0,0,0,.14);--glass-bg:rgba(255,255,255,.42);--glass-solid:#f2f2f5}
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]) .glass{--glass-sh:inset 0 0 0 .5px rgba(255,255,255,.2),inset 1.5px 1.5px 1px -1px rgba(255,255,255,.6),inset -1.5px -1.5px 1px -1px rgba(255,255,255,.2),inset 0 0 24px rgba(255,255,255,.045),0 14px 34px rgba(0,0,0,.45);--glass-bg:rgba(28,28,30,.34);--glass-solid:#1c1c1e}
@@ -1253,7 +1255,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
 .set-hub-t{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;border-bottom:1px solid var(--hair)}
-.set-hub .set-p b{color:var(--ink);font-weight:500}
 /* 「報告」那一列、合併頁裡「每週概述」那一列（登入前是清單上的「每週概述」）：本週週報還沒產出時，圖示右上角紅點 */
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]) .sr-ico{position:relative}
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]).due .sr-ico::after{content:"";position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}

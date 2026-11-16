@@ -26,7 +26,7 @@ document.addEventListener("click",async e=>{
   if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有總管理員能刪（規則） */
   if(t.closest("#addWeek")){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:"",ph:"貼上本週概述文字"}],{wide:true});
+    const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:""}],{wide:true});
     if(v&&v.text)await settingSave(()=>{const nw={id:uid("w"),date:v.date||today(),text:v.text};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500);snapshotBase(v.date||today())},"已新增週報");return}
 
   const wk=t.closest("[data-week]");
@@ -39,7 +39,7 @@ document.addEventListener("click",async e=>{
   /* 新增即時回報：左右兩欄時直接開始編輯一筆空白的（選到它、在右側填名稱，取消就不留）；其他時候填一個小表單，按確定直接儲存 */
   if(t.closest("#addEvent")&&!editing&&mdOn("live")){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);selEv=ev.id;dirty=true})){mdPaneIn($("#evDetail"));kpFocus("title",true)}return}
-  if(t.closest("#addEvent")&&!editing){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱",ph:"例如：飲水機故障通報"},{name:"desc",label:"說明",type:"textarea",ph:"簡短說明"},...staffField([])],{validate:o=>descTooBig(o.desc)});
+  if(t.closest("#addEvent")&&!editing){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱"},{name:"desc",label:"說明",type:"textarea"},...staffField([])],{validate:o=>descTooBig(o.desc)});
     if(v&&v.name)await settingSave(()=>{const ev={id:uid("e"),name:v.name,createdAt:today(),staff:v.staff||[],links:[],times:[],round:1,touched:[]};evSetDesc(ev,v.desc||"");evTouch(ev);state.events.push(ev)},"已新增即時回報");return}
   /* 新增議題：開始編輯一個空白議題、換到它的詳情並打開名稱欄（取消就不留） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
@@ -85,7 +85,7 @@ document.addEventListener("click",async e=>{
   if(evRound){const ev=evOf(evRound);
     const v=await ask(`完成「${ev.name}」第 ${ev.round} 段`,[
       {name:"done",label:"這一段完成了什麼（存進完成紀錄）",type:"textarea",rows:4,value:ev.desc||""},
-      {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3,ph:"例如：等總務處回覆維修時程"}],{validate:o=>descTooBig(o.done)||descTooBig(o.next)});
+      {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3}],{validate:o=>descTooBig(o.done)||descTooBig(o.next)});
     if(!v)return;
     evRoundDone(ev,v.done||"",v.next||"");return}
 

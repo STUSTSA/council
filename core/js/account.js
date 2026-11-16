@@ -103,11 +103,11 @@ function acctSettingsInner(){
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
-      +setRow("labels","tag","標籤",state.labels.length?`人事時地物 ${state.labels.length} 個`:"人事時地物，還沒有建立")
-      +setRow("backup","download","備份","匯出看板內容（JSON 檔）")):"";
-  return setSec(fsWriter()?setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`)+setRow("log","history","編輯紀錄","誰在什麼時候改了什麼"):wk)
+      +setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")
+      +setRow("backup","download","備份")):"";
+  return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理","人員、QR 邀請、申請、紀錄")):"");
+    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
