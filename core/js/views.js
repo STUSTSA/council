@@ -231,9 +231,9 @@ const evFldOpen=(ev,k)=>!!evFld&&evFld.ev===ev.id&&evFld.k===k;
    o＝{open,k,label,view,editor（函式，打開時才產生）,del（多一顆刪除）,key／pen／fx（data 屬性名：欄位、點內容、按鈕）,attr（外框多帶的屬性）} */
 function fldRowHTML(o){
   const lb=o.label?`<span class="evf-l">${o.label}</span>`:"",at=o.attr?" "+o.attr:"";
-  if(o.open)return `<div class="evf open" data-${o.key}="${o.k}"${at}>${lb}<div class="evf-ed">${o.editor()}</div>
+  if(o.open)return `<div class="evf open" data-${o.key}="${esc(o.k)}"${at}>${lb}<div class="evf-ed">${o.editor()}</div>
         <div class="evf-btns">${o.del?`<button type="button" class="icon danger" data-${o.fx}="del">刪除</button><span class="evd-gap"></span>`:""}<button type="button" class="ghost" data-${o.fx}="cancel">取消</button><button type="button" class="primary" data-${o.fx}="ok">完成</button></div></div>`;
-  return `<div class="evf" data-${o.key}="${o.k}"${at}>${lb}<button type="button" class="evf-v" data-${o.pen}="${o.k}" title="點一下修改${o.label||"這一項"}">${o.view}</button></div>`;
+  return `<div class="evf" data-${o.key}="${esc(o.k)}"${at}>${lb}<button type="button" class="evf-v" data-${o.pen}="${esc(o.k)}" title="點一下修改${o.label||"這一項"}">${o.view}</button></div>`;
 }
 function evFieldHTML(ev,k,label,view,editor){return fldRowHTML({open:evFldOpen(ev,k),k,label,view,editor,del:/^[tl]:(?!\+)/.test(k),key:"evfk",pen:"evpen",fx:"evfx"})}
 /* 時間的文字：「日期 時刻 名稱 期間 · 地點」（顯示與編輯中共用） */

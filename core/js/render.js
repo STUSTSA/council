@@ -42,7 +42,7 @@ async function startEdit(key,then){
     const ev=key[0]==="e"&&state.events.find(e=>e.id===key.slice(2)),was=ev&&JSON.parse(snapshot).events.find(e=>e.id===ev.id);
     kp=ev&&!ev.doneAt?{id:ev.id,before:was?JSON.stringify(was):null}:null;render()});
   if(kp)staffPplLoad();   /* 專員欄的選項（firestore 模式；team.js） */
-  const box=document.querySelector(`[data-edbox="${key}"]`);   /* 剛打開的那張，編輯工具淡入（board.css「編輯／檢視切換時的動畫」段的 .sec-anim） */
+  const box=document.querySelector(`[data-edbox="${CSS.escape(key)}"]`);   /* 剛打開的那張，編輯工具淡入（board.css「編輯／檢視切換時的動畫」段的 .sec-anim） */
   if(box&&!reduceMotion()){box.classList.remove("sec-anim");void box.offsetWidth;box.classList.add("sec-anim");clearTimeout(box._sa);box._sa=setTimeout(()=>box.classList.remove("sec-anim"),900)}
   return true;
 }

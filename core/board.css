@@ -288,8 +288,8 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .events .ev.closing>summary .ev-chev{transform:none}
 /* 完成紀錄膠囊：跟即時回報完全同一套（2026-11-06 起；以前收合時是空心綠框綠字），只有燈號是綠色（data-st="done"） */
 .events .done-ev.new{animation:doneIn .9s var(--ease) both}
-/* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數，分隔線 --hair 也是淺色那一組） */
-.ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--hair:#e2e2e8;--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
+/* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數，分隔線 --hair、紅字 --red／--warn 也是淺色那一組） */
+.ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--hair:#e2e2e8;--red:var(--accent-light);--warn:var(--accent-light);--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
 .ev[open]{border-color:var(--surface)}
 /* --- 展開後的內容 --- */
 .ev-body{flex:1;min-width:0;padding:0 18px 12px 37px}   /* 左邊對齊標題文字（標題列內距 18＋燈號＋間距） */
