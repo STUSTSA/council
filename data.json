@@ -163,6 +163,15 @@
      "pos": "up",
      "text": "停車場冷氣機報廢後續（第 2 段）",
      "date": "2026-11-16"
+    },
+    {
+     "id": "mmwj34fbsjjwy",
+     "evId": "emvteefflmm61",
+     "at": 30,
+     "stage": "待回覆",
+     "pos": "up",
+     "text": "六宿女宿舍通道安全（第 3 段・結案）",
+     "date": "2026-11-16"
     }
    ],
    "links": [],
@@ -368,17 +377,18 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-09",
-    "2026-11-10"
+    "2026-11-10",
+    "2026-11-16"
    ],
    "links": [],
    "times": [],
    "round": 3,
-   "touchedAt": "2026-11-10T19:05",
+   "touchedAt": "2026-11-16T17:52",
    "report": false,
    "issueId": "imvpc3f0dcpi6",
    "roundAt": "2026-11-10T19:05",
    "labels": [],
-   "doneAt": null
+   "doneAt": "2026-11-16"
   },
   {
    "id": "emvpd82rr1kit",
