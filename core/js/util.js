@@ -8,6 +8,11 @@ const MARK_COLORS=["#8a6cf2","#6ea2f2","#b993f2","#f39ac8","#7fd0c8","#111114"];
 const $=s=>document.querySelector(s);
 /* 跳脫：所有來自資料的字串進 HTML（含屬性值，單、雙引號都跳脫）一律經過這一個函式 */
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* 樣式值：所有來自資料、要放進 style="…"（或 style 屬性）的值一律經過這兩個函式，不各處自己處理。
+   esc 擋不住「red;position:fixed;background:url(…)」這種用分號接新宣告的字串（03 審查 P1-1）。
+   cssColor：只收 #rrggbb（程式內建的 COLORS、MARK_COLORS 都是這個格式），其他回預設色 d；cssNum：只收有限的數字，其他回 d */
+const cssColor=(c,d=COLORS[0])=>typeof c==="string"&&/^#[0-9a-f]{6}$/i.test(c)?c:d;
+const cssNum=(n,d=0)=>{const v=typeof n==="number"?n:typeof n==="string"&&n.trim()?Number(n):NaN;return Number.isFinite(v)?v:d};
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;

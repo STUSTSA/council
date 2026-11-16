@@ -268,7 +268,7 @@ function kpClick(t,e){
   const lk=t.closest(".kp-lk"),lo=lk&&ev.links.find(x=>x.id===lk.dataset.lk);
   const sw=t.closest('[data-kplk="color"]');if(sw&&lo){lo.color=COLORS[(COLORS.indexOf(lo.color)+1)%COLORS.length];sw.dataset.c=lo.color;sw.style.background=lo.color;return true}
   if(t.closest("[data-kplkdel]")&&lo){ev.links=ev.links.filter(x=>x!==lo);render();return true}
-  if(t.closest("[data-kplkadd]")){const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
+  if(t.closest("[data-kplkadd]")){if(ev.links.length>=StoreMap.LNK_MAX){kpSay("bad",`最多 ${StoreMap.LNK_MAX} 個超連結`);return true}const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
     document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus({preventScroll:true});return true}
   return false;
 }

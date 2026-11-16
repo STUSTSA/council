@@ -2269,6 +2269,10 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
      規則要逐行檢查形狀，陣列才能整欄一次檢查，見 firestore.rules 的 blocksOk）。02D 遷移的舊卡片是 [{id, text, check, timeId}]，讀得到，存檔時換成新格式。
      上限跟規則相同：最多 BLK_MAX 行、每行最多 TXT_MAX 字。 */
   const BLK_MAX = 50, TXT_MAX = 1000, CHK = { done: "☑ ", todo: "☐ " };
+  /* 03 審查（P1-1）：卡片最多 LNK_MAX 個超連結；超連結、議題註記的顏色只收 #rrggbb（畫面把顏色放進 style，規則 linksOk 也檢查卡片的超連結）。
+     讀回來時不合格的超連結顏色換成預設色（＝util.js 的 COLORS[0]）、註記拿掉顏色（畫面用預設色）；網頁 normalize 時再清一次（state.js 的 linksFix） */
+  const LNK_MAX = 10, HEX = /^#[0-9a-f]{6}$/i, LINK_COLOR = "#6a4fd8";
+  const linksIn = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x === "object").map(x => ({ ...copy(x), color: HEX.test(x.color) ? x.color : LINK_COLOR }));
   const lineOf = b => (b && typeof b.check === "boolean" ? (b.check ? CHK.done : CHK.todo) : "") + String((b && b.text) || "");
   const descOf = blocks => (blocks || []).map(lineOf).join("\n");
   /* 新的行 ID：決定性（L0、L1…），跟這張卡片已有的 ID 撞到就加後綴 */
@@ -2435,9 +2439,9 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
     s.issues = (src.issues || []).slice().sort(byOrder).map(i => clean({ id: oid(dept, i.id), title: i.title, cur: i.cur, start: i.start, end: i.end,
-      note: i.note, tags: copy(i.tags || []), labels: (i.labels || []).map(x => oid(dept, x)), links: copy(i.links || []),
+      note: i.note, tags: copy(i.tags || []), labels: (i.labels || []).map(x => oid(dept, x)), links: linksIn(i.links),
       staff: (i.staff || []).map(x => fromStaff(dept, x)), doneAt: i.doneAt || null,
-      markers: (i.markers || []).map(m => clean({ ...copy(m), evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
+      markers: (i.markers || []).map(m => clean({ ...copy(m), color: HEX.test(m.color) ? m.color : undefined, evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
     s.weeks = (src.weeks || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(w => clean({ id: oid(dept, w.id), date: w.date, text: w.text, auto: w.auto || undefined }));
     const evByCard = {};
     (src.events || []).forEach(e => { if (e.cardId) (evByCard[e.cardId] = evByCard[e.cardId] || []).push(e); });
@@ -2448,7 +2452,7 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
       const blocks = fromFsBlocks(dept, c.blocks);
       return clean({ id: oid(dept, c.id), name: c.title, desc: descOf(blocks), blocks,
         issueId: c.issueId ? oid(dept, c.issueId) : null, staff: (c.staff || []).map(x => fromStaff(dept, x)),
-        labels: (c.labels || []).map(x => oid(dept, x)), links: copy(c.links || []), report: !!c.report,
+        labels: (c.labels || []).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report,
         times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: e.startRaw || fmtTaipei(e.start.__ts, e.allDay),
           end: e.endRaw != null ? e.endRaw : fmtTaipei(e.end.__ts, e.allDay), place: e.place || "", toIssue: !!e.toIssue })),
         createdAt: c.createdAt ? strOf(c.createdAt) : undefined, doneAt: c.state === "done" ? strOf(c.doneAt) : null,
@@ -2524,7 +2528,7 @@ const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, LNK_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);
@@ -3286,6 +3290,11 @@ const MARK_COLORS=["#8a6cf2","#6ea2f2","#b993f2","#f39ac8","#7fd0c8","#111114"];
 const $=s=>document.querySelector(s);
 /* 跳脫：所有來自資料的字串進 HTML（含屬性值，單、雙引號都跳脫）一律經過這一個函式 */
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* 樣式值：所有來自資料、要放進 style="…"（或 style 屬性）的值一律經過這兩個函式，不各處自己處理。
+   esc 擋不住「red;position:fixed;background:url(…)」這種用分號接新宣告的字串（03 審查 P1-1）。
+   cssColor：只收 #rrggbb（程式內建的 COLORS、MARK_COLORS 都是這個格式），其他回預設色 d；cssNum：只收有限的數字，其他回 d */
+const cssColor=(c,d=COLORS[0])=>typeof c==="string"&&/^#[0-9a-f]{6}$/i.test(c)?c:d;
+const cssNum=(n,d=0)=>{const v=typeof n==="number"?n:typeof n==="string"&&n.trim()?Number(n):NaN;return Number.isFinite(v)?v:d};
 const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -3565,6 +3574,8 @@ const MIGRATIONS={
 function evBlocksFix(e){e.blocks=StoreMap.blocksOf(e);e.desc=StoreMap.descOf(e.blocks);return e}
 /* 只給一段文字（新增即時回報的小表單、完成這一段、會議編輯的說明欄）：照文字重建 blocks，跟原本某一行相同的沿用那一行 */
 function evSetDesc(e,text){e.desc=String(text||"");return evBlocksFix(e)}
+/* 超連結的顏色只能是 #rrggbb（畫面放進 style；不合格的換成預設色，03 審查 P1-1；store-map.js 讀 Firestore 時也清一次） */
+function linksFix(l){(l=Array.isArray(l)?l.filter(x=>x&&typeof x==="object"):[]).forEach(x=>{x.color=cssColor(x.color)});return l}
 function migrate(s){
   let v=+s.schemaVersion||+s.v||2;if(v<2)v=2;
   if(v>SCHEMA_VERSION){s._newer=true;return s}   /* 比這個程式還新的資料：不動它 */
@@ -3581,10 +3592,10 @@ let termSrc=null;
 function termCfg(){const s=(!termOwn()&&termSrc)||state;return {yearLabel:s.yearLabel||"",termStart:s.termStart||"",semester:["up","down"].includes(s.semester)?s.semester:""}}
 function normalize(s){
   s=migrate(s||{});if(!s.id)s.id=CFG.boardId;
-  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=e.links||[];e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
+  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=linksFix(e.links);e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
   s.weeks=s.weeks||[];s.issues=s.issues||[];s.events=s.events||[];s.reportBase=s.reportBase||null;if(s.yearLabel===undefined)s.yearLabel=CFG.term.label;if(s.termStart===undefined)s.termStart=CFG.term.start;s.range=s.range||defaultRange();s.title=s.title||CFG.title;
-  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=i.links||[];i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
-    i.markers.forEach(m=>{if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
+  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=linksFix(i.links);i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
+    i.markers.forEach(m=>{if(m.color!=null&&cssColor(m.color,"")!==m.color)m.color=MARK_COLORS[0];if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
   return s;
 }
 
@@ -3840,7 +3851,7 @@ function renderGantt(){
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     const l=pos(s),w=Math.max(.8,pos(e)-l);
-    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${esc(m.color||MARK_COLORS[0])}" title="${esc(fmt(m.date))} ${m.stage?"【"+esc(m.stage)+"】":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
+    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" title="${esc(fmt(m.date))} ${m.stage?"【"+esc(m.stage)+"】":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
     return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
       <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
   }).join("");
@@ -3853,21 +3864,21 @@ function renderGantt(){
 
 /* 階段標籤與連結按鈕（只顯示；編輯中改用逐欄編輯的「階段」「超連結」欄） */
 function tagsHTML(it){return it.tags.map((g,k)=>`<span class="tag ${k===it.cur?"cur":k<it.cur?"past":""}">${esc(g)}</span>`).join("")}
-function linkHTML(l){return `<a class="link" style="--c:${esc(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`}
+function linkHTML(l){return `<a class="link" style="--c:${cssColor(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`}
 function latestMarkerId(list){
   const dated=list.filter(m=>m.date).sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at);
   const pick=dated.length?dated[dated.length-1]:[...list].sort((a,b)=>a.at-b.at).pop();
   return pick&&pick.id;
 }
 function markerHTML(m,latest,it){
-  const at=mkAt(it,m),edge=at<18?"edgeL":at>82?"edgeR":"";
-  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${esc(at)}%;--mc:${esc(m.color||MARK_COLORS[0])}" data-marker="${esc(m.id)}" title="${m.date?esc(fmt(m.date))+" ":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
+  const at=cssNum(mkAt(it,m),50),edge=at<18?"edgeL":at>82?"edgeR":"";
+  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" data-marker="${esc(m.id)}" title="${m.date?esc(fmt(m.date))+" ":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
 }
 
 const sortedMarkers=it=>[...it.markers].sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||a.at-b.at);
 function logHTML(it){
   const ms=sortedMarkers(it);if(!ms.length)return "";
-  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${esc(m.color||MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub" title="來自即時回報">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
+  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub" title="來自即時回報">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
 /* stack marker labels into lanes so many markers never overlap */
@@ -3949,7 +3960,7 @@ function issueFieldsHTML(it){
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
       <div class="evf-group"><span class="evf-l">超連結</span>
-        ${it.links.map(l=>F("l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,it.links.length,"iffx"))).join("")}
+        ${it.links.map(l=>F("l:"+l.id,"",`<span class="link" style="--c:${cssColor(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,it.links.length,"iffx"))).join("")}
         ${ifOpen("i",it.id,"l:+")?F("l:+","","",()=>linkEditorHTML(null,it.links.length,"iffx")):`<button type="button" class="ghost evd-add" data-ifpen="l:+" data-ift="i" data-ifid="${esc(it.id)}">+ 超連結</button>`}</div>
     </div>`;
 }
@@ -4003,7 +4014,7 @@ function evTimesHTML(ev,free){
 /* 連結按鈕列 */
 function evLinksHTML(ev){
   if(!ev.links.length)return "";
-  return `<div class="links ev-links">${ev.links.map(l=>`<a class="link" style="--c:${esc(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`).join("")}</div>`;
+  return `<div class="links ev-links">${ev.links.map(l=>`<a class="link" style="--c:${cssColor(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`).join("")}</div>`;
 }
 /* ---------- 逐欄編輯（秘書處會議卡；議題、完成紀錄用同一套 fldRowHTML，見 issueFieldsHTML／doneFieldsHTML） ----------
    按了卡片的「編輯」之後，每一欄本身就是可以點的（滑過去底色微亮），點哪一欄只有那一欄變成輸入框，其他照常顯示。
@@ -4036,8 +4047,8 @@ function evTimeEditor(ev,tm){
 }
 /* 連結的輸入框（顏色、名稱、網址；即時回報、議題共用）：n＝目前幾個連結（新增時輪流選顏色），fx＝按鈕的 data 屬性名 */
 function linkEditorHTML(l,n,fx){
-  const c=l?l.color:COLORS[n%COLORS.length];
-  return `<span class="evf-row"><button type="button" class="evf-sw" style="background:${esc(c)}" data-${fx}="color" data-c="${esc(c)}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
+  const c=cssColor(l?l.color:COLORS[n%COLORS.length]);
+  return `<span class="evf-row"><button type="button" class="evf-sw" style="background:${c}" data-${fx}="color" data-c="${c}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
 }
 /* 秘書處會議卡（編輯中）的欄位：名稱、說明、母議題、專員、標籤、時間標記、超連結，每一欄各自可以點 */
 function evFieldsHTML(ev){
@@ -4055,8 +4066,8 @@ function evFieldsHTML(ev){
         ${ts.map(t=>evFieldHTML(ev,"t:"+t.id,"",evTimeView(t,par),()=>evTimeEditor(ev,t))).join("")}
         ${evFldOpen(ev,"t:+")?evFieldHTML(ev,"t:+","",'',()=>evTimeEditor(ev,null)):`<button type="button" class="ghost evd-add" data-evpen="t:+">${ico("calendar")}+ 時間</button>`}</div>
       <div class="evf-group"><span class="evf-l">超連結</span>
-        ${ev.links.map(l=>evFieldHTML(ev,"l:"+l.id,"",`<span class="link" style="--c:${esc(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,ev.links.length,"evfx"))).join("")}
-        ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`}</div>
+        ${ev.links.map(l=>evFieldHTML(ev,"l:"+l.id,"",`<span class="link" style="--c:${cssColor(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,ev.links.length,"evfx"))).join("")}
+        ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):ev.links.length<StoreMap.LNK_MAX?`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`:""}</div>
     </div>`;
 }
 /* 展開膠囊裡的動作列（編輯中）：欄位在上面逐欄改，這裡只剩整筆的動作 */
@@ -4102,7 +4113,7 @@ function kpFieldsHTML(ev){
   return `<div class="kp-flds">${row("issue","母議題",cselHTML({name:"kpIssue",value:ev.issueId||"",options:opts,cls:"kp-issue",aria:"母議題"}))}
       ${so.length?row("staff","專員",`<div class="chips">${so.map(([v,t])=>`<label class="chip"><input type="checkbox" name="kpStaff" value="${esc(v)}"${on.has(v)?" checked":""}><span>${esc(t)}</span></label>`).join("")}</div>`):""}
       ${state.labels.length?row("labels","標籤",labelPickerHTML("kpLabels",ev.labels)):""}
-      ${row("links","超連結",`${ev.links.map(l=>`<div class="kp-lk" data-lk="${esc(l.id)}">${linkEditorHTML(l,0,"kplk")}<button type="button" class="icon kp-del" data-kplkdel aria-label="刪除這個超連結">${ico("close","solo")}</button></div>`).join("")}<button type="button" class="ghost evd-add kp-add" data-kplkadd>+ 超連結</button>`)}</div>`;
+      ${row("links","超連結",`${ev.links.map(l=>`<div class="kp-lk" data-lk="${esc(l.id)}">${linkEditorHTML(l,0,"kplk")}<button type="button" class="icon kp-del" data-kplkdel aria-label="刪除這個超連結">${ico("close","solo")}</button></div>`).join("")}${ev.links.length<StoreMap.LNK_MAX?`<button type="button" class="ghost evd-add kp-add" data-kplkadd>+ 超連結</button>`:""}`)}</div>`;
 }
 /* 儲存回饋：編輯中＝狀態＋「儲存」（失敗時保留草稿、可以再按）；存好後（檢視）＝已儲存＋「復原這次修改」 */
 function kpBarHTML(ev){const s=kpSt&&kpSt.id===ev.id?kpSt:null;
@@ -4191,7 +4202,7 @@ function renderDone(){
   const de=state.events.filter(ev=>ev.doneAt);
   const ids=new Set([...ds.map(i=>i.id),...de.map(e=>e.id)]);
   const dnew=id=>prevDone&&!prevDone.has(id)?"new":"";
-  const link=l=>`<a class="link" style="--c:${esc(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;
+  const link=l=>`<a class="link" style="--c:${cssColor(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;
   /* 每一筆拆成：屬性、標題、副標、內容，膠囊與右側詳情共用。內容最下面「編輯」（登入才看得到）；
      編輯中（cardEd）名稱、完成日期、說明（即時回報多母議題）換成逐欄編輯（doneFieldsHTML），最下面「取消｜儲存」 */
   const tail=(key,ed)=>ed?editBarHTML():`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
@@ -7478,7 +7489,7 @@ function kpClick(t,e){
   const lk=t.closest(".kp-lk"),lo=lk&&ev.links.find(x=>x.id===lk.dataset.lk);
   const sw=t.closest('[data-kplk="color"]');if(sw&&lo){lo.color=COLORS[(COLORS.indexOf(lo.color)+1)%COLORS.length];sw.dataset.c=lo.color;sw.style.background=lo.color;return true}
   if(t.closest("[data-kplkdel]")&&lo){ev.links=ev.links.filter(x=>x!==lo);render();return true}
-  if(t.closest("[data-kplkadd]")){const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
+  if(t.closest("[data-kplkadd]")){if(ev.links.length>=StoreMap.LNK_MAX){kpSay("bad",`最多 ${StoreMap.LNK_MAX} 個超連結`);return true}const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
     document.querySelector(`.kp [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus({preventScroll:true});return true}
   return false;
 }

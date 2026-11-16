@@ -53,6 +53,8 @@ const MIGRATIONS={
 function evBlocksFix(e){e.blocks=StoreMap.blocksOf(e);e.desc=StoreMap.descOf(e.blocks);return e}
 /* 只給一段文字（新增即時回報的小表單、完成這一段、會議編輯的說明欄）：照文字重建 blocks，跟原本某一行相同的沿用那一行 */
 function evSetDesc(e,text){e.desc=String(text||"");return evBlocksFix(e)}
+/* 超連結的顏色只能是 #rrggbb（畫面放進 style；不合格的換成預設色，03 審查 P1-1；store-map.js 讀 Firestore 時也清一次） */
+function linksFix(l){(l=Array.isArray(l)?l.filter(x=>x&&typeof x==="object"):[]).forEach(x=>{x.color=cssColor(x.color)});return l}
 function migrate(s){
   let v=+s.schemaVersion||+s.v||2;if(v<2)v=2;
   if(v>SCHEMA_VERSION){s._newer=true;return s}   /* 比這個程式還新的資料：不動它 */
@@ -69,10 +71,10 @@ let termSrc=null;
 function termCfg(){const s=(!termOwn()&&termSrc)||state;return {yearLabel:s.yearLabel||"",termStart:s.termStart||"",semester:["up","down"].includes(s.semester)?s.semester:""}}
 function normalize(s){
   s=migrate(s||{});if(!s.id)s.id=CFG.boardId;
-  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=e.links||[];e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
+  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=linksFix(e.links);e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
   s.weeks=s.weeks||[];s.issues=s.issues||[];s.events=s.events||[];s.reportBase=s.reportBase||null;if(s.yearLabel===undefined)s.yearLabel=CFG.term.label;if(s.termStart===undefined)s.termStart=CFG.term.start;s.range=s.range||defaultRange();s.title=s.title||CFG.title;
-  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=i.links||[];i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
-    i.markers.forEach(m=>{if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
+  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=linksFix(i.links);i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
+    i.markers.forEach(m=>{if(m.color!=null&&cssColor(m.color,"")!==m.color)m.color=MARK_COLORS[0];if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
   return s;
 }
 

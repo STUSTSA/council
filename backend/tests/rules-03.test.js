@@ -1,4 +1,5 @@
 // 03 卡片逐行內容（blocks）的形狀與長度（firestore.rules 的 blocksOk，data-model.md 第 3 節）：L-01～L-11。
+// 03 審查（P1-1）：卡片超連結的數量與顏色格式（firestore.rules 的 linksOk）：L-12～L-14。
 // blocks＝四個一樣長的陣列 {id, text, check, time}：id 是 safeId 而且不重複、text 每行最多 1000 字而且不能有換行、
 // check 是 null／true／false、time 是 null 或這張卡片 timeIds 裡的 ID；最多 50 行。版本的 blocks 等於卡片的 blocks（原有要求）而且一樣檢查形狀。
 import { describe, it, before, after, beforeEach } from 'node:test';
@@ -132,5 +133,52 @@ describe('L-01～L-11 卡片逐行內容 blocks（03）', () => {
     const c = cardData('ed', { timeIds: ['c6_t1'], blocks: B(['a', 'x', false, 'c6_t1']) });
     await assertFails(commit(db('ed'), [['cards/c6', c], ['cards/c6/versions/1', verData('ed', 'c6', c)], ['events/c6_t1', eventData('ed', 'c6', { blockId: 'a"><img src=x>' })]]));
     await assertSucceeds(commit(db('ed'), [['cards/c6', c], ['cards/c6/versions/1', verData('ed', 'c6', c)], ['events/c6_t1', eventData('ed', 'c6', { blockId: 'a' })]]));
+  });
+});
+
+// 超連結：顏色放進畫面的 style（03 審查 P1-1），只收 #rrggbb；最多 10 個
+const LK = (n, color = i => ['#6a4fd8', '#3d7fe0', '#AbCdEf'][i % 3]) => Array.from({ length: n }, (_, i) => ({ id: `l${i}`, name: `連結 ${i}`, url: 'https://example.com/' + i, color: color(i) }));
+const EVIL = ['red;position:fixed;inset:0;background:url(https://attacker.invalid/x.png)', '#123456;position:fixed', 'url(https://attacker.invalid/x.png)',
+  '#12345', '#1234567', '#12345g', 'red', '', ' #123456', '#123456 ', 7, null, true, ['#123456'], { c: '#123456' }];
+describe('L-12～L-14 卡片超連結 links（03 審查 P1-1）', () => {
+  it('L-12 最多 10 個：10 個可以、11 個拒絕（新建與修改）；10 個超連結＋50 行＋時間事件同一批不超過運算式上限', async () => {
+    await assertSucceeds(createCard(db('ed'), 'ed', 'c10', { links: LK(10) }));
+    await assertFails(createCard(db('ed'), 'ed', 'c11', { links: LK(11) }));
+    const cur = await readDoc(t, 'cards/c10');
+    await assertFails(editCard(db('ed'), 'ed', 'c10', cur, { links: LK(11) }));
+    await assertSucceeds(editCard(db('ed'), 'ed', 'c10', cur, { links: LK(9) }));
+    const b = many(50); b.check[49] = false; b.time[49] = 'c5_t1';
+    const c = cardData('ed', { blocks: b, timeIds: ['c5_t1'], links: LK(10) });
+    await assertSucceeds(commit(db('ed'), [['cards/c5', c], ['cards/c5/versions/1', verData('ed', 'c5', c)], ['events/c5_t1', eventData('ed', 'c5', { blockId: 'b49' })]]));
+    await assertFails(createCard(db('boss'), 'boss', 'cboss', { links: LK(11) }));   // 總管理員也一樣
+  });
+  it('L-13 顏色注入：分號接新宣告、url()、不是 #rrggbb、不是字串、沒有 color、不是 map，放在第 1 個或第 10 個都拒絕（新建與修改）', async () => {
+    let k = 0;
+    for (const bad of EVIL) for (const at of [0, 9]) {
+      const links = LK(10); links[at] = { ...links[at], color: bad };
+      await assertFails(createCard(db('ed'), 'ed', `c${++k}`, { links }));
+    }
+    const nocolor = LK(1); delete nocolor[0].color;
+    await assertFails(createCard(db('ed'), 'ed', 'cnc', { links: nocolor }));
+    await assertFails(createCard(db('ed'), 'ed', 'cstr', { links: ['#123456'] }));
+    await assertFails(createCard(db('ed'), 'ed', 'cmap', { links: { 0: LK(1)[0] } }));
+    await assertSucceeds(createCard(db('ed'), 'ed', 'cok', { links: LK(3) }));
+    const cur = await readDoc(t, 'cards/cok');
+    for (const bad of EVIL.slice(0, 4)) await assertFails(editCard(db('ed'), 'ed', 'cok', cur, { links: LK(3, i => i === 2 ? bad : '#111114') }));
+    await assertSucceeds(editCard(db('ed'), 'ed', 'cok', cur, { links: LK(3, () => '#111114') }));
+  });
+  it('L-14 舊卡片（超連結已經超過或格式不合）：沒改超連結的修改、換順序、永久刪除照常；改超連結一定要合格', async () => {
+    const bad = LK(12, i => i === 3 ? 'red;position:fixed' : '#6a4fd8');
+    await seed(t, async d => { const c = { ...cardData('seed', { links: bad }), createdAt: new Date(), updatedAt: new Date() };
+      await d.doc('cards/c1').set(c); await d.doc('cards/c1/versions/1').set({ ...verData('seed', 'c1', c), at: new Date() }); });
+    const cur = await readDoc(t, 'cards/c1');
+    await assertSucceeds(editCard(db('ed'), 'ed', 'c1', cur, { title: '只改名稱' }));
+    await assertSucceeds(db('ed').doc('cards/c1').update({ order: 5, updatedAt: NOW(), updatedBy: 'ed' }));
+    const cur2 = await readDoc(t, 'cards/c1');
+    await assertFails(editCard(db('ed'), 'ed', 'c1', cur2, { links: bad.slice(0, 10) }));
+    await assertSucceeds(editCard(db('ed'), 'ed', 'c1', cur2, { links: LK(2) }));
+    await seed(t, async d => { const c = { ...cardData('seed', { links: bad }), createdAt: new Date(), updatedAt: new Date() };
+      await d.doc('cards/c2').set(c); await d.doc('cards/c2/versions/1').set({ ...verData('seed', 'c2', c), at: new Date() }); });
+    await assertSucceeds(purgeCard(db('ed'), 'ed', 'c2'));
   });
 });

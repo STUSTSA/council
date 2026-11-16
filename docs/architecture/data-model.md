@@ -88,7 +88,7 @@
 | `issueId` | 母議題（`issueId`，改新 ID） |
 | `staff` | 負責人：UID 或 `legacy:{deptId}__{舊身分ID}`（`staff[]`） |
 | `labels` | 標籤 ID（`labels[]`，改新 ID） |
-| `links` | 連結（`links[]`） |
+| `links` | 連結（`links[]`）＝`[{id, name, url, color}]`。03 審查：最多 10 個、`color` 只能是 `#rrggbb`（規則 `linksOk`，改了超連結才檢查；[permissions.md](permissions.md) 第 5.1f 節） |
 | `report` | 會議要報告（`report`） |
 | `state` | `open` \| `done` \| `purging`（02A：永久刪除進行中，不可逆；拿掉 `deleted`） |
 | `doneAt`、`deletedAt`、`deletedBy` | （`doneAt`）；`deletedAt`、`deletedBy`＝開始永久刪除的時間與人 |

@@ -7,7 +7,8 @@
    7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
-      確認 window.__x 沒被設定、文字原樣顯示、沒有多出元素、超連結不是 javascript:、可以進入編輯並收合 */
+      確認 window.__x 沒被設定、文字原樣顯示、沒有多出元素、超連結不是 javascript:、可以進入編輯並收合；
+      超連結與議題註記的顏色、註記位置放「;position:fixed;background:url(外部)」（03 審查 P1-1）：不會變成 position:fixed、不會對外請求 */
 const c=require('./common');const fs=require('fs');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(v)passes++;else fails++};
 (async()=>{
@@ -90,12 +91,14 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
   /* 6. 跳脫攻擊 */
   const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3="' onmouseover='window.__x=1",XJ='javascript:window.__x=1';
   const EID='e'+X2,TID='t'+X1,FID='f'+X3,IID='i'+X2,MID='m'+X1,LID='l'+X3;
+  /* 03 審查 P1-1：顏色用分號接新的宣告、位置不是數字（esc 擋不住），想把元素蓋滿整個畫面並載入外部圖片 */
+  const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.invalid/x.png)',XA='1;position:fixed;inset:0;background:url(https://attacker.invalid/a.png)';
   const blocks=[{id:'L0',text:X1,check:null,timeId:null},{id:X2,text:X2,check:false,timeId:null},{id:'L2',text:X3,check:true,timeId:null},{id:'L3',text:'時間行',check:false,timeId:TID}];
   const bad=JSON.parse(JSON.stringify(orig));bad.schemaVersion=14;
-  bad.issues.unshift({id:IID,title:X2+X1,tags:[],cur:0,start:'',end:'',doneAt:null,markers:[],links:[],note:''});
+  bad.issues.unshift({id:IID,title:X2+X1,tags:[],cur:0,start:'2026-11-01',end:'2026-12-31',doneAt:null,markers:[{id:'mk1',text:'註記',color:XC,at:XA,date:'2026-11-15',pos:'up',stage:''}],links:[{id:'ik1',name:'議題連結',url:'https://example.com/i',color:XC}],note:''});
   bad.labels=[{id:LID,kind:'人',name:X1+X3}];
   bad.events.unshift({id:EID,name:X1+X2+X3,desc:[X1,'☐ '+X2,'☑ '+X3,'☐ 時間行'].join('\n'),blocks,createdAt:'2026-11-01',issueId:IID,staff:[MID],labels:[LID],
-    links:[{id:'k1',name:X1,url:XJ,color:'#3b82f6'},{id:X2,name:X3,url:'https://example.com/'+X2,color:'#ef4444'}],
+    links:[{id:'k1',name:X1,url:XJ,color:'#3b82f6'},{id:X2,name:X3,url:'https://example.com/'+X2,color:'#ef4444'},{id:'k3',name:'壞顏色',url:'https://example.com/c',color:XC}],
     times:[{id:TID,label:'時間行',start:'2026-11-20T14:00',end:'',place:X2,toIssue:false},{id:FID,label:X2+X1,start:'2026-11-21',end:'',place:X3,toIssue:false}],round:1,touched:[]});
   const tmp=require('os').tmpdir()+'/kp2-xss.json';fs.writeFileSync(tmp,JSON.stringify(bad));
   const q=v=>v.replace(/["\\]/g,m=>'\\'+m);   /* 屬性選擇器裡的引號、反斜線 */
@@ -105,7 +108,9 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
   c.serveRemote=true;
   for(const [w,tag] of [[900,'膠囊 900'],[1300,'詳情 1300']]){
     const {b:b2,mk:mk2,login:login2,remote:rem2}=await c.setup(tmp);
-    const g=await mk2(w,900,'light',false);await login2(g);
+    const g=await mk2(w,900,'light',false);g.reqs=[];
+    await g.context().route('https://attacker.invalid/**',r=>r.abort());g.on('request',r=>{if(/attacker\.invalid/.test(r.url()))g.reqs.push(r.url())});   /* 惡意樣式想載入的外部圖片：擋下並記錄 */
+    await login2(g);
     rem2().members.push({id:MID,name:X1+X2,role:'member'});   /* 負責人：登入建立第一個身分後才加進資料檔，重新讀一次 */
     await g.goto(g.url());await g.waitForTimeout(1800);
     await g.evaluate(()=>setSection('live',{instant:true}));await g.waitForTimeout(400);
@@ -123,6 +128,15 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     ok((v.par||'').includes(X2+X1)&&v.staff.includes(X1+X2)&&v.lbl.some(s=>s.includes(X1+X3)),`${tag} 檢視：母議題名、負責人名稱、標籤名原樣（${JSON.stringify([v.par,v.staff,v.lbl])}）`);
     ok(v.free.includes(X2+X1)&&v.place.some(s=>s.includes(X3)),`${tag} 檢視：沒連到行的時間標記名稱、地點原樣`);
     ok(v.links.some(([n,h])=>n===X1&&!/^javascript:/i.test(h))&&v.links.some(([n,h])=>n===X3&&h.startsWith('https://example.com/')),`${tag} 檢視：超連結文字原樣、javascript: 不會變成可執行的連結（${JSON.stringify(v.links)}）`);
+    /* 03 審查 P1-1：超連結、議題註記的顏色與位置（資料檔讀進來時 normalize 清一次；畫面組 HTML 時 cssColor／cssNum 再擋一次：直接改 state 不經 normalize 再畫） */
+    const css=sel=>g.evaluate(sel=>[...document.querySelectorAll(sel)].map(a=>{const c=getComputedStyle(a);return {pos:c.position,bg:c.backgroundImage,st:a.getAttribute('style')}}),sel);
+    const cssOk=l=>l.length>0&&l.every(x=>x.pos!=='fixed'&&!/url\(/.test(x.bg)&&!/attacker|position/.test(x.st));
+    {const a=await css(`${sc} .ev-links a`),m=await css('#gantt .g-mk');
+      ok(cssOk(a)&&a.length===3&&cssOk(m)&&!g.reqs.length,`${tag} 檢視：超連結、甘特圖註記的惡意顏色與位置沒有變成 position:fixed、沒有背景圖、沒有對外請求（${JSON.stringify([a,m])}；請求 ${g.reqs.length}）`);}
+    await g.evaluate(([id,iid,XC,XA])=>{const e=state.events.find(x=>x.id===id),i=state.issues.find(x=>x.id===iid);e.links.forEach(l=>{l.color=XC});i.links.forEach(l=>{l.color=XC});i.markers.forEach(m=>{m.color=XC;m.at=XA});progOpen=iid;render()},[EID,IID,XC,XA]);await g.waitForTimeout(300);
+    {const a=await css(`${sc} .ev-links a`),m=await css('#gantt .g-mk,#cardDetail .marker,#cardDetail .log-dot,#cardDetail .links a');
+      ok(cssOk(a)&&a.length===3&&cssOk(m)&&m.length>=3&&!g.reqs.length,`${tag} 檢視（不經 normalize 直接畫）：超連結、註記、處理紀錄的惡意顏色與位置擋在組 HTML 時（${JSON.stringify(m.map(x=>x.st))}；請求 ${g.reqs.length}）`);}
+    await g.evaluate(()=>{progOpen=null;render()});
     await g.click(`${sc} .kp-vl:nth-child(1) [data-kpgo]`);await g.waitForTimeout(700);
     await hover(g,sc);
     x=await xs(g);
@@ -133,6 +147,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     ok(e.editing&&e.title===X1+X2+X3&&JSON.stringify(e.lines)===JSON.stringify([X1,X2,X3,'時間行'])&&e.tm===1&&e.free.includes(X2+X1),`${tag} 編輯：標題、每行文字、時間行、沒連到行的時間標記原樣（${JSON.stringify(e)}）`);
     ok(e.issue[0]===X2+X1&&e.staff.includes(X1+X2)&&e.lbl.includes(X1+X3),`${tag} 編輯：母議題、負責人、標籤原樣（${JSON.stringify([e.issue,e.staff,e.lbl])}）`);
     ok(e.lkn.includes(X1)&&e.lkn.includes(X3)&&e.lku.includes(XJ),`${tag} 編輯：超連結名稱、網址原樣`);
+    {const k=await css(`${sc} .kp-lk .evf-sw`);ok(cssOk(k)&&k.length===3&&!g.reqs.length,`${tag} 編輯：超連結色點的惡意顏色沒有變成 position:fixed、沒有對外請求（${JSON.stringify(k.map(x=>x.st))}）`);}
     await g.click(`${sc} .kp-line [data-kptm]`);await g.waitForTimeout(400);x=await xs(g);
     ok(x.x===undefined&&!x.extra.length&&await g.evaluate(sc=>(document.querySelector(`${sc} .tp [data-tpf=place]`)||{}).value,sc)===X2,`${tag} 編輯：時間選取器的地點原樣、沒有執行`);
     await g.click(`${sc} .tp [data-tpok]`);await g.waitForTimeout(300);

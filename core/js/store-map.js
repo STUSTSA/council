@@ -47,6 +47,10 @@
      規則要逐行檢查形狀，陣列才能整欄一次檢查，見 firestore.rules 的 blocksOk）。02D 遷移的舊卡片是 [{id, text, check, timeId}]，讀得到，存檔時換成新格式。
      上限跟規則相同：最多 BLK_MAX 行、每行最多 TXT_MAX 字。 */
   const BLK_MAX = 50, TXT_MAX = 1000, CHK = { done: "☑ ", todo: "☐ " };
+  /* 03 審查（P1-1）：卡片最多 LNK_MAX 個超連結；超連結、議題註記的顏色只收 #rrggbb（畫面把顏色放進 style，規則 linksOk 也檢查卡片的超連結）。
+     讀回來時不合格的超連結顏色換成預設色（＝util.js 的 COLORS[0]）、註記拿掉顏色（畫面用預設色）；網頁 normalize 時再清一次（state.js 的 linksFix） */
+  const LNK_MAX = 10, HEX = /^#[0-9a-f]{6}$/i, LINK_COLOR = "#6a4fd8";
+  const linksIn = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x === "object").map(x => ({ ...copy(x), color: HEX.test(x.color) ? x.color : LINK_COLOR }));
   const lineOf = b => (b && typeof b.check === "boolean" ? (b.check ? CHK.done : CHK.todo) : "") + String((b && b.text) || "");
   const descOf = blocks => (blocks || []).map(lineOf).join("\n");
   /* 新的行 ID：決定性（L0、L1…），跟這張卡片已有的 ID 撞到就加後綴 */
@@ -213,9 +217,9 @@
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
     s.issues = (src.issues || []).slice().sort(byOrder).map(i => clean({ id: oid(dept, i.id), title: i.title, cur: i.cur, start: i.start, end: i.end,
-      note: i.note, tags: copy(i.tags || []), labels: (i.labels || []).map(x => oid(dept, x)), links: copy(i.links || []),
+      note: i.note, tags: copy(i.tags || []), labels: (i.labels || []).map(x => oid(dept, x)), links: linksIn(i.links),
       staff: (i.staff || []).map(x => fromStaff(dept, x)), doneAt: i.doneAt || null,
-      markers: (i.markers || []).map(m => clean({ ...copy(m), evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
+      markers: (i.markers || []).map(m => clean({ ...copy(m), color: HEX.test(m.color) ? m.color : undefined, evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
     s.weeks = (src.weeks || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(w => clean({ id: oid(dept, w.id), date: w.date, text: w.text, auto: w.auto || undefined }));
     const evByCard = {};
     (src.events || []).forEach(e => { if (e.cardId) (evByCard[e.cardId] = evByCard[e.cardId] || []).push(e); });
@@ -226,7 +230,7 @@
       const blocks = fromFsBlocks(dept, c.blocks);
       return clean({ id: oid(dept, c.id), name: c.title, desc: descOf(blocks), blocks,
         issueId: c.issueId ? oid(dept, c.issueId) : null, staff: (c.staff || []).map(x => fromStaff(dept, x)),
-        labels: (c.labels || []).map(x => oid(dept, x)), links: copy(c.links || []), report: !!c.report,
+        labels: (c.labels || []).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report,
         times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: e.startRaw || fmtTaipei(e.start.__ts, e.allDay),
           end: e.endRaw != null ? e.endRaw : fmtTaipei(e.end.__ts, e.allDay), place: e.place || "", toIssue: !!e.toIssue })),
         createdAt: c.createdAt ? strOf(c.createdAt) : undefined, doneAt: c.state === "done" ? strOf(c.doneAt) : null,
@@ -302,7 +306,7 @@
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, LNK_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);

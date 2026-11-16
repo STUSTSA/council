@@ -55,6 +55,15 @@ service cloud.firestore {
             && tt.join(' ').matches('^[A-Za-z0-9_-]{1,120}( [A-Za-z0-9_-]{1,120})*$')
             && t.hasAll(tt)));
     }
+    // 03 審查（P1-1）：卡片的超連結 links 最多 10 個（store-map.js 的 LNK_MAX），每個是 map、color 只能是 #rrggbb。
+    // 畫面把顏色放進 style="--c:…"，esc 擋不住「red;position:fixed;background:url(…)」這種用分號接新宣告的字串（畫面另有 util.js 的 cssColor）。
+    // 規則沒有迴圈：用固定索引逐個檢查（10 個，每個約 4 個運算式）；名稱、網址的內容不檢查（畫面一律跳脫、網址經過 safeUrl）
+    function linkOk(l, i)  { return l.size() <= i || (l[i] is map && l[i].get('color', null) is string && l[i].color.matches('^#[0-9A-Fa-f]{6}$')); }
+    function linksOk(l) {
+      return l is list && l.size() <= 10
+        && linkOk(l, 0) && linkOk(l, 1) && linkOk(l, 2) && linkOk(l, 3) && linkOk(l, 4)
+        && linkOk(l, 5) && linkOk(l, 6) && linkOk(l, 7) && linkOk(l, 8) && linkOk(l, 9);
+    }
     // 稽核鏈：同一批寫入裡必須新建 auditLogs/{col}_{id}_{rev}
     function auditAfter(col, id, rev) { return existsAfter(doc('auditLogs', col + '_' + id + '_' + string(rev))); }
     // 遷移：總管理員＋running 的批次（migration.md 第 3 節）
@@ -403,10 +412,11 @@ service cloud.firestore {
       allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
       allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
       // 03：blocks 每一行的形狀（blocksOk）。修改時 blocks、timeIds 都沒變（只換順序）不再檢查；永久刪除中（purging）也不檢查
-      // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）
-      allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', []))
+      // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）。超連結（linksOk）：新建一定檢查；修改時 links 有變才檢查（舊卡片沒改超連結照常能存）
+      allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', [])) && linksOk(d().get('links', []))
         && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
       allow update: if cardShape() && (d().state == 'purging' || unchanged(['blocks', 'timeIds']) || blocksOk(d().blocks, d().get('timeIds', [])))
+        && (unchanged(['links']) || linksOk(d().get('links', [])))
         && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
         && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
       allow delete: if purgeFinish() || rollbackDelete();

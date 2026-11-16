@@ -6,7 +6,7 @@
    4. 點外面儲存；復原這次修改
    5. 母議題、專員、標籤、超連結在原位改（沒有各欄的取消／完成），點外面跟其他修改一起存；重新載入後正確
    深色模式另外檢查：重要元素的文字與底色對比（≥ 4.5）、卡片以外沒有白底殘留（收合的膠囊照規格是白底）。
-   跳脫攻擊（桌面與手機各一次，檢視與編輯兩種狀態）：用模擬器的管理寫入（不經規則）塞惡意字串到卡片 ID、標題、每行文字、
+   跳脫攻擊（桌面與手機各一次，檢視與編輯兩種狀態）：用模擬器的管理寫入（不經規則）塞惡意字串到卡片 ID、標題、每行文字、超連結顏色（03 審查 P1-1：不會變成 position:fixed、不會對外請求）、
    時間標記名稱、地點與 ID、行 ID、負責人名稱與信箱（總管理員看得到信箱）、標籤名、母議題名、超連結網址（含 javascript:）與文字；
    確認 window.__x 沒被設定、文字原樣顯示、沒有多出元素（img、svg、on* 屬性）、超連結不是 javascript:。
    不合格的文件 ID（卡片、時間標記）照 02D 的防護整份略過、不合格的行 ID 換成新的（store-map.js 的 SAFE_ID）。
@@ -25,6 +25,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();if(v)return v;if(Date.now()-t0>ms)return v;await sleep(150)}};
 /* 惡意字串 */
 const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3="' onmouseover='window.__x=1",XJ='javascript:window.__x=1';
+const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.invalid/x.png)';   /* 03 審查 P1-1：超連結顏色用分號接新的宣告 */
 
 (async()=>{
   await new Promise(r=>srv.listen(PORT,'127.0.0.1',r));
@@ -55,7 +56,9 @@ const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3=
     await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc.replace(new RegExp(`(\\{ id: "${DEPT}",[^\\n]*?)( \\},?\\n)`),`$1, source: "firestore"$2`);
       s=s.replace(/firebase: \{[^}]*\}/,`firebase: { apiKey: "demo-key", authDomain: "", projectId: "${PROJECT}", appId: "", emulator: { host: "${h}", port: ${pt}, auth: "http://${AEMU}" } }`);
       r.fulfill({contentType:'text/javascript',body:s})});
-    const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));p.on('console',m=>{if(m.type()==='error'&&!/Failed to load resource/.test(m.text()))p.errs.push('console:'+m.text())});
+    await ctx.route('https://attacker.invalid/**',r=>r.abort());   /* 惡意樣式想載入的外部圖片：擋下並記錄（request 事件照樣會觸發） */
+    const p=await ctx.newPage();p.errs=[];p.reqs=[];p.on('pageerror',e=>p.errs.push(e.message));p.on('console',m=>{if(m.type()==='error'&&!/Failed to load resource/.test(m.text()))p.errs.push('console:'+m.text())});
+    p.on('request',r=>{if(/attacker\.invalid/.test(r.url()))p.reqs.push(r.url())});
     await p.goto(`${BASE}/index.html?d=${DEPT}`);
     await p.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await p.waitForTimeout(1200);
     p.o=o;return p};
@@ -222,7 +225,7 @@ const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3=
     await d.doc('roles/kpxe').set({super:false,depts:{[DEPT]:'editor'},rev:1,lastVia:'manual',lastRef:'bootstrap',updatedAt:now,updatedBy:'su'});
     const B={id:['kpxL1',X2,'kpxL3','kpxL4'],text:[X1,X2,X3,'時間行'],check:[null,false,true,false],time:[null,null,null,`${DEPT}__kpxt`]};
     const card={deptId:DEPT,title:X1+X2+X3,blocks:B,timeIds:[`${DEPT}__kpxt`,`${DEPT}__kpxf`,`${DEPT}__${X2}`],issueId:`${DEPT}__kpxi`,staff:['kpxs','kpxe',X2],labels:[`${DEPT}__kpxl`,`${DEPT}__"><img src=x onerror=window.__x=1>`],
-      links:[{id:'kpxk1',name:X1,url:XJ,color:'#3b82f6'},{id:X2,name:X3,url:`https://example.com/${X2}`,color:'#ef4444'}],report:false,state:'open',doneAt:null,deletedAt:null,deletedBy:null,order:-1,version:1,createdAt:now,createdBy:'x',...stamp};
+      links:[{id:'kpxk1',name:X1,url:XJ,color:'#3b82f6'},{id:X2,name:X3,url:`https://example.com/${X2}`,color:'#ef4444'},{id:'kpxk3',name:'壞顏色',url:'https://example.com/c',color:XC}],report:false,state:'open',doneAt:null,deletedAt:null,deletedBy:null,order:-1,version:1,createdAt:now,createdBy:'x',...stamp};
     await d.doc(C('kpxss')).set(card);
     await d.doc(`${C('kpxss')}/versions/1`).set({cardId:`${DEPT}__kpxss`,deptId:DEPT,version:1,title:card.title,blocks:B,times:[],state:'open',by:'x',at:now,imported:false});
     for(const [id,label,place] of [['kpxt',X1+X3,X2],['kpxf',X2+X1,X3],[X2,'不合格 ID 的時間','']])
@@ -236,6 +239,9 @@ const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3=
     const onAttr=[...root.querySelectorAll('*')].filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).map(e=>e.tagName);
     const jsHref=[...root.querySelectorAll('a[href]')].filter(a=>/^\s*javascript:/i.test(a.getAttribute('href'))).length;
     return {x:window.__x,extra,onAttr,jsHref,where}},[where]);
+  /* 超連結（檢視的按鈕、編輯的色點）：惡意顏色沒有變成 position:fixed、沒有背景圖、沒有對外請求 */
+  const css=async(p,sc)=>p.evaluate(sc=>[...document.querySelectorAll(`${sc} .ev-links a,${sc} .kp-lk .evf-sw`)].map(a=>{const c=getComputedStyle(a);return {pos:c.position,bg:c.backgroundImage,st:a.getAttribute('style')}}),sc);
+  const cssOk=l=>l.length>0&&l.every(x=>x.pos!=='fixed'&&!/url\(/.test(x.bg)&&!/attacker|position|;/.test(x.st));
   const hoverAll=async(p,sc)=>{for(const el of (await p.$$(`${sc} *`)).slice(0,120)){try{const bb=await el.boundingBox();if(bb&&bb.width>0&&bb.height>0&&bb.y>0&&bb.y<800)await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2)}catch(_){}}};
   for(const o of [{tag:'桌面 1300',w:1300,h:900,sc:'light'},{tag:'手機 412',w:412,h:860,sc:'light',touch:true}]){
     const T=o.tag;const p=await open(o);await signIn(p,'kp3ed');await setRole(edUid,{[DEPT]:'editor'});await until(()=>p.evaluate(()=>!boardLocked()&&state.events.some(e=>e.id==='kpxss')));
@@ -258,6 +264,7 @@ const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3=
     ok(view.times.includes(X2+X1)&&view.place.some(s=>s.includes(X3))&&!view.times.includes('不合格 ID 的時間'),`${T} 檢視：沒連到行的時間標記名稱、地點原樣，不合格 ID 的時間略過（${JSON.stringify([view.times,view.place])}）`);
     ok(view.links.some(([n,h])=>n===X1&&!/^javascript:/i.test(h))&&view.links.some(([n,h])=>n===X3&&h.startsWith('https://example.com/')),`${T} 檢視：超連結文字原樣、javascript: 網址不會變成可執行的連結（${JSON.stringify(view.links)}）`);
     ok(view.ids.every(i=>/^[A-Za-z0-9_-]*$/.test(i)||i==='title')&&!view.ids.includes(X2),`${T} 檢視：不合格的行 ID 換成新的（${JSON.stringify(view.ids)}）`);
+    {const cs=await css(p,sc);ok(cssOk(cs)&&cs.length===3&&!p.reqs.length,`${T} 檢視：超連結的惡意顏色沒有變成 position:fixed、沒有背景圖、沒有對外請求（${JSON.stringify(cs)}；請求 ${p.reqs.length}）`);}
     /* 編輯 */
     await p.click(`${sc} .kp-vl:nth-child(1) [data-kpgo]`);await p.waitForTimeout(700);
     await hoverAll(p,sc);
@@ -272,6 +279,7 @@ const X1='<img src=x onerror=window.__x=1>',X2='"><svg onload=window.__x=1>',X3=
     ok(edv.staff.includes(X1+X2),`${T} 編輯：負責人名稱原樣（${JSON.stringify(edv.staff)}）`);
     ok(edv.lbl.includes(X1+X3),`${T} 編輯：標籤名原樣`);
     ok(edv.lkn.includes(X1)&&edv.lkn.includes(X3)&&edv.lku.includes(XJ)&&edv.lku.includes(`https://example.com/${X2}`),`${T} 編輯：超連結名稱、網址原樣（${JSON.stringify(edv.lku)}）`);
+    {const cs=await css(p,sc);ok(cssOk(cs)&&cs.length===3&&!p.reqs.length,`${T} 編輯：超連結色點的惡意顏色沒有變成 position:fixed、沒有背景圖、沒有對外請求（${JSON.stringify(cs)}；請求 ${p.reqs.length}）`);}
     /* 打開時間選取器（地點是惡意字串） */
     await p.click(`${sc} .kp-free [data-kptm]`);await p.waitForTimeout(500);
     x=await xs(p,'時間選取器');
