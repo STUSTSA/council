@@ -148,6 +148,15 @@
      "tmId": "tmw3b7vk5uwv7",
      "text": "六宿女宿舍通道安全：安全場勘時間",
      "date": "2026-11-09"
+    },
+    {
+     "id": "mmwj2gm2b6mim",
+     "evId": "emwj2gm2bmzjb",
+     "at": 30,
+     "stage": "待回覆",
+     "pos": "up",
+     "text": "停車場冷氣機報廢後續（第 2 段）",
+     "date": "2026-11-16"
     }
    ],
    "links": [],
@@ -537,30 +546,22 @@
   {
    "id": "emvt1pwvqrhyw",
    "name": "停車場冷氣機報廢後續",
-   "desc": "報廢要求被退回學務處\n\n與宿舍/生輔組確認",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考",
    "createdAt": "2026-10-29",
    "staff": [],
    "touched": [
     "2026-10-27",
     "2026-11-03",
     "2026-11-05",
-    "2026-11-09"
+    "2026-11-09",
+    "2026-11-16"
    ],
    "links": [],
-   "times": [
-    {
-     "id": "tmw3b6j9am1v8",
-     "label": "安全場勘時間順代提出",
-     "start": "2026-11-09T16:00",
-     "end": "",
-     "toIssue": false,
-     "place": ""
-    }
-   ],
-   "round": 2,
-   "touchedAt": "2026-11-09T02:08",
+   "times": [],
+   "round": 3,
+   "touchedAt": "2026-11-16T17:33",
    "report": true,
-   "roundAt": "2026-11-05T16:54",
+   "roundAt": "2026-11-16T17:33",
    "labels": [],
    "issueId": "imvpc3f0dcpi6"
   },
@@ -1177,6 +1178,29 @@
    "touchedAt": "2026-11-10T21:54",
    "labels": [],
    "report": false
+  },
+  {
+   "id": "emwj2gm2bmzjb",
+   "name": "停車場冷氣機報廢後續",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考",
+   "createdAt": "2026-10-29",
+   "doneAt": "2026-11-16",
+   "issueId": "imvpc3f0dcpi6",
+   "links": [],
+   "staff": [],
+   "labels": [],
+   "times": [
+    {
+     "id": "tmw3b6j9am1v8",
+     "label": "安全場勘時間順代提出",
+     "start": "2026-11-09T16:00",
+     "end": "",
+     "toIssue": false,
+     "place": ""
+    }
+   ],
+   "round": 2,
+   "fromEv": "emvt1pwvqrhyw"
   }
  ],
  "yearLabel": "115學年",
