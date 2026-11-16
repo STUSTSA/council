@@ -8,6 +8,7 @@
    9. 03 審查 P1-3：右側詳情的「完成這一段」預填按下當下的內容；超過行數、字數上限不寫入
    10. 03 審查 P2-2：完成紀錄的說明欄超過行數、字數上限時給明確訊息、不寫入
    11. 03 審查 P2-3：設定列的小字（週報日期、看板名稱）原樣顯示、不會多出元素
+   12. 03 審查 P2-6：原位編輯中按結案、刪除先檢查名稱與超連結的按鈕名稱；填好後結案，核取行、時間行不變、desc 同步
    8. 03 審查 P1-2：原位編輯打字中關分頁會跳 beforeunload，只點進編輯沒改不擋
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
@@ -133,6 +134,33 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
         week:(el.querySelector('[data-set="report"] small,[data-set="week"] small')||{}).textContent,title:(el.querySelector('[data-set="title"] small')||{}).textContent}};
       return openSettings().then(()=>new Promise(r=>setTimeout(r,600))).then(()=>{const v=ok();state.title=keep.t;state.weeks=keep.w;closeSettings(true);render();return v})},XS);
     ok(r.x===undefined&&r.extra===0&&r.week==='最新一份 9<i>x</i>'&&r.title===XS,`P2-3 設定列：週報日期、看板名稱原樣顯示、沒有多出元素（${JSON.stringify(r)}）`);
+  }
+  /* 12. 03 審查 P2-6：原位編輯中按結案、刪除，先走跟點外面一樣的檢查（名稱、超連結的按鈕名稱）與 blocks 同步 */
+  {
+    const id=src.id,S=`.ev[data-ev="${id}"]`,st=()=>p.evaluate(()=>(document.querySelector('.kp-bar .kp-st')||{}).textContent);
+    const name0=await p.evaluate(i=>state.events.find(e=>e.id===i).name,id);
+    await p.evaluate(i=>{openEv.add(i);render()},id);await p.waitForTimeout(300);
+    await p.click(`${S} [data-kpgo="a1"]`);await p.waitForTimeout(400);
+    await p.fill(`${S} [data-kptitle]`,'  ');
+    await p.click(`${S} [data-evdone]`);await p.waitForTimeout(400);
+    ok(await p.evaluate(i=>editing&&!state.events.find(e=>e.id===i).doneAt,id)&&await st()==='請填名稱',`P2-6 名稱空白按結案：不結案、停在編輯、提示「${await st()}」`);
+    await p.click(`${S} [data-evdel]`);await p.waitForTimeout(400);
+    ok(await p.evaluate(i=>editing&&state.events.some(e=>e.id===i)&&!document.querySelector('#dlg[open]'),id)&&await st()==='請填名稱','P2-6 名稱空白按刪除：不跳確認、不刪除、提示「請填名稱」');
+    await p.fill(`${S} [data-kptitle]`,name0);
+    await p.click(`${S} [data-kplkadd]`);await p.waitForTimeout(300);await p.fill(`${S} .kp-lk:last-of-type [data-e=url]`,'https://example.com/noname');
+    await p.click(`${S} [data-evdone]`);await p.waitForTimeout(400);
+    ok(await p.evaluate(i=>editing&&!state.events.find(e=>e.id===i).doneAt,id)&&await st()==='請填按鈕名稱','P2-6 超連結沒填名稱按結案：不結案、提示「請填按鈕名稱」');
+    await p.fill(`${S} .kp-lk:last-of-type [data-e=name]`,'有名稱了');
+    await p.click(`${S} [data-kptx="a1"]`);await p.keyboard.press('End');await p.keyboard.type('  ');
+    await p.click(`${S} [data-evdone]`);await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
+    const e=remote().events.find(x=>x.id===id);
+    ok(e&&e.doneAt&&e.blocks.find(b=>b.id==='a1').check===true&&e.blocks.find(b=>b.id==='a1').text===e.blocks.find(b=>b.id==='a1').text.trim()&&e.blocks.some(b=>b.timeId==='tq')&&e.desc===e.blocks.map(b=>(typeof b.check==='boolean'?(b.check?'☑ ':'☐ '):'')+b.text).join('\n')&&e.links.some(l=>l.name==='有名稱了'),
+      `P2-6 填好後結案：存回資料檔、核取行與時間行不變、行尾空白去掉、desc 跟 blocks 同步（${JSON.stringify(e&&e.blocks.map(b=>[b.id,b.text,b.check,b.timeId]))}）`);
+    /* 移回即時回報，供後面的步驟使用（完成紀錄的編輯、移回、儲存） */
+    await p.evaluate(i=>{setSection('done',{instant:true});openDone.add(i);render()},id);await p.waitForTimeout(400);
+    await p.click(`.done-ev[data-done="${id}"] [data-edit]`);await p.waitForTimeout(400);await p.click(`.done-ev[data-done="${id}"] [data-evundo]`);await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});
+    await p.evaluate(()=>{setSection('live',{instant:true});render()});await p.waitForTimeout(400);
+    ok(await p.evaluate(i=>!editing&&!state.events.find(e=>e.id===i).doneAt,id),'P2-6 移回即時回報');
   }
   /* 8. 03 審查 P1-2：原位編輯打字中關分頁（或重新整理）會跳 beforeunload；只點進編輯、沒改不擋（用合成的 beforeunload 事件看有沒有 preventDefault） */
   {
