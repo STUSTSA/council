@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-13 13:56",
+ "savedAt": "2026-11-16 17:33",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -338,7 +338,7 @@
     "2026-11-12"
    ],
    "touchedAt": "2026-11-12T03:01",
-   "report": true,
+   "report": false,
    "roundAt": "2026-11-05T17:37",
    "labels": []
   },
