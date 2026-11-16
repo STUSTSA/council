@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-16 17:34",
+ "savedAt": "2026-11-16 17:38",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -841,7 +841,7 @@
   {
    "id": "emw0myswnrccf",
    "name": "緊急公關聲明流程",
-   "desc": "流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
+   "desc": "確認上週校正程序是否已更正\n\n流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
    "createdAt": "2026-11-03",
    "staff": [],
    "links": [
@@ -853,16 +853,17 @@
     }
    ],
    "times": [],
-   "round": 2,
+   "round": 3,
    "touched": [
     "2026-11-03",
     "2026-11-05",
     "2026-11-06",
-    "2026-11-10"
+    "2026-11-10",
+    "2026-11-16"
    ],
-   "touchedAt": "2026-11-10T19:07",
+   "touchedAt": "2026-11-16T17:38",
    "report": false,
-   "roundAt": "2026-11-05T17:06",
+   "roundAt": "2026-11-16T17:38",
    "labels": []
   },
   {
@@ -1202,6 +1203,27 @@
    ],
    "round": 2,
    "fromEv": "emvt1pwvqrhyw"
+  },
+  {
+   "id": "emwj2mymw9ljs",
+   "name": "緊急公關聲明流程",
+   "desc": "確認上週校正程序是否已更正\n\n流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
+   "createdAt": "2026-11-03",
+   "doneAt": "2026-11-16",
+   "issueId": null,
+   "links": [
+    {
+     "id": "lmwal5zucgc3s",
+     "name": "初版流程",
+     "url": "https://drive.google.com/file/d/1B0mLeHIdJXyk9DO6ouRxlYUXKpTRwSxD/view?usp=drive_link",
+     "color": "#6a4fd8"
+    }
+   ],
+   "staff": [],
+   "labels": [],
+   "times": [],
+   "round": 2,
+   "fromEv": "emw0myswnrccf"
   }
  ],
  "yearLabel": "115學年",
