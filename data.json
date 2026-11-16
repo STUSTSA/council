@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-16 17:41",
+ "savedAt": "2026-11-16 17:52",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -1209,7 +1209,8 @@
    ],
    "round": 2,
    "fromEv": "emvt1pwvqrhyw",
-   "report": false
+   "report": false,
+   "touched": []
   },
   {
    "id": "emwj2mymw9ljs",
@@ -1231,7 +1232,29 @@
    "times": [],
    "round": 2,
    "fromEv": "emw0myswnrccf",
-   "report": false
+   "report": false,
+   "touched": []
+  },
+  {
+   "id": "emwj2z9n02k6g",
+   "name": "婉如日聲明",
+   "desc": "討論聲明內容與校內環境檢視",
+   "createdAt": "2026-11-16",
+   "staff": [],
+   "links": [
+    {
+     "id": "lmwj33pk67jjt",
+     "name": "婉如日聲明",
+     "url": "https://drive.google.com/file/d/1syFs51V7FCsfoZocGqtD8x62GDdo1Vau/view",
+     "color": "#6a4fd8"
+    }
+   ],
+   "times": [],
+   "round": 1,
+   "touched": [
+    "2026-11-16"
+   ],
+   "touchedAt": "2026-11-16T17:52"
   }
  ],
  "yearLabel": "115學年",
