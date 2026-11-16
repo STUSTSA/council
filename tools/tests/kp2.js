@@ -5,6 +5,7 @@
    4. 復原這次修改：存回原本的 desc
    5. 母議題、超連結在原位改（03 T7），點外面跟其他修改一起存回資料檔
    7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
+   8. 03 審查 P1-2：原位編輯打字中關分頁會跳 beforeunload，只點進編輯沒改不擋
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
       行 ID、負責人名稱與 ID、標籤名與 ID、母議題名與 ID、超連結網址（含 javascript:）與文字都放惡意字串（github 模式的 ID 不會被過濾，原樣進屬性）；
       確認 window.__x 沒被設定、文字原樣顯示、沒有多出元素、超連結不是 javascript:、可以進入編輯並收合；
@@ -85,7 +86,21 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await sv();g=await got();
     ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字']),`P0-1 編輯中切換時間行勾選＋行尾空白：時間行不變、時間標記名稱沒有多空白（${show(g.e)}）`);
   }
-  ok(!p.errs.length,`沒有頁面錯誤（${p.errs.join(' | ')}）`);
+  /* 8. 03 審查 P1-2：原位編輯打字中關分頁（或重新整理）會跳 beforeunload；只點進編輯、沒改不擋（用合成的 beforeunload 事件看有沒有 preventDefault） */
+  {
+    const bu=()=>p.evaluate(()=>{const e=new Event('beforeunload',{cancelable:true});dispatchEvent(e);return e.defaultPrevented});
+    await p.evaluate(i=>{openEv.add(i);render()},src.id);await p.waitForTimeout(300);
+    await p.click(`.ev[data-ev="${src.id}"] [data-kpgo="a1"]`);await p.waitForTimeout(400);
+    ok(await p.evaluate(()=>editing&&!!kp)&&!(await bu()),'P1-2 只點進編輯、沒改：不擋關分頁');
+    await p.keyboard.press('End');await p.keyboard.type('未存的草稿');
+    const st=await p.evaluate(()=>({editing,dirty}));
+    ok(await bu(),`P1-2 打字中：擋關分頁（dirty=${st.dirty}，原位編輯不設 dirty，改成比對開始前的內容）`);
+    let got=null;p.on('dialog',async d=>{got=d.type();await d.dismiss().catch(()=>{})});
+    const errs=p.errs.slice();
+    await p.close({runBeforeUnload:true});await new Promise(r=>setTimeout(r,1500));
+    ok(got==='beforeunload',`P1-2 打字中關分頁（page.close runBeforeUnload）：跳出 beforeunload（${got}）`);
+    ok(!errs.length,`沒有頁面錯誤（${errs.join(' | ')}）`);
+  }
   await b.close();
 
   /* 6. 跳脫攻擊 */

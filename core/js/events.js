@@ -467,7 +467,10 @@ $("#importFile").addEventListener("change",async e=>{
     toast(`已匯入：${state.issues.length} 個議題、${state.events.length} 則即時回報、${state.weeks.length} 份週報`);
   }catch(err){toast("這個檔案讀不到看板資料")}
 });
-window.addEventListener("beforeunload",e=>{if(editing&&dirty){e.preventDefault();e.returnValue=""}});
+/* 關分頁、重新整理前：編輯中有改動就提醒。原位編輯的打字、勾選、新增刪除行直接寫進 state、不設 dirty（cancelEdit 等靠 dirty 判斷），
+   所以另外比對這張卡片跟開始前的內容（kp.before；新增的卡片沒有 before＝一定算改了）與這張以外的資料（03 審查 P1-2） */
+const kpDirty=()=>{if(!kp||!editing||cardEdit!=="e:"+kp.id)return false;const ev=kpEv();return !kp.before||!ev||JSON.stringify(ev)!==kp.before||dirtyOthers()};
+window.addEventListener("beforeunload",e=>{if(editing&&(dirty||kpDirty())){e.preventDefault();e.returnValue=""}});
 
 /* Esc：收起即時回報／完成紀錄的右側（有對話框、設定或通知層開著時不管） */
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||setOpen||notiOpen||$("#dlg").open)return;
