@@ -35,7 +35,7 @@
  },
  "title": "會長室工作進度",
  "pwKdf": "PeQbCwD/+SUhcfIPdXc2Yg==:kmxqm/Rt4YU6WUFdakICa3wEBOEgoPCmgka4X+Wi49c=",
- "savedAt": "2026-11-09 13:28",
+ "savedAt": "2026-11-16 21:31",
  "savedBy": "小芸",
  "labels": [],
  "meetGrant": {
@@ -44,7 +44,13 @@
   "at": "2026-11-09 13:28"
  },
  "semester": "",
- "docs": [],
+ "docs": [
+  {
+   "id": "dmwjaxotszedf",
+   "name": "2026彭婉如日_學代性別保障名額串聯聲明",
+   "url": "https://drive.google.com/file/d/1syFs51V7FCsfoZocGqtD8x62GDdo1Vau/view?usp=sharing"
+  }
+ ],
  "minutes": [],
  "sync": {
   "tokenAll": {
