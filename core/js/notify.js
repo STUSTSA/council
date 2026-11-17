@@ -50,7 +50,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)notiBadge(
 notiTickSet();
 
 /* ---------- 今日／明日：左右兩張卡片（手機也並排） ---------- */
-/* 卡片裡一列的時間欄：當天開始的寫時刻（沒有就「整天」），時段寫「第 k／N 天」 */
+/* 卡片裡一列的時間欄：當天開始的寫時刻（沒有就「整天」），時段寫「第 k／N 天」。時刻是資料裡的字串，呼叫端一律 esc（ui-06 審查 P2-4；calWhen、dkCardHTML 的時刻也是） */
 function dayWhen(x,d){
   if(!x.end)return x.time||"整天";
   const k=Math.round((pd(d)-pd(x.date))/864e5)+1,n=Math.round((pd(x.end)-pd(x.date))/864e5)+1;
@@ -63,7 +63,7 @@ function dayCardHTML(d,lab,cls,list){
   const xs=list.filter(x=>covers(x,d)),MAX=4;
   return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件">
     <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}<i>・</i>週${WD[pd(d).getDay()]}</b><small class="num">${xs.length?`${xs.length} 件`:""}</small></span></span>
-    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row"><span class="nd-t num">${dayWhen(x,d)}</span><span class="nd-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
+    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row"><span class="nd-t num">${esc(dayWhen(x,d))}</span><span class="nd-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
       :`<span class="nd-empty" aria-hidden="true"><i></i></span>`}
   </button>`;
 }
@@ -106,7 +106,7 @@ const calPill=(c,x)=>c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);
 const calKind=(c,x)=>x.kind==="meet"?" line":x.kind==="act"||c.mode==="mine"?" pri":c.mode==="pres"?" acc":"";
 function calListHTML(c,r){
   const d=c.day,xs=r.xs.filter(x=>covers(x,d));
-  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${calWhen(x)}</span></div><div class="ce-n">${esc(x.title)}</div>
+  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div><div class="ce-n">${esc(x.title)}</div>
       <div class="ce-b">${x.place?`<span class="ce-pl">${ico("pin","solo")}${esc(x.place)}</span>`:""}<span class="ce-k${calKind(c,x)}">${esc(calPill(c,x))}</span></div></div>`).join("")
     :r.loading?`<p class="cal-none">讀取中…</p>`:r.err?`<p class="cal-none">${esc(r.err)}</p>`:`<p class="cal-none num">${nmd(d)}</p>`;
   return `<div class="cal-list" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
@@ -239,7 +239,7 @@ function dkCardHTML(x,i){
   return `<div class="dk-card" data-dk="${esc(x.t.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':""}>
     <span class="dk-stp r" aria-hidden="true">改時間</span><span class="dk-stp l" aria-hidden="true">延後</span>
     <span class="dk-date"><b class="num">${+d.slice(8)}</b><small>${+d.slice(5,7)} 月・週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
-    <span class="dk-main"><b>${esc(x.t.label||x.b.text||x.ev.name||"（未命名）")}</b><small>${esc(x.ev.name||"")}${tm?`<span class="num">${tm}</span>`:""}</small></span>
+    <span class="dk-main"><b>${esc(x.t.label||x.b.text||x.ev.name||"（未命名）")}</b><small>${esc(x.ev.name||"")}${tm?`<span class="num">${esc(tm)}</span>`:""}</small></span>
   </div>`;
 }
 function lateHTML(){
@@ -332,7 +332,7 @@ let todayOpen=false;
 function todayHTML(){
   const t=today(),own=notiMine().filter(x=>covers(x,t));
   return `<div class="td-in"><div class="td-top"><span class="td-num num">${+t.slice(8)}</span><span class="td-lab"><b>今日</b><small class="num">${+t.slice(5,7)} 月・週${WD[pd(t).getDay()]}</small></span><button type="button" class="td-x-btn" data-tdclose aria-label="關閉今日">${ico("close")}關閉</button></div>
-    <section class="td-sec"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${own.map((x,i)=>`<li class="td-row" style="--i:${i}"><span class="td-t num">${dayWhen(x,t)}</span><span class="td-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></li>`).join("")}</ol>`:`<p class="td-none">今天沒有排定的事</p>`}</section></div>`;
+    <section class="td-sec"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${own.map((x,i)=>`<li class="td-row" style="--i:${i}"><span class="td-t num">${esc(dayWhen(x,t))}</span><span class="td-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></li>`).join("")}</ol>`:`<p class="td-none">今天沒有排定的事</p>`}</section></div>`;
 }
 /* 彈簧曲線取樣（質量 1、阻尼比 z、勁度 k）：回傳 0→1 的進度（會超過 1 再回來＝Q 彈）與總時間，拿來產生 Web Animations 的關鍵影格 */
 function springCurve(z,k,tol=.0015){
