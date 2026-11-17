@@ -8,7 +8,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
            換分頁、進出設定與通知都是同一個節點（data-fx-keep，不參加進場動畫）；顯示哪些鈕由 views.js 的 renderHero 決定 -->
       <header class="dhead" data-fx-keep>
         <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>
-        <img class="dh-logo" src="dept/icons/favicon.svg" alt="" width="46" height="46">
+        <img class="dh-logo" alt="" width="46" height="46">
         <div class="dh-name"><span class="dh-en" id="dhEn"></span><b id="dhName"></b></div>
         <span class="dh-ro" id="dhRo" hidden>唯讀</span>
         <span class="dh-st"><span class="sr-only" id="saveInfo" role="status"></span></span>
@@ -118,6 +118,9 @@ const SHELL_HTML=`<div class="pager" id="pager">
 /* 部門英文名（DESIGN-next 第四節）：標題列名稱上面的英文小標。用部門代號（dept/config.js 的 id）對照，不改設定檔；
    表上沒有的部門（例如測試用的水果部）不放英文小標 */
 const DEPT_EN={president:"PRESIDENT",secretariat:"SECRETARIAT",rights:"STUDENT RIGHTS",marketing:"MARKETING",finance:"FINANCE",events:"EVENTS",affairs:"CLUB AFFAIRS",pr:"PUBLIC RELATIONS",works:"FACILITIES"};
+/* 部門標誌（DESIGN-next 第五節「部門標誌」）：九個部門各一個 SVG（dept/icons/dept-代號.svg；藍 #0a5baa、黃 #f0bc23 寫在檔案裡，不跟主題變）。
+   標題列用 <img>；主頁的色塊把同一個檔案放進頁面裡（core/js/home.js），零件才能各自動。表上沒有的部門（測試用的水果部）用學生會的 favicon */
+const deptLogo=id=>DEPT_EN[id]?`dept/icons/dept-${id}.svg`:"dept/icons/favicon.svg";
 /* 學生會 logo（設定頁標題列）：同一份 SU_LOGO 路徑。淺色模式用原檔的彩色（2026-11-06 使用者）；深色模式是單色（跟著文字色，board.css「學生會 logo」段）。
    深色的標誌用使用者提供的單色線稿（2026-11-11 使用者：所有黑白模式的 logo 都換成線稿；splash.js 的 SU_LINE，跟開場動畫同一份：左邊小人線框、右邊小人實心），
    線稿用 SU_LINE.t 疊在彩色標誌的同一個位置，兩組只顯示一組（.logo-color／.logo-line）；字照舊填文字色。
@@ -141,6 +144,7 @@ function suLogoColor(label){
   const nm=document.getElementById("dhName"),en=document.getElementById("dhEn");
   if(nm)nm.textContent=CFG.dept.name||"";
   if(en){en.textContent=DEPT_EN[CFG.deptId]||"";en.hidden=!en.textContent}
+  const lg=document.querySelector(".dhead .dh-logo");if(lg)lg.src=deptLogo(CFG.deptId);
   const q=document.getElementById("boardQ");if(q)q.setAttribute("aria-label","搜尋"+(CFG.dept.name||""));
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
      設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light */

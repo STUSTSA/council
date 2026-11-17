@@ -20,9 +20,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
 
   /* 1. 標題列（登入前） */
   {const r=await p.evaluate(()=>{const h=document.querySelector('.dhead');return {keep:h&&h.hasAttribute('data-fx-keep'),home:(a=>a&&a.tagName==='A'&&a.getAttribute('href')==='home.html'&&a.getAttribute('aria-label')==='首頁'&&!!a.querySelector('svg .i-roof')&&!a.querySelector('.i-door'))(h.querySelector('.dh-home')),
-      logo:(i=>i&&/dept\/icons\/favicon\.svg$/.test(i.getAttribute('src'))&&i.complete&&i.naturalWidth>0)(h.querySelector('.dh-logo')),en:$('#dhEn').textContent,enCs:(s=>[s.fontFamily.split(',')[0].replace(/"/g,''),s.fontSize,s.letterSpacing])(getComputedStyle($('#dhEn'))),
+      logo:(i=>i&&/dept\/icons\/dept-rights\.svg$/.test(i.getAttribute('src'))&&i.complete&&i.naturalWidth>0)(h.querySelector('.dh-logo')),en:$('#dhEn').textContent,enCs:(s=>[s.fontFamily.split(',')[0].replace(/"/g,''),s.fontSize,s.letterSpacing])(getComputedStyle($('#dhEn'))),
       name:$('#dhName').textContent,nameW:getComputedStyle($('#dhName')).fontWeight,eye:$('#peekBtn').hidden,noti:$('#notiBtn').hidden,ro:$('#dhRo').hidden,old:!!document.querySelector('.hero,.logo-box,.hero-search')}});
-    ok(r.keep&&r.home&&r.logo,`標題列是保留節點、首頁鍵連到總覽（五邊形房子沒有門）、部門標誌是 dept/icons 的 SVG`);
+    ok(r.keep&&r.home&&r.logo,`標題列是保留節點、首頁鍵連到總覽（五邊形房子沒有門）、部門標誌是自己的 dept/icons/dept-rights.svg（ui-07 起九個部門各一個）`);
     ok(r.en==='STUDENT RIGHTS'&&r.enCs[0]==='Jost'&&r.enCs[1]==='10.5px'&&Math.abs(parseFloat(r.enCs[2])-10.5*.22)<.1,`英文小標 ${r.en}（${r.enCs.join(' ')}）`);
     ok(r.name==='權益部'&&+r.nameW>=700,`部門名 ${r.name}（${r.nameW}）`);
     ok(r.eye&&!r.noti&&r.ro,`登入前（GitHub 模式，登入就能編輯）：沒有眼睛鈕、有通知鈕、沒有唯讀標籤`);
