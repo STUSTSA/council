@@ -79,7 +79,13 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const toastHas=(p,s)=>until(()=>p.toasts.some(x=>x.includes(s)));
   const settled=p=>until(()=>p.evaluate(()=>!fsBusy&&storeFsBase&&!document.querySelector('#dlg[open]')),15000).then(()=>sleep(300));
   /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收合打開的卡片 */
-  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});openEv.clear();openDone.clear();selEv=null;render()}).then(()=>p.waitForTimeout(400));
+  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});lvOpen=null;dnOpen=null;render()}).then(()=>p.waitForTimeout(400));
+  /* ui-05：新增＝浮動圓鈕開一張空白卡片（900 寬是全螢幕），打名稱（Enter 到第一行打說明），返回鍵存檔並收回 */
+  const newCard=async(p,name,desc)=>{await liveTop(p);await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);
+    if(desc){await p.keyboard.press('Enter');await p.keyboard.type(desc)}await p.click('.lc-ed [data-lcback]');await settled(p)};
+  /* ui-05：完成、刪除＝把膠囊拖到右上角、左上角（編輯中不能拖） */
+  const dragTo=async(p,id,x,y)=>{await liveTop(p);const r=await p.$eval(`#events .cp[data-cp="${id}"]`,e=>{const b=e.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2}});
+    await p.mouse.move(r.x,r.y);await p.mouse.down();await p.mouse.move(r.x+10,r.y,{steps:3});await p.mouse.move(x,y,{steps:12});await p.mouse.up();await p.waitForTimeout(700)};
   const dlg=p=>p.waitForSelector('#dlg[open]',{timeout:8000}).then(()=>p.evaluate(()=>document.querySelector('#dlgForm b').textContent));
   const dlgSet=(p,o)=>p.evaluate(o=>{for(const [k,v] of Object.entries(o)){const i=document.querySelector(`#dlgForm [name="${k}"]`);i.value=v}},o);
   const dlgAct=async(p,a)=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(500)};
@@ -111,13 +117,12 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     ok(g.del===0&&g.gantt,`編輯者：沒有刪除議題、週報（部門管理員以上才能刪，02D D-d）、甘特圖時間軸（管理員）（${JSON.stringify(g)}）`);}
   await openSet(ed);{const s=await setText(ed);ok(s.includes('標籤')&&s.includes('報告')&&s.includes('備份')&&!s.includes('看板名稱')&&!s.includes('人員')&&!s.includes('學年'),'編輯者：設定頁有報告、標籤、備份，沒有看板名稱、人員、學年');}
   await closeSet(ed);
-  /* a. 新增卡片（小表單 → 直接儲存） */
-  await ed.click('#addEvent');ok((await dlg(ed))==='新增即時回報','新增卡片：表單');
-  await dlgSet(ed,{name:'FW 新卡片',desc:'第一行'});await dlgAct(ed,'ok');await settled(ed);
+  /* a. 新增卡片（ui-05：浮動圓鈕開一張空白卡片 → 名稱、第一行 → 返回鍵存檔） */
+  await newCard(ed,'FW 新卡片','第一行');
+  ok(await ed.evaluate(()=>!editing&&!lvOpen),'新增卡片：返回鍵存檔並收回');
   const nid=await ed.evaluate(()=>(state.events.find(e=>e.name==='FW 新卡片')||{}).id);
   let c=nid&&await read(C(nid)),v1=nid&&await read(`${C(nid)}/versions/1`);
   ok(c&&c.version===1&&c.state==='open'&&c.createdBy===edUid&&v1&&v1.title==='FW 新卡片'&&!v1.imported,'新增卡片：卡片＋第 1 版、createdBy＝自己');
-  ok(await toastHas(ed,'已新增即時回報'),'新增卡片：提示已新增');
   /* b. 改內容 */
   await editCard(ed,nid,ev=>{ev.desc='第一行\n第二行'});await settled(ed);
   c=await read(C(nid));const v2=await read(`${C(nid)}/versions/2`);
@@ -132,24 +137,13 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   e1=await read(`events/${DEPT}__tfw1`);ok(e1&&e1.place==='會議室'&&e1.rev===2,'改時間標記：rev 2');
   await editCard(ed,nid,ev=>{ev.times=[]});await settled(ed);
   c=await read(C(nid));ok(c.timeIds.length===0&&!(await read(`events/${DEPT}__tfw1`)),'拿掉時間標記：同一批刪掉 events 文件');
-  /* e. 結案（卡片上的「結案」鈕） */
-  await ed.evaluate(async id=>{await startEdit('e:'+id);openEv.add(id);render()},nid);
-  await ed.evaluate(id=>document.querySelector(`#events [data-ev="${id}"] [data-evdone]`).click(),nid);await settled(ed);
-  c=await read(C(nid));ok(c.state==='done'&&c.doneAt&&c.doneAt.toMillis()>Date.now()-60000,'結案：state done、doneAt＝伺服器時間');
-  await ed.evaluate(async id=>{await startEdit('e:'+id)},nid);
-  await ed.evaluate(id=>document.querySelector(`[data-ev="${id}"] [data-evundo]`).click(),nid);await settled(ed);
+  /* e. 完成（ui-05：把膠囊拖到右上角）、移回即時回報（完成紀錄卡片的「編輯」裡） */
+  await dragTo(ed,nid,890,10);await settled(ed);
+  c=await read(C(nid));ok(c.state==='done'&&c.doneAt&&c.doneAt.toMillis()>Date.now()-60000,'完成（拖到右上角）：state done、doneAt＝伺服器時間');
+  await ed.evaluate(async id=>{lcShow('done',id);await startEdit('e:'+id)},nid);await ed.waitForTimeout(400);
+  await ed.evaluate(id=>document.querySelector(`.lc[data-ev="${id}"] [data-evundo]`).click(),nid);await settled(ed);
   c=await read(C(nid));ok(c.state==='open'&&c.doneAt===null,'移回即時回報：state open、doneAt null');
-  /* 完成這一段：過去的時間標記移到完成紀錄（events 用新 ID 重建、舊的刪掉；超過 3 個分批） */
-  const rd=await ed.evaluate(()=>{const now=nowStr().replace(' ','T');const ev=state.events.filter(e=>!e.doneAt&&e.times.some(x=>x.start<=now)).sort((a,b)=>b.times.length-a.times.length)[0];return ev&&{id:ev.id,past:ev.times.filter(x=>x.start<=now).map(x=>x.id),all:ev.times.length}});
-  if(rd){
-    const had=await ed.evaluate(()=>state.events.map(e=>e.id));
-    await ed.evaluate(async id=>{await startEdit('e:'+id);evRoundDone(state.events.find(e=>e.id===id),'這段完成','下一段');if(fldCommitOpen())await saveFlow()},rd.id);await settled(ed);
-    c=await read(C(rd.id));const rec=await ed.evaluate(([id,had])=>{const r=state.events.find(e=>e.fromEv===id&&!had.includes(e.id));return r&&{id:r.id,times:r.times.map(x=>x.id)}},[rd.id,had]);
-    const rc=rec&&await read(C(rec.id));const gone=await Promise.all(rd.past.map(x=>read(`events/${DEPT}__${x}`)));
-    const fresh=rec?await Promise.all(rec.times.map(x=>read(`events/${DEPT}__${x}`))):[];
-    ok(rc&&rc.state==='done'&&rc.version===2&&c.timeIds.length===rd.all-rd.past.length&&gone.every(x=>!x)&&fresh.length===rd.past.length&&fresh.every(x=>x&&x.cardId===`${DEPT}__${rec.id}`),
-      `完成這一段：完成紀錄（done、第 2 版）、${rd.past.length} 個過去的時間標記換到完成紀錄（舊的刪掉、用新 ID 重建）`);
-  }else ok(false,'完成這一段：找不到有過去時間標記的卡片');
+  /* （ui-05 拿掉）「完成這一段」新介面沒有入口 */
   /* f. 新增議題 */
   await ed.evaluate(()=>{setSection('progress',{instant:true})});await ed.click('#addIssue');await ed.waitForTimeout(400);
   await ed.evaluate(async()=>{const i=state.issues[state.issues.length-1];i.title='FW 新議題';ifFld=null;dirty=true;await saveFlow()});await settled(ed);
@@ -171,9 +165,8 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   /* i. 永久刪除有時間標記的卡片（兩次確認） */
   const del=await ed.evaluate(()=>{const ev=state.events.filter(e=>!e.doneAt).sort((a,b)=>b.times.length-a.times.length)[0];return {id:ev.id,name:ev.name,times:ev.times.map(x=>x.id)}});
   const dc=await read(C(del.id));
-  await ed.evaluate(async id=>{await startEdit('e:'+id);openEv.add(id);render()},del.id);
-  await ed.evaluate(id=>document.querySelector(`#events [data-ev="${id}"] [data-evdel]`).click(),del.id);
-  ok((await dlg(ed)).startsWith('刪除「'),'刪除：第一次確認');await dlgAct(ed,'delete');
+  await dragTo(ed,del.id,10,10);   /* ui-05：刪除＝拖到左上角 */
+  ok((await dlg(ed)).startsWith('刪除「'),'刪除（拖到左上角）：第一次確認');await dlgAct(ed,'delete');
   ok((await dlg(ed))===`一起刪掉 ${del.times.length} 個時間標記？`,`刪除：第二次確認寫出 ${del.times.length} 個時間標記`);await dlgAct(ed,'delete');await settled(ed);
   const left=await Promise.all([read(C(del.id)),...del.times.map(x=>read(`events/${DEPT}__${x}`)),...Array.from({length:dc.version},(_,i)=>read(`${C(del.id)}/versions/${i+1}`))]);
   ok(left.every(x=>!x),`刪除：卡片、${dc.version} 個版本、${del.times.length} 個時間標記都不在了`);
@@ -182,7 +175,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(await ed.evaluate(id=>!state.events.some(e=>e.id===id),del.id),'刪除：畫面上也不在了');
 
   /* j. 時間標記多的卡片：一次加 5 個（分批建立）、一次拿掉 4 個（規則一批最多 3 個：分兩個版本）、永久刪除時分兩批清除 */
-  await liveTop(ed);await ed.click('#addEvent');await dlg(ed);await dlgSet(ed,{name:'FW 多標記',desc:''});await dlgAct(ed,'ok');await settled(ed);
+  await newCard(ed,'FW 多標記');
   const mid=await ed.evaluate(()=>state.events.find(e=>e.name==='FW 多標記').id);
   await editCard(ed,mid,ev=>{for(let i=1;i<=5;i++)ev.times.push({id:'tmany'+i,label:'標記'+i,start:'2026-12-0'+i,end:'',place:'',toIssue:false})});await settled(ed);
   c=await read(C(mid));let evs=await Promise.all([1,2,3,4,5].map(i=>read(`events/${DEPT}__tmany${i}`)));
@@ -191,8 +184,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   c=await read(C(mid));evs=await Promise.all([1,2,3,4,5].map(i=>read(`events/${DEPT}__tmany${i}`)));
   ok(c.version===4&&c.timeIds.length===1&&evs.slice(0,4).every(x=>!x)&&evs[4]&&!!(await read(`${C(mid)}/versions/3`)),`一次拿掉 4 個：分成兩個版本（version ${c.version}），4 個都刪掉`);
   await editCard(ed,mid,ev=>{for(let i=6;i<=9;i++)ev.times.push({id:'tmany'+i,label:'標記'+i,start:'2026-12-0'+i,end:'',place:'',toIssue:false})});await settled(ed);
-  await ed.evaluate(async id=>{await startEdit('e:'+id);openEv.add(id);render()},mid);
-  await ed.evaluate(id=>document.querySelector(`#events [data-ev="${id}"] [data-evdel]`).click(),mid);
+  await dragTo(ed,mid,10,10);
   await dlg(ed);await dlgAct(ed,'delete');ok((await dlg(ed))==='一起刪掉 5 個時間標記？','刪除 5 個時間標記的卡片：第二次確認');await dlgAct(ed,'delete');await settled(ed);
   const left2=await Promise.all([read(C(mid)),...[5,6,7,8,9].map(i=>read(`events/${DEPT}__tmany${i}`)),...[1,2,3,4,5].map(v=>read(`${C(mid)}/versions/${v}`))]);
   ok(left2.every(x=>!x),'刪除 5 個時間標記、5 個版本的卡片：全部清掉（分批）');
@@ -346,21 +338,20 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
       '兩個人同時接著清：不會卡住，最後全部清完');
     await e3.ctx.close();}
 
-  /* ---------- 10. 分批儲存中途失敗（02D 審查 P1）：前面的批已寫入 → 重新讀一次、只補寫剩下的；完成這一段的時間標記不會重複 ---------- */
-  {await liveTop(e2);await e2.click('#addEvent');await dlg(e2);await dlgSet(e2,{name:'FW 分批',desc:''});await dlgAct(e2,'ok');await settled(e2);
+  /* ---------- 10. 分批儲存中途失敗（02D 審查 P1）：前面的批已寫入 → 重新讀一次、只補寫剩下的 ----------
+     ui-05：原本用「完成這一段」（新介面沒有入口）製造多批寫入，改成一次拿掉 4 個時間標記（規則一批最多 3 個：分兩批） */
+  {await newCard(e2,'FW 分批');
     const pid=await e2.evaluate(()=>state.events.find(e=>e.name==='FW 分批').id);
-    await editCard(e2,pid,ev=>{ev.times.push({id:'tpart1',label:'分批一',start:'2020-01-01',end:'',place:'',toIssue:false},{id:'tpart2',label:'分批二',start:'2020-01-02',end:'',place:'',toIssue:false})});await settled(e2);
+    await editCard(e2,pid,ev=>{for(let i=1;i<=5;i++)ev.times.push({id:'tpart'+i,label:'分批'+i,start:'2020-01-0'+i,end:'',place:'',toIssue:false})});await settled(e2);
+    const v0=(await read(C(pid))).version;
     let n=0,failed=0;
     await e2.ctx.route(/documents:commit/,r=>{n++;if(n===2){failed++;return r.fulfill({status:403,contentType:'application/json',body:JSON.stringify({error:{code:403,message:'test',status:'PERMISSION_DENIED'}})})}return r.continue()});
-    const had=await e2.evaluate(()=>state.events.map(e=>e.id));e2.toasts.length=0;
-    await e2.evaluate(async id=>{await startEdit('e:'+id);evRoundDone(state.events.find(e=>e.id===id),'分批完成','下一段');if(fldCommitOpen())await saveFlow()},pid);await settled(e2);
+    e2.toasts.length=0;
+    await editCard(e2,pid,ev=>{ev.times=ev.times.filter(x=>x.id==='tpart5')});await settled(e2);
     await e2.ctx.unroute(/documents:commit/);
-    const rec=await e2.evaluate(([id,had])=>{const r=state.events.find(e=>e.fromEv===id&&!had.includes(e.id));return r&&r.id},[pid,had]);
-    const rc=rec&&await read(C(rec)),pc=await read(C(pid));
-    let evs=[];await admin(async d=>{evs=(await d.collection('events').where('deptId','==',DEPT).get()).docs.map(s=>({id:s.id,...s.data()})).filter(x=>['分批一','分批二'].includes(x.label))});
+    const pc=await read(C(pid)),gone=await Promise.all([1,2,3,4].map(i=>read(`events/${DEPT}__tpart${i}`))),keep=await read(`events/${DEPT}__tpart5`);
     ok(failed===1&&n>=3&&await toastHas(e2,'部分修改已寫入，正在補寫'),`第二批被擋下（模擬）：提示部分已寫入、正在補寫（commit ${n} 次）`);
-    ok(rc&&rc.state==='done'&&rc.version===2&&pc.timeIds.length===0&&evs.length===2&&evs.every(x=>x.cardId===`${DEPT}__${rec}`)&&!(await read(`events/${DEPT}__tpart1`)),
-      `補寫後收斂：完成紀錄 done（第 2 版）、原卡片的時間標記拿掉、時間標記只有 2 份都在完成紀錄（${evs.length} 份，沒有重複）`);
+    ok(pc.timeIds.length===1&&gone.every(x=>!x)&&keep&&pc.version>v0,`補寫後收斂：4 個時間標記都刪掉、剩 1 個、版本前進（${v0}→${pc.version}）`);
     ok(await e2.evaluate(()=>!editing&&!document.querySelector('#dlg[open]')),'補寫成功：結束編輯、沒有跳出儲存失敗');}
 
   /* ---------- 11. 裝置上 github 模式留下的本機暫存（02D D-e）：部門切到 firestore 後不會被讀進畫面、也不會被存回 Firestore ----------

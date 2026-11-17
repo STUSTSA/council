@@ -251,7 +251,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
     await d.doc(C(X1)).set({...card,title:'不合格 ID 的卡片',timeIds:[]});
   });
   const xs=async(p,where)=>p.evaluate(([where,X])=>{
-    const all=s=>[...document.querySelectorAll(`#livePanel ${s},#lcFull ${s}`)];
+    const all=s=>[...document.querySelectorAll(s.split(',').map(x=>`#livePanel ${x},#lcFull ${x}`).join(','))];
     const extra=all('img,svg:not(.ico):not(.csel-chev):not([aria-hidden="true"]),script,iframe').map(e=>e.outerHTML.slice(0,60));
     const onAttr=all('*').filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).map(e=>e.tagName);
     const jsHref=all('a[href]').filter(a=>/^\s*javascript:/i.test(a.getAttribute('href'))).length;

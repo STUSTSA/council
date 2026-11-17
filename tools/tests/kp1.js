@@ -190,7 +190,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const legacy=await ed.evaluate(()=>{const e=state.events.find(x=>!x.doneAt&&x.desc.includes('\n')&&x.blocks.every(b=>b.check===null));return e&&{id:e.id,desc:e.desc,n:e.desc.split('\n').length}});
   {const lc=legacy&&rows(await read(C(legacy.id)));ok(!!lc&&lc.length===legacy.n&&lc.every(x=>x[1]===null&&x[2]===null)&&lc.map(x=>x[0]).join('\n')===legacy.desc,`遷移的舊卡片（資料檔只有 desc）：每行一個純文字行（${legacy&&legacy.n} 行）`);}
   await expand(ed,legacy.id);
-  const lv=await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.lc[data-ev="${id}"] .ln`)];return {n:li.length,boxes:li.filter(x=>x.querySelector('input')).length,txt:li.map(x=>x.querySelector('.tx').textContent).join('\n')}},legacy.id);
+  const lv=await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.lc[data-ev="${id}"] .ln:not(.free)`)];return {n:li.length,boxes:li.filter(x=>x.querySelector('input')).length,txt:li.map(x=>x.querySelector('.tx').textContent).join('\n')}},legacy.id);
   ok(lv.n===legacy.n&&lv.boxes===0&&lv.txt===legacy.desc,`舊卡片：每行顯示成純文字（${lv.n} 行）`);
   /* 02D 遷移的舊格式（每行一個物件），而且沒有行 ID */
   await admin(d=>d.doc(C('kpold')).set({deptId:DEPT,title:'沒有行 ID 的舊卡',blocks:[{text:'第一行'},{text:'第二行'}],timeIds:[],issueId:null,staff:[],labels:[],links:[],report:false,state:'open',

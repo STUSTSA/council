@@ -183,7 +183,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     times:[{id:TID,label:'時間行',start:'2026-11-20T14:00',end:'',place:X2,toIssue:false},{id:FID,label:X2+X1,start:'2026-11-21',end:'',place:X3,toIssue:false}],round:1,touched:[]});
   const tmp=require('os').tmpdir()+'/kp2-xss.json';fs.writeFileSync(tmp,JSON.stringify(bad));
   const q=v=>v.replace(/["\\]/g,m=>'\\'+m);   /* 屬性選擇器裡的引號、反斜線 */
-  const xs=pg=>pg.evaluate(()=>{const all=s=>[...document.querySelectorAll(`#livePanel ${s},#lcFull ${s}`)];return {x:window.__x,extra:all('img,svg:not(.ico):not(.csel-chev):not([aria-hidden="true"]),script,iframe').map(e=>e.outerHTML.slice(0,60)),
+  const xs=pg=>pg.evaluate(()=>{const all=s=>[...document.querySelectorAll(s.split(',').map(x=>`#livePanel ${x},#lcFull ${x}`).join(','))];return {x:window.__x,extra:all('img,svg:not(.ico):not(.csel-chev):not([aria-hidden="true"]),script,iframe').map(e=>e.outerHTML.slice(0,60)),
     on:all('*').filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).length,js:all('a[href]').filter(a=>/^\s*javascript:/i.test(a.getAttribute('href'))).length}});
   const hover=async(g,sc)=>{for(const el of (await g.$$(`${sc} *`)).slice(0,100)){const bb=await el.boundingBox().catch(()=>null);if(bb&&bb.width&&bb.height&&bb.y>0&&bb.y<880)await g.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2)}};
   c.serveRemote=true;
