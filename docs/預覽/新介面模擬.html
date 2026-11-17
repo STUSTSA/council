@@ -1788,7 +1788,9 @@ function morph(a,b){if(a.nodeType!==1){if(a.data!==b.data)a.data=b.data;return}
   morphKids(a,b)}
 const TPL=document.createElement("template");let lastScreen="";
 function paint(html){const same=lastScreen===S.screen+"|"+S.dept;lastScreen=S.screen+"|"+S.dept;TPL.innerHTML=html;
-  view.getAnimations({subtree:true}).forEach(a=>{if(!(window.CSSTransition&&a instanceof CSSTransition))a.cancel()});
+  /* 重畫前只收掉程式發動的動畫（進場、變形那些，不收的話留下來的節點會卡在半路）。樣式表自己的動畫與過渡不動：
+     開場標誌、圖示動作這類正在播的東西，節點沒換就要讓它播完——取消掉的話同一個節點不會再播第二次 */
+  view.getAnimations({subtree:true}).forEach(a=>{if(!(window.CSSTransition&&a instanceof CSSTransition)&&!(window.CSSAnimation&&a instanceof CSSAnimation))a.cancel()});
   const dk0=$(".dock",view),dk1=TPL.content.querySelector(".dock");S.dockKept=!!(dk0&&dk1&&dk0.dataset.keep===dk1.dataset.keep);
   if(same){S.topKept=!!view.querySelector(":scope>.bd-top");morphKids(view,TPL.content);return}
   /* 換畫面：整個換新，只有上面那排（內容相同時）與主頁下排沿用 */
