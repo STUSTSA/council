@@ -1,4 +1,4 @@
-/* 03 即時回報的原位編輯器（Keep 式，core/js/events.js 的「原位編輯器」段、views.js 的 kpEditorHTML／evLinesHTML／tpHTML）＋逐行內容 blocks（store-map.js）。
+/* 03 即時回報的原位編輯器（Keep 式，core/js/live.js 的 kpEditorHTML／evLinesHTML／tpHTML 與「原位編輯器」段）＋逐行內容 blocks（store-map.js）。
    firestore 模式驗收：Auth 模擬器＋Firestore 模擬器、正式規則；權益部用遷移程式匯入後切成 firestore。全部用畫面操作（點、打字、自製下拉、時間選取器、點外面）。
    1. 三行純文字存好；第 1、3 行轉成核取，重新載入後正確
    2. 純文字、核取（勾）、時間＋核取各一行，重新載入後各自正確（時間標記的 blockId 指向那一行、名稱＝那一行的文字）

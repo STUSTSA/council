@@ -327,7 +327,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 @media print{
   .ev-edrow{display:none}
 }
-/* --- 逐行內容（檢視；views.js 的 evLinesHTML）：純文字、核取（.fld-check，沒有權限＝不能按）、時間＋核取；有權限的人點一行＝原位編輯 --- */
+/* --- 逐行內容（檢視；live.js 的 evLinesHTML）：純文字、核取（.fld-check，沒有權限＝不能按）、時間＋核取；有權限的人點一行＝原位編輯 --- */
 .kp-view{list-style:none;margin:0;padding:0;display:grid;gap:2px}
 .kp-vl{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;line-height:1.75}
 .kp-vl .kp-ck{flex:none;padding-top:2px}
@@ -357,7 +357,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .opening .done-body>*:nth-child(7){animation-delay:0.48s}
 .opening .done-body>*:nth-child(8){animation-delay:0.55s}
 .ev.opening .ev-body>*:first-child{animation-delay:.06s}
-/* --- 原位編輯器（即時回報卡，views.js 的 kpEditorHTML／kpFieldsHTML；events.js 的「原位編輯器」段） ---
+/* --- 原位編輯器（即時回報卡，live.js 的 kpEditorHTML／kpFieldsHTML 與「操作」的原位編輯器段） ---
    名稱一列、每一行＝種類（自製下拉）＋核取框＋時間＋文字＋刪除；下面母議題、專員、標籤、超連結（直接改，沒有各自的取消／完成）；
    最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」，存好後的「已儲存＋復原這次修改」也在這一段（列印時 .kp-bar 整列不印） */
 .kp{display:grid;gap:4px;margin-top:10px}
@@ -389,7 +389,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .kp-lk{display:flex;align-items:center;gap:6px}
 .kp-lk .evf-row{flex:1;min-width:0}
 .kp-fv .kp-add{margin:0}
-/* 儲存回饋：編輯中＝狀態＋「儲存」（.card-edbar.kp-bar）；存好後（檢視）＝「已儲存」＋「復原這次修改」（.kp-bar.kp-done，views.js 的 kpStatusHTML） */
+/* 儲存回饋：編輯中＝狀態＋「儲存」（.card-edbar.kp-bar）；存好後（檢視）＝「已儲存」＋「復原這次修改」（.kp-bar.kp-done，live.js 的 kpStatusHTML） */
 .kp-bar{align-items:center}
 .kp-done{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;animation:fadeSlide var(--mo-base) var(--mo-out) both}
 .kp-st{margin-right:auto;font-size:12.5px;color:var(--muted);transition:color var(--mo-fast) var(--mo-out)}
@@ -404,7 +404,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
   .kp-bar{display:none}
 }
 @media (prefers-reduced-motion:reduce){.kp-done{animation:none}}
-/* --- 時間選取器（原位編輯器的時間，views.js 的 tpHTML；不用瀏覽器原生的日期、時間彈出） ---
+/* --- 時間選取器（原位編輯器的時間，live.js 的 tpHTML；不用瀏覽器原生的日期、時間彈出） ---
    開始／結束切換、月曆（選到的日子實心、期間淡底、今天細框）、開始與結束時刻、地點、寫進母議題、完成 */
 .tp{display:grid;gap:8px;max-width:340px;margin:2px 0 8px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide var(--mo-base) var(--mo-out) both}
 .tp-ends{display:flex;align-items:center;gap:6px}
@@ -432,7 +432,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 }
 @media (prefers-reduced-motion:reduce){.tp{animation:none}}
 /* --- 拖曳排序 --- */
-/* 拖曳排序（events.js 的「即時回報排序」）：登入、沒有卡片在編輯時標題可抓，放開直接儲存；拖著的那顆浮在最上面、跟著指標走 */
+/* 拖曳排序（live.js 的「即時回報排序」）：登入、沒有卡片在編輯時標題可抓，放開直接儲存；拖著的那顆浮在最上面、跟著指標走 */
 body.authed:not(.edit) #events .events>.ev>summary{cursor:grab;-webkit-touch-callout:none}
 .ev.ev-dragging{z-index:5;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.35);transition:none}
 html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}

@@ -63,7 +63,7 @@ const doneIssues=()=>state.issues.filter(i=>i.doneAt&&!(editing&&keepIds.has(i.i
 let rendering=false;
 function render(){
   if(rendering)return;rendering=true;
-  const flip=Anim.capture(),kf=kpFocusGet();   /* 原位編輯器裡的游標：重畫後放回原位（events.js） */   /* 動畫規則 2：data-flip 容器裡的項目，render 前後比對位置（anim.js） */
+  const flip=Anim.capture(),kf=kpFocusGet();   /* 原位編輯器裡的游標：重畫後放回原位（live.js） */   /* 動畫規則 2：data-flip 容器裡的項目，render 前後比對位置（anim.js） */
   try{
     document.body.classList.toggle("edit",editing);
     document.body.classList.toggle("locked",boardLocked());
