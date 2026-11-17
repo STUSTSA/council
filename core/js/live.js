@@ -327,12 +327,13 @@ function lvEdClick(t,ev){
   const iss=t.closest("[data-teiss]");if(iss){const tt=ev.times.find(x=>x.id===iss.dataset.teiss);if(tt){tt.toIssue=iss.checked;kpSync(ev)}return true}
   return false;
 }
-/* 勾選（核取框、時間線的圓點）：寫進 state、只換那一行的樣子（不重畫）、勾勾彈一下 */
+/* 勾選（核取框、時間線的圓點）：寫進 state、只換那一行的樣子（不重畫）、勾勾彈一下、游標到那一行 */
 function lvCheck(ev,ck){
   const b=ev.blocks.find(x=>x.id===ck.dataset.kpck);if(!b)return;b.check=!b.check;kpSync(ev);
   if(ck.tagName==="INPUT")ck.checked=b.check;else ck.setAttribute("aria-checked",String(b.check));
   const ln=ck.closest(".ln");if(ln){ln.classList.toggle("done",b.check);const tc=ln.querySelector(".tmc");if(tc)tc.classList.toggle("late",!b.check&&tmLate(ev.times.find(x=>x.id===b.timeId)))}
   if(!reduceMotion())ck.animate([{transform:"scale(.7)"},{transform:"scale(1.16)",offset:.55},{transform:"none"}],{duration:280,easing:MO.out});
+  ln&&ln.querySelector("input.tx")?.focus({preventScroll:true});   /* 游標到那一行（ui-03：按核取框那一下不失焦，放開後到那一行） */
   if(typeof Sfx!=="undefined")Sfx.play("check");
 }
 /* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行；時間頁選到一段時上下鍵、數字調整；Esc＝收起母議題選單或存檔並離開編輯 */
