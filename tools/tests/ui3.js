@@ -13,6 +13,7 @@
    11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
    12. 審查 P2-2：編輯中游標在 .kp-tx，點專員、標籤的勾選膠囊（label）後 activeElement 仍是那一欄（桌面、手機觸控 412）
    13. 審查 P2-3：照順序配對時含焦點的節點只有 data-* 一樣才沿用（[a,b(焦點)]→[z,a,b]）；MORPH_KEYS 有 evfk iffk kplb lblname
+   14. 審查 P2-4：HTML 寫過、後來不寫的 style 拿掉；程式在執行時設的 style 保留
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -220,6 +221,16 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
       d.remove();return out});
     ok(r.x==='b'&&r.v==='B打到一半'&&r.same,`[a,b(焦點)]→[z,a,b]：焦點那一欄 data-x=${r.x}、值「${r.v}」、同一個節點 ${r.same}（${r.list}）`);
     ok(r.keys,'MORPH_KEYS 有 evfk、iffk、kplb、lblname');}
+  /* 14. 審查 P2-4：HTML 寫過、後來不寫的 style 會拿掉；程式在執行時改的 style 保留 */
+  {const r=await p.evaluate(()=>{const d=document.createElement('div');document.body.append(d);
+      morphTo(d,'<p class="m4" style="color: red">x</p>');const n=d.firstChild;
+      morphTo(d,'<p class="m4">x</p>');const gone=d.firstChild===n&&!n.hasAttribute('style');
+      n.style.transform='translateX(3px)';morphTo(d,'<p class="m4">y</p>');const rt=d.firstChild===n&&n.style.transform==='translateX(3px)';
+      morphTo(d,'<p class="m4" style="--c:#123">y</p>');n.style.opacity='.5';morphTo(d,'<p class="m4">z</p>');const rt2=n.style.opacity==='0.5';
+      morphTo(d,'<p class="m4" style="--c:#456">z</p>');const set=n.getAttribute('style')==='--c:#456';morphTo(d,'<p class="m4">z</p>');const gone2=!n.hasAttribute('style');
+      d.remove();return {gone,rt,rt2,set,gone2}});
+    ok(r.gone&&r.gone2,`HTML 寫過、後來不寫的 style 拿掉了（${r.gone}、${r.gone2}）`);
+    ok(r.rt&&r.rt2&&r.set,`程式在執行時設的 style 保留（沒寫過 style 的 ${r.rt}、HTML 寫過又被程式改的 ${r.rt2}）`);}
 
   ok(!p.errs.length,'沒有錯誤'+(p.errs.length?'：'+p.errs.slice(0,3).join(' | '):''));
   await b.close();

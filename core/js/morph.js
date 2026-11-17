@@ -8,7 +8,8 @@
      搬動節點時不搬含有焦點的那一個（改搬它前面的兄弟），焦點與手機鍵盤不會掉。
    - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中、卡片堆飛出去 go-yes／go-no…）不會被拿掉；
      只能放「程式加、HTML 從來不寫」的暫時狀態；一直都要有的外觀（例如 LiquidSeg 的 .glass）寫在 HTML 裡，不放這裡。
-     新的 HTML 沒寫 style 時保留節點上程式寫的 style（動畫、拖曳、FLIP 的暫時位移）。
+     style：新的 HTML 沒寫 style 時，節點上的 style 跟上一次 HTML 寫的一樣（MORPH_ST 記著）才拿掉；程式在執行時寫的或改過的
+     （動畫、拖曳、FLIP 的暫時位移）保留。不是經過這裡建的節點（骨架、別的程式 innerHTML 進來的）沒有紀錄，style 一律保留。
    - <details> 展開收合時 motion.js 會把內容包進 .dwrap：比對時把新 HTML 的內容當成在 .dwrap 裡，不會因為多一層而整塊重建。
    - SVG（圖示、標誌）內部不逐一比對：整段一樣就不動，不一樣才換掉。
    第一次畫（容器是空的）或換成完全不同的內容時，結果跟 innerHTML 一樣是新建的節點。不依賴其他檔案。 */
@@ -16,6 +17,9 @@ const MORPH_KEYS=["key","ev","done","issue","blk","lk","tp","dk","week","fw","fk
 const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov","go-yes","go-no"];
 const morphCls=n=>{for(const c of n.classList)if(!MORPH_RT.includes(c))return c;return ""};   /* 第一個 class（不算程式執行時加的） */
 const morphKey=n=>{if(n.nodeType!==1)return "";if(n.id)return "#"+n.id;const d=n.dataset;if(!d)return "";for(const k of MORPH_KEYS){const v=d[k];if(v!=null&&v!=="")return k+":"+v}return ""};
+const MORPH_ST=new WeakMap();   /* 節點 → 上一次 HTML 寫的 style */
+const morphCssEl=document.createElement("i"),morphCss=v=>{morphCssEl.setAttribute("style",v||"");return morphCssEl.style.cssText};   /* 比較前正規化（程式改過再改回來，字串寫法會不同） */
+const morphMark=n=>{if(n.nodeType!==1)return;if(n.hasAttribute("style"))MORPH_ST.set(n,n.getAttribute("style"));n.querySelectorAll("[style]").forEach(x=>MORPH_ST.set(x,x.getAttribute("style")))};   /* 從 HTML 新建的節點：記下 HTML 寫的 style */
 const morphFocus=n=>{const a=document.activeElement;return !!a&&a!==document.body&&n.contains(a)};
 const morphData=(x,y)=>{const d=n=>[...n.attributes].filter(t=>t.name.startsWith("data-")).map(t=>t.name+"="+t.value).sort().join("\n");return d(x)===d(y)};   /* data-* 全部一樣 */
 /* 把 node 放到 ref 的位置。node 含有焦點時不搬它（搬了會失焦），改把 ref 到 node 之間的兄弟搬到 node 後面 */
@@ -39,7 +43,7 @@ function morphKids(a,b){
     if(k){m=keyed.get(n.tagName+k)||null;keyed.delete(n.tagName+k)}
     else{const c=cur;if(c&&c.nodeType===n.nodeType&&!morphKey(c)&&(n.nodeType!==1||(c.tagName===n.tagName&&morphCls(c)===morphCls(n)&&(!morphFocus(c)||morphData(c,n)))))m=c}   /* 含焦點的不是同一筆：不沿用，新的插在它前面 */
     if(m){morphPlace(a,m,cur);cur=m.nextSibling;morphNode(m,n)}
-    else a.insertBefore(n,cur);
+    else{a.insertBefore(n,cur);morphMark(n)}
   }
   while(cur){const nx=cur.nextSibling;cur.remove();cur=nx}
 }
@@ -52,10 +56,12 @@ function morphNode(a,b){
     let v=value;
     if(name==="class"){const keep=MORPH_RT.filter(c=>a.classList.contains(c)&&!b.classList.contains(c));if(keep.length)v=(v+" "+keep.join(" ")).trim()}
     if(name==="value"&&focused)continue;   /* 正在輸入：value 屬性也不動（沒打過字的欄位改屬性會改到畫面上的值） */
+    if(name==="style")MORPH_ST.set(a,v);
     if(a.getAttribute(name)!==v)a.setAttribute(name,v);
   }
   for(const {name} of [...a.attributes]){
-    if(b.hasAttribute(name)||name==="style")continue;   /* 新的 HTML 沒寫 style：留著程式寫的（動畫、拖曳） */
+    if(b.hasAttribute(name))continue;
+    if(name==="style"){const was=MORPH_ST.get(a);MORPH_ST.delete(a);if(was!==undefined&&morphCss(a.getAttribute("style"))===morphCss(was))a.removeAttribute("style");continue}   /* 新的 HTML 沒寫 style：上次 HTML 寫的拿掉，程式寫的、改過的留著（動畫、拖曳） */
     if(name==="class"){const keep=MORPH_RT.filter(c=>a.classList.contains(c));if(keep.length){a.setAttribute("class",keep.join(" "));continue}}
     a.removeAttribute(name);
   }
@@ -74,7 +80,7 @@ function morphNode(a,b){
    上一次不是這個畫面畫的（代號不同、或內容被別的程式整段換掉）就整段重建，不沿用別的畫面的節點與它們身上的事件 */
 function morphTo(el,html,scr){
   if(!el)return;
-  if(scr!==undefined&&(el._mScr!==scr||el._mFirst!==el.firstChild)){el.innerHTML=html;el._mScr=scr;el._mFirst=el.firstChild;return}
+  if(scr!==undefined&&(el._mScr!==scr||el._mFirst!==el.firstChild)){el.innerHTML=html;[...el.children].forEach(morphMark);el._mScr=scr;el._mFirst=el.firstChild;return}
   const t=document.createElement("template");t.innerHTML=html;
   morphKids(el,t.content);
   if(scr!==undefined)el._mFirst=el.firstChild;
@@ -83,5 +89,5 @@ function morphTo(el,html,scr){
 function morphOuter(el,html){
   if(!el)return;
   const t=document.createElement("template");t.innerHTML=html.trim();const n=t.content.firstElementChild;
-  if(n&&t.content.childElementCount===1&&n.tagName===el.tagName)morphNode(el,n);else el.replaceWith(t.content);
+  if(n&&t.content.childElementCount===1&&n.tagName===el.tagName)morphNode(el,n);else{[...t.content.children].forEach(morphMark);el.replaceWith(t.content)}
 }
