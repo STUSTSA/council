@@ -241,7 +241,10 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 /* ===== 即時回報（完成紀錄的膠囊、左右兩欄也用這一套；議題卡片裡的小膠囊在本段最後） =====
    膠囊一律白底黑字（細框），狀態只放在左邊的燈號：data-st＝ok 綠（期限前有更新）／go 黃（學生會黃 --su-yellow；這週完成過一段，或期限後才補更新）／stall 紅（沒有進度）。
    只有紅色（沒有進度）的燈號會一直向外擴散提醒，其他靜止——一整排同時閃很吵，也會讓展開收合動畫變卡。
-   --st＝燈號與狀態標籤的顏色，--st-ink＝狀態標籤上的字色。逐欄編輯（.evf*）在下一段「逐欄編輯」 */
+   --st＝燈號與狀態標籤的顏色，--st-ink＝狀態標籤上的字色。
+   小節：狀態色、膠囊格、上下兩區、膠囊、展開後的內容、逐行內容、展開動畫、原位編輯器、時間選取器、拖曳排序、左右兩欄、小膠囊；
+   各小節的手機、列印、減少動態規則寫在該小節最後。原位編輯器借用的 .evf-row、.evf-btns、.evd-add 在下一段「逐欄編輯」；
+   跟其他元件寫在同一條的規則（共用段的按鈕內距、.sec-anim 淡入、開頁進場、圓角補半像素、單卡編輯的 .card-edbar）留在原段 */
 /* --- 狀態色 --- */
 .ev,.kid-ev,.evd{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
 .ev[data-st="ok"],.kid-ev[data-st="ok"],.evd[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
@@ -291,6 +294,15 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 /* 展開的膠囊與右側詳情卡（左右兩欄）：深淺色模式都是淺灰底黑字（在卡片上重設色彩變數，分隔線 --hair、紅字 --red／--warn 也是淺色那一組） */
 .ev[open],#evDetail,#doneDetail{--surface:#f6f6f8;--bg:#fff;--ink:#111114;--hair:#e2e2e8;--red:var(--accent-light);--warn:var(--accent-light);--pop:#fff;--pop-sh:inset 0 0 0 .5px rgba(0,0,0,.1),0 14px 32px rgba(0,0,0,.16);--muted:#5d5d66;--line:#dcdce2;--teal:#111114;--onteal:#fff;--teal-soft:#e6e6ec;background:var(--surface);color:var(--ink)}
 .ev[open]{border-color:var(--surface)}
+/* 手機焦點：有一張展開時，其他還收著的膠囊變暗（展開那一下的「拿起來」動畫在 motion.js 的 animateDetails） */
+@media (max-width:640px){
+  /* 亮度過渡跟展開收合（0.38–0.56 秒）同步，不要瞬間變暗變亮；被收起的那張在開始收合時就一起變暗，不會收完才再暗一下 */
+  .events .ev{transition:background-color .45s var(--mo-out),color .45s var(--mo-out),transform .22s var(--ease),box-shadow .22s var(--ease),border-color .45s var(--mo-out),opacity .55s cubic-bezier(.4,0,.2,1)}
+  .events:has(>.ev[open]:not(.closing))>.ev:is(:not([open]),.closing){opacity:.45}
+}
+@media (prefers-reduced-motion:reduce){
+  .ev:hover{transform:none}
+}
 /* --- 展開後的內容 --- */
 .ev-body{flex:1;min-width:0;padding:0 18px 12px 37px}   /* 左邊對齊標題文字（標題列內距 18＋燈號＋間距） */
 .ev-body p{margin:0;font-size:13.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
@@ -312,6 +324,9 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 /* 展開後最下面那顆「編輯」（即時回報、完成紀錄）：登入、沒有卡片在編輯時才出現（跟「單卡編輯」段的 .card-edit-btn 同一條規則） */
 .ev-edrow{display:flex;justify-content:flex-end;margin-top:10px}
 body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
+@media print{
+  .ev-edrow{display:none}
+}
 /* --- 逐行內容（檢視；views.js 的 evLinesHTML）：純文字、核取（.fld-check，沒有權限＝不能按）、時間＋核取；有權限的人點一行＝原位編輯 --- */
 .kp-view{list-style:none;margin:0;padding:0;display:grid;gap:2px}
 .kp-vl{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;line-height:1.75}
@@ -342,111 +357,6 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .opening .done-body>*:nth-child(7){animation-delay:0.48s}
 .opening .done-body>*:nth-child(8){animation-delay:0.55s}
 .ev.opening .ev-body>*:first-child{animation-delay:.06s}
-/* --- 手機焦點與減少動態 --- */
-/* 手機焦點：有一張展開時，其他還收著的膠囊變暗（展開那一下的「拿起來」動畫在 motion.js 的 animateDetails） */
-@media (max-width:640px){
-  /* 亮度過渡跟展開收合（0.38–0.56 秒）同步，不要瞬間變暗變亮；被收起的那張在開始收合時就一起變暗，不會收完才再暗一下 */
-  .events .ev{transition:background-color .45s var(--mo-out),color .45s var(--mo-out),transform .22s var(--ease),box-shadow .22s var(--ease),border-color .45s var(--mo-out),opacity .55s cubic-bezier(.4,0,.2,1)}
-  .events:has(>.ev[open]:not(.closing))>.ev:is(:not([open]),.closing){opacity:.45}
-}
-@media (prefers-reduced-motion:reduce){
-  .ev:hover{transform:none}
-}
-/* --- 拖曳排序 --- */
-/* 拖曳排序（events.js 的「即時回報排序」）：登入、沒有卡片在編輯時標題可抓，放開直接儲存；拖著的那顆浮在最上面、跟著指標走 */
-body.authed:not(.edit) #events .events>.ev>summary{cursor:grab;-webkit-touch-callout:none}
-.ev.ev-dragging{z-index:5;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.35);transition:none}
-html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}
-/* --- 左右兩欄：清單＋右半邊詳情卡 --- */
-/* 左右兩欄（桌面 1000px 以上、即時回報被選到時）：左半邊膠囊照樣排成格（通常兩欄），被點的那一顆長成右半邊的詳情卡（motion.js 的 mdGrow）；
-   詳情卡固定在右邊，外觀跟展開的膠囊同一套（淺灰底黑字、大圓角），編輯中所有功能都在右側直接改 */
-/* 完成紀錄（#doneMD）共用這一套 */
-:is(#liveMD,#doneMD).split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
-#liveMD.split .events,#doneMD.split .events{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}
-#liveMD.split .ev-chev,#doneMD.split .ev-chev{display:none}
-/* 被選到的那一顆「飛到」右邊：原位留一個虛線空位（其他膠囊不動，位置好記），收起時縮回這個空位、膠囊再出現 */
-.events .ev.sel{border-style:dashed;border-color:color-mix(in srgb,var(--ink) 35%,transparent);background:transparent;box-shadow:none;pointer-events:none}
-.events .ev.sel>*{visibility:hidden}
-#evDetail,#doneDetail{position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px}
-.evd-head{display:flex;align-items:center;gap:10px;font-size:20px;line-height:1.4}
-.md-close{margin-left:auto;flex:none;font-size:12.5px;font-weight:400}   /* 即時回報、完成紀錄右側的「收起」 */
-/* 詳情卡標題列的「上一個／下一個」：放在收起前面；到頭或到尾時那一顆變淡不能按 */
-.md-step{margin-left:auto;display:flex;flex:none;gap:6px}
-.md-step+.md-close{margin-left:0}
-.md-step button{font-size:12.5px;font-weight:400;letter-spacing:0}
-.md-step button:disabled{opacity:.35;pointer-events:none}
-/* 清單裡「下一個」記號：開會時台下先知道接下來看哪一顆（即時回報、完成紀錄共用） */
-.events .ev.next>summary::after{content:"下一個";flex:none;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;line-height:18px;letter-spacing:.04em;background:#111114;color:#fff;animation:nextIn .3s var(--ease)}
-@keyframes nextIn{from{opacity:0;transform:translateX(-4px)}}
-@media (hover:hover){:is(#evDetail,#doneDetail) button:not(.csel-opt):hover{box-shadow:0 0 0 1px var(--ink),0 0 10px rgba(255,255,255,.18)}}   /* 右側會捲動，外散的光暈會被邊緣切掉：改成貼著按鈕的小光暈 */
-.evd-head b{font-weight:700;min-width:0;overflow-wrap:anywhere}
-.evd .ev-meta{margin:8px 0 0}
-.evd-par{margin:12px 0 0}
-.evd-desc{margin:12px 0 0;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
-.evd-f,.evd .fld,.evd fieldset.multi{display:grid;gap:4px;margin-top:14px;font-size:12.5px;color:var(--muted)}
-.evd-sec{display:grid;gap:8px;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
-.evd-gap{flex:1}
-/* 「完成這一段」的展開框（events.js 的 data-evd） */
-.evd-round{display:grid;gap:4px;padding:4px 14px 14px;border:1px solid var(--hair);border-radius:14px;margin-bottom:6px}
-.evd-round[hidden]{display:none}
-/* --- 議題卡片裡的小膠囊 --- */
-/* 議題卡片裡「進行中的即時回報」小膠囊：同樣白底、燈號帶狀態色 */
-.kid-evs{display:grid;gap:4px}
-.kid-list{display:flex;flex-wrap:wrap;gap:6px}
-.kid-ev{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#111114;border-radius:999px;padding:3px 12px 3px 10px;font-size:13px;box-shadow:inset 0 0 0 1px var(--line)}
-.kid-ev .live-dot{width:7px;height:7px}
-/* --- 列印 --- */
-@media print{
-  .ev-edrow{display:none}
-}
-
-/* ===== 逐欄編輯（即時回報、進度、完成紀錄、秘書處會議卡共用；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML；即時回報卡的原位編輯器與時間選取器在本段後面） =====
-   編輯中每一欄一列「標題｜內容」，內容本身就是按鈕，點了那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
-.evfs{display:grid;margin-top:12px}
-.evf{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:4px 10px;min-height:42px;padding:3px 0;border-bottom:1px solid var(--hair);font-size:14px}
-.evf-l{font-size:12px;color:var(--muted);letter-spacing:.04em}
-/* 欄位內容本身就是按鈕：點了只編這一欄。平常看起來就是文字，滑過去底色微亮、右邊淡出「修改」提示 */
-.evf-v{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 8px;width:calc(100% + 16px);min-width:0;min-height:36px;margin:0 -8px;padding:6px 52px 6px 8px;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.5;cursor:text;transition:background-color .2s var(--ease)}
-.evf-v::after{content:"修改";position:absolute;right:8px;top:50%;font-size:11px;letter-spacing:.12em;color:var(--muted);opacity:0;transform:translate(4px,-50%);transition:opacity .2s var(--ease),transform .2s var(--ease)}
-.evf-v:hover,.evf-v:focus-visible{background:color-mix(in srgb,var(--ink) 6%,transparent)}
-.evf-v:hover,.evf-v:active{transform:none}   /* 整欄寬的按鈕不要套一般按鈕的放大／按下縮小 */
-.evf-v:hover::after,.evf-v:focus-visible::after{opacity:1;transform:translate(0,-50%)}
-.evf-desc{white-space:pre-wrap;line-height:1.7}
-.evf-url{max-width:100%;overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
-.evf-v .tags{gap:4px}
-.evf.open{position:relative;z-index:3;grid-template-columns:minmax(0,1fr);gap:8px;margin:6px 0;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide .28s var(--ease) both}   /* z-index：打開的欄位疊在下面幾列上，下拉清單才不會被後面的欄位文字穿過去（母議題選單看不清楚的原因） */
-.evf-ed{display:grid;gap:8px;min-width:0}
-.evf-ed input,.evf-ed textarea{width:100%}
-.evf-ed input.bad,.evf-ed textarea.bad{border-color:var(--red)}
-.evf-ed .fld,.evf-ed fieldset.multi{margin:0}
-.evf-hint{font-size:11.5px}
-/* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
-.evd-btns,.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
-/* 時間標記、超連結一組（每一筆各自一列，最後一顆「+ 時間」「+ 超連結」）；「+ 階段」也是 .evd-add */
-.evd-add{justify-self:start}
-.evf-group{display:grid;padding-top:10px;border-bottom:1px solid var(--hair)}
-.evf-group:last-child{border-bottom:0}   /* 最後一組下面接動作列（詳情卡的分隔線、膠囊的按鈕），不再多一條線 */
-.evf-group>.evf-l{padding-bottom:2px}
-.evf-group .evf{grid-template-columns:minmax(0,1fr)}
-.evf-group .evf:last-of-type:not(.open){border-bottom:0}
-.evf-group .evd-add{margin:6px 0 10px}
-/* --- 時間標記、超連結的輸入框（views.js 的 evTimeEditor、linkEditorHTML；議題的超連結也用） --- */
-.evf-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
-.evf-row>input{flex:1 1 180px;min-width:0}
-.evf-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evf-when input[type=date]{width:auto}
-.evf-when input:not([type]){width:72px}
-.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.evf-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.evf-place input{flex:1 1 180px}
-.place-quick{display:flex;flex-wrap:wrap;gap:4px}
-/* --- 議題的「階段」欄 --- */
-/* 議題的「階段」欄（進度的逐欄編輯，views.js 的 stageEditorHTML）：一列一個階段＝「目前」鈕＋名稱＋刪除 */
-.stg-list{display:grid;gap:6px}
-.stg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px}
-.stg-cur{min-height:30px;padding:0 12px;font-size:12px;color:var(--muted);border-color:var(--hair);transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
-.stg-cur[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
-.stg-del{width:30px;min-height:30px;padding:0}
 /* --- 原位編輯器（即時回報卡，views.js 的 kpEditorHTML／kpFieldsHTML；events.js 的「原位編輯器」段） ---
    名稱一列、每一行＝種類（自製下拉）＋核取框＋時間＋文字＋刪除；下面母議題、專員、標籤、超連結（直接改，沒有各自的取消／完成）；
    最下面儲存回饋（儲存中／已儲存／儲存失敗）＋「儲存」，存好後的「已儲存＋復原這次修改」也在這一段（列印時 .kp-bar 整列不印） */
@@ -490,6 +400,10 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
   .kp-f{grid-template-columns:minmax(0,1fr);gap:6px}   /* 手機：標題在上、內容在下 */
   .kp-f:is([data-kpf="labels"],[data-kpf="links"]) .kp-fl{padding-top:0}
 }
+@media print{
+  .kp-bar{display:none}
+}
+@media (prefers-reduced-motion:reduce){.kp-done{animation:none}}
 /* --- 時間選取器（原位編輯器的時間，views.js 的 tpHTML；不用瀏覽器原生的日期、時間彈出） ---
    開始／結束切換、月曆（選到的日子實心、期間淡底、今天細框）、開始與結束時刻、地點、寫進母議題、完成 */
 .tp{display:grid;gap:8px;max-width:340px;margin:2px 0 8px;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide var(--mo-base) var(--mo-out) both}
@@ -514,9 +428,101 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
   .tp{max-width:none}
 }
 @media print{
-  .kp-bar,.tp{display:none}
+  .tp{display:none}
 }
-@media (prefers-reduced-motion:reduce){.evf.open,.tp,.kp-done{animation:none}}
+@media (prefers-reduced-motion:reduce){.tp{animation:none}}
+/* --- 拖曳排序 --- */
+/* 拖曳排序（events.js 的「即時回報排序」）：登入、沒有卡片在編輯時標題可抓，放開直接儲存；拖著的那顆浮在最上面、跟著指標走 */
+body.authed:not(.edit) #events .events>.ev>summary{cursor:grab;-webkit-touch-callout:none}
+.ev.ev-dragging{z-index:5;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.35);transition:none}
+html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}
+/* --- 左右兩欄：清單＋右半邊詳情卡 --- */
+/* 左右兩欄（桌面 1000px 以上、即時回報被選到時）：左半邊膠囊照樣排成格（通常兩欄），被點的那一顆長成右半邊的詳情卡（motion.js 的 mdGrow）；
+   詳情卡固定在右邊，外觀跟展開的膠囊同一套（淺灰底黑字、大圓角），編輯中所有功能都在右側直接改 */
+/* 完成紀錄（#doneMD）共用這一套 */
+:is(#liveMD,#doneMD).split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+#liveMD.split .events,#doneMD.split .events{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}
+#liveMD.split .ev-chev,#doneMD.split .ev-chev{display:none}
+/* 被選到的那一顆「飛到」右邊：原位留一個虛線空位（其他膠囊不動，位置好記），收起時縮回這個空位、膠囊再出現 */
+.events .ev.sel{border-style:dashed;border-color:color-mix(in srgb,var(--ink) 35%,transparent);background:transparent;box-shadow:none;pointer-events:none}
+.events .ev.sel>*{visibility:hidden}
+#evDetail,#doneDetail{position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:24px;padding:18px 26px 24px 24px}
+.evd-head{display:flex;align-items:center;gap:10px;font-size:20px;line-height:1.4}
+.md-close{margin-left:auto;flex:none;font-size:12.5px;font-weight:400}   /* 即時回報、完成紀錄右側的「收起」 */
+/* 詳情卡標題列的「上一個／下一個」：放在收起前面；到頭或到尾時那一顆變淡不能按 */
+.md-step{margin-left:auto;display:flex;flex:none;gap:6px}
+.md-step+.md-close{margin-left:0}
+.md-step button{font-size:12.5px;font-weight:400;letter-spacing:0}
+.md-step button:disabled{opacity:.35;pointer-events:none}
+/* 清單裡「下一個」記號：開會時台下先知道接下來看哪一顆（即時回報、完成紀錄共用） */
+.events .ev.next>summary::after{content:"下一個";flex:none;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;line-height:18px;letter-spacing:.04em;background:#111114;color:#fff;animation:nextIn .3s var(--ease)}
+@keyframes nextIn{from{opacity:0;transform:translateX(-4px)}}
+@media (hover:hover){:is(#evDetail,#doneDetail) button:not(.csel-opt):hover{box-shadow:0 0 0 1px var(--ink),0 0 10px rgba(255,255,255,.18)}}   /* 右側會捲動，外散的光暈會被邊緣切掉：改成貼著按鈕的小光暈 */
+.evd-head b{font-weight:700;min-width:0;overflow-wrap:anywhere}
+.evd .ev-meta{margin:8px 0 0}
+.evd-par{margin:12px 0 0}
+.evd-desc{margin:12px 0 0;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+.evd-f,.evd .fld,.evd fieldset.multi{display:grid;gap:4px;margin-top:14px;font-size:12.5px;color:var(--muted)}
+.evd-sec{display:grid;gap:8px;margin-top:20px;padding-top:14px;border-top:1px solid var(--hair)}
+.evd-gap{flex:1}
+/* 「完成這一段」的展開框（events.js 的 data-evd） */
+.evd-round{display:grid;gap:4px;padding:4px 14px 14px;border:1px solid var(--hair);border-radius:14px;margin-bottom:6px}
+.evd-round[hidden]{display:none}
+/* --- 議題卡片裡的小膠囊 --- */
+/* 議題卡片裡「進行中的即時回報」小膠囊：同樣白底、燈號帶狀態色 */
+.kid-evs{display:grid;gap:4px}
+.kid-list{display:flex;flex-wrap:wrap;gap:6px}
+.kid-ev{display:inline-flex;align-items:center;gap:7px;background:#fff;color:#111114;border-radius:999px;padding:3px 12px 3px 10px;font-size:13px;box-shadow:inset 0 0 0 1px var(--line)}
+.kid-ev .live-dot{width:7px;height:7px}
+
+/* ===== 逐欄編輯（進度、完成紀錄、秘書處會議卡；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML；即時回報卡的原位編輯器、時間選取器在「即時回報」段，借用本段的 .evf-row、.evf-btns、.evd-add） =====
+   編輯中每一欄一列「標題｜內容」，內容本身就是按鈕，點了那一欄換成輸入框＋取消／完成（一次只開一欄）。時間標記、超連結是一組，每一筆各自一列 */
+.evfs{display:grid;margin-top:12px}
+.evf{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:4px 10px;min-height:42px;padding:3px 0;border-bottom:1px solid var(--hair);font-size:14px}
+.evf-l{font-size:12px;color:var(--muted);letter-spacing:.04em}
+/* 欄位內容本身就是按鈕：點了只編這一欄。平常看起來就是文字，滑過去底色微亮、右邊淡出「修改」提示 */
+.evf-v{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 8px;width:calc(100% + 16px);min-width:0;min-height:36px;margin:0 -8px;padding:6px 52px 6px 8px;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.5;cursor:text;transition:background-color .2s var(--ease)}
+.evf-v::after{content:"修改";position:absolute;right:8px;top:50%;font-size:11px;letter-spacing:.12em;color:var(--muted);opacity:0;transform:translate(4px,-50%);transition:opacity .2s var(--ease),transform .2s var(--ease)}
+.evf-v:hover,.evf-v:focus-visible{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.evf-v:hover,.evf-v:active{transform:none}   /* 整欄寬的按鈕不要套一般按鈕的放大／按下縮小 */
+.evf-v:hover::after,.evf-v:focus-visible::after{opacity:1;transform:translate(0,-50%)}
+.evf-desc{white-space:pre-wrap;line-height:1.7}
+.evf-url{max-width:100%;overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.evf-v .tags{gap:4px}
+.evf.open{position:relative;z-index:3;grid-template-columns:minmax(0,1fr);gap:8px;margin:6px 0;padding:10px 12px 12px;border:1px solid var(--line);border-radius:14px;background:var(--bg);animation:fadeSlide .28s var(--ease) both}   /* z-index：打開的欄位疊在下面幾列上，下拉清單才不會被後面的欄位文字穿過去（母議題選單看不清楚的原因） */
+.evf-ed{display:grid;gap:8px;min-width:0}
+.evf-ed input,.evf-ed textarea{width:100%}
+.evf-ed input.bad,.evf-ed textarea.bad{border-color:var(--red)}
+.evf-ed .fld,.evf-ed fieldset.multi{margin:0}
+.evf-hint{font-size:11.5px}
+/* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
+.evd-btns,.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+/* 時間標記、超連結一組（每一筆各自一列，最後一顆「+ 時間」「+ 超連結」）；「+ 階段」也是 .evd-add */
+.evd-add{justify-self:start}
+.evf-group{display:grid;padding-top:10px;border-bottom:1px solid var(--hair)}
+.evf-group:last-child{border-bottom:0}   /* 最後一組下面接動作列（詳情卡的分隔線、膠囊的按鈕），不再多一條線 */
+.evf-group>.evf-l{padding-bottom:2px}
+.evf-group .evf{grid-template-columns:minmax(0,1fr)}
+.evf-group .evf:last-of-type:not(.open){border-bottom:0}
+.evf-group .evd-add{margin:6px 0 10px}
+@media (prefers-reduced-motion:reduce){.evf.open{animation:none}}
+/* --- 時間標記、超連結的輸入框（views.js 的 evTimeEditor、linkEditorHTML；議題的超連結也用） --- */
+.evf-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.evf-row>input{flex:1 1 180px;min-width:0}
+.evf-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evf-when input[type=date]{width:auto}
+.evf-when input:not([type]){width:72px}
+.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.evf-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.evf-place input{flex:1 1 180px}
+.place-quick{display:flex;flex-wrap:wrap;gap:4px}
+/* --- 議題的「階段」欄 --- */
+/* 議題的「階段」欄（進度的逐欄編輯，views.js 的 stageEditorHTML）：一列一個階段＝「目前」鈕＋名稱＋刪除 */
+.stg-list{display:grid;gap:6px}
+.stg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px}
+.stg-cur{min-height:30px;padding:0 12px;font-size:12px;color:var(--muted);border-color:var(--hair);transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
+.stg-cur[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.stg-del{width:30px;min-height:30px;padding:0}
 /* ===== 部門專用分頁（dept/config.js 的 ext：會長室「會長室」、秘書處「會議」；shell.js 把面板搬進 .sgroup-ext） =====
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
 .sgroup-ext>.panel{margin:0}
