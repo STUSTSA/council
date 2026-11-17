@@ -206,7 +206,7 @@ body.searching .layout{display:none}
 .dr-dot[data-st="stall"]{background:var(--st-stall)}
 .dr-dot[data-st="done"]{background:var(--ok)}
 .dr-none{margin:0;padding:34px 0;border-radius:var(--r-lg);text-align:center;color:var(--muted);font-size:15px}
-@media print{.dsearch{display:none}}
+@media print{.dsearch,.dres{display:none}body.searching .layout{display:grid}}   /* 搜尋中列印：印看板，不印搜尋結果 */
 @media (max-width:640px){
   .dsearch{margin-bottom:14px}
   .dr-list{grid-template-columns:minmax(0,1fr)}
