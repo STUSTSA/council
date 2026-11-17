@@ -30,7 +30,7 @@ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest
 
 /* ---------- 設定頁「標籤」：管理員新增、改名、刪除；其他人只看 ---------- */
 function labelSetHTML(){
-  const adm=fsMode()?fsWriter():isAdmin(),del=fsMode()?fsDelOk():adm,use=labelUse();   /* firestore 模式：編輯者以上能新增、改名，只有總管理員能刪（規則） */
+  const adm=fsMode()?fsWriter():isAdmin(),del=fsMode()?fsDelOk():adm,use=labelUse();   /* firestore 模式：編輯者以上能新增、改名，部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   const grp=k=>{const ls=labelsOf(k,use);
     return `<section class="tm-sec"><div class="att-h">${k}<span class="sub">　${{人:"例如：學務處、某位老師",事:"例如：宿舍、交通安全",時:"例如：期中考週、校慶",地:"例如：六宿、圖書館",物:"例如：飲水機、機車"}[k]}</span></div>
       <ul class="tm-list">${ls.map(l=>`<li class="tm-row">${adm?`<input data-lblname="${esc(l.id)}" value="${esc(l.name)}" aria-label="標籤名稱">`:`<span class="tm-name">${esc(l.name)}</span>`}<span class="sub">用了 ${use.get(l.id)||0} 次</span>${del?`<button type="button" class="icon danger" data-x="del" data-id="${esc(l.id)}">刪除</button>`:""}</li>`).join("")||'<li class="sub">還沒有</li>'}</ul>

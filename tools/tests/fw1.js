@@ -101,7 +101,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   await setRole(edUid,{[DEPT]:'editor'});
   ok(await until(async()=>{const u=await ui(ed);return !u.locked&&u.authed&&u.editBtns>0}),'編輯者：角色一給就可以編輯（不用重新整理）');
   {const g=await ed.evaluate(()=>({del:document.querySelectorAll('[data-delissue],[data-deldone],[data-delweek]').length,gantt:document.querySelector('#ganttEdBtn').hidden}));
-    ok(g.del===0&&g.gantt,`編輯者：沒有刪除議題、週報（總管理員才能刪）、甘特圖時間軸（管理員）（${JSON.stringify(g)}）`);}
+    ok(g.del===0&&g.gantt,`編輯者：沒有刪除議題、週報（部門管理員以上才能刪，02D D-d）、甘特圖時間軸（管理員）（${JSON.stringify(g)}）`);}
   await openSet(ed);{const s=await setText(ed);ok(s.includes('標籤')&&s.includes('報告')&&s.includes('備份')&&!s.includes('看板名稱')&&!s.includes('人員')&&!s.includes('學年'),'編輯者：設定頁有報告、標籤、備份，沒有看板名稱、人員、學年');}
   await closeSet(ed);
   /* a. 新增卡片（小表單 → 直接儲存） */
@@ -200,6 +200,33 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(st.title==='FW 權益部看板'&&st.rev===2&&st.updatedBy===adUid&&al&&al.actor===adUid&&al.after.fields.includes('title'),'看板名稱：deptSettings rev 2＋稽核紀錄');
   ok(await ad.evaluate(()=>state.title==='FW 權益部看板'),'看板名稱：畫面更新');
   await closeSet(ad);
+  /* 3b. 管理員刪除議題、週報、標籤（02D D-d）：刪除鈕跟著權限出現；同一批寫刪除紀錄（誰、類型、標題）；編輯者直接呼叫刪除被規則擋下 */
+  {const delLogs=async col=>{let out=[];await admin(async d=>{out=(await d.collection('auditLogs').where('col','==',col).where('action','==','delete').get()).docs.map(x=>({id:x.id,...x.data()}))});return out};
+    await ad.evaluate(()=>{setSection('progress',{instant:true})});await ad.waitForTimeout(300);
+    await ad.evaluate(async id=>{await startEdit('i:'+id);if(typeof progShow==='function')progShow(id)},iid);await ad.waitForTimeout(600);
+    ok(await ad.evaluate(id=>!!document.querySelector(`[data-issue="${id}"] [data-delissue]`),iid),'管理員：議題有刪除鈕');
+    const wBefore=await read(`weeks/${DEPT}__${wid}`),iBefore=await read(`issues/${DEPT}__${iid}`);
+    await ad.click(`[data-issue="${iid}"] [data-delissue]`);await dlg(ad);await dlgAct(ad,'delete');await settled(ad);
+    const il=await delLogs('issues');
+    ok(!(await read(`issues/${DEPT}__${iid}`))&&il.length===1&&il[0].id===`issues_${DEPT}__${iid}_delete_${iBefore.updatedAt.toMillis()}`&&il[0].actor===adUid&&il[0].before.title==='FW 新議題'&&il[0].before.deptId===DEPT,
+      '管理員刪除議題：文件不在、同一批寫了刪除紀錄（誰、標題、部門）');
+    await openSet(ad);await ad.click('[data-set="report"]');await ad.waitForTimeout(800);await ad.click('[data-hub="week"]');await ad.waitForTimeout(900);
+    ok(await ad.evaluate(id=>!!document.querySelector(`[data-week="${id}"] [data-delweek]`),wid),'管理員：週報有刪除鈕');
+    await ad.click(`[data-week="${wid}"] [data-delweek]`);await dlg(ad);await dlgAct(ad,'delete');await settled(ad);await closeSet(ad);
+    const wl=await delLogs('weeks');
+    ok(!(await read(`weeks/${DEPT}__${wid}`))&&wl.length===1&&wl[0].before.title===wBefore.date&&wl[0].actor===adUid,'管理員刪除週報：文件不在、刪除紀錄的標題是週報日期');
+    await openSet(ad);await ad.click('[data-set="labels"]');await ad.waitForSelector('[data-newlbl="人"]',{timeout:8000});
+    ok(await ad.evaluate(id=>!!document.querySelector(`#dlgForm [data-x="del"][data-id="${id}"]`),lid),'管理員：標籤有刪除鈕');
+    await ad.click(`#dlgForm [data-x="del"][data-id="${lid}"]`);await ad.click('[data-x="done"]');await settled(ad);await closeSet(ad);
+    const ll=await delLogs('labels');
+    ok(!(await read(`labels/${DEPT}__${lid}`))&&ll.length===1&&ll[0].before.title==='FW 標籤'&&ll[0].actor===adUid,'管理員刪除標籤：文件不在、刪除紀錄有標籤名稱');
+    /* 編輯者繞過畫面：自己寫一模一樣的刪除＋紀錄，規則拒絕 */
+    const tmp=`${DEPT}__fwdel`;await admin(d=>d.doc(`labels/${tmp}`).set({deptId:DEPT,kind:'事',name:'暫時',updatedAt:TS.fromMillis(1763000000000),updatedBy:'su'}));
+    const r=await ed.evaluate(async id=>{const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js');const db=m.getFirestore();const b=m.writeBatch(db);
+      b.delete(m.doc(db,'labels',id));b.set(m.doc(db,'auditLogs',`labels_${id}_delete_1763000000000`),{col:'labels',docId:id,rev:0,action:'delete',actor:acct.user.uid,at:m.serverTimestamp(),before:{title:'暫時',deptId:'rights'},after:{},ref:''});
+      try{await b.commit();return 'ok'}catch(e){return e.code}},tmp);
+    ok(r==='permission-denied'&&!!(await read(`labels/${tmp}`)),`編輯者直接寫刪除＋紀錄：規則拒絕（${r}）`);
+    await admin(d=>d.doc(`labels/${tmp}`).delete());}
 
   /* ---------- 4. 衝突：別人剛存過 ---------- */
   await ed.evaluate(async()=>{await new Promise(r=>setTimeout(r,200));});
@@ -251,7 +278,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     ok(r.t.includes('設定\n看板名稱')&&r.t.includes(`即時回報\n刪除｜${del.name}`)&&r.t.includes('即時回報\n修改｜FW 新卡片'),'編輯紀錄（總管理員）：加上稽核紀錄（看板名稱、卡片刪除）');}
   /* 會長室（firestore 模式）的各部門編輯量：權益部＝不是匯入的版本＋稽核紀錄；還在 GitHub、沒有設定 repo 的部門＝讀不到（—） */
   let want=0;await admin(async d=>{want=(await d.collectionGroup('versions').where('deptId','==',DEPT).get()).docs.filter(x=>!x.data().imported).length
-    +(await d.collection('auditLogs').get()).docs.map(x=>x.data()).filter(a=>a.col==='deptSettings'&&a.action==='update'&&a.docId===DEPT||a.col==='cards'&&a.action==='purge'&&a.before.deptId===DEPT).length});
+    +(await d.collection('auditLogs').get()).docs.map(x=>x.data()).filter(a=>a.col==='deptSettings'&&a.action==='update'&&a.docId===DEPT||a.col==='cards'&&a.action==='purge'&&a.before.deptId===DEPT||['issues','weeks','labels'].includes(a.col)&&a.action==='delete'&&a.before.deptId===DEPT).length});   /* 02D D-d：議題、週報、標籤的刪除紀錄也算 */
   const actOf=async p=>{await p.evaluate(()=>actLoad(true));await until(()=>p.evaluate(()=>ACT.rows&&!ACT.busy));
     return p.evaluate(()=>({rows:Object.fromEntries(ACT.rows.map(r=>[r.id,r.fail?'—':r.sum])),leg:(document.querySelector('[data-ack="rights"] .num')||{}).textContent}))};
   const ps=await open('president',[DEPT,'president']);await signIn(ps,'su2');await until(async()=>!(await ui(ps)).locked);
