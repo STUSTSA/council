@@ -20,85 +20,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-/* 各部門總覽（2026-11-06 第四版）。版面參考使用者給的網頁：導覽列、左邊大標題、右邊一排可以左右拖的卡片、下面箭頭與進度條。
-   2026-11-17（新介面第 2 步，DESIGN-next 第三節）：卡片改成平面色塊（--blk 底、--ink 字），沒有漸層、光暈；版面第 7 步才換。以前使用者：卡片列兩端淡出、不要硬切；拖起來要流暢、Q 彈；點下去要有過渡；會長室／秘書處不要在三個地方重複。
-   App 打開：學生會開場動畫（core/js/splash.js）→ 這一頁。卡片內容都是固定文字，大小固定。自成一頁，不載入看板程式 */
-/* 顏色跟看板同一組主題變數（core/theme.css；--bg、--blk、--ink、--muted、--hair…），這裡不另外寫顏色、也不另寫深色 */
-:root{--pill:var(--blk);--ease:cubic-bezier(.2,.9,.25,1);--spring:cubic-bezier(.34,1.5,.5,1)}
-*{box-sizing:border-box}
-html,body{margin:0;min-height:100%;-webkit-tap-highlight-color:transparent;background:var(--bg);color:var(--ink);font-family:"Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}   /* 數字、英文用 Jost（跟看板一致），中文落到 Noto Sans TC */
-body{overflow-x:hidden}
-a{color:inherit}
-.page{position:relative;min-height:100vh;min-height:100dvh;max-width:1240px;margin:0 auto;display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));overflow:hidden}
-/* --- 導覽列：左邊學生會標誌＋STUSTSA、右邊日期膠囊 --- */
-.bar{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:.08em;text-decoration:none}
-.hm-svg{display:block;width:26px;height:auto;overflow:visible}   /* 標誌貼滿 viewBox：深色線稿的描邊（.mk-line）會超出半條線寬，不能被裁掉 */
-.mk-under{fill:var(--bg)}
-.mk-line{display:none}   /* 深色（單色）：標誌換成使用者提供的單色線稿（左邊小人線框、右邊小人實心，跟看板頁首、開場同一份；2026-11-11 使用者）。線太細，另外描一圈不隨縮放變粗的細線 */
-.mk-line path{fill:var(--ink);stroke:var(--ink);stroke-width:.75px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-[data-theme="dark"] .hm-svg :is(.mk-under,.mk-y,.mk-b){display:none}[data-theme="dark"] .hm-svg .mk-line{display:inline}
-.date{display:flex;align-items:center;padding:9px 16px;border-radius:999px;background:var(--pill);font-size:12.5px;letter-spacing:.06em;white-space:nowrap}
-/* --- 主區：大標題、左欄說明、右邊卡片列 --- */
-.main{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);grid-template-rows:auto 1fr;gap:28px 24px;padding-top:clamp(36px,8vh,90px)}
-h1{grid-column:1/-1;margin:0;display:flex;align-items:center;gap:14px;font-size:clamp(34px,5.4vw,60px);font-weight:700;letter-spacing:.04em;line-height:1.05}
-h1 svg{width:.62em;height:.62em;flex:none}
-.note{align-self:end;margin:0;font-size:13px;line-height:1.7;color:var(--muted)}
-.note b{display:block;margin-bottom:6px;font-size:28px;font-weight:300;color:var(--ink);letter-spacing:.02em}
-/* 卡片列：自己做的拖曳（程式 rail）。.view 裁掉超出的部分、兩端淡出（左邊只在往左拖過之後淡）；.belt 整排用 transform 移動 */
-.rail{min-width:0;display:flex;flex-direction:column;gap:18px}
-.view{--fl:0px;position:relative;overflow:hidden;margin:-30px calc(-1*max(20px,env(safe-area-inset-right))) -30px -6px;padding:30px max(20px,env(safe-area-inset-right)) 30px 6px;touch-action:pan-y;cursor:grab;
-  -webkit-mask:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - 90px),transparent 100%);mask:linear-gradient(90deg,transparent 0,#000 var(--fl),#000 calc(100% - 90px),transparent 100%)}
-.view.drag{cursor:grabbing}
-.belt{display:flex;gap:14px;width:max-content;will-change:transform}
-/* 卡片：平面色塊（--blk），字直接放在上面 */
-.card{position:relative;flex:none;width:clamp(236px,24vw,282px);height:360px;display:flex;flex-direction:column;padding:20px 20px 18px;border-radius:18px;overflow:hidden;color:var(--ink);text-decoration:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
-  background:var(--blk);box-shadow:var(--blk-sh);   /* 平鋪的色塊不用陰影（柔光主題的 --blk-sh 例外）；圓角 18＝大色塊與卡片（DESIGN-next 第三節） */
-  scale:1;transition:scale .5s var(--spring);
-  will-change:transform}   /* 每張卡片自己一層：拖曳時的微縮、斜一點只在顯示卡上變形（2026-11-06 使用者：手機滑動很卡） */
-.card>*{position:relative;z-index:1}
-.card .en{font-size:10.5px;letter-spacing:.26em;color:var(--muted)}
-.card .en{margin-top:auto}
-.card b{margin-top:6px;font-size:28px;font-weight:700;letter-spacing:.1em;line-height:1.1}
-.card .dash{width:22px;height:1.5px;margin:14px 0 10px;background:var(--ink);opacity:.75}
-.card p{margin:0;font-size:13px;line-height:1.6;color:var(--muted);min-height:3.2em}
-.card .go{position:absolute;top:16px;right:16px;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--bg);transition:background-color .25s,color .25s}
-.card .go svg{width:14px;height:14px;transition:transform .35s var(--spring)}
-.card:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-@media (hover:hover){.card:hover .go{background:var(--pri);color:var(--pri-ink)}.card:hover .go svg{transform:translate(2px,-2px)}}
-/* 按下：Q 彈縮一下（放開用彈簧曲線彈回） */
-.card.press{scale:.96;transition:scale .18s var(--ease)}
-/* 卡片下面：左右箭頭、進度條（目前在第幾段，實線較長） */
-.ctl{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.arrows{display:flex;gap:6px}
-.arrows button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);cursor:pointer;transition:opacity .2s,background-color .2s,scale .4s var(--spring)}
-.arrows button:active{scale:.88}
-.arrows button:disabled{opacity:.3;cursor:default}
-@media (hover:hover){.arrows button:not(:disabled):hover{background:var(--pill)}}
-.arrows svg{width:18px;height:18px}
-/* 進度條：一條細軌道，上面一段實線＝目前看得到的範圍（長度＝看得到的比例，跟著拖曳移動），部門再多也放得下 */
-.prog{position:relative;width:min(180px,40vw);height:1.5px;background:var(--hair);overflow:hidden}
-.prog i{position:absolute;left:0;top:0;bottom:0;width:var(--pw,30%);background:var(--ink);transform:translateX(var(--px,0%));will-change:transform}
-.foot{position:relative;z-index:1;margin:22px 0 0;font-size:11px;letter-spacing:.14em;color:var(--muted)}
-/* 進場：大標題由下往上、卡片從右邊 Q 彈滑進來（減少動態時不動） */
-h1,.note{animation:rise .7s var(--ease) both}
-.note{animation-delay:.08s}
-@keyframes rise{from{opacity:0;transform:translateY(16px)}}
-.card{animation:cardIn .8s var(--spring) both;animation-delay:calc(var(--i,0) * 60ms + 120ms)}
-@keyframes cardIn{from{opacity:0;translate:60px 0}}
-@media (max-width:760px){
-  .main{grid-template-columns:minmax(0,1fr);grid-template-rows:auto;gap:16px;padding-top:30px}
-  .note{order:3}
-  .card{width:min(74vw,280px);height:340px}
-  .view{margin-left:calc(-1*max(20px,env(safe-area-inset-left)));padding-left:max(20px,env(safe-area-inset-left))}
-}
-.pfx-arrive body{opacity:0}
-@media (prefers-reduced-motion:reduce){h1,.note,.card{animation:none}.card,.prog i{transition:none}}
-</style>
 <script>/* 換頁動畫（core/js/pagefx.js）：從站內換頁過來的，body 先透明，等它從後面浮上來（不會先閃一下完整的畫面） */try{var r=document.referrer,n=performance.getEntriesByType("navigation")[0];if(r&&new URL(r).origin===location.origin&&(!n||n.type!=="reload")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("pfx-arrive")}catch(e){}</script>
 </head>
-<body class="hm-body">
+<body>
 <script src="core/js/splash.js"></script>
 <script>mountSplash()   /* App 打開（或從網站外面進來）先跑學生會開場動畫；從看板回來（站內）不放 */</script>
 <!-- 主頁（DESIGN-next 第六節「主頁」；core/js/home.js）：左上橫式學生會標誌、時間、設定、部門色塊（桌面一排／手機卡片堆）、下排。
