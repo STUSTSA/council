@@ -1217,7 +1217,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .tb-main{display:flex;padding:6px;border-radius:999px;touch-action:none}
 #tabbar :is(.tb-main,.tb-gear){box-shadow:0 0 0 1px var(--hair),0 14px 30px -10px var(--stack-sh)}   /* 浮在內容上面：細線＋陰影（柔光主題也一樣，不疊 --blk-sh） */
 .tb-tabs{position:relative;z-index:1;display:flex;gap:2px}
-.tabbar .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;min-height:0;padding:5px 2px 4px;border:0;border-radius:24px;background:transparent;color:var(--tb-muted);font-size:11.5px;letter-spacing:.08em;line-height:1.2;scale:var(--ts,1);-webkit-tap-highlight-color:transparent}
+.tabbar .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;min-height:0;padding:5px 2px 4px;border:0;border-radius:24px;background:transparent;color:var(--tb-muted);font-size:11.5px;letter-spacing:.08em;line-height:1.2;-webkit-tap-highlight-color:transparent;transition:scale .18s var(--mo-out)}
+.tabbar .tab.lit{scale:var(--ts,1)}   /* 按下時鏡片那一格的內容放大到 1.2（nav.js 寫 --ts）；換到別格時平順地縮回 */
 #tabbar .tab:hover,#tabbar .tab:active{transform:none;box-shadow:none}   /* 取消一般按鈕的 hover 浮起；不用 !important，按下的形變（inline）才不會被擋掉 */
 #tabbar .tb-gear:hover,#tabbar .tb-gear:active{transform:none}   /* 設定鍵：同上（陰影照舊） */
 .tab-ind{display:grid;place-items:center;width:56px;height:30px;border-radius:999px;font-size:19px;color:var(--tb-ink);transition:color .25s}
@@ -1230,6 +1231,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 #tabbar .tb-lens.off{opacity:0}
 #tabbar .tab.lit .tab-ind{color:var(--pri-ink)}
 .tb-gear{width:62px;height:62px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;min-height:0;color:var(--tb-ink);font-size:21px;-webkit-tap-highlight-color:transparent;transition:color .35s,background-color .35s}
+#tabbar .tb-gear[hidden]{display:none}   /* 唯讀檢視時不出現（nav.js 的 renderTabbar） */
 /* 本週週報還沒產出（週五起，weekly.js 的 weekDotSync）：設定鍵右上角一顆紅點（以前在頁首「每週概述」鈕上） */
 .tb-due{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg);opacity:0;transform:scale(0);pointer-events:none;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-slow) var(--mo-spring)}
 #setBtn.due .tb-due{opacity:1;transform:none}
@@ -1248,12 +1250,13 @@ dialog#dlg:has(.csel.open){overflow:visible}
 #tabbar .tb-gear:focus-visible .ico{transform:scale(1.15)}
 #tabbar .tab:focus-visible .tab-ind .ico{transform:scale(1.15)}
 .tab-ind .ico{transition:transform .3s cubic-bezier(.2,1.4,.4,1)}
-@media (max-width:640px){
+/* 底部（900px 以下）：畫面底部置中、離底 14px（加安全區），寬＝畫面寬減 24、最寬 480；分頁平分，設定鍵 62×62 */
+@media (max-width:899px){
   .tabbar{width:calc(100% - 24px);max-width:480px}
   .tb-main{flex:1}
   .tb-tabs{flex:1;justify-content:space-around}
   .tabbar .tab{flex:1;width:auto}
-  .tb-gear{width:58px;height:58px;flex:none}
+  .tb-gear{flex:none}
 }
 /* 桌面：左側直立的分頁列（只有圖示，照手機分頁列的比例：外框 6px、按鈕 50×48、跟設定鍵同寬 62），設定鍵一樣分開放在下面，整組垂直置中。
    文字標籤只留給讀屏；鏡片 50×44，互動跟手機一樣（按下放大、按住鏡片可上下拖，見 nav.js）。
