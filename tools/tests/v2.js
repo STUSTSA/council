@@ -56,15 +56,15 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  const delVis=()=>p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {ev:[...document.querySelectorAll('[data-evdel]')].filter(V).length,issue:[...document.querySelectorAll('[data-delissue]')].filter(V).length,inner:document.querySelectorAll('.done-body [data-deldone],.done-body [data-evdel],.edit-block [data-delissue],.week-tools [data-delweek]').length}});   /* 桌面左右兩欄時被選到的膠囊只是空位（visibility:hidden），刪除鈕在右側詳情 */
  const d0=await delVis();log('D delete buttons (not editing):',d0);A(!d0.ev&&!d0.issue&&!d0.inner,'no delete buttons before editing');
  const eid=await p.evaluate(()=>liveOrder()[0].id);
- await p.click(`.ev[data-ev="${eid}"]>summary`);await p.waitForTimeout(900);await p.click('#evDetail .card-edit-btn');await p.waitForTimeout(900);
+ await p.click(`.ev[data-ev="${eid}"]>summary`);await p.waitForTimeout(900);await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(900);   /* 03 T7：即時回報卡沒有「編輯」鈕，點名稱開始 */
  const ed=await p.evaluate(()=>({editing,cardEdit}));const d1=await delVis();log('D editing one card:',ed,'| delete buttons:',d1);
  A(ed.editing&&ed.cardEdit==='e:'+eid,'card edit started');A(d1.ev===1&&!d1.inner,'only the edited card has a delete button');
  await p.screenshot({path:'v2_d_edit.png'});
  const ev0=await p.$(`.ev[data-ev="${eid}"]`);const op0=await ev0.evaluate(d=>d.open);await p.click('#evDetail [data-evdel]');await p.waitForTimeout(500);
  const dt=await dlgTitle(p),op1=await ev0.evaluate(d=>d.open);log('D ev delete dlg:',dt,'| opened?',op0,'→',op1);A(/^刪除「/.test(dt||'')&&op0===op1,'delete asks first, capsule not toggled');
  await p.keyboard.press('Escape');await p.waitForTimeout(500);
- await p.click('#evDetail [data-edcancel]');await p.waitForTimeout(900);
- const ac=await p.evaluate(i=>({editing,cardEdit,still:!!state.events.find(e=>e.id===i)}),eid);log('D after cancel:',ac);A(!ac.editing&&!ac.cardEdit&&ac.still,'cancel ends editing, event kept');
+ await p.click('#evH');await p.waitForTimeout(900);   /* 03：即時回報卡沒有「取消」，點卡片外面＝收合（沒改就不存） */
+ const ac=await p.evaluate(i=>({editing,cardEdit,still:!!state.events.find(e=>e.id===i)}),eid);log('D after click outside:',ac);A(!ac.editing&&!ac.cardEdit&&ac.still,'click outside ends editing, event kept');
  log('D errs:',p.errs);A(!p.errs.length,'desktop errors');
  // 重新整理：第一個身分建立時預設記住這台裝置 → 重新整理後自動登入（boot.js 的 remBoot）
  await p.go();await p.waitForTimeout(600);

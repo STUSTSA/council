@@ -36,13 +36,17 @@ const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcanc
    秘書處會議編輯寫別的部門（還在 GitHub），firestore 模式不開放 */
 const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
-  if(editing||!fsSecOk(key)||!(await ensureLogin()))return false;
-  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();render()});
-  const box=document.querySelector(`[data-edbox="${key}"]`);   /* 剛打開的那張，編輯工具淡入（board.css「編輯／檢視切換時的動畫」段的 .sec-anim） */
+  if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;
+  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;kpTp=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
+    /* 即時回報卡（進行中、不是秘書處的會議卡）：原位編輯器，記下開始前的內容（新增的卡片＝null） */
+    const ev=key[0]==="e"&&state.events.find(e=>e.id===key.slice(2)),was=ev&&JSON.parse(snapshot).events.find(e=>e.id===ev.id);
+    kp=ev&&!ev.doneAt?{id:ev.id,before:was?JSON.stringify(was):null}:null;render()});
+  if(kp)staffPplLoad();   /* 專員欄的選項（firestore 模式；team.js） */
+  const box=document.querySelector(`[data-edbox="${CSS.escape(key)}"]`);   /* 剛打開的那張，編輯工具淡入（board.css「編輯／檢視切換時的動畫」段的 .sec-anim） */
   if(box&&!reduceMotion()){box.classList.remove("sec-anim");void box.offsetWidth;box.classList.add("sec-anim");clearTimeout(box._sa);box._sa=setTimeout(()=>box.classList.remove("sec-anim"),900)}
   return true;
 }
-function cancelEdit(){morph(()=>{if(CFG.meeting)mtDiscard();if(dirty)state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;evFld=null;ifFld=null;render()})}
+function cancelEdit(){morph(()=>{if(CFG.meeting)mtDiscard();if(dirty)state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;evFld=null;ifFld=null;kp=null;render()})}
 /* 固定在頁面上的整區（追蹤、會議編輯、甘特圖時間軸）：編輯中加 .sec-edit、最下面補上「取消｜儲存」；卡片本身（即時回報、議題、完成紀錄）每次重畫時自己帶 */
 function renderSecEdit(){
   document.body.classList.toggle("authed",canEdit());
@@ -59,12 +63,13 @@ const doneIssues=()=>state.issues.filter(i=>i.doneAt&&!(editing&&keepIds.has(i.i
 let rendering=false;
 function render(){
   if(rendering)return;rendering=true;
-  const flip=Anim.capture();   /* 動畫規則 2：data-flip 容器裡的項目，render 前後比對位置（anim.js） */
+  const flip=Anim.capture(),kf=kpFocusGet();   /* 原位編輯器裡的游標：重畫後放回原位（events.js） */   /* 動畫規則 2：data-flip 容器裡的項目，render 前後比對位置（anim.js） */
   try{
     document.body.classList.toggle("edit",editing);
     document.body.classList.toggle("locked",boardLocked());
     renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();layoutAll();flowWatch();
   }finally{rendering=false}
+  kpFocusSet(kf);
   Anim.play(flip);Anim.syncPings();
 }
 

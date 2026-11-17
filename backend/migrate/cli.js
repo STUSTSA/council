@@ -2,7 +2,7 @@
 // 正式匯入是「總管理員在瀏覽器執行的匯入頁」（migration.md 第 3 節），不在這裡。
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { ROOT, loadSources, plan, runImport, finishImport, verify, deptReport, formatReport, exportDept, roundTrip, blockedOut } from './run.js';
+import { ROOT, loadSources, plan, runImport, finishImport, verify, deptReport, formatReport, exportDept, roundTrip, blockedOut, tooBigLines } from './run.js';
 import { IGNORED } from './compare.js';
 
 const USAGE = `用法（在 backend/ 資料夾）：
@@ -37,6 +37,8 @@ if (has('dry-run')) {
   const by = {}; p.docs.forEach(d => by[d.kind] = (by[d.kind] || 0) + 1);
   console.log('會產生的文件：', by);
   p.reports.forEach(r => { if (r.broken.length || r.badTimes.length) console.log(r.dept, '斷掉的連結', r.broken, '無法解析的時間', r.badTimes); });
+  const big = tooBigLines(p.reports);   // 03 審查（P2-2）：超過規則上限的卡片（匯入會在寫入前停下）
+  if (big.length) { console.log(`超過上限的卡片 ${big.length} 張（請先在看板上改短再匯入）：`); big.forEach(x => console.log('  ' + x)); process.exit(1); }
   process.exit(0);
 }
 

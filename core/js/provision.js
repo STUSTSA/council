@@ -56,7 +56,7 @@ async function pvAuto(report){
   if([...out.made,...out.fixed].includes(CFG.dept.name)&&!editing){cloud.etag=null;await cloudPull({force:true});render()}   /* 自己這個部門剛更新：載入雲端的新版本 */
   return out;
 }
-const allSub=()=>allRead()?"已設定：各部門自動開通，部門的人用這組密碼加入":"還沒設定：設定後各部門自動開通，部門的人不用碰權杖";
+const allSub=()=>allRead()?"已設定":"還沒設定";
 /* 設定 → 網站管理 → 全會密碼 */
 async function allPwSet(){
   if(!cloudOn()||!ghToken()){await ask("這台裝置沒有權杖",[],{note:"全會密碼要在已經連上雲端（貼過 GitHub 權杖）的裝置上設定。請先到「雲端同步」貼上權杖。"});return}

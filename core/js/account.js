@@ -60,7 +60,7 @@ async function acctStart(){
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
@@ -102,15 +102,16 @@ function acctSettingsInner(){
   const wk=setRow("week","doc","每週概述",weekSub());
   if(!FB_ON)return setSec(wk);
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
-  if(!acct.user)return setSec(wk)+acctGateHTML();
+  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
-  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",esc(state.title)):"")
-      +setRow("labels","tag","標籤",state.labels.length?`人事時地物 ${state.labels.length} 個`:"人事時地物，還沒有建立")
-      +setRow("backup","download","備份","匯出看板內容（JSON 檔）")):"";
-  return setSec(fsWriter()?setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`)+setRow("log","history","編輯紀錄","誰在什麼時候改了什麼"):wk)
-    +setSec(setRow("acct","people",esc(name),`${esc(u.email)} · ${esc(acctRoleSub())}`))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理","人員、QR 邀請、申請、紀錄、匯入、匯出")):"");
+  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
+      +setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")
+      +setRow("backup","download","備份")):"";
+  return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
+    +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
+    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
+    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -155,9 +156,9 @@ async function acctHub(){
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
   return hubRun("帳號",()=>[
-    {k:"name",ic:"edit",t:"名稱",sub:esc(acct.names[acct.user.uid]||acct.user.name||""),flow:acctRename},
+    {k:"name",ic:"edit",t:"名稱",sub:acct.names[acct.user.uid]||acct.user.name||"",flow:acctRename},
     {k:"req",ic:"doc",t:"申請編輯權限",sub:"",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
-    ...pend().map(q=>({k:"rq-"+esc(q.id),ic:"history",t:`${esc(deptNameOf(q.deptId))}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}]);
@@ -206,6 +207,7 @@ function peoplePanel(){
     const A=await acctLoad();
     let roles=[],users=[],who=null;
     const load=async()=>{[roles,users]=await Promise.all([A.rolesList(),A.usersList()]);acct.names=await A.profiles().catch(()=>acct.names)};
+    A.rosterSync().catch(()=>{});   /* 03 F3：打開人員時把全部的專員名單對齊角色（補上 F3 之前就有角色的人、清掉已撤權的） */
     const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
@@ -220,7 +222,7 @@ function peoplePanel(){
       p.box.innerHTML=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="sr-t"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
-    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){await load();draw()}};
+    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});await load();draw()}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補） */
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
@@ -272,9 +274,10 @@ function impRepo(){
 }
 const IMP_STEP={read:"讀取資料檔",write:"寫入",check:"檢查"};
 const IMP_ERR={source:"讀不到資料檔","permission-denied":"沒有權限",unavailable:"沒有連上網路"};
+const impBig=lines=>lines&&lines.length?`<ol class="acct-log imp-big">${lines.map(x=>`<li><span class="acct-log-b"><small>${esc(x)}</small></span></li>`).join("")}</ol>`:"";   /* 超過規則上限的卡片（03 審查 P2-2） */
 function importPanel(){
   return acctPanel("匯入",async p=>{
-    let busy=false,res=null,err="",step="",dept="";
+    let busy=false,res=null,err="",errBig=null,step="",dept="";
     const nm=id=>deptNameOf(id);
     const rowsHTML=r=>`<table class="imp-tbl"><thead><tr><th>項目</th><th>資料檔</th><th>Firestore</th><th>結果</th></tr></thead><tbody>${r.report.rows.map(x=>
       `<tr${x.ok?"":' class="bad"'}><td>${esc(x.label)}</td><td class="num">${x.source}</td><td class="num">${x.firestore}</td><td>${x.ok?"相同":"不同"}</td></tr>`).join("")}</tbody></table>`;
@@ -283,11 +286,11 @@ function importPanel(){
       if(dept){
         const head=`<div class="acct-person"><b>${esc(nm(dept))}</b><small>${esc(CFG.firebase.projectId)}</small></div>`;
         if(busy){p.box.innerHTML=p.head()+head+`<p class="set-p imp-step" role="status">${esc(step)}</p>`;return}
-        if(err){p.box.innerHTML=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p><div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
+        if(err){p.box.innerHTML=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
         const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
         p.box.innerHTML=p.head()+head
           +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`${esc(res.repo)} · commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
-          +rowsHTML(res)
+          +impBig(res.report.tooBig)+rowsHTML(res)
           +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
           +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
           +`<div class="acct-acts"><button type="button" class="add-row" data-run>再匯入一次</button><button type="button" class="add-row" data-back>返回</button></div>`;
@@ -295,11 +298,11 @@ function importPanel(){
       p.box.innerHTML=p.head()+`<div class="set-list">${BOARD_DEPTS.map(d=>`<button type="button" class="set-row acct-row" data-imp="${esc(d.id)}"><span class="sr-t"><b>${esc(d.name)}</b><span class="acct-chips"><span class="acct-chip${deptSourceOf(d.id)==="frozen"?" on":""}">${SRC_T[deptSourceOf(d.id)]}</span></span></span>${SR_CHEV}</button>`).join("")}</div>`;
     };
     const run=async()=>{
-      if(busy)return;busy=true;err="";res=null;step=IMP_STEP.read;draw();
+      if(busy)return;busy=true;err="";errBig=null;res=null;step=IMP_STEP.read;draw();
       try{
         const B=await migLoad();
         res=await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
-      }catch(e){console.error(e);err=IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`}
+      }catch(e){console.error(e);err=e&&e.code==="too-big"?`有 ${e.tooBig.length} 張卡片超過上限，沒有寫入`:IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`;if(e&&e.code==="too-big")errBig=e.tooBig}
       busy=false;draw();
     };
     p.box.addEventListener("click",async e=>{
@@ -396,7 +399,7 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){await load();draw()}}
+      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});await load();draw()}}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")){await load();draw()}}
     });
     await load();draw();

@@ -136,7 +136,7 @@ async function joinDone(first){
     +`其他人加入：請他打開設定 → 登入 →「＋ 新增身分」，輸入學生會給的密碼（各部門都一樣）${first?"。之後也可以到「設定 → 身分與專員」設定只有你們部門知道的共用密碼":""}。`});
 }
 async function createMember(first,title){
-  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）",ph:"例如：王小明"}],
+  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）"}],
     [{name:"rem",label:"在這個裝置上記住密碼（下次不用再輸入）",type:"check",value:true}]);
   if(!v)return false;
   const m={id:uid("m"),name:v.name.trim(),role:first?"admin":"member",kdf:await kdfMake(v.p1),createdAt:nowStr()};
@@ -199,7 +199,31 @@ async function teamSettings(){
 /* ---------- 專員標籤 ---------- */
 /* 專員＝本看板的編輯身分（members）；ev.staff／issues[].staff 存 member id（schemaVersion 8 起） */
 const staffOpts=()=>state.members.map(m=>[m.id,m.name]);
-const staffNames=ids=>(ids||[]).map(id=>state.members.find(m=>m.id===id)).filter(Boolean).map(m=>m.name);
+/* 03 負責人（暫定，不改權限）：firestore 模式的帳號（UID）用 profiles 的名稱，總管理員另外看得到信箱；舊身分照舊用 members 的名字 */
+const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name;if(!fsMode())return "";
+  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?"":String(id).slice(0,8))};
+const staffNames=ids=>(ids||[]).map(staffName).filter(Boolean);
+/* 即時回報「專員」欄的選項：github 模式＝本看板的身分；firestore 模式（staffPplLoad 讀）：
+   總管理員＝這個部門有角色的帳號（roles）；部門的編輯者、管理員＝已標的＋自己＋這個部門的專員名單（03 F3，deptMembers：同部門有角色的人，只有 uid，名字從 profiles） */
+const staffPpl={key:"",roles:null,editors:null,mail:{}};
+/* 讀到的名單只給同一個帳號、同一個角色、同一個部門用（登出、換帳號、撤權後不沿用，信箱只有總管理員看得到） */
+const staffKey=()=>`${CFG.deptId}|${typeof acct!=="undefined"&&acct.user?acct.user.uid:""}|${fsRole()}`;
+function staffOptsFor(ev){
+  if(!fsMode())return staffOpts();
+  const me=typeof acct!=="undefined"&&acct.user?acct.user.uid:"";
+  const ok=staffPpl.key===staffKey(),ids=fsRole()==="super"?[...(ev.staff||[]),...(ok&&staffPpl.roles||[])]:[...(ev.staff||[]),me,...(ok&&staffPpl.editors||[])];
+  return [...new Set(ids.filter(Boolean))].map(id=>[id,staffName(id)||String(id).slice(0,8)]);
+}
+async function staffPplLoad(){
+  const key=staffKey();if(!fsMode()||staffPpl.key===key)return;
+  Object.assign(staffPpl,{key,roles:null,editors:null,mail:{}});
+  try{
+    if(fsRole()==="super"){const A=await acctLoad(),[rs,us]=await Promise.all([A.rolesList(),A.usersList()]);
+      staffPpl.roles=rs.filter(r=>(r.depts||{})[CFG.deptId]).map(r=>r.uid);us.forEach(u=>{if(u.email)staffPpl.mail[u.uid]=u.email})}
+    else{const A=await acctLoad();staffPpl.editors=await A.roster(CFG.deptId)}
+  }catch(_){staffPpl.key=""}   /* 讀不到：只有已標的與自己，下次開始編輯再試 */
+  if(editing&&kp&&!document.querySelector(".csel.open"))render();   /* 原位編輯器的專員選項 */
+}
 function staffHTML(ids){
   const names=staffNames(ids);
   return names.length?`<div class="staff-row"><span class="staff-h">專員</span>${names.map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")}</div>`:"";

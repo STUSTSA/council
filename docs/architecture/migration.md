@@ -10,7 +10,7 @@
 
 | 舊欄位 | 去處 | 備註 |
 |---|---|---|
-| `schemaVersion`、`v` | 不搬；記進 `migrations/{batch}.report` | 匯入前先用現有 `migrate`／`normalize` 升到 13 |
+| `schemaVersion`、`v` | 不搬；記進 `migrations/{batch}.report` | 匯入前先用現有 `migrate`／`normalize` 升到 13（03 起 GitHub 模式存的 14 也收：14＝13＋即時回報的 `blocks`） |
 | `id` | 不搬 | 看板 ID，新架構用部門代號 |
 | `title` | `deptSettings/{dept}.title` | |
 | `range.start`、`range.end` | `deptSettings/{dept}.range` | |
@@ -32,7 +32,7 @@
 |---|---|---|
 | `id` | 文件 ID 的後半 | |
 | `name` | `title` | |
-| `desc` | `blocks` ＋ `legacyDesc` | 依 `\n` 切行；每行 `{id: '{卡片ID}_L{序號}', text, check: null, timeId: null}`；空白行保留成空字串；`legacyDesc` 存原文 |
+| `desc` | `blocks` ＋ `legacyDesc` | 依 `\n` 切行，每行一個純文字行（行 ID `{卡片ID}_L{序號}`，`check: null`、`time: null`）；空白行保留成空字串；`legacyDesc` 存原文。03：`blocks` 是 `{id, text, check, time}` 四個陣列（[data-model.md](data-model.md) 第 3 節）；03 之後 GitHub 模式存的檔案（schemaVersion 14）有 `blocks`，照它搬（勾選、時間行、事件的 `blockId`），`desc` 跟 `blocks` 對不上時照 `desc` 重建、對得上的行沿用 |
 | `issueId` | `issueId` | 改 `{dept}__{issueId}`；找不到的保留原值並列進報告 |
 | `staff[]`（舊身分 ID） | `staff[]` | 改 `legacy:{dept}__{id}` |
 | `labels[]` | `labels[]` | 改新 ID |
@@ -133,7 +133,7 @@ function importing() {
 
 **02D 實作（逐部門）**：操作手冊在 [`docs/遷移步驟.md`](../遷移步驟.md)。
 - 只匯入一個部門：`loadSources({dept})`／命令列 `--dept=代號`。只寫這個部門的文件（`departments` 也只寫它）；`org/config` 跟著秘書處、`grants/meetingEdit` 跟著會長室。重跑同一批：內容相同跳過、少的補上、被改過的列為衝突不覆寫。
-- 筆數報告：`deptReport`／命令列 `--dept=代號 --report`。左欄直接從資料檔數（卡片、遷移產生的第 1 版、議題、週報、標籤、時間標記、議題註記、舊身分、多行說明），右欄是 Firestore 裡這個部門的文件，再加上只看這個部門的 V1～V6。任何一列不同或 V1～V6 失敗＝不通過（結束碼 1）。指到還沒匯入的部門的連結（例如會長室追蹤權益部的議題）列出來但不算失敗。只在匯入後、開放編輯前看。
+- 筆數報告：`deptReport`／命令列 `--dept=代號 --report`。左欄直接從資料檔數（卡片、遷移產生的第 1 版、議題、週報、標籤、時間標記、議題註記、舊身分、多行說明），右欄是 Firestore 裡這個部門的文件，再加上只看這個部門的 V1～V6。任何一列不同或 V1～V6 失敗＝不通過（結束碼 1）。指到還沒匯入的部門的連結（例如會長室追蹤權益部的議題）列出來但不算失敗。只在匯入後、開放編輯前看。03 審查：超過規則上限的卡片（行數、每行字數、超連結數與顏色、名稱長度；`store-map.js` 的 `report.tooBig`）報告最先列出、算不通過；`runImport` 看到就在寫入任何文件（含批次紀錄）之前停下，`--dry-run` 也列出並以結束碼 1 結束。
 - 讀資料檔複本：`--dir=資料夾`（演練先把資料檔複製過去，只讀複本）；`--commit=SHA` 讀那個 commit 的版本。兩者都不寫資料檔。
 - 演練：`tools/tests/sw1.js`（十個部門依順序各做一次匯入 → 報告 → 切換 → 編輯 → 其他部門不變；水果部完整回復），結果見 [verification.md](verification.md) 第 10 節。
 - 網頁匯入頁：見第 3 節（02D D-a）。網頁還沒有「回復這一批」「清空這個部門」（README 待辦）。
@@ -146,7 +146,7 @@ function importing() {
 | # | 檢查 |
 |---|---|
 | V1 | 每個集合、每個部門的來源筆數＝寫入筆數 |
-| V2 | 20 筆多行說明：`blocks[].text` 用 `\n` 接回去＝`legacyDesc`＝原始 `desc` |
+| V2 | 20 筆多行說明：`blocks` 攤平（`store-map.js` 的 `descOf`，核取變成「☑ 」「☐ 」開頭）接回去＝`legacyDesc`＝原始 `desc` |
 | V3 | 連結：`issueId`、`markers[].evId／tmId`、`follows[].ref`、`fromEv`、`labels`、`staff` 全部指得到；斷掉的列出，不丟棄 |
 | V4 | 時間：每個 `events` 的 `startRaw` 重新解析＝`start`；全天事件的日期在台灣時間沒有偏一天 |
 | V5 | 重跑一次：文件數相同、每份文件內容雜湊相同 |

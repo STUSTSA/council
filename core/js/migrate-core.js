@@ -19,14 +19,15 @@
     ? (v.__now ? "__now" : Object.keys(v).filter(k => !IGNORE.has(k)).sort().reduce((o, k) => (o[k] = norm(v[k]), o), {})) : v;
   const contentKey = data => JSON.stringify(norm(data));
 
-  /* 產生所有文件（不寫入）。schemaVersion 不是 13 的檔案直接停下來（不猜舊格式）。只匯入一個部門時，departments 只寫那一個 */
+  /* 產生所有文件（不寫入）。schemaVersion 不是 13 或 14 的檔案直接停下來（不猜舊格式；14＝13＋即時回報的 blocks，03 起 GitHub 模式存的檔案）。
+     只匯入一個部門時，departments 只寫那一個 */
   function plan(src, { batch, uid }) {
     const out = [], reports = [];
     src.depts.forEach((d, i) => { if (!src.only || d.id === src.only) out.push({ kind: "departments", path: `departments/${d.id}`,
       data: { name: d.name, order: i, active: !d.test, updatedAt: NOW, updatedBy: uid } }); });
     for (const f of src.files) {
       const v = +f.state.schemaVersion || +f.state.v || 0;
-      if (v !== 13) throw new Error(`${f.path} 的 schemaVersion 是 ${v}，不是 13：請先用看板開啟並儲存一次（core/js/state.js 的 migrate）再遷移`);
+      if (v !== 13 && v !== 14) throw new Error(`${f.path} 的 schemaVersion 是 ${v}，不是 13 或 14：請先用看板開啟並儲存一次（core/js/state.js 的 migrate）再遷移`);
       const r = MAP.toDocs(f.dept, f.state, { batch, uid });
       out.push(...r.docs);
       reports.push(r.report);
@@ -34,9 +35,15 @@
     return { docs: out, reports };
   }
 
+  /* 03 審查（P2-2）：超過規則上限的卡片（store-map.js 的 report.tooBig），一行一張 */
+  const tooBigLines = reports => reports.flatMap(r => (r.tooBig || []).map(x => `${r.dept}／${x.id}「${x.name}」：${x.why.join("、")}`));
+
   /* 匯入：先建 migrations/{batch}（running＋稽核），再分批寫；重跑時已存在且內容相同就跳過，不同的不覆寫、列為衝突 */
   async function runImport(io, src, { batch, uid, log = () => {} }) {
     const p = plan(src, { batch, uid });
+    /* 有卡片超過規則上限：寫入任何文件（含批次紀錄）之前就停，列出是哪幾張（不讓整個部門寫到一半被規則擋下才發現） */
+    const big = tooBigLines(p.reports);
+    if (big.length) throw Object.assign(new Error(`有 ${big.length} 張卡片超過上限，請先在看板上改短再匯入（沒有寫入任何文件）：\n${big.join("\n")}`), { code: "too-big", tooBig: big });
     const counts = {}, written = {}, skipped = {}, conflicts = [];
     p.docs.forEach(d => counts[d.kind] = (counts[d.kind] || 0) + 1);
     const existing = await io.get(`migrations/${batch}`);
@@ -133,11 +140,11 @@
     for (const [kind, docs] of Object.entries(all)) docs.forEach(d => { const k = `${kind}/${kind === "departments" || kind === "deptSettings" ? "-" : (d.deptId || d.id)}`; have[k] = (have[k] || 0) + 1; });
     const diff = Object.keys({ ...want, ...have }).filter(k => (want[k] || 0) !== (have[k] || 0) && !k.startsWith("org/") && !k.startsWith("grants/"));
     diff.length ? fail("V1", "筆數不符：" + diff.map(k => `${k} 來源 ${want[k] || 0}／寫入 ${have[k] || 0}`).join("；")) : pass("V1", `${Object.keys(want).length} 組集合×部門筆數相同`);
-    /* V2 多行說明：blocks 接回去＝legacyDesc＝原始 desc */
+    /* V2 多行說明：blocks 接回去（攤平成 desc，03）＝legacyDesc＝原始 desc */
     const srcCards = new Map();
     src.files.forEach(f => (f.state.events || []).forEach(e => srcCards.set(`${f.dept}__${e.id}`, String(e.desc || ""))));
     let multi = 0; const bad2 = [];
-    for (const c of all.cards) { const joined = (c.blocks || []).map(b => b.text).join("\n"), orig = srcCards.get(c.id);
+    for (const c of all.cards) { const joined = MAP.descOf(MAP.fromFsBlocks(c.deptId, c.blocks)), orig = srcCards.get(c.id);
       if (orig != null && orig.includes("\n") && joined === orig) multi++;
       if (joined !== orig || c.legacyDesc !== orig) bad2.push(c.id); }
     bad2.length ? fail("V2", "還原不符：" + bad2.join(", ")) : pass("V2", `${all.cards.length} 張卡片還原相同，其中多行 ${multi} 張`);
@@ -192,14 +199,15 @@
   async function deptReport(io, src, dept) {
     const f = src.files.find(x => x.dept === dept);
     if (!f) throw new Error(`來源裡沒有 ${dept}`);
-    const one = { ...src, only: dept, files: [f] };
-    const v = await verify(io, one, plan(one, { batch: "report", uid: "report" }), { dept });
+    const one = { ...src, only: dept, files: [f] }, pl = plan(one, { batch: "report", uid: "report" });
+    const tooBig = tooBigLines(pl.reports);   /* 03 審查（P2-2）：超過規則上限的卡片先列出來（有的話不通過） */
+    const v = await verify(io, one, pl, { dept });
     const a = sourceCounts(f.state), b = { ...v.counts, versions: v.counts.importedVersions };
     const rows = REPORT_ROWS.map(([k, label]) => ({ key: k, label, source: a[k], firestore: b[k] || 0, ok: a[k] === (b[k] || 0) }));
-    return { dept, path: f.path, sha256: f.sha256, commit: src.commit, rows, verify: v.items, pending: v.pending, ok: v.ok && rows.every(r => r.ok) };
+    return { dept, path: f.path, sha256: f.sha256, commit: src.commit, tooBig, rows, verify: v.items, pending: v.pending, ok: !tooBig.length && v.ok && rows.every(r => r.ok) };
   }
 
-  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport };
+  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport, tooBigLines };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.MigrateCore = api;
 })(typeof window !== "undefined" ? window : globalThis);

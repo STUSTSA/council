@@ -173,27 +173,30 @@ document.addEventListener("click",e=>{
 /* 登入前整頁只顯示鎖頭；桌面（900px 以上）點了有下一層的項目，清單往左滑、右側面板顯示內容；手機照舊跳出對話框 */
 const SR_CHEV='<span class="sr-chev" aria-hidden="true"><svg viewBox="0 0 8 14" width="7" height="12"><path d="M1.5 1.5 6.5 7l-5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 /* 一列：k＝項目代號；attr＝"set"（設定清單）或 "hub"（合併頁裡的一列） */
-const setRow=(k,ic,t,sub,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${k}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><span class="sr-t"><b>${t}</b>${sub?`<small>${sub}</small>`:""}</span>${off?"":SR_CHEV}</button>`;
+/* 設定列：k、標題 t、小字 sub 一律在這裡跳脫（03 審查 P2-3），呼叫端傳純文字、不傳 HTML */
+const setRow=(k,ic,t,sub,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${esc(k)}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><span class="sr-t"><b>${esc(t)}</b>${sub?`<small>${esc(sub)}</small>`:""}</span>${off?"":SR_CHEV}</button>`;
 const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div></section>`;
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
+/* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
+const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
 const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=>w.date).sort().pop())}`:"還沒有週報";
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
 function settingsInner(){
   if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
-  if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()+" · 生成週報、歷史週報"))+(boardLocked()
+  if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
-    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`);
-  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub()+" · 生成週報、歷史週報")+setRow("log","history","編輯紀錄","誰在什麼時候改了什麼"));
+    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec();
+  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec();
   const rem=remRead(),remName=rem&&(state.members.find(m=>m.id===rem.id)||{}).name,t=termCfg();
-  return setSec(setRow("report","doc","報告",`每週概述（${weekSub()}）、工作報告`)+setRow("log","history","編輯紀錄","誰在什麼時候改了什麼"))+
-    setSec(setRow("title","edit","看板名稱",esc(state.title))+
-      setRow("team","people","人員",`${state.members.length} 個身分 · 編輯身分、管理員`)+
-      setRow("labels","tag","標籤",state.labels.length?`人事時地物 ${state.labels.length} 個`:"人事時地物，還沒有建立")+
-      (termOwn()?setRow("term","calendar","學年與開學日",`${esc(t.yearLabel||"學年未設定")}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"} · 全會共用`):""))+
-    setSec(setRow("backup","download","備份","匯出、匯入看板內容（JSON 檔）")+
-      setRow("device","device","這台裝置",remName?`記住：${esc(remName)} · 安裝成 App`:"沒有記住身分 · 安裝成 App"))+
-    (siteAdmin()?setSec(setRow("site","cloud","網站管理","雲端同步、分享預覽、全會密碼（只有後台管理員看得到）")):"");
+  return setSec(setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"))+
+    setSec(setRow("title","edit","看板名稱",state.title)+
+      setRow("team","people","人員",`${state.members.length} 個身分`)+
+      setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")+
+      (termOwn()?setRow("term","calendar","學年與開學日",`${t.yearLabel||"學年未設定"}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"}`):""))+
+    setSec(setRow("backup","download","備份")+
+      setRow("device","device","這台裝置",remName?`記住：${remName}`:"沒有記住身分"))+
+    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"");
 }
 /* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
@@ -327,12 +330,12 @@ function forgetDevice(){remClear();if(!editing){meId="";sessionPw="";sharedPwSes
    - act（直接執行的，例如匯出備份、忘記這台裝置）：合併頁留著，執行完更新文字。
    返回（子頁的「返回」、系統返回、Esc）一次退一層：先退出功能回到合併頁，再退才離開（paneDismiss）。 */
 let hubNow=null;
-function hubRun(title,rows,foot=""){
+function hubRun(title,rows,foot=()=>""){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟） */
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b><div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>${foot?`<p class="set-p">${foot}</p>`:""}`;weekDotSync()};
+    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync()};
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{
@@ -350,27 +353,28 @@ function hubRun(title,rows,foot=""){
 const SET_HUBS={
   /* 報告：每週概述（在同一個面板打開，返回回到這一頁；weekly.js 的 weekPane）與工作報告 */
   report:()=>hubRun("報告",()=>[
-    {k:"week",ic:"doc",t:"每週概述",sub:weekSub()+" · 生成週報、歷史週報",flow:()=>weekPane()},
-    {k:"report",ic:"doc",t:"工作報告",sub:"選期間、補寫內容，再存成 PDF",flow:()=>reportDialog()}]),
+    {k:"week",ic:"doc",t:"每週概述",sub:weekSub(),flow:()=>weekPane()},
+    {k:"report",ic:"doc",t:"工作報告",flow:()=>reportDialog()}]),
   backup:()=>hubRun("備份",()=>[
-    {k:"export",ic:"download",t:"匯出備份",sub:"把目前的看板內容存成 JSON 檔，之後可以再匯入",act:()=>exportBackup()},
-    ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",sub:"用備份檔取代目前的看板內容（會先問一次）",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
+    {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
+    ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
+  /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
-    return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${esc(n)}（登入時勾選「在這個裝置上記住密碼」）`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]},
-    "<b>安裝成 App</b><br>全會共用一個 App「學生會看板」，打開就是各部門總覽，從那裡選部門。以前每個部門各裝一個的，建議刪掉重裝。<br>iPhone：用 Safari 打開 → 分享 → 加入主畫面。<br>Android／電腦：瀏覽器選單裡的「安裝」。"),
+    return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",sub:"",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
+      ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}])]},
+    ()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
-    {k:"year",ic:"cap",t:"學年",sub:esc((state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||"")),flow:()=>editBoardInfo("year")},
-    {k:"term",ic:"flag",t:"開學日",sub:state.termStart?fmt(state.termStart):"未設定",flow:()=>editBoardInfo("term")}],
-    "這裡改的是全會共用的值：各部門的學年、開學第幾週、甘特圖預設的學期都跟著秘書處。"),
+    {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
+    {k:"term",ic:"flag",t:"開學日",sub:state.termStart?fmt(state.termStart):"未設定",flow:()=>editBoardInfo("term")}]),
   /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列 */
   site:()=>hubRun("網站管理",()=>{const c=cloudCfg();return [
-    {k:"cloud",ic:"cloud",t:"雲端同步",sub:cloudOn()?`${esc(c.owner)}/${esc(c.repo)} · ${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定",
+    {k:"cloud",ic:"cloud",t:"雲端同步",sub:cloudOn()?`${c.owner}/${c.repo} · ${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定",
       flow:async()=>{const before=JSON.stringify(state);const ok=await cloudSettings();if(ok&&!editing&&JSON.stringify(state)!==before)await settingSave(()=>{},"雲端設定已更新");else render()}},
-    {k:"share",ic:"share",t:"分享預覽",sub:"貼連結到 LINE、IG、FB 時顯示的標題與說明（所有部門共用）",flow:()=>shareSettings()},
+    {k:"share",ic:"share",t:"分享預覽",flow:()=>shareSettings()},
     /* 全會密碼與自動開通、重置測試部門（provision.js） */
     ...(cloudOn()&&ghToken()?[{k:"allpw",ic:"people",t:"全會密碼",sub:allSub(),flow:()=>allPwSet()},
-      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,sub:`回到剛開通的狀態，可以重新測試第一位成員的加入流程（網址 ?d=${d.id}）`,flow:()=>pvReset(d.id)}))]:[])]}),
+      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])]}),
 };
 /* 有下一層的項目（桌面版放右側面板、手機進子頁） */
 const SET_FLOWS={
@@ -387,7 +391,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);

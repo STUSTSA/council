@@ -63,6 +63,14 @@
 | `updatedAt`、`updatedBy` | | |
 沒有 `roles` 文件、或 `super` 不是 true 且 `depts` 為空的登入者＝一般登入者：讀得到 L0、L1，不能寫，可以申請部門角色（02A 定案；01A-R 的 `viewer` 欄位取消，規則不接受這個欄位）。
 
+### `deptMembers/{deptId}__{uid}`：專員名單（03 F3）；同部門的編輯者、管理員與總管理員讀，本人或總管理員寫
+
+`{deptId, uid, at}`，沒有其他欄位（沒有信箱、角色等級、名字）。用途：選專員時列出同部門全部有角色的人，名字照舊從 `profiles` 讀。為什麼另外一份：`roles/{uid}` 裡有 `super`、其他部門、`lastRef`（邀請雜湊）等不能給別人看的欄位，規則不能只開放其中一個欄位，所以改用只含部門與 uid 的名單（使用者 2026-11-17：只開放名稱，不開放信箱與其他欄位）。
+- 誰寫：本人登入時替自己有角色的部門補上（`fb-account.js` 的 `rosterSelf`；建立時規則用 `getAfter(roles/本人)` 確認真的有那個部門的編輯者／管理員）；總管理員改角色、核准申請、撤權之後替那個人對齊，打開「人員」時整份對齊（`rosterSync`）。
+- 誰刪：總管理員、本人；同部門的人可以刪「已經沒有這個部門角色」的那份（過期）。不能改。
+- 誰讀：`isEditor(deptId) || isSuper()`，查詢一定要帶 `deptId ==`；自己那一份（ID 結尾是自己的 uid）不論存不存在都可以 `get`（登入時先查有沒有再補）。別部門的成員、沒有角色的登入者、未登入都讀不到（rules-03-roster M-01～M-07）。
+- 已知限制：名單跟角色在不同的寫入裡對齊（不是同一批），撤權後如果對齊那一批沒寫成，被撤的人會留在名單上直到總管理員下次打開「人員」；只影響同部門的人看到的名字，不影響任何權限（權限只看 `roles`）。
+
 ### `roleRequests/{id}`：本人與 L4
 `uid`、`deptId`、`role`（`admin`｜`editor`；02A 拿掉 `viewer`）、`note`、`legacyRef`（選填，要認領的舊身分）、`status`（`pending`｜`approved`｜`rejected`｜`cancelled`）、`createdAt`、`decidedBy`、`decidedAt`、`rev`。
 
@@ -83,12 +91,12 @@
 |---|---|
 | `deptId` | 建立後不能改 |
 | `title` | 名稱（`name`） |
-| `blocks` | 逐行內容 `[{id, text, check: null \| {done, doneAt, doneBy}, timeId: null \| string}]`（由 `desc` 依換行切開；03 才用到核取方塊） |
-| `timeIds` | 這張卡片的**全部**時間事件 ID（`times[]` 搬到 `events` 後的 ID；行層級的也列在這裡，`blocks[].timeId` 指向其中一個）。02A：規則要求屬於卡片的時間事件一定列在這裡，永久刪除靠它確認全部刪光 |
+| `blocks` | 逐行內容（03 定稿）：四個一樣長的陣列 `{id: [], text: [], check: [], time: []}`，第 n 行＝四個陣列的第 n 個。`id`＝行 ID（`safeId`、同一張卡片裡不重複；插入、刪除一行時勾選與時間跟著 ID 走）；`text`＝文字（每行最多 1000 字、不能有換行）；`check`＝`null`（純文字）、`false`／`true`（核取，沒勾／勾了）；`time`＝`null` 或這張卡片 `timeIds` 裡的一個時間事件 ID（時間＋核取；那份事件的 `blockId` 指回這一行）。最多 50 行。遷移的舊卡片由 `desc` 依換行切開，每行一個純文字行（`{卡片ID}_L{序號}`）。不用「每行一個物件的陣列」：規則沒有迴圈，逐行檢查形狀的運算式數量跟行數成正比，模擬器實測十行就超過每個請求 1000 個運算式的上限；四個陣列可以整欄一次檢查（`firestore.rules` 的 `blocksOk`）。02D 遷移寫的是 `[{id, text, check: null, timeId: null}]`：網頁讀得到，改內容時換成新格式（規則接受舊格式原樣留著，改了 `blocks` 就要是新格式）。不記勾選的人與時間（版本歷史有誰在何時改過） |
+| `timeIds` | 這張卡片的**全部**時間事件 ID（`times[]` 搬到 `events` 後的 ID；行層級的也列在這裡，`blocks.time[n]` 指向其中一個）。02A：規則要求屬於卡片的時間事件一定列在這裡，永久刪除靠它確認全部刪光 |
 | `issueId` | 母議題（`issueId`，改新 ID） |
 | `staff` | 負責人：UID 或 `legacy:{deptId}__{舊身分ID}`（`staff[]`） |
 | `labels` | 標籤 ID（`labels[]`，改新 ID） |
-| `links` | 連結（`links[]`） |
+| `links` | 連結（`links[]`）＝`[{id, name, url, color}]`。03 審查：最多 10 個、`color` 只能是 `#rrggbb`（規則 `linksOk`，改了超連結才檢查；[permissions.md](permissions.md) 第 5.1f 節） |
 | `report` | 會議要報告（`report`） |
 | `state` | `open` \| `done` \| `purging`（02A：永久刪除進行中，不可逆；拿掉 `deleted`） |
 | `doneAt`、`deletedAt`、`deletedBy` | （`doneAt`）；`deletedAt`、`deletedBy`＝開始永久刪除的時間與人 |
@@ -103,7 +111,7 @@
 
 ### `cards/{cardId}/versions/{version}`：跟母卡片同一個讀取條件；只能新增，只能隨永久刪除刪掉
 （01A-R：從頂層 `cardVersions/{cardId}_{version}` 改成子集合，讀取條件跟著母卡片。02A：永久刪除時由新往舊一起刪掉，見 [permissions.md](permissions.md) 第 5.1 節。）
-`cardId`、`deptId`、`version`、`title`、`blocks`、`times`（當時的時間值快照）、`state`、`by`、`at`、`imported`（遷移產生的第 1 版為 true）、`importBatch`（只有遷移產生的第 1 版有，等於母卡片的批次；01B R1）。`title`、`blocks`、`state`、`deptId`、`by`、`at` 由規則比對批次後的卡片。
+`cardId`、`deptId`、`version`、`title`、`blocks`、`times`（當時的時間值快照）、`state`、`by`、`at`、`imported`（遷移產生的第 1 版為 true）、`importBatch`（只有遷移產生的第 1 版有，等於母卡片的批次；01B R1）。`title`、`blocks`、`state`、`deptId`、`by`、`at` 由規則比對批次後的卡片；03 起 `blocks` 也照卡片的 `blocksOk` 檢查形狀。
 
 ### `issues/{id}`：母議題
 `deptId`、`title`、`cur`（目前階段）、`start`、`end`（原字串＋時間）、`note`、`tags`、`labels`、`links`、`staff`、`markers`（陣列，保留舊結構，`evId`／`tmId` 改新 ID）、`doneAt`、`order`、`rev`、`updatedAt`、`updatedBy`。
@@ -118,7 +126,7 @@
 | 欄位 | 說明（舊欄位） |
 |---|---|
 | `deptId` | |
-| `cardId`、`blockId` | 來源卡片與行（舊資料只有 `cardId`）。02A：有 `cardId` 時必須列在那張卡片的 `timeIds`、跟卡片同部門；`cardId` 建立後不能改 |
+| `cardId`、`blockId` | 來源卡片與行（舊資料只有 `cardId`；03：時間＋核取那一行的行 ID，規則只檢查是 `null` 或 `safeId`）。02A：有 `cardId` 時必須列在那張卡片的 `timeIds`、跟卡片同部門；`cardId` 建立後不能改 |
 | `label` | 標記名稱（`times[].label`） |
 | `start`、`end` | Timestamp；`startRaw`、`endRaw` 原字串 |
 | `allDay` | 只有日期 |

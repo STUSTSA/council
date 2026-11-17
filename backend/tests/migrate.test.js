@@ -5,7 +5,7 @@ import { env, google, anon, seed, seedRole, assertFails, assertSucceeds, FV, TS 
 import { loadSources, runImport, finishImport, rollbackImport, setMigrationStatus, verify, fromFirestore, MAP } from '../migrate/run.js';
 import { editCard, readDoc } from './helpers.js';
 import { canon } from '../migrate/compare.js';
-import { deptReport, exportDept, roundTrip, ROOT, blockedOut } from '../migrate/run.js';
+import { deptReport, formatReport, exportDept, roundTrip, ROOT, blockedOut, plan } from '../migrate/run.js';
 import { mkdtempSync, copyFileSync, readFileSync, existsSync, mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -255,6 +255,72 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.deepEqual(s.events[0].times, []);
     assert.deepEqual(s.issues.map(i => i.id), ['i1']);
     assert.deepEqual([s.weeks.length, s.labels.length, s.members.length], [0, 0, 0]);
+  });
+
+  it('03 逐行內容：schemaVersion 14 的檔案照 blocks 搬（行 ID、勾選、時間行與事件的 blockId）；讀回來 desc 攤平、仍是 schemaVersion 13', () => {
+    const st = { schemaVersion: 14, title: 't', members: [], labels: [], issues: [], weeks: [], events: [
+      { id: 'e1', name: '卡', desc: '純文字\n☐ 核取\n☑ 開會', times: [{ id: 't1', label: '開會', start: '2026-11-20T10:00', end: '', place: '', toIssue: false }],
+        blocks: [{ id: 'a', text: '純文字', check: null, timeId: null }, { id: 'b', text: '核取', check: false, timeId: null }, { id: 'c', text: '開會', check: true, timeId: 't1' }] },
+      { id: 'e2', name: '舊卡', desc: '第一行\n第二行', times: [] }] };
+    const { docs } = MAP.toDocs('rights', st, { batch: 'b', uid: 'u' });
+    const card = docs.find(d => d.path === 'cards/rights__e1').data, ev = docs.find(d => d.path === 'events/rights__t1').data;
+    assert.deepEqual(card.blocks, { id: ['a', 'b', 'c'], text: ['純文字', '核取', '開會'], check: [null, false, true], time: [null, null, 'rights__t1'] });
+    assert.equal(ev.blockId, 'c');
+    assert.deepEqual(docs.find(d => d.path === 'cards/rights__e1/versions/1').data.blocks, card.blocks);
+    const old = docs.find(d => d.path === 'cards/rights__e2').data;
+    assert.deepEqual(old.blocks, { id: ['rights__e2_L0', 'rights__e2_L1'], text: ['第一行', '第二行'], check: [null, null], time: [null, null] });
+    // desc 跟 blocks 對不上（舊網站改過 desc）：照 desc 重建，對得上的行沿用 ID 與勾選
+    const st2 = JSON.parse(JSON.stringify(st)); st2.events[0].desc = '純文字\n新的一行\n☑ 開會';
+    const c2 = MAP.toDocs('rights', st2, { batch: 'b', uid: 'u' }).docs.find(d => d.path === 'cards/rights__e1').data;
+    assert.deepEqual([c2.blocks.id[0], c2.blocks.id[2], c2.blocks.check, c2.blocks.time], ['a', 'c', [null, null, true], [null, null, 'rights__t1']]);
+    // 讀回來（新網站的 firestore 模式、回復匯出）：schemaVersion 13、desc 攤平（核取變成文字）、blocks 是多出來的欄位
+    const back = MAP.toState('rights', { settings: { title: 't' }, cards: [{ id: 'rights__e1', ...card }, { id: 'rights__e2', ...old }],
+      events: [{ id: 'rights__t1', ...ev, start: { __ts: 0 }, end: { __ts: 0 } }] });
+    assert.equal(back.schemaVersion, 13);
+    assert.equal(back.events[0].desc, '純文字\n☐ 核取\n☑ 開會');
+    assert.deepEqual(back.events[0].blocks[2], { id: 'c', text: '開會', check: true, timeId: 't1' });
+    assert.equal(back.events[1].desc, '第一行\n第二行');
+    // 02D 遷移的舊格式（每行一個物件）也讀得到
+    const legacy = MAP.toState('rights', { settings: {}, cards: [{ id: 'rights__e3', title: 'x', state: 'open', blocks: [{ id: 'rights__e3_L0', text: '舊', check: null, timeId: null }] }] });
+    assert.equal(legacy.events[0].desc, '舊');
+    assert.equal(canon(back, 'rights').events[0].desc, '純文字\n☐ 核取\n☑ 開會');
+  });
+  it('03：schemaVersion 14 可以遷移、15 停下來', () => {
+    const f = v => ({ depts: [], only: null, files: [{ dept: 'rights', path: 'x.json', state: { schemaVersion: v, events: [], issues: [], weeks: [], labels: [], members: [] } }] });
+    assert.ok(plan(f(14), { batch: 'b', uid: 'u' }).docs.length > 0);
+    assert.throws(() => plan(f(15), { batch: 'b', uid: 'u' }), /不是 13 或 14/);
+  });
+  it('03 審查 P2-2：超過規則上限的卡片（51 行、一行 1001 字、11 個超連結、顏色不是 #rrggbb）在寫入前就列出來並停下；報告、--dry-run 也列出', async () => {
+    const d2 = mkdtempSync(join(tmpdir(), 'mig-big-'));                         // 暫存的水果部複本（不碰正式資料檔）
+    const st = JSON.parse(readFileSync(join(ROOT, 'data-fruit.json'), 'utf8'));
+    const ev = (id, o) => ({ id, name: id, desc: '', createdAt: '2026-11-01', staff: [], links: [], times: [], round: 1, touched: [], ...o });
+    const lk = (n, color = '#6a4fd8') => Array.from({ length: n }, (_, i) => ({ id: 'l' + i, name: '連結', url: 'https://example.com/', color }));
+    st.events = [...(st.events || []), ev('big51', { desc: Array.from({ length: 51 }, (_, i) => `第 ${i} 行`).join('\n') }), ev('ok50', { desc: Array.from({ length: 50 }, (_, i) => 'x'.repeat(1000)).join('\n') }),
+      ev('big1001', { desc: '一行\n' + 'x'.repeat(1001) }), ev('lk11', { links: lk(11) }), ev('ok10', { links: lk(10), desc: Array.from({ length: 50 }, (_, i) => `第 ${i} 行`).join('\n'), times: [{ id: 't1', label: '開會', start: '2026-11-20T14:00', end: '', place: '' }] }), ev('lkbad', { links: lk(1, 'red;position:fixed') }),
+      ev('blk51', { desc: '', blocks: Array.from({ length: 51 }, (_, i) => ({ id: 'b' + i, text: 't', check: null, timeId: null })) })];
+    st.events.find(e => e.id === 'blk51').desc = Array(51).fill('t').join('\n');
+    writeFileSync(join(d2, 'data-fruit.json'), JSON.stringify(st));
+    const s = loadSources({ dir: d2, dept: 'fruit' });
+    const big = plan(s, { batch: 'x', uid: SU }).reports[0].tooBig;
+    assert.deepEqual(big.map(x => x.id), ['big51', 'big1001', 'lk11', 'lkbad', 'blk51']);
+    await assert.rejects(runImport(sdb(), FV, TS, s, { batch: 'd-big', uid: SU }),
+      /有 5 張卡片超過上限[\s\S]*big51「big51」：51 行[\s\S]*big1001[\s\S]*最長一行 1001 字[\s\S]*lk11[\s\S]*11 個超連結[\s\S]*lkbad[\s\S]*#rrggbb[\s\S]*blk51[\s\S]*51 行/);
+    assert.ok(!(await readDoc(t, 'migrations/d-big')), '停在寫入之前：連批次紀錄都沒有寫');
+    assert.equal(await count('cards', 'fruit'), 0);
+    const rep = await deptReport(sdb(), s, 'fruit');
+    assert.equal(rep.ok, false);
+    assert.equal(rep.tooBig.length, 5);
+    const txt = formatReport(rep);
+    assert.ok(txt.indexOf('超過上限的卡片 5 張') > 0 && txt.indexOf('超過上限的卡片') < txt.indexOf('項目'), '報告先列出超過上限的卡片：' + txt);
+    const dry = spawnSync(process.execPath, [join(ROOT, 'backend/migrate/cli.js'), '--dry-run', `--dir=${d2}`, '--dept=fruit'], { cwd: join(ROOT, 'backend'), env: process.env, encoding: 'utf8' });
+    assert.equal(dry.status, 1, dry.stdout + dry.stderr);
+    assert.match(dry.stdout, /超過上限的卡片 5 張[\s\S]*fruit／big51/);
+    // 剛好在上限內的（50 行 × 1000 字；10 個超連結＋50 行＋時間標記）照常匯入、規則接受（遷移匯入最吃運算式，firestore.rules 的 linkOk 註解）
+    st.events = st.events.filter(e => !big.some(x => x.id === e.id));
+    writeFileSync(join(d2, 'data-fruit.json'), JSON.stringify(st));
+    const s2 = loadSources({ dir: d2, dept: 'fruit' });
+    const r = await runImport(sdb(), FV, TS, s2, { batch: 'd-big2', uid: SU });
+    assert.equal(r.written.cards, 2, JSON.stringify(r.written));
   });
 
   it('匯出位置檢查（02D 審查）：大小寫不分、解開符號連結（檔案或資料夾）；只在暫存的假 repo 裡測，不碰正式資料檔', () => {

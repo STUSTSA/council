@@ -42,6 +42,8 @@ export function loadSources({ commit, dir, dept } = {}) {
 // 02D D-a：匯入、批次狀態、驗證、筆數報告的邏輯搬到 core/js/migrate-core.js（網頁匯入頁共用同一份）；這裡只把 compat Firestore 包成它要的 io。
 export const CORE = require(path.join(ROOT, 'core/js/migrate-core.js'));
 export const plan = CORE.plan;
+// 03 審查（P2-2）：超過規則上限的卡片（store-map.js 的 report.tooBig），一行一張
+export const tooBigLines = CORE.tooBigLines;
 
 // ---------- 寫入 ----------
 export function toFirestore(v, FV, TS) {
@@ -119,10 +121,12 @@ const cols = t => [...String(t)].reduce((n, c) => n + (c.codePointAt(0) > 0x2e80
 const padTo = (t, n) => t + ' '.repeat(Math.max(0, n - cols(t)));
 export function formatReport(r) {
   const w = Math.max(...r.rows.map(x => cols(x.label))) + 2;
-  return [`部門 ${r.dept}（${r.path}，SHA-256 ${r.sha256}）`, `${padTo('項目', w)}資料檔  Firestore  結果`,
+  return [`部門 ${r.dept}（${r.path}，SHA-256 ${r.sha256}）`,
+    ...(r.tooBig && r.tooBig.length ? [`超過上限的卡片 ${r.tooBig.length} 張（匯入會在寫入前停下，請先在看板上改短）：`, ...r.tooBig.map(x => '  ' + x)] : []),
+    `${padTo('項目', w)}資料檔  Firestore  結果`,
     ...r.rows.map(x => `${padTo(x.label, w)}${String(x.source).padStart(6)}  ${String(x.firestore).padStart(9)}  ${x.ok ? '相同' : '不同'}`),
     ...r.verify.map(i => `${i.ok ? '通過' : '失敗'} ${i.id} ${i.msg}`),
-    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列）'].join('\n');
+    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列、超過上限的卡片）'].join('\n');
 }
 
 // ---------- 02D：回復用的匯出（upgrade-plan.md 第 6.6 節第 2 列） ----------

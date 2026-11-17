@@ -30,7 +30,7 @@ const dlgTitle=()=>p.evaluate(()=>$('#dlg').open?($('#dlgForm b')||{}).textConte
 const act=async a=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(600)};
 const has=id=>p.evaluate(i=>!!state.events.find(e=>e.id===i),id);
 const startEdit=async id=>{await pwFix(7);const left=await dlgTitle();if(left)console.log('（還開著的對話框：'+left+'）');await p.evaluate(()=>{if(editing)cancelEdit()});await p.waitForTimeout(400);
-  await p.click(`.ev[data-ev="${id}"]>summary`);await p.waitForTimeout(800);await p.click('#evDetail .card-edit-btn');await p.waitForTimeout(800);
+  await p.click(`.ev[data-ev="${id}"]>summary`);await p.waitForTimeout(800);await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(800);
   return p.evaluate(i=>editing&&cardEdit==='e:'+i,id)};
 const del=async()=>{await p.click('#evDetail [data-evdel]');await p.waitForTimeout(600);return dlgTitle()};
 

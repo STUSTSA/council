@@ -52,7 +52,7 @@ export async function seedDepts(t) {
 // ---------- 卡片 ----------
 export function cardData(uid, o = {}) {
   return {
-    deptId: 'rights', title: '卡片', blocks: [{ id: 'b1', text: '第一行', check: null, timeId: null }],
+    deptId: 'rights', title: '卡片', blocks: { id: ['b1'], text: ['第一行'], check: [null], time: [null] },   // 03：四個平行陣列（firestore.rules 的 blocksOk）
     timeIds: [], issueId: null, staff: [], labels: [], links: [], report: false, state: 'open',
     doneAt: null, deletedAt: null, deletedBy: null, order: 1000, version: 1,
     createdAt: NOW(), createdBy: uid, updatedAt: NOW(), updatedBy: uid, ...o,

@@ -154,7 +154,7 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
       r ? [{ path: `deptSettings/${dept}`, ok: s => s && s.rev === r.rev }] : []));
   }
 
-  /* ---- 標籤、議題、週報：新增、修改；刪除＝部門管理員或總管理員，同一批寫刪除紀錄（02D D-d，permissions.md 第 5.1f 節） ---- */
+  /* ---- 標籤、議題、週報：新增、修改；刪除＝部門管理員或總管理員，同一批寫刪除紀錄（02D D-d，permissions.md 第 5.1g 節） ---- */
   for (const kind of ["labels", "issues", "weeks"]) {
     const rev = kind === "issues";
     for (const [id, d] of Object.entries(N[kind])) {
