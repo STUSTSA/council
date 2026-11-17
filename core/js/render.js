@@ -76,7 +76,8 @@ document.addEventListener("mousedown",e=>{
   const hit=t.closest("button,[role=button],label,input[type=checkbox],input[type=radio]");if(!hit||!box.contains(hit))return;
   if(hit.tagName==="LABEL"&&hit.control&&!/^(checkbox|radio)$/.test(hit.control.type))return;
   e.preventDefault();
-  if(hit.tagName==="LABEL"&&hit.control)keepFld={a,c:hit.control,at:performance.now()};
+  if(hit.tagName==="LABEL"&&hit.control){keepFld={a,c:hit.control,at:performance.now()};
+    if(a.selectionStart!==a.selectionEnd&&a.setSelectionRange)try{a.setSelectionRange(a.selectionEnd,a.selectionEnd)}catch(_){}}   /* 文字欄有選取範圍時瀏覽器不讓 label 的點擊勾到核取框（新卡片名稱整段選取時點負責人沒反應；ui-05 審查 P2-1）：收成游標 */
 });
 document.addEventListener("click",()=>{const k=keepFld;if(!k)return;keepBack();clearTimeout(k.t);k.t=setTimeout(()=>{keepBack();if(keepFld===k)keepFld=null},0)});
 document.addEventListener("change",keepBack);
