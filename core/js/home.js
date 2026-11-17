@@ -111,15 +111,15 @@
       const dt=e.timeStamp-d.lt;if(dt>0){d.vy=d.vy*.4+(e.clientY-d.ly)/dt*.6;d.ly=e.clientY;d.lt=e.timeStamp}
       const n=WAL.els.length;let q=d.p-dy/WDRAG;if(q<0)q*=.35;else if(q>n-1)q=n-1+(q-n+1)*.35;WAL.p=q;walDraw()});
     const up=e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;WAL.d=null;const n=WAL.els.length;
-      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){WAL.tap=true;hmEnter(i);return}WAL.f=i}walRun();return}
-      WAL.tap=true;   /* 拖完放開的那一下不是點擊 */
+      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){hmEnter(i);return}WAL.f=i}walRun();return}
       const v=e.timeStamp-d.lt>90?0:d.vy,b=Math.round(d.p);   /* 手指停住才放開＝沒有速度 */
       let to=Math.round(WAL.p-v*170/WDRAG);if(to===b&&Math.abs(v)>.35)to=b+(v<0?1:-1);
       WAL.f=Math.max(0,Math.min(n-1,Math.max(b-3,Math.min(b+3,to))));WAL.v=-v*1000/WDRAG;walRun()};
     w.addEventListener("pointerup",up);w.addEventListener("pointercancel",up);
-    /* 點擊：指標的點擊已經在放開時處理（WAL.tap），這裡只擋掉連結的預設動作；鍵盤 Enter（detail 0）＝進入焦點卡；按著 Ctrl／⌘ 的照連結預設（新分頁） */
+    /* 點擊：指標的點擊（detail 1 以上）已經在放開時處理，這裡只擋掉連結的預設動作；鍵盤 Enter（detail 0）＝進入焦點卡；按著 Ctrl／⌘ 的照連結預設（新分頁）。
+       不用「放開後吃掉下一次點擊」的旗標：手指拖完放開不會有點擊，旗標會留著吃掉下一次 Enter（審查 P2） */
     w.addEventListener("click",e=>{const c=e.target.closest(".hm-wc");if(!c||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();
-      if(WAL.tap){WAL.tap=false;return}if(e.detail===0&&+c.dataset.i===H.i)hmEnter(H.i)});
+      if(e.detail===0&&+c.dataset.i===H.i)hmEnter(H.i)});
   }
   /* ---------- 畫面：桌面／手機各自一套，跨過 640px 時重畫 ---------- */
   function paint(){

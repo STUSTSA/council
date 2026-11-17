@@ -174,4 +174,13 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(!p.errs.length,'沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
 
+  /* ---------- 8. 審查修正 ---------- */
+  /* 8a 手機：拖過卡片堆之後，鍵盤 Enter 第一次就進焦點卡（拖完放開沒有點擊，不能留著「吃掉下一次點擊」的旗標） */
+  {const p=await mk(412,860);await go(p,'home.html');
+    const cdp=await p.context().newCDPSession(p);const t=(type,x,y)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:[{x,y,id:1}]});
+    await t('touchStart',200,600);for(let i=1;i<=14;i++){await t('touchMove',200,600-i*10);await p.waitForTimeout(16)}await p.waitForTimeout(200);await t('touchEnd');await p.waitForTimeout(900);
+    const want=await p.evaluate(()=>{const c=document.querySelector('.hm-wc.on');c.focus();return c.getAttribute('href')});
+    await p.keyboard.press('Enter');await p.waitForURL(/index\.html/,{timeout:4000}).catch(()=>{});
+    ok(p.url().endsWith(want),`拖過之後第一次 Enter 就進焦點卡（${want} → ${p.url().replace(U,'')}）`);
+    await p.ctx.close()}
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();
