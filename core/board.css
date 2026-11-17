@@ -1391,7 +1391,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
    按壓回饋由 notify.js 的 ndPress（只動 transform） */
 .noti-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .nd-card{--nd-bg:var(--blk);--nd-ink:var(--ink);--nd-mut:var(--muted);--nd-rule:color-mix(in srgb,var(--ink) 12%,transparent);
-  display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:196px;padding:18px 18px 16px;border:0;border-radius:var(--r-lg);background:var(--nd-bg);color:var(--nd-ink);text-align:left;white-space:normal;font-weight:400;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:14px;min-height:196px;padding:18px 18px 16px;border:0;border-radius:var(--r-lg);background:var(--nd-bg);color:var(--nd-ink);text-align:left;white-space:normal;font-weight:400;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .nd-card.today{--nd-bg:var(--pri);--nd-ink:var(--pri-ink);--nd-mut:color-mix(in srgb,var(--pri-ink) 62%,var(--pri));--nd-rule:color-mix(in srgb,var(--pri-ink) 18%,transparent)}
 /* 按壓回饋由 notify.js 的 ndPress（Web Animations）做，這裡關掉共用按鈕的 hover／active 縮放 */
 .nd-card:hover,.nd-card:active{transform:none;box-shadow:none}
@@ -1417,9 +1417,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
   .nd-num{font-size:44px}
   .nd-lab b{font-size:13px;letter-spacing:.06em}
-  .nd-row{grid-template-columns:minmax(0,1fr);gap:1px}
   .nd-x b{font-size:13.5px}
-  .nd-more{padding-left:0}
 }
 
 /* ===== 今日層（notify.js 的 openToday；DESIGN-next 第五節「彈簧與回彈」、第九節） =====
