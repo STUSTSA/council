@@ -1,12 +1,12 @@
 /* 核心｜底部工具列、設定頁、拉到底回彈、工具列依背景反轉 */
 const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 /* ---------- 底部工具列（手機）／左側細欄（桌面 900px 以上） ----------
-   材質：毛玻璃 .glass（util.js 的 glassify，跟對話框同一套）；選取鏡片是實心膠囊（文字色），鏡片底下的圖示反白。
+   材質：平面色塊 .glass（util.js 的 glassify；board.css「平面色塊」「底部工具列」段）；選取鏡片是主要動作的實心膠囊（--pri），鏡片底下的圖示用 --pri-ink。
    按鈕機制照 Convx（Kyant backdrop catalog 的 LiquidBottomTabs／DampedDragAnimation／InteractiveHighlight／LiquidButton），手機與桌面同一套，
    差別只在方向（手機水平、桌面直立）：
      - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），整條列跟著偏最多 4px；放開吸到最近的分頁
      - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿主軸拉伸；整條列沿長邊放大 16px、分頁內容放大 1.2；
-       鏡片位置一圈白光（彈簧 .5／300）
+       鏡片位置一圈白光（彈簧 .5／300；2026-11-17 起材質只有平面，白光不畫，--hp 照樣寫但沒有樣式用到）
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
    設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
 let setOpen=false;
@@ -106,7 +106,6 @@ function renderTabbar(){
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
   requestAnimationFrame(()=>lensTo(act));
-  tbContrastSoon();
 }
 function tabGo(k){if(setOpen)closeSettings();if(notiOpen)closeNoti();setSection(k)}
 function setupTabbar(tb){
@@ -156,8 +155,8 @@ function setupTabbar(tb){
   gear.addEventListener("pointermove",e=>{const g=gearSt;if(g.down!==e.pointerId)return;sprSnap(g.ox,e.clientX-g.x0);sprSnap(g.oy,e.clientY-g.y0);tbKick()});
   const gearUp=e=>{const g=gearSt;if(g.down===false||e&&e.pointerId!==undefined&&e.pointerId!==g.down)return;g.down=false;g.p.t=0;g.ox.t=0;g.oy.t=0;tbKick()};
   gear.addEventListener("pointerup",gearUp);gear.addEventListener("pointercancel",gearUp);addEventListener("pointerup",gearUp);addEventListener("blur",()=>gearUp());
-  const relayout=()=>{lensTo(tbActive(),true);tbContrastSoon()};
-  RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;[main,gear].forEach(n=>n.classList.remove("on-light","on-dark"));requestAnimationFrame(relayout)});
+  const relayout=()=>lensTo(tbActive(),true);
+  RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;requestAnimationFrame(relayout)});
   addEventListener("resize",()=>lensTo(tbActive(),true));
   document.fonts?.ready.then(()=>lensTo(tbActive(),true));
 }
@@ -459,41 +458,3 @@ function elastic(sc,inner){
   sc.addEventListener("touchend",up);sc.addEventListener("touchcancel",up);
 }
 elastic($("#pageMain"),document.querySelector("#pageMain .wrap"));
-
-/* ---------- 工具列文字依背後顏色自動反轉 ---------- */
-function lumUnder(x,y){
-  for(const el of document.elementsFromPoint(x,y)){
-    if(el.closest("#tabbar,#splash")||el.classList.contains("dlg-ghost-bd"))continue;   /* 開場畫面（白底）蓋在上面時不算，看的是底下的看板 */
-    for(let n=el;n&&n.nodeType===1;n=n.parentElement){
-      const m=(getComputedStyle(n).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
-      if(m.length>=3&&(m.length<4||m[3]>.45))return (0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
-    }
-    break;
-  }
-  const m=(getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g)||[0,0,0]).map(Number);return (0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
-}
-let tbCR=0;
-/* 取樣要量版面（elementsFromPoint＋getComputedStyle），放在展開收合動畫進行中會讓動畫卡一下：
-   等畫面上沒有展開收合動畫、瀏覽器閒下來再做 */
-const idle=window.requestIdleCallback||(f=>setTimeout(f,60));
-function tbContrastSoon(){
-  if(tbCR)return;
-  tbCR=1;const go=()=>{if(document.querySelector(".animating"))return setTimeout(go,120);idle(()=>{tbCR=0;tbContrast()},{timeout:300})};
-  requestAnimationFrame(go);
-}
-/* 主列和設定鈕各自判斷（桌面主列是直的，取樣點改成上下排）；多點取樣＋遲滯，避免邊界附近來回閃 */
-function tbContrast(){
-  const tb=$("#tabbar");if(!tb)return;const rail=isRail();
-  tb.querySelectorAll(".tb-main,.tb-gear").forEach(el=>{
-    const r=el.getBoundingClientRect();if(!r.width)return;
-    const g=el.classList.contains("tb-gear"),fx=g||rail?[.3,.5,.7]:[.1,.3,.5,.7,.9],fy=rail&&!g?[.1,.3,.5,.7,.9]:[.3,.5,.7];
-    const ls=[];fx.forEach(a=>fy.forEach(b=>ls.push(lumUnder(r.left+r.width*a,r.top+r.height*b))));
-    const light=ls.filter(v=>v>.6).length/ls.length,dark=ls.filter(v=>v<.4).length/ls.length;
-    if(light>=.7){el.classList.add("on-light");el.classList.remove("on-dark")}
-    else if(dark>=.6){el.classList.add("on-dark");el.classList.remove("on-light")}
-  });
-}
-document.addEventListener("scroll",tbContrastSoon,{capture:true,passive:true});
-addEventListener("resize",tbContrastSoon);
-document.addEventListener("toggle",tbContrastSoon,true);
-document.addEventListener("click",()=>setTimeout(tbContrastSoon,450),true);

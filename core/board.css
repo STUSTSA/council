@@ -131,11 +131,6 @@ a.logo-box:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
    線稿的線在頁首大小只有約 0.4px，另外描一圈不隨縮放變粗的細線（.75px），小尺寸才看得清楚 */
 .logo .logo-line{display:none}
 .logo .logo-line path{stroke:currentColor;stroke-width:.75px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .logo path{fill:currentColor}
-  :root:not([data-theme="light"]) .logo .logo-color{display:none}
-  :root:not([data-theme="light"]) .logo .logo-line{display:inline}
-}
 :root[data-theme="dark"] .logo path{fill:currentColor}
 :root[data-theme="dark"] .logo .logo-color{display:none}
 :root[data-theme="dark"] .logo .logo-line{display:inline}
