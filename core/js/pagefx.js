@@ -103,10 +103,14 @@ const PageFx=(()=>{
      區塊由下往上滑入（2026-11-06 第四版） */
   /* 從主頁點部門進來（index.html 開頭的小程式設了 html[data-pfx]）：開頁第一格就蓋著主頁過場的終點——
      桌面（tile）＝色塊鋪滿的底板（--blk）加部門標誌；手機（flip）＝翻過來的部門底板（--bg）加部門標誌。蓋在 <html> 下（body 還是透明的時候也看得到） */
+  /* 部門標誌放進頁面（不用 <img>）：秘書處的白色零件（.dg-w）才吃得到 board.css「部門標誌」段的填色，交接前後同色、深色時沒有白塊。
+     讀 SVG 檔、解析成這一頁的 <svg>（不是 svg 就給 null）；主頁色塊（home.js）也用這一個 */
+  const svg=u=>fetch(u).then(r=>r.ok?r.text():"").then(t=>{const s=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
+    if(!s||s.nodeName!=="svg")return null;const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");return n}).catch(()=>null);
   let cover=null;const arriveFns=[];
   {const h=document.documentElement,k=h.dataset.pfx,d=h.dataset.pfxD;
-    if(k&&d&&h.classList.contains("pfx-arrive")&&!RM()){cover=document.createElement("div");cover.className="pfx-cover";cover.dataset.k=k;cover.setAttribute("aria-hidden","true");
-      const im=document.createElement("img");im.alt="";im.src=`dept/icons/dept-${d}.svg`;im.onerror=()=>im.remove();cover.append(im);h.append(cover)}
+    if(k&&d&&h.classList.contains("pfx-arrive")&&!RM()){const c=cover=document.createElement("div");c.className="pfx-cover";c.dataset.k=k;c.setAttribute("aria-hidden","true");h.append(c);
+      svg(`dept/icons/dept-${d}.svg`).then(s=>{if(s)c.append(s)})}   /* 主頁剛讀過同一個檔，從快取拿，通常趕得上第一格 */
     delete h.dataset.pfx;delete h.dataset.pfxD}
   function arrive(){
     const h=document.documentElement;if(!h.classList.contains("pfx-arrive")){arriveFns.splice(0).forEach(f=>f());return}
@@ -137,5 +141,5 @@ const PageFx=(()=>{
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",arrive);else arrive();
   /* 跨頁到達開始浮上來的那一刻呼叫 f（沒有要浮上來就馬上呼叫）：主頁從部門回來時，收回色塊的動畫跟著這一刻開始 */
   function onArrive(f){if(document.documentElement.classList.contains("pfx-arrive"))arriveFns.push(f);else f()}
-  return {swap,settle,leave,hold,reset,onArrive};
+  return {swap,settle,leave,hold,reset,onArrive,svg};
 })();

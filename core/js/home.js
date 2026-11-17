@@ -29,9 +29,8 @@
   document.addEventListener("visibilitychange",tick);tick();
 
   /* ---------- 部門標誌：讀 SVG 檔，放進色塊裡（同一個檔案只讀一次） ---------- */
-  const svgLoad=id=>H.svg[id]||(H.svg[id]=fetch(deptLogo(id)).then(r=>r.ok?r.text():"").then(t=>{
-    const doc=new DOMParser().parseFromString(t,"image/svg+xml"),s=doc.documentElement;return s&&s.nodeName==="svg"?s:null}).catch(()=>null));
-  function logosFill(){stage.querySelectorAll(".hm-lg[data-lg]").forEach(h=>{if(h.firstChild)return;svgLoad(h.dataset.lg).then(s=>{if(s&&!h.firstChild){const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");h.append(n)}})})}
+  const svgLoad=id=>H.svg[id]||(H.svg[id]=PageFx.svg(deptLogo(id)));   /* 讀檔、解析在 pagefx.js（看板開頁的底板也用） */
+  function logosFill(){stage.querySelectorAll(".hm-lg[data-lg]").forEach(h=>{if(h.firstChild)return;svgLoad(h.dataset.lg).then(s=>{if(s&&!h.firstChild)h.append(s.cloneNode(true))})})}
 
   /* ---------- 進行中的張數：進主頁時讀一次 ----------
      資料檔（github、frozen 的部門）＝網站上的 data*.json，跟看板開頁讀的同一個檔（cache:no-cache，沒變就是 304）；

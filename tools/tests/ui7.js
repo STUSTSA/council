@@ -87,8 +87,9 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(mid.fx===1&&mid.lg===1,`桌面：被點的色塊連同標誌鋪滿（${nm}）`);
     ok(mid.kp.every(k=>ALLOWED.has(k)),'主頁的動畫只動 transform／opacity：'+mid.kp.join());
     await p.waitForURL(/index\.html/,{timeout:5000}).catch(()=>{});await p.waitForTimeout(30);
-    const arr=await p.evaluate(()=>({cover:document.querySelector('.pfx-cover')?.dataset.k,img:document.querySelector('.pfx-cover img')?.getAttribute('src'),ho:sessionStorage.getItem('pfx-burst')}));
-    ok(arr.cover==='tile'&&/dept\/icons\/dept-\w+\.svg$/.test(arr.img||'')&&arr.ho===null,`看板開頁第一格蓋著同一個終點（${arr.cover} ${arr.img}），交接用完就刪`);
+    const arr=await p.evaluate(()=>({cover:document.querySelector('.pfx-cover')?.dataset.k,ho:sessionStorage.getItem('pfx-burst')}));
+    arr.img=await p.waitForFunction(()=>document.querySelector('.pfx-cover svg.dg')?.dataset.d,null,{timeout:1500}).then(h=>h.jsonValue()).catch(()=>null);
+    ok(arr.cover==='tile'&&arr.img===(new URL(p.url()).searchParams.get('d')||'rights')&&arr.ho===null,`看板開頁第一格蓋著同一個終點（${arr.cover}，標誌 ${arr.img} 放進頁面），交接用完就刪`);
     await p.waitForTimeout(2600);
     ok(await p.evaluate(()=>!document.querySelector('.pfx-cover')),'看板穩定後底板淡掉');
     /* 回主頁：收回那一張 */
@@ -183,6 +184,17 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     await p.keyboard.press('Enter');await p.waitForURL(/index\.html/,{timeout:4000}).catch(()=>{});
     ok(p.url().endsWith(want),`拖過之後第一次 Enter 就進焦點卡（${want} → ${p.url().replace(U,'')}）`);
     await p.ctx.close()}
+  /* 8b 桌面深色：秘書處標誌的白色零件（.dg-w）在色塊、鋪滿的分身、看板開頁的底板都是同一個顏色（色塊底色，不是白） */
+  {const p=await mk(1300,860,{scheme:'dark'});await go(p,'home.html');
+    await p.keyboard.press('ArrowLeft');await p.waitForTimeout(700);
+    const h0=await p.evaluate(()=>{const t=document.querySelector('.hm-tile.on'),w=t.querySelector('.dg-w');return {href:t.getAttribute('href'),bg:getComputedStyle(t).backgroundColor,w:w&&getComputedStyle(w).fill}});
+    await p.click('.hm-tile.on');await p.waitForTimeout(150);
+    const fx=await p.evaluate(()=>{const w=document.querySelector('.hm-fxl .dg-w'),o=document.querySelector('.hm-fx');return {w:w&&getComputedStyle(w).fill,bg:o&&getComputedStyle(o).backgroundColor}});
+    await p.waitForURL(/index\.html/,{timeout:5000}).catch(()=>{});
+    const cv=await p.waitForFunction(()=>{const c=document.querySelector('.pfx-cover'),w=c&&c.querySelector('svg .dg-w');return w&&{w:getComputedStyle(w).fill,bg:getComputedStyle(c).backgroundColor,k:c.dataset.k}},null,{timeout:1500}).then(h=>h.jsonValue()).catch(()=>null);
+    ok(h0.href==='index.html?d=secretariat'&&h0.w===h0.bg&&fx.w===h0.bg&&fx.bg===h0.bg,`深色：色塊與鋪滿分身裡的白色零件＝色塊底色（${h0.w} ${fx.w} 底 ${h0.bg}）`);
+    ok(!!cv&&cv.k==='tile'&&cv.w===h0.bg&&cv.bg===h0.bg&&cv.w!=='rgb(255, 255, 255)',`深色：看板開頁的底板裡同一個零件也是同色，沒有白塊（${cv&&cv.w} 底 ${cv&&cv.bg}）`);
+    await p.ctx.close()}
   /* 8c 系統返回鍵（沒走 bfcache）回主頁：焦點是剛才的部門、收回那一張、不放開場 */
   {const p=await mk(1300,860);await go(p,'home.html');
     await p.keyboard.press('ArrowLeft');await p.waitForTimeout(700);await p.click('.hm-tile.on');
@@ -194,5 +206,15 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     await p.waitForTimeout(1800);
     ok(await p.evaluate(()=>!document.querySelector('.hm-fx')),'收回的底板播完就拿掉');
     ok(!p.errs.length,'沒有錯誤 '+p.errs.join(' | '));
+    await p.ctx.close()}
+  /* 8d 手機深色：翻面的部門底板（--bg）與看板開頁的翻面底板裡，白色零件＝底板底色 */
+  {const p=await mk(412,860,{scheme:'dark'});await go(p,'home.html');
+    await p.keyboard.press('ArrowUp');await p.waitForTimeout(900);
+    const rf=await p.evaluate(()=>{const c=document.querySelector('.hm-wc.on'),r=c.getBoundingClientRect();return [r.left+r.width/2,r.top+60,c.getAttribute('href'),getComputedStyle(c.querySelector('.dg-w')).fill,getComputedStyle(c).backgroundColor]});
+    await p.touchscreen.tap(rf[0],rf[1]);await p.waitForTimeout(150);
+    const fb=await p.evaluate(()=>{const f=document.querySelector('.hm-fb'),w=f&&f.querySelector('.dg-w');return {w:w&&getComputedStyle(w).fill,bg:f&&getComputedStyle(f).backgroundColor}});
+    await p.waitForURL(/index\.html/,{timeout:5000}).catch(()=>{});
+    const cv=await p.waitForFunction(()=>{const c=document.querySelector('.pfx-cover'),w=c&&c.querySelector('svg .dg-w');return w&&{w:getComputedStyle(w).fill,bg:getComputedStyle(c).backgroundColor,k:c.dataset.k}},null,{timeout:1500}).then(h=>h.jsonValue()).catch(()=>null);
+    ok(rf[2]==='index.html?d=secretariat'&&rf[3]===rf[4]&&fb.w===fb.bg&&!!cv&&cv.k==='flip'&&cv.w===fb.bg&&cv.bg===fb.bg,`手機深色：卡片（${rf[3]}／${rf[4]}）、翻面底板（${fb.w}／${fb.bg}）、看板翻面底板（${cv&&cv.w}／${cv&&cv.bg}）的白色零件都＝底色`);
     await p.ctx.close()}
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();
