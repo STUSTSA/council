@@ -418,7 +418,7 @@ const dirtyOthers=()=>{const a=JSON.parse(snapshot);a.events=a.events.filter(e=>
 /* 離開編輯並儲存；失敗時回到編輯（卡片打開）、保留草稿 */
 async function kpSave(){
   const id=kp.id,key=cardEdit,snap=snapshot,draft=kp,undoable=!!kp.before&&!kp.noUndo&&!dirtyOthers();
-  if(!fsMode()&&!(await prepareSave())){kpSay("fail",KP_MSG.fail);return false}
+  if(!fsMode()&&!(await prepareSave())){kpSay("fail",`${KP_MSG.fail}：這台裝置沒有連上雲端`);return false}
   kpSaving=true;
   morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;kpSt={id,st:"saving"};state.savedAt=nowStr();if(meName())state.savedBy=meName();render()});
   let ok=false;
@@ -430,7 +430,7 @@ async function kpSave(){
   if(!state.events.some(e=>e.id===id))state=normalize(JSON.parse(snap));
   editing=true;cardEdit=key;snapshot=snap;dirty=true;kp=draft;
   if(lvOpen!==id){const was=lcCur();lcSet("live",id);if(!lvWide()&&!was)Back.opened("card",lcBack)}
-  kpSt={id,st:"fail",msg:fsMode()&&fsLastErr?`${KP_MSG.fail}：${fsLastErr}`:KP_MSG.fail};render();
+  {const why=fsMode()?fsLastErr:persistErr;kpSt={id,st:"fail",msg:why?`${KP_MSG.fail}：${why}`:KP_MSG.fail}}render();   /* 兩種模式都接原因（firestore：store.js 的 fsLastErr；GitHub：save.js 的 persistErr） */
   return false;
 }
 /* 復原：卡片換回修改前的內容，當成一次編輯儲存（是新的一版、不再提供復原）；這張在那之後被改過（重新讀到別人的修改）就不復原 */
