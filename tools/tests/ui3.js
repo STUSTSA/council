@@ -12,6 +12,7 @@
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
    11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
    12. 審查 P2-2：編輯中游標在 .kp-tx，點專員、標籤的勾選膠囊（label）後 activeElement 仍是那一欄（桌面、手機觸控 412）
+   13. 審查 P2-3：照順序配對時含焦點的節點只有 data-* 一樣才沿用（[a,b(焦點)]→[z,a,b]）；MORPH_KEYS 有 evfk iffk kplb lblname
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -208,6 +209,17 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(!q.errs.length,`${tag}：沒有錯誤`+(q.errs.length?'：'+q.errs.slice(0,3).join(' | '):''));
     await s2.b.close();
   }
+  /* 13. 審查 P2-3：照順序配對（沒有 key）的節點，含焦點的那一個只有 data-* 都一樣才沿用：[a,b(焦點)]→[z,a,b]，焦點那一欄的 data 跟值是同一筆 */
+  {const r=await p.evaluate(()=>{const d=document.createElement('div');document.body.append(d);
+      const it=x=>`<input class="m3" data-x="${x}" value="${x.toUpperCase()}">`;
+      morphTo(d,it('a')+it('b'));const fb=d.children[1];fb.focus();fb.value='B打到一半';
+      morphTo(d,it('z')+it('a')+it('b'));
+      const a=document.activeElement,out={x:a.dataset&&a.dataset.x,v:a.value,same:a===fb,list:[...d.children].map(c=>c.dataset.x+'='+c.value).join(',')};
+      /* 一般的 MORPH_KEYS：即時回報欄位（evfk）、議題欄位（iffk）、時間標記名稱（kplb）、標籤名稱（lblname）都用 key 配對 */
+      out.keys=['evfk','iffk','kplb','lblname'].every(k=>MORPH_KEYS.includes(k));
+      d.remove();return out});
+    ok(r.x==='b'&&r.v==='B打到一半'&&r.same,`[a,b(焦點)]→[z,a,b]：焦點那一欄 data-x=${r.x}、值「${r.v}」、同一個節點 ${r.same}（${r.list}）`);
+    ok(r.keys,'MORPH_KEYS 有 evfk、iffk、kplb、lblname');}
 
   ok(!p.errs.length,'沒有錯誤'+(p.errs.length?'：'+p.errs.slice(0,3).join(' | '):''));
   await b.close();

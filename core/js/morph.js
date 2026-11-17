@@ -2,6 +2,8 @@
    同一個畫面重畫時不整段換掉 innerHTML，而是拿新的 HTML 跟畫面上現有的節點比對，只改有變的屬性、文字與節點：
    - 沒變的節點原封不動（同一個 DOM 節點）：CSS 動畫、圖示正在播的動作、捲動位置、程式掛在節點上的狀態都留著，也不會被當成新的而重跑進場動畫。
    - 配對：有 id 或 MORPH_KEYS 裡的 data 屬性的，用「標籤＋那個值」配對同一筆（換順序時搬動，不重建）；沒有的照順序配對同標籤、同第一個 class 的。
+     照順序配對時，含有焦點的節點只有 data-* 全部一樣才沿用；不一樣就先把新的插在它前面，它留給後面的配對（都沒配到就拿掉），
+     不會變成「屬性是另一筆、值卻是這一筆打到一半的字」。逐欄編輯（evfk、iffk）、時間標記名稱（kplb）、標籤名稱（lblname）都帶 key。
    - 正在輸入的欄位（document.activeElement）不覆寫 value 與選取範圍；正在編輯的 contenteditable 整塊不動。
      搬動節點時不搬含有焦點的那一個（改搬它前面的兄弟），焦點與手機鍵盤不會掉。
    - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中、卡片堆飛出去 go-yes／go-no…）不會被拿掉；
@@ -10,10 +12,12 @@
    - <details> 展開收合時 motion.js 會把內容包進 .dwrap：比對時把新 HTML 的內容當成在 .dwrap 裡，不會因為多一層而整塊重建。
    - SVG（圖示、標誌）內部不逐一比對：整段一樣就不動，不一樣才換掉。
    第一次畫（容器是空的）或換成完全不同的內容時，結果跟 innerHTML 一樣是新建的節點。不依賴其他檔案。 */
-const MORPH_KEYS=["key","ev","done","issue","blk","lk","tp","dk","week","fw","fk","set","hub","zone","kpf"];
+const MORPH_KEYS=["key","ev","done","issue","blk","lk","tp","dk","week","fw","fk","set","hub","zone","kpf","evfk","iffk","kplb","lblname"];
 const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov","go-yes","go-no"];
 const morphCls=n=>{for(const c of n.classList)if(!MORPH_RT.includes(c))return c;return ""};   /* 第一個 class（不算程式執行時加的） */
 const morphKey=n=>{if(n.nodeType!==1)return "";if(n.id)return "#"+n.id;const d=n.dataset;if(!d)return "";for(const k of MORPH_KEYS){const v=d[k];if(v!=null&&v!=="")return k+":"+v}return ""};
+const morphFocus=n=>{const a=document.activeElement;return !!a&&a!==document.body&&n.contains(a)};
+const morphData=(x,y)=>{const d=n=>[...n.attributes].filter(t=>t.name.startsWith("data-")).map(t=>t.name+"="+t.value).sort().join("\n");return d(x)===d(y)};   /* data-* 全部一樣 */
 /* 把 node 放到 ref 的位置。node 含有焦點時不搬它（搬了會失焦），改把 ref 到 node 之間的兄弟搬到 node 後面 */
 function morphPlace(p,node,ref){
   if(node===ref)return;
@@ -33,7 +37,7 @@ function morphKids(a,b){
     while(cur&&cur.nodeType===1&&morphKey(cur)&&!want.has(cur.tagName+morphKey(cur))){const nx=cur.nextSibling;keyed.delete(cur.tagName+morphKey(cur));cur.remove();cur=nx}
     let m=null;const k=morphKey(n);
     if(k){m=keyed.get(n.tagName+k)||null;keyed.delete(n.tagName+k)}
-    else{const c=cur;if(c&&c.nodeType===n.nodeType&&!morphKey(c)&&(n.nodeType!==1||(c.tagName===n.tagName&&morphCls(c)===morphCls(n))))m=c}
+    else{const c=cur;if(c&&c.nodeType===n.nodeType&&!morphKey(c)&&(n.nodeType!==1||(c.tagName===n.tagName&&morphCls(c)===morphCls(n)&&(!morphFocus(c)||morphData(c,n)))))m=c}   /* 含焦點的不是同一筆：不沿用，新的插在它前面 */
     if(m){morphPlace(a,m,cur);cur=m.nextSibling;morphNode(m,n)}
     else a.insertBefore(n,cur);
   }
