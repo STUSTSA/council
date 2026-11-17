@@ -20,6 +20,7 @@ function renderHero(){
   Anim.toggle($("#dhRo"),deptRO());
   Anim.toggle(eye,deptCan());eye.setAttribute("aria-pressed",String(roView));eye.classList.toggle("on",roView);
   Anim.toggle(nb,!deptRO());
+  hsBar();   /* 搜尋列（search.js）：只在即時回報、進度、完成紀錄三頁 */
   weekDotSync();
 }
 

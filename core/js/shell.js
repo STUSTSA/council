@@ -16,6 +16,9 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <button type="button" class="dh-btn dh-eye" id="peekBtn" aria-pressed="false" aria-label="用唯讀檢視看這個單位" hidden></button>
         <button type="button" class="dh-btn noti-btn" id="notiBtn" aria-label="通知" hidden><span class="noti-n num" hidden></span></button>
       </header>
+      <!-- 搜尋列（即時回報、進度、完成紀錄三頁；search.js）：有輸入時內容換成分區的結果清單（#boardRes），點結果跳到那一項並打開 -->
+      <label class="dsearch" id="dSearch"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋" aria-controls="boardRes"><button type="button" class="ds-x" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+      <div class="dres" id="boardRes" role="region" aria-label="搜尋結果" data-flip="sres" hidden></div>
 
       <!-- 會長室：文件連結（follow.js 的 renderDocs）。會長自己新增的超連結按鈕，點了用新分頁打開 -->
       <section class="panel docs-panel" id="docsPanel" data-edbox="s:docs" aria-labelledby="dcH" hidden>
@@ -136,6 +139,7 @@ function suLogoColor(label){
   const nm=document.getElementById("dhName"),en=document.getElementById("dhEn");
   if(nm)nm.textContent=CFG.dept.name||"";
   if(en){en.textContent=DEPT_EN[CFG.deptId]||"";en.hidden=!en.textContent}
+  const q=document.getElementById("boardQ");if(q)q.setAttribute("aria-label","搜尋"+(CFG.dept.name||""));
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
      設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light */
   const c=CFG.colors||{},map={accentLight:"--accent-light",accentDark:"--accent-dark"};

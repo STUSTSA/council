@@ -225,6 +225,45 @@ a.logo-box:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
   .dh-ro{padding:0 10px}
 }
 
+/* ===== 部門搜尋列與結果（search.js；DESIGN-next 第六節「部門內」） =====
+   標題列下面、高 50 的膠囊（平面色塊 --blk），只在即時回報、進度、完成紀錄三頁。聚焦框用 outline（不跟 --blk-sh 串在 box-shadow 裡）。
+   有輸入時 body.searching：看板內容（.layout）藏起來，換成分區的結果清單（#boardRes）：區名（英文小標＋700）＋件數，每一筆是一顆膠囊 */
+.dsearch{display:flex;align-items:center;gap:10px;height:50px;margin:0 0 18px;padding:0 8px 0 18px;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--muted);cursor:text;-webkit-user-select:none;user-select:none}
+.dsearch[hidden]{display:none}
+.dsearch:focus-within{outline:1.5px solid var(--ink);outline-offset:-1.5px}
+.ds-ico{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.dsearch input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
+.dsearch input::placeholder{color:var(--muted);opacity:1}
+.dsearch input:focus,.dsearch input:focus-visible{outline:none}
+.ds-x{flex:none;display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--bg);color:var(--ink)}
+.ds-x[hidden]{display:none}
+.ds-x svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+body.searching .layout{display:none}
+.dres{display:grid;gap:22px;align-content:start;margin-bottom:12px}
+.dres[hidden]{display:none}
+.dr-sec{display:grid;gap:12px;min-width:0}
+.dr-h{display:flex;align-items:flex-end;gap:12px}
+.dr-h b{display:grid;font-size:20px;font-weight:700;letter-spacing:.06em;line-height:1.15}
+.dr-h .num{font-size:14px;color:var(--muted);letter-spacing:.06em}
+.dr-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.dr-item{display:flex;align-items:center;justify-content:flex-start;gap:12px;width:100%;min-width:0;height:54px;padding:0 20px;border:0;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);text-align:left;white-space:nowrap}
+.dr-item b{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.dr-item small{flex:none;max-width:46%;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:var(--muted)}
+.dr-item.done{opacity:.5}
+.dr-item.on{outline:2px solid var(--ink);outline-offset:-2px}   /* 上下鍵選到的那一筆 */
+.dr-item.done.on{opacity:1}
+@media (hover:hover){.dr-item:hover{transform:scale(1.025)}}
+.dr-item mark{background:var(--acc);color:var(--acc-ink);border-radius:3px;padding:0 1px}
+.dr-dot{flex:none;width:10px;height:10px;border-radius:50%;background:var(--st-ok)}
+.dr-dot[data-st="go"]{background:var(--st-go)}
+.dr-dot[data-st="stall"]{background:var(--st-stall)}
+.dr-dot[data-st="done"]{background:var(--ok)}
+.dr-none{margin:0;padding:34px 0;border-radius:var(--r-lg);text-align:center;color:var(--muted);font-size:15px}
+@media (max-width:640px){
+  .dsearch{margin-bottom:14px}
+  .dr-list{grid-template-columns:minmax(0,1fr)}
+}
+
 /* ===== 版面與區塊外框 ===== */
 .layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
