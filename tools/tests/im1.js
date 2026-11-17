@@ -124,7 +124,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   await su.click('[data-imp="rights"]');ok((await dlg(su))==='匯入 權益部（還沒凍結）','權益部：確認的標題標出還沒凍結');await dlgAct(su,'delete');
   await until(async()=>/結果：|失敗（|讀不到|沒有權限/.test(await panel(su)),90000);const t3=await panel(su);
   {const rows=await su.evaluate(()=>[...document.querySelectorAll('.acct-panel .imp-tbl tbody tr')].map(r=>[...r.cells].map(c=>c.textContent)));
-    ok(t3.includes('結果：通過')&&rows.find(r=>r[0].startsWith('卡片'))[1]==='42','權益部（還沒凍結，確認時標出）：42 張卡片匯入通過');}
+    ok(t3.includes('結果：通過')&&rows.find(r=>r[0].startsWith('卡片'))[1]===String(JSON.parse(fs.readFileSync(path.join(ROOT,'data.json'),'utf8')).events.length),'權益部（還沒凍結，確認時標出）：卡片數＝資料檔的筆數，匯入通過');   /* release-03：資料會增加，不寫死筆數 */}
   {const mig=await import(path.join(ROOT,'backend/migrate/run.js'));
     const r=await mig.deptReport(t.authenticatedContext(suUid,{email:'su@example.test',email_verified:true,firebase:{sign_in_provider:'google.com'}}).firestore(),mig.loadSources({dept:'rights'}),'rights');
     ok(r.ok,'權益部：命令列的筆數報告（同一份 migrate-core）也通過');}

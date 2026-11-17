@@ -72,17 +72,18 @@
     out.forEach((b, n) => { if (!b.id) b.id = freshId(seen, n); });
     return out;
   }
-  /* 從 desc 重建 blocks：跟舊的某一行（攤平後）完全相同的沿用那一行（ID、勾選、時間），其他是純文字的新行。
-     舊卡片（只有 desc）、舊網站或會議編輯只改了 desc 的資料都走這裡 */
+  /* 一行文字 → {text, check}：開頭「☑ 」＝已勾的核取行、「☐ 」＝沒勾的核取行（攤平的反方向），其他純文字 */
+  const chkOf = line => { const t = String(line).replace(/\r/g, ""), ck = t.startsWith(CHK.done) ? true : t.startsWith(CHK.todo) ? false : null;
+    return { text: ck === null ? t : t.slice(CHK.done.length), check: ck }; };
+  /* 從 desc 重建 blocks：跟舊的某一行（攤平後）完全相同的沿用那一行（ID、勾選、時間），其他是新行（開頭「☑ 」「☐ 」的還原成核取行，
+     release-03：舊網站改了核取行的文字時不會變成純文字）。舊卡片（只有 desc）、舊網站或會議編輯只改了 desc 的資料都走這裡 */
   function blocksFromDesc(desc, old) {
     const pool = new Map(), keep = new Set();
     (old || []).forEach(b => { const k = lineOf(b); if (!pool.has(k)) pool.set(k, []); pool.get(k).push(b); });
     const out = (desc ? String(desc).split("\n") : []).map(line => {
       const m = (pool.get(line) || []).shift();
       if (m) { keep.add(m.id); return copy(m); }
-      /* 對不上的行：開頭是「☑ 」「☐ 」就還原成核取行（舊網站或會議編輯改了核取行的文字、存回的是攤平的 desc；release-03 檢查 C） */
-      const t = line.replace(/\r/g, ""), ck = t.startsWith(CHK.done) ? true : t.startsWith(CHK.todo) ? false : null;
-      return { id: null, text: ck === null ? t : t.slice(CHK.done.length), check: ck, timeId: null };
+      return { id: null, ...chkOf(line), timeId: null };   /* 對不上的行（release-03 檢查 C：「☑ 」「☐ 」開頭的還原成核取行） */
     });
     out.forEach((b, n) => { if (!b.id) b.id = freshId(keep, n); });
     return out;
@@ -148,8 +149,9 @@
       const id = nid(dept, e.id), desc = String(e.desc || "");
       const lines = desc.split("\n");
       if (lines.length > 1) report.multiline++;
-      /* 舊資料（只有 desc）：每行一個純文字行（ID {卡片}_L{n}）。03 之後 GitHub 模式存的檔案有 blocks：照 blocks 搬（timeId 加部門前綴） */
-      const own = Array.isArray(e.blocks) ? blocksOf(e) : lines.map((text, n) => ({ id: `${id}_L${n}`, text, check: null, timeId: null }));
+      /* 舊資料（只有 desc）：每行一行（ID {卡片}_L{n}），開頭「☑ 」「☐ 」的是核取行、其他純文字（跟網頁的 blocksFromDesc 同一個判斷，release-03）。
+         03 之後 GitHub 模式存的檔案有 blocks：照 blocks 搬（timeId 加部門前綴） */
+      const own = Array.isArray(e.blocks) ? blocksOf(e) : lines.map((text, n) => ({ id: `${id}_L${n}`, ...chkOf(text), timeId: null }));
       const blocks = fsBlocks(dept, own);
       /* 03 審查（P2-2）：超過規則上限的卡片（行數、每行字數、超連結數與顏色、名稱長度）先列出來；run.js 的 runImport 看到就在寫入前停下，
          不要讓整個部門寫到一半被規則擋下才發現（要先在看板上改短再匯入） */
