@@ -130,8 +130,9 @@ function renderEvents(){
   const empty=`<p class="empty">目前沒有即時回報。</p>`;   /* 不放教學說明文字（03 暫定決策 f） */
   /* 2026-11-06 使用者從預覽選 D：報告區不寫區名（每顆膠囊右邊自己標「報告」），其他回報上面一條細線、中間小字區名 */
   const zone=(k,h,list,tail)=>`<div class="ev-zone" data-zone="${k}">${h?`<div class="ev-zone-h"><span>${h}</span></div>`:""}<div class="events">${list.length?list.map(cap).join(""):h?"":empty}${tail}</div></div>`;
-  $("#events").innerHTML=rep.length?zone("rep","",rep,"")+"\n      "+zone("rest","其他回報",rest,addBtn):zone("rest","",live,addBtn);
-  if(md){pane.innerHTML=evDetailHTML(live.find(e=>e.id===selEv));pane.hidden=false}else{pane.innerHTML="";pane.hidden=true}
+  /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著 */
+  morphTo($("#events"),rep.length?zone("rep","",rep,"")+"\n      "+zone("rest","其他回報",rest,addBtn):zone("rest","",live,addBtn));
+  if(md){morphTo(pane,evDetailHTML(live.find(e=>e.id===selEv)));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   Anim.syncPings();
 }
 
@@ -253,7 +254,7 @@ function tpClick(ev,tp,t){
   else if(t.closest("[data-tpok]")){if(tpApply()){kpTp=null;render();kpFocusTime(ev,tm.id)}return}
   else if(t.closest("[data-place]"))return;   /* 地點快速選項：labels.js 填進地點欄 */
   else return;
-  tp.outerHTML=tpHTML(ev,tm,st);
+  morphOuter(tp,tpHTML(ev,tm,st));   /* 原位更新：地點、時刻欄的焦點留著，選取器不重跑淡入 */
 }
 const kpFocusTime=(ev,tid)=>{const b=ev.blocks.find(x=>x.timeId===tid);if(b)kpFocus(b.id)};
 /* 把打開的時間選取器寫回那個時間標記；格式不對就在選取器裡顯示、回傳 false */
