@@ -6,7 +6,7 @@
      不會變成「屬性是另一筆、值卻是這一筆打到一半的字」。逐欄編輯（evfk、iffk）、時間標記名稱（kplb）、標籤名稱（lblname）都帶 key。
    - 正在輸入的欄位（document.activeElement）不覆寫 value 與選取範圍；正在編輯的 contenteditable 整塊不動。
      搬動節點時不搬含有焦點的那一個（改搬它前面的兄弟），焦點與手機鍵盤不會掉。
-   - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中、卡片堆飛出去 go-yes／go-no…）不會被拿掉；
+   - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中、逾期卡片堆飛出去 go-l／go-r…）不會被拿掉；
      只能放「程式加、HTML 從來不寫」的暫時狀態；一直都要有的外觀（例如 LiquidSeg 的 .glass）寫在 HTML 裡，不放這裡。
      style：新的 HTML 沒寫 style 時，節點上的 style 跟上一次 HTML 寫的一樣（MORPH_ST 記著）才拿掉；程式在執行時寫的或改過的
      （動畫、拖曳、FLIP 的暫時位移）保留。不是經過這裡建的節點（骨架、別的程式 innerHTML 進來的）沒有紀錄，style 一律保留。
@@ -14,7 +14,7 @@
    - SVG（圖示、標誌）內部不逐一比對：整段一樣就不動，不一樣才換掉。
    第一次畫（容器是空的）或換成完全不同的內容時，結果跟 innerHTML 一樣是新建的節點。不依賴其他檔案。 */
 const MORPH_KEYS=["key","ev","done","issue","blk","lk","tp","dk","week","fw","fk","set","hub","zone","kpf","evfk","iffk","kplb","lblname"];
-const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov","go-yes","go-no"];
+const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov","go-l","go-r"];
 const morphCls=n=>{for(const c of n.classList)if(!MORPH_RT.includes(c))return c;return ""};   /* 第一個 class（不算程式執行時加的） */
 const morphKey=n=>{if(n.nodeType!==1)return "";if(n.id)return "#"+n.id;const d=n.dataset;if(!d)return "";for(const k of MORPH_KEYS){const v=d[k];if(v!=null&&v!=="")return k+":"+v}return ""};
 const MORPH_ST=new WeakMap();   /* 節點 → 上一次 HTML 寫的 style */

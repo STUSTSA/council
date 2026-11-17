@@ -1381,7 +1381,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 
 /* ===== 通知頁（notify.js 的 #notiPage；DESIGN-next 第九節） =====
    部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：由上到下今日／明日、逾期、行事曆，區塊之間 28px。
-   區塊標題：上面很小的英文小標＋粗體名稱（.nt-h）。列印不印這一頁 */
+   區塊標題：上面很小的英文小標＋粗體名稱（.nt-h，用 h3：全站的 h2 有細線裝飾）。列印不印這一頁 */
 .sg-noti{gap:28px;padding-bottom:12px}
 @media print{.sgroup.sg-noti{display:none}}
 .nt-h{display:grid;justify-items:start;gap:3px;margin:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2}
@@ -1500,39 +1500,51 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @media (max-width:640px){.td-num{font-size:72px}}
 @media (prefers-reduced-motion:reduce){.td-ov.on .td-row{transition:none}}
 
-/* --- 整理：交友軟體式左滑右滑（notify.js 的 deckHTML／dkBind） ---
-   卡片堆最多露出三張（後面的往下 10px、縮 5%）；最上面那張跟手指走並傾斜，右滑浮出綠色「今天處理」、左滑浮出「還不要」；
-   下面一排：✕（還不要）、復原、✓（今天處理）；全部滑完整區收起來（notify.js 的 triFold），不畫空狀態 */
-.noti-deck{display:grid;gap:12px;scroll-margin-top:150px}   /* scroll-margin：捲過來時留出上面 sticky 的範圍切換＋搜尋欄 */
-.dk-stack{position:relative;height:196px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.dk-card{position:absolute;inset:0 0 20px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:18px;padding:22px 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 10px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform}
-.dk-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}   /* 卡片堆浮在內容上：平面色塊＋陰影（沒有細框） */
+/* ===== 逾期卡片堆（notify.js 的 lateHTML／dkBind／dkFly；DESIGN-next 第九節） =====
+   最多露出三張（後面的往下 12px、縮 5%、越後面越淡）；最上面那張跟手指走並傾斜：往右拖浮出「改時間」（左上，焦點色）、往左拖浮出「延後」（右上，文字色）；
+   下面一排：延後（外框圓鈕）、剩幾件、改時間（主要動作色圓鈕）。卡片堆浮在內容上：平面色塊＋陰影。後面的卡片往前補位時滑過去（transform 過渡；拖曳中由程式關掉） */
+.nt-late{display:grid;gap:14px}
+.dk-stack{position:relative;height:184px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.dk-card{position:absolute;inset:0 0 14px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:20px;padding:0 26px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 12px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform;transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
+.dk-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}
+.dk-card[data-i="1"]{opacity:.7}
+.dk-card[data-i="2"]{opacity:.4}
 .dk-card[data-i="0"]:active{cursor:grabbing}
 .dk-card:not([data-i="0"]){pointer-events:none}
-.dk-date{display:grid;justify-items:center;min-width:3.6em;padding-right:18px;border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);line-height:1}
-.dk-date b{font-family:"Jost",sans-serif;font-weight:200;font-size:54px;line-height:.85}
-.dk-date small{margin-top:8px;font-size:11.5px;color:var(--muted);letter-spacing:.06em;text-align:center;line-height:1.4}
+.dk-date{display:grid;justify-items:center;min-width:3.6em;padding-right:20px;border-right:1px solid var(--hair);line-height:1}
+.dk-date b{font-family:"Jost",sans-serif;font-weight:300;font-size:46px;line-height:.9}
+.dk-date small{margin-top:6px;font-size:12px;color:var(--muted);letter-spacing:.06em;text-align:center;line-height:1.4}
 .dk-main{display:grid;gap:5px;min-width:0}
-.dk-main b{font-size:18px;font-weight:700;line-height:1.35;letter-spacing:.02em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.dk-main b{font-size:17px;font-weight:700;line-height:1.35;letter-spacing:.04em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.dk-main small{display:flex;gap:12px;font-size:13px;color:var(--muted);overflow:hidden;white-space:nowrap}
+.dk-main small>.num{flex:none}
+/* 拖曳時浮出的印章（--r／--l＝0～1，由拖曳距離決定；飛出去時 .go-r／.go-l 全亮） */
+.dk-stp{position:absolute;top:16px;display:grid;place-items:center;height:30px;padding:0 14px;border-radius:999px;font-size:13px;line-height:1;letter-spacing:.08em;pointer-events:none;opacity:0}
+.dk-stp.r{left:16px;opacity:var(--r,0);background:var(--acc2);color:var(--acc2-ink)}
+.dk-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
+.dk-card.go-r .dk-stp.r,.dk-card.go-l .dk-stp.l{opacity:1}
+.dk-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
+.dk-btn{width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh)}
+.dk-btn.pri{background:var(--pri);color:var(--pri-ink)}
+.dk-btn .ico{width:20px;height:20px}
+.dk-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.dk-card{transition:none}}
 .dk-dot{display:inline-block;width:9px;height:9px;margin:0 8px 2px 0;border-radius:50%;background:var(--c);vertical-align:middle}
-.dk-main small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 拖曳時浮出的印章（--yes／--no＝0～1，由拖曳距離決定） */
 .dk-yes,.dk-no{position:absolute;top:16px;padding:3px 12px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.12em;pointer-events:none;opacity:var(--o,0)}
 .dk-yes{left:16px;--o:var(--yes,0);color:#06210f;background:var(--ok);transform:rotate(-8deg)}
 .dk-no{right:16px;--o:var(--no,0);color:var(--bg);background:var(--muted);transform:rotate(8deg)}
 .dk-card.go-yes .dk-yes,.dk-card.go-no .dk-no{opacity:1}
-.dk-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.dk-btn{width:54px;height:54px;min-height:0;padding:0;border-radius:50%;display:grid;place-items:center;font-size:20px}
 .dk-btn.yes{background:var(--ok);border-color:var(--ok);color:#06210f}
 .dk-btn.no{border-color:var(--hair)}
 .dk-undo[disabled]{opacity:.35;pointer-events:none}
 .dk-count{margin:-4px 0 0;text-align:center}
 @media (max-width:640px){
-  .dk-stack{height:180px}
-  .dk-card{padding:18px;gap:14px;border-radius:var(--r-lg)}
-  .dk-date{padding-right:14px;min-width:3em}
-  .dk-date b{font-size:44px}
-  .dk-main b{font-size:16.5px}
+  .dk-stack{height:174px}
+  .dk-card{padding:0 20px;gap:16px}
+  .dk-date{padding-right:16px;min-width:3em}
+  .dk-date b{font-size:42px}
+  .dk-main b{font-size:16px}
 }
 
 /* --- 行事曆：月份列＋「這一天」＋海報月曆 --- */

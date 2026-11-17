@@ -30,15 +30,16 @@ const notiSub=x=>[NOTI.scope==="all"?deptName(x.dept):"",x.place,x.ev].filter(Bo
 /* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了。
    有結束日看結束：結束日在今天以前，或結束是今天、有結束時刻而且時刻到了；沒有結束日看開始：開始日在今天以前，或開始是今天、有時刻而且時刻到了
    （只有日期、沒有時刻的，過了那一天才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
-function notiLate(s=state){
-  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`;let n=0;
+function notiLateItems(s=state){
+  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
   const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
   s.events.filter(e=>!e.doneAt).forEach(e=>{const tm=new Map((e.times||[]).map(x=>[x.id,x]));
     (e.blocks||[]).forEach(b=>{const x=b.timeId&&tm.get(b.timeId);if(!x||b.check||!x.start)return;
       const ed=(x.end||"").slice(0,10);
-      if(ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16)))n++})});
-  return n;
+      if(ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16)))out.push({ev:e,t:x,b})})});
+  return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
 }
+const notiLate=(s=state)=>notiLateItems(s).length;
 function notiBadge(){
   const b=$("#notiBtn");if(!b)return;
   const n=notiLate(),el=b.querySelector(".noti-n"),txt=n?String(n>99?"99+":n):"";
@@ -109,7 +110,7 @@ function notiInner(){
     :Object.entries(NOTI_ST).map(([k,c])=>`<span><i style="--c:${c}"></i>${EV_ST[k]}</span>`).join("");
   return `${all?`<p class="sub noti-note">${NOTI.loading?"讀取各部門資料中…":"全會：讀各部門的資料檔，只能看、不能改。"}</p>`:""}
     <div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
-    ${triDeck(list).length?`<section class="noti-tri" id="notiTri"><h3 class="noti-h"><b>整理</b><span>右滑今天處理・左滑還不要</span></h3>${deckHTML(list)}</section>`:""}
+    ${lateHTML()}
     <section class="noti-cal">
       <div class="cal-top"><h3 class="noti-h"><b>行事曆</b></h3><button type="button" class="icon" data-nmon="-1" aria-label="上個月">${ico("prev","solo")}</button><button type="button" class="icon" data-nmon="1" aria-label="下個月">${ico("next","solo")}</button><button type="button" class="icon" data-nmon="0">回到本月</button></div>
       ${dayViewHTML(list)}
@@ -130,19 +131,80 @@ let TRI=triLoad();
 const triFresh=()=>{if(TRI.date!==today())TRI=triLoad();return TRI};
 const triPicked=list=>{const y=new Set(triFresh().yes);return list.filter(x=>y.has(x.key))};
 const triDeck=list=>{const o=triFresh(),done=new Set([...o.yes,...o.no]),t=today();return list.filter(x=>(x.end||x.date)>=t&&!done.has(x.key))};
-function deckCardHTML(x,i){
-  return `<div class="dk-card" data-dk="${esc(x.key)}" data-i="${i}" style="--c:${itemColor(x)};--i:${i}"${i?' aria-hidden="true"':""}>
-    <span class="dk-yes" aria-hidden="true">今天處理</span><span class="dk-no" aria-hidden="true">還不要</span>
-    <span class="dk-date"><b class="num">${+x.date.slice(8)}</b><small>${+x.date.slice(5,7)} 月・週${WD[pd(x.date).getDay()]}${x.end?`<br>到 ${nmd(x.end)}`:""}</small></span>
-    <span class="dk-main"><b><i class="dk-dot" aria-hidden="true"></i>${esc(x.title)}</b><small>${esc([x.time,x.place].filter(Boolean).join("・"))}</small><small>${esc([NOTI.scope==="all"?deptName(x.dept):"",x.ev].filter(Boolean).join("・"))}</small></span>
+/* ---------- 逾期（DESIGN-next 第九節）：卡片堆只列逾期的時間（定義跟標題列通知鈕的數字一樣，notiLateItems） ----------
+   一次一張、後面露出兩張；最上面那張跟手指走並傾斜：左滑＝延後（明天同一時刻，notiPostpone）、右滑＝改成具體時間（打開那張卡片的時間頁，notiRetime）。
+   下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity */
+function dkCardHTML(x,i){
+  const d=x.t.start.slice(0,10),en=(x.t.end||"").slice(0,10),tm=x.t.start.slice(11,16);
+  return `<div class="dk-card" data-dk="${esc(x.t.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':""}>
+    <span class="dk-stp r" aria-hidden="true">改時間</span><span class="dk-stp l" aria-hidden="true">延後</span>
+    <span class="dk-date"><b class="num">${+d.slice(8)}</b><small>${+d.slice(5,7)} 月・週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
+    <span class="dk-main"><b>${esc(x.t.label||x.b.text||x.ev.name||"（未命名）")}</b><small>${esc(x.ev.name||"")}${tm?`<span class="num">${tm}</span>`:""}</small></span>
   </div>`;
 }
-function deckHTML(list){
-  const xs=triDeck(list),o=triFresh();
-  return `<div class="noti-deck" id="notiDeck">
-    <div class="dk-stack">${xs.slice(0,3).map(deckCardHTML).reverse().join("")}</div>
-    <div class="dk-ctl"><button type="button" class="dk-btn no" data-dkgo="no" aria-label="還不要">${ico("close","solo")}</button><button type="button" class="icon dk-undo" data-dkundo${o.last.length?"":" disabled"}>復原</button><button type="button" class="dk-btn yes" data-dkgo="yes" aria-label="今天處理">${ico("check","solo")}</button></div>
-    <p class="dk-count sub num">還有 ${xs.length} 件</p></div>`;
+function lateHTML(){
+  const xs=notiLateItems();if(!xs.length)return "";
+  return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="nt-h" id="ntLateH"><span class="nt-en">OVERDUE</span>逾期</h3>
+    <div class="dk-stack" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
+    <div class="dk-ctl"><button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button><span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span><button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button></div></section>`;
+}
+/* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著） */
+function notiPostpone(evId,tid){
+  const tm=addDays(today(),1);
+  return settingSave(()=>{const ev=state.events.find(e=>e.id===evId),t=ev&&(ev.times||[]).find(y=>y.id===tid);if(!t)return false;
+    const sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
+    if(ed&&ed>sd)t.end=tm+t.end.slice(10);
+    else{t.start=tm+t.start.slice(10);if(t.end)t.end=tm+t.end.slice(10)}
+    evTouch(ev);syncLink(ev)},"已延後到明天");
+}
+/* 改成具體時間：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
+async function notiRetime(evId,tid){
+  closeNoti(true,"live");
+  if(!state.events.some(e=>e.id===evId&&!e.doneAt))return;
+  lcShow("live",evId);
+  if(!canEdit()||!(await kpStart(evId,{focus:null})))return;
+  lvPane="time";lvSeg={tid,k:"d",buf:""};render();
+  document.querySelector(".lc-ed .sg.on")?.focus({preventScroll:true});lvBodyIn();
+}
+/* 最上面那張飛出去（dir：l 往左＝延後、r 往右＝改時間），播完才做 */
+function dkFly(card,dir,from={x:0,y:0}){
+  if(!card||card._gone)return;card._gone=true;
+  const W=card.offsetWidth||320,sx=dir==="r"?1:-1,tid=card.dataset.dk,x=notiLateItems().find(y=>y.t.id===tid);
+  const reset=()=>{if(!card.isConnected)return;card._gone=false;card.getAnimations().forEach(a=>a.cancel());card.classList.remove("go-l","go-r");card.style.transform="";card.style.transition="";card.style.setProperty("--l",0);card.style.setProperty("--r",0)};
+  const act=()=>{if(!x){reset();return}if(dir==="l")Promise.resolve(notiPostpone(x.ev.id,tid)).finally(reset);else{reset();notiRetime(x.ev.id,tid)}};
+  card.classList.add(dir==="r"?"go-r":"go-l");
+  if(reduceMotion()){act();return}
+  const next=card.parentElement.querySelector(`.dk-card[data-i="1"]`);
+  if(next)next.animate([{transform:getComputedStyle(next).transform},{transform:"none"}],{duration:MO.base,easing:MO.out,fill:"forwards"});
+  card.animate([{transform:`translate(${from.x}px,${from.y}px) rotate(${from.x/18}deg)`,opacity:1},{transform:`translate(${sx*W*1.3}px,${from.y+40}px) rotate(${sx*26}deg)`,opacity:0}],{duration:340,easing:MO.in,fill:"forwards"})
+    .finished.then(()=>{if(next)next.getAnimations().forEach(a=>a.cancel());act()}).catch(()=>{});
+}
+function dkBind(){
+  const st=$("#notiDeck");if(!st||st._dk)return;st._dk=true;
+  ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".dk-card"))e.stopPropagation()},{passive:true}));
+  let d=null;
+  st.addEventListener("pointerdown",e=>{
+    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone)return;
+    d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",vx:0,lx:e.clientX,lt:performance.now()};
+    c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  st.addEventListener("pointermove",e=>{
+    if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
+    if(!d.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;d.axis=Math.abs(dx)>=Math.abs(dy)?"x":"y";if(d.axis==="y"){d=null;return}d.c.style.transition="none"}
+    const now=performance.now();d.vx=(e.clientX-d.lx)/Math.max(8,now-d.lt);d.lx=e.clientX;d.lt=now;d.x=dx;d.y=dy*.35;
+    const W=d.c.offsetWidth||320,k=Math.min(1,Math.abs(dx)/(W*.3));
+    d.c.style.transform=`translate(${dx}px,${d.y}px) rotate(${dx/18}deg)`;d.c.style.setProperty("--r",dx>0?k:0);d.c.style.setProperty("--l",dx<0?k:0);
+    const nx=st.querySelector('.dk-card[data-i="1"]');if(nx){nx.style.transition="none";nx.style.transform=`translateY(${(1-k)*12}px) scale(${.95+.05*k})`}
+  });
+  const end=e=>{
+    if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
+    const nx=st.querySelector('.dk-card[data-i="1"]');
+    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>24){if(nx){nx.style.transform="";nx.style.transition=""}dkFly(c,(x||v)>0?"r":"l",{x,y});return}
+    const from=c.style.transform;c.style.transform="";c.style.transition="";c.style.setProperty("--r",0);c.style.setProperty("--l",0);
+    if(nx){nx.style.transform="";nx.style.transition=""}
+    if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
+  };
+  st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
 function triCommit(key,dir){
   const o=triFresh();o.yes=o.yes.filter(k=>k!==key);o.no=o.no.filter(k=>k!==key);o[dir].push(key);o.last.push(key);o.last=o.last.slice(-30);triSave(o);
@@ -156,42 +218,6 @@ function triFold(sec){
   return sec.animate([{height:h+"px",opacity:1,marginBottom:"0px"},{height:"0px",opacity:0,marginBottom:"-30px"}],{duration:MO.layout,easing:MO.out,fill:"forwards"}).finished.catch(()=>{});
 }
 function triUndo(){const o=triFresh(),k=o.last.pop();if(!k)return;o.yes=o.yes.filter(x=>x!==k);o.no=o.no.filter(x=>x!==k);triSave(o);renderNoti()}
-/* 讓最上面那張飛出去（dir：yes 往右、no 往左），播完才記下來重畫 */
-function dkFly(card,dir,from={x:0,y:0}){
-  if(!card||card._gone)return;card._gone=true;
-  const W=card.offsetWidth||320,sx=dir==="yes"?1:-1,key=card.dataset.dk;
-  card.classList.add(dir==="yes"?"go-yes":"go-no");
-  if(reduceMotion()){triCommit(key,dir);return}
-  const next=card.parentElement.querySelector(`.dk-card[data-i="1"]`);
-  if(next)next.animate([{transform:getComputedStyle(next).transform},{transform:"none"}],{duration:MO.base,easing:MO.out,fill:"forwards"});
-  card.animate([{transform:`translate(${from.x}px,${from.y}px) rotate(${from.x/18}deg)`,opacity:1},{transform:`translate(${sx*W*1.4}px,${from.y+40}px) rotate(${sx*28}deg)`,opacity:0}],{duration:360,easing:MO.in,fill:"forwards"}).finished.then(()=>triCommit(key,dir)).catch(()=>{});
-}
-function dkBind(){
-  const st=$("#notiDeck .dk-stack");if(!st||st._dk)return;st._dk=true;
-  ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".dk-card"))e.stopPropagation()},{passive:true}));
-  let d=null;
-  st.addEventListener("pointerdown",e=>{
-    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone)return;
-    d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",t:performance.now(),vx:0,lx:e.clientX,lt:performance.now()};
-    c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
-  });
-  st.addEventListener("pointermove",e=>{
-    if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
-    if(!d.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;d.axis=Math.abs(dx)>=Math.abs(dy)?"x":"y";if(d.axis==="y"){d=null;return}}
-    const now=performance.now();d.vx=(e.clientX-d.lx)/Math.max(8,now-d.lt);d.lx=e.clientX;d.lt=now;d.x=dx;d.y=dy*.35;
-    const W=d.c.offsetWidth||320,k=Math.min(1,Math.abs(dx)/(W*.3));
-    d.c.style.transform=`translate(${dx}px,${d.y}px) rotate(${dx/18}deg)`;d.c.style.setProperty("--yes",dx>0?k:0);d.c.style.setProperty("--no",dx<0?k:0);
-    const nx=st.querySelector('.dk-card[data-i="1"]');if(nx)nx.style.transform=`translateY(${(1-k)*10}px) scale(${.95+.05*k})`;
-  });
-  const end=e=>{
-    if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
-    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>24){dkFly(c,(x||v)>0?"yes":"no",{x,y});return}
-    const from=c.style.transform;c.style.transform="";c.style.setProperty("--yes",0);c.style.setProperty("--no",0);
-    const nx=st.querySelector('.dk-card[data-i="1"]');if(nx)nx.style.transform="";
-    if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
-  };
-  st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
-}
 /* ---------- 今日層（DESIGN-next 第九節） ----------
    點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
    返回鍵／手勢、Esc、「關閉」都會關。資料只讀 */
@@ -353,7 +379,6 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-nday]")){NOTI.day=null;renderNoti();return}
   const cd=t.closest("[data-cal]");if(cd){const d=cd.dataset.cal,was=NOTI.day;NOTI.day=was===d?null:d;renderNoti();const v=$("#notiDay");if(v&&!was)Anim.enter(v,"down");return}   /* 點日期：上方出現「這一天」；再點一次收起 */
   const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
-  if(t.closest("[data-dkundo]")){triUndo();return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!todayOpen&&!$("#dlg").open&&!setOpen&&!(typeof rptOpen!=="undefined"&&rptOpen)){e.preventDefault();closeNoti()}});
