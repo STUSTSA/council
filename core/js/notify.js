@@ -5,9 +5,9 @@
    - 由上到下：今日／明日 → 逾期 → 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
+/* 部門色：會長室「各部門編輯量」的折線與圖例在用（activity.js） */
 const DEPT_COLORS=["#e0342a","#0a5baa","#f0bc23","#2f8f84","#a24fc0","#d84f92","#c26a12","#3d7fe0","#6b6b75"];
 const deptColor=id=>DEPT_COLORS[Math.max(0,(window.BOARD_DEPTS||[]).findIndex(d=>d.id===id))%DEPT_COLORS.length];
-const NOTI_ST={ok:"var(--st-ok)",go:"var(--st-go)",stall:"var(--st-stall)"};
 const WD="日一二三四五六";
 /* 一份看板資料 → 事件清單 {key,date,end,time,etime,title,place,ev,dept}（還沒結案的即時回報上的時間） */
 function notiItems(s,dept){
@@ -19,14 +19,10 @@ function notiItems(s,dept){
 }
 const byWhen=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
 const notiMine=()=>notiItems(state,CFG.deptId||"rights");
-const notiList=()=>NOTI.scope==="all"&&NOTI.all?NOTI.all:notiMine();
 /* 某一天有這件事：單日＝那天；時段＝頭到尾每一天 */
 const covers=(x,d)=>x.end?d>=x.date&&d<=x.end:x.date===d;
-const itemColor=x=>NOTI.scope==="all"?deptColor(x.dept):NOTI_ST[x.st]||"var(--ink)";
 const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
-/* 出處文字：地點・所屬即時回報（全會再加部門） */
-const notiSub=x=>[NOTI.scope==="all"?deptName(x.dept):"",x.place,x.ev].filter(Boolean).join("・");
 /* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了。
    有結束日看結束：結束日在今天以前，或結束是今天、有結束時刻而且時刻到了；沒有結束日看開始：開始日在今天以前，或開始是今天、有時刻而且時刻到了
    （只有日期、沒有時刻的，過了那一天才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
@@ -233,19 +229,6 @@ function notiInner(){
     ${lateHTML()}
     ${calHTML(NOTI)}`;
 }
-/* ---------- 整理：交友軟體式左滑右滑（2026-11-05 使用者要求） ----------
-   卡片堆＝所有還沒處理的事件（今天起還沒結束、今天還沒滑過的時間標記），一次一張、後面露出兩張。
-   右滑＝今天處理（放進「今日」卡片的「今天處理」）；左滑＝還不要（今天不再出現）。也可以按下面的 ✕／✓，「復原」退回上一張。
-   全部滑完＝整個「整理」區收起來（高度縮掉、淡出），今天不再出現；隔天結果清空，卡片堆跟著回來（2026-11-06 使用者）。
-   結果只存在這台裝置的 localStorage（workboard:triage:部門代號），隔天自動清空；不上傳、別人看不到。
-   動畫只動 transform／opacity：跟手指走、依位移傾斜，放開超過 30% 寬或甩得夠快就飛出去，否則彈回。 */
-const TRI_KEY=()=>`workboard:triage:${CFG.deptId||"rights"}`;
-function triLoad(){try{const o=JSON.parse(localStorage.getItem(TRI_KEY())||"null");if(o&&o.date===today())return o}catch(_){}return {date:today(),yes:[],no:[],last:[]}}
-function triSave(o){try{localStorage.setItem(TRI_KEY(),JSON.stringify(o))}catch(_){}}
-let TRI=triLoad();
-const triFresh=()=>{if(TRI.date!==today())TRI=triLoad();return TRI};
-const triPicked=list=>{const y=new Set(triFresh().yes);return list.filter(x=>y.has(x.key))};
-const triDeck=list=>{const o=triFresh(),done=new Set([...o.yes,...o.no]),t=today();return list.filter(x=>(x.end||x.date)>=t&&!done.has(x.key))};
 /* ---------- 逾期（DESIGN-next 第九節）：卡片堆只列逾期的時間（定義跟標題列通知鈕的數字一樣，notiLateItems） ----------
    一次一張、後面露出兩張；最上面那張跟手指走並傾斜：左滑＝延後（明天同一時刻，notiPostpone）、右滑＝改成具體時間（打開那張卡片的時間頁，notiRetime）。
    下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity */
@@ -321,18 +304,6 @@ function dkBind(){
   };
   st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
-function triCommit(key,dir){
-  const o=triFresh();o.yes=o.yes.filter(k=>k!==key);o.no=o.no.filter(k=>k!==key);o[dir].push(key);o.last.push(key);o.last=o.last.slice(-30);triSave(o);
-  const sec=$("#notiTri");
-  if(sec&&!triDeck(notiList()).length&&!reduceMotion()){triFold(sec).then(renderNoti);return}   /* 滑完最後一張：整區收起來再重畫 */
-  renderNoti();
-}
-/* 「整理」區收起：高度縮到 0、淡出，下面的區塊跟著往上補（連同區塊間距 30px，.noti-inner 的 gap） */
-function triFold(sec){
-  const h=sec.offsetHeight;sec.style.overflow="hidden";
-  return sec.animate([{height:h+"px",opacity:1,marginBottom:"0px"},{height:"0px",opacity:0,marginBottom:"-30px"}],{duration:MO.layout,easing:MO.out,fill:"forwards"}).finished.catch(()=>{});
-}
-function triUndo(){const o=triFresh(),k=o.last.pop();if(!k)return;o.yes=o.yes.filter(x=>x!==k);o.no=o.no.filter(x=>x!==k);triSave(o);renderNoti()}
 /* ---------- 今日層（DESIGN-next 第九節） ----------
    點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
    返回鍵／手勢、Esc、「關閉」都會關。資料只讀 */
@@ -407,28 +378,6 @@ function renderNoti(){
   dkBind();
 }
 
-/* ---------- 常駐搜尋欄（毛玻璃膠囊，貼在通知層最上面） ----------
-   搜尋事件名稱、地點、所屬即時回報（全會再加部門名）；包含過去的事件。結果即時列在下面，點一筆＝月曆跳到那天閃兩下 */
-const hl=(s,q)=>{const t=String(s);if(!q)return esc(t);const i=t.toLowerCase().indexOf(q.toLowerCase());return i<0?esc(t):esc(t.slice(0,i))+`<mark>${esc(t.slice(i,i+q.length))}</mark>`+esc(t.slice(i+q.length))};
-function notiSearch(){
-  const box=$("#notiRes");if(!box)return;const q=NOTI.q.trim();
-  $("#notiOv .noti-search").classList.toggle("has-q",!!NOTI.q);
-  if(!q){resBox(false);return}
-  const ql=q.toLowerCase(),xs=notiList().filter(x=>[x.title,x.place,x.ev,NOTI.scope==="all"?deptName(x.dept):""].join(" ").toLowerCase().includes(ql)).slice(0,30);
-  box.innerHTML=xs.map(x=>`<button type="button" class="nr" data-nd="${esc(x.date)}" data-ne="${esc(x.end)}" style="--c:${itemColor(x)}"><span class="nr-when num">${nmd(x.date)}${x.end?`–${nmd(x.end)}`:""}${x.time?` ${x.time}`:""}</span><span class="nr-main"><b>${hl(x.title,q)}</b>${notiSub(x)?`<small>${hl(notiSub(x),q)}</small>`:""}</span></button>`).join("")||`<p class="nr-none">找不到「${esc(q)}」</p>`;
-  resBox(true);
-}
-/* 結果框的顯示／隱藏（打字很快時不會被還沒播完的隱藏動畫蓋掉） */
-function resBox(on){
-  const box=$("#notiRes");if(!box||!!box._on===on)return;box._on=on;
-  box.getAnimations().forEach(a=>a.cancel());
-  if(on){box.hidden=false;Anim.enter(box,"down");return}
-  if(reduceMotion()){box.hidden=true;return}
-  const a=box.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"});
-  a.finished.then(()=>{if(!box._on){box.hidden=true;a.cancel()}}).catch(()=>{});
-}
-const searchClose=()=>resBox(false);
-
 /* ---------- 進出這一頁 ----------
    打開：編輯中的卡片先存檔（名稱空白等不能存就不進來）、設定頁收起、搜尋清掉；推一筆瀏覽紀錄；從原分頁換到這一頁（render.js 的 secSwap）。
    沒有權限、唯讀檢視時沒有通知鈕（views.js 的 renderHero），這一頁進不來；開著時變成唯讀就直接回原分頁 */
@@ -449,26 +398,6 @@ function closeNoti(instant,to){
   if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
-}
-async function notiLoadAll(){
-  NOTI.loading=true;renderNoti();
-  const ds=window.BOARD_DEPTS||[];
-  const res=await Promise.all(ds.map(d=>d.id===(CFG.deptId||"rights")?{data:state}:fwLoad(d.id)));
-  NOTI.all=res.flatMap((r,i)=>r&&r.data?notiItems(r.data,ds[i].id):[]).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  NOTI.loading=false;renderNoti();
-}
-/* 換月份：舊月曆淡出、新月曆從翻頁方向滑入（dir：1＝往後、-1＝往前） */
-async function notiMonth(m,dir=1){
-  const old=$("#notiCal");if(old)await Anim.leave(old,"fade",{duration:120});
-  NOTI.month=m;renderNoti();const cal=$("#notiCal");
-  if(cal&&!reduceMotion())await cal.animate([{opacity:0,transform:`translateX(${dir*18}px)`},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.out}).finished.catch(()=>{});
-}
-/* 點一件事：月曆換到那個月、捲到那天，那天（或整個時段）閃兩下 */
-function notiFocus(d,e){
-  const go=()=>{const cells=[...document.querySelectorAll("#notiCal [data-cal]")].filter(c=>e?c.dataset.cal>=d&&c.dataset.cal<=e:c.dataset.cal===d);
-    if(!cells.length)return;cells[0].scrollIntoView({block:"center",behavior:reduceMotion()?"auto":"smooth"});
-    cells.forEach(c=>{c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash")});setTimeout(()=>cells.forEach(c=>c.classList.remove("flash")),1500)};
-  if(d.slice(0,7)!==NOTI.month)notiMonth(d.slice(0,7)).then(go);else go();
 }
 /* 明日卡片：行事曆選到那一天（換到那個月），捲到行事曆 */
 function notiOpenDay(d){

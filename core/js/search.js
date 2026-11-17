@@ -81,7 +81,7 @@ function hsGo(x){
   });
   $("#dSearch .ds-x").addEventListener("click",e=>{e.preventDefault();hsClear();q.focus()});
   /* 搜尋中按 Esc（焦點不在搜尋欄也算）：清掉搜尋。在 document 的捕獲階段先處理，排在「收起右側詳情」（events.js）之前；
-     有對話框、設定、通知層、今日層、報告預覽、編輯紀錄開著時不管（各自的 Esc 先關它們） */
+     有對話框、設定、通知與行事曆、今日層、報告預覽、編輯紀錄開著時不管（各自的 Esc 先關它們） */
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape"||!HS.mode||$("#dlg").open||setOpen||notiOpen||todayOpen||rptOpen||($("#logOv")&&!$("#logOv").hidden))return;
     e.preventDefault();e.stopImmediatePropagation();hsClear();
