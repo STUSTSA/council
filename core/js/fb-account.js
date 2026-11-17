@@ -223,8 +223,6 @@ async function inviteRedeem(token) {
   return result;
 }
 
-/* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
-   mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
 /* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}，只有部門與 uid；名字從 profiles） ---------- */
 const rosterId = (d, u) => `${d}__${u}`;
 const ROLE_OK = ["admin", "editor"];
@@ -247,16 +245,20 @@ async function rosterSync(only) {
   const got = new Set(have.map(x => rosterId(x.deptId, x.uid)));
   if (only && !rs.length) want.clear();
   const add = [...want].filter(k => !got.has(k)), del = [...got].filter(k => !want.has(k));
+  let failed = 0;
   for (let i = 0; i < add.length + del.length; i += 5) {   /* 每份寫入的規則讀取約 3～4 次，整批上限 20（不依賴快取）：一批 5 份 */
     const b = writeBatch(db);
     [...add.map(k => ["add", k]), ...del.map(k => ["del", k])].slice(i, i + 5).forEach(([op, k]) => {
       const [d, u] = k.split("__");
       if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, at: NOW() }); else b.delete(ref("deptMembers", k));
     });
-    await b.commit();
+    try { await b.commit(); } catch (e) { failed++; }   /* 一批失敗（例如本人剛好同時補上）不擋後面的批，下次打開人員再對齊（03 審查） */
   }
+  if (failed) throw Object.assign(new Error("roster"), { code: "partial", failed });
   return { add: add.length, del: del.length };
 }
+/* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
+   mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
 async function rolesList() { return (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, ...plainRole(s.data()), rev: s.data().rev })); }
 async function usersList() { return (await getDocs(collection(db, "users"))).docs.map(s => ({ uid: s.id, email: s.data().email || "", lastLoginAt: ms(s.data().lastLoginAt) })); }
 async function roleWrite(target, mutate, via, r = "") {

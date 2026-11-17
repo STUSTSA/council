@@ -59,13 +59,13 @@ document.addEventListener("click",async e=>{
        原位編輯中的卡片結案時先走跟點外面一樣的檢查與整理（kpReady：時間選取器、名稱與超連結的按鈕名稱不能空白、blocks 同步 desc；03 審查 P2-6）。
        刪除不檢查（03 F2：名稱被清空也能直接刪，不用先填回名稱）：只收掉開著的時間選取器 */
     const inKp=kp&&kp.id===ev.id&&cardEdit==="e:"+ev.id;
-    if(inKp&&evAct.dataset.evdel!==undefined)kpTp=null;
-    else if(inKp&&evAct.dataset.evundo===undefined&&!kpReady(ev))return;
+    if(inKp&&evAct.dataset.evdel===undefined&&evAct.dataset.evundo===undefined&&!kpReady(ev))return;
     if(evAct.dataset.evdone!==undefined){if(!fldCommitOpen())return;ev.doneAt=today();evTouch(ev);syncLink(ev);dirty=true;await saveFlow();toast(parentOf(ev)?`已結案，並記錄到「${parentOf(ev).title}」`:"已結案，移到完成紀錄")}
     else if(evAct.dataset.evundo!==undefined){if(!fldCommitOpen())return;ev.doneAt=null;evTouch(ev);syncLink(ev);dirty=true;await saveFlow()}
     else{const n=(ev.times||[]).length;   /* 刪除是永久的（D16）：有時間標記再確認一次，寫出會一起刪掉幾個 */
-      const v=await ask(ev.name?`刪除「${ev.name}」？`:"刪除這張卡片？",[],{danger:"刪除"});if(v!=="delete")return;
+      const v=await ask((ev.name||"").trim()?`刪除「${ev.name.trim()}」？`:"刪除這張卡片？",[],{danger:"刪除"});if(v!=="delete")return;
       if(n&&await ask(`一起刪掉 ${n} 個時間標記？`,[],{danger:"刪除"})!=="delete")return;
+      if(inKp)kpTp=null;   /* 確認刪除之後才收掉時間選取器（取消的話選取器照舊開著，03 審查） */
       {unlinkEv(ev);state.events=state.events.filter(x=>x!==ev);evFld=null;dirty=true;await saveFlow()}}
     return}
   /* 逐欄編輯（只在編輯中出現）：點一欄＝原本開著的那欄先存回（填錯就停在原欄），再打開這一欄；data-evfx＝取消／完成／刪除 */

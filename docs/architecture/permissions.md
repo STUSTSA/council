@@ -57,7 +57,7 @@ R＝讀、C＝新增、U＝修改、D＝硬刪；「部門」＝文件的 `deptI
 | `deptSettings` | | R | R | RU（部門） | RCUD | |
 | `users/{uid}` | | 本人 RCU | 本人 | 本人 | R | 信箱必須等於登入信箱 |
 | `profiles/{uid}` | | R；本人 CU | 同左 | 同左 | RU | |
-| `deptMembers/{dept}__{uid}`（03 F3） | | | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 只有部門與 uid（專員名單），名字從 `profiles`；見第 5.1h 節 |
+| `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 只有部門與 uid（專員名單），名字從 `profiles`；見第 5.1h 節 |
 | `roles/{uid}` | | 本人 R；核銷邀請時本人 CU | 同左 | 同左 | RCU（不能動自己的 `super`） | 見 [invitations-roles-audit.md](invitations-roles-audit.md) |
 | `roleRequests` | | 本人 RC、本人撤回（只能申請部門的 `admin`／`editor`） | 同左 | 同左 | RU（核准要同批改 `roles`） | |
 | `invitations` | | 知道權杖者 get；核銷 U | 同左 | 同左（D3 開放則可對自己部門 C） | RCU | 不能 list |

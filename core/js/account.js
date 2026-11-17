@@ -102,7 +102,7 @@ function acctSettingsInner(){
   const wk=setRow("week","doc","每週概述",weekSub());
   if(!FB_ON)return setSec(wk);
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
-  if(!acct.user)return setSec(wk)+acctGateHTML();
+  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
@@ -111,7 +111,7 @@ function acctSettingsInner(){
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
-    +((pwaCanInstall()||pwaIosSteps())?setSec(setRow("device","device","這台裝置")):"");   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現 */
+    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
