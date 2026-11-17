@@ -82,8 +82,6 @@ function dayCardHTML(d,lab,cls,list){
 const MON_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],host:null}}
 const NOTI=calState(false),CALS=[NOTI];
-/* 這個行事曆現在要列的事：{xs, loading, err} */
-function calItems(c){return {xs:notiMine(),loading:false,err:""}}
 /* 清單換內容的判斷：模式、勾的部門、月份、那一天 */
 const calKey=c=>[c.mode,c.oth.join(","),c.day].join("|");
 function posterHTML(c,list){
@@ -119,7 +117,52 @@ function calListHTML(c,r){
 /* 月份選單：那個學年（8 月起算）的 12 個月 */
 function calMonths(c){const [y,mo]=c.month.split("-").map(Number),y0=mo>=8?y:y-1;return Array.from({length:12},(_,i)=>{const mm=(7+i)%12+1;return `${mm>=8?y0:y0+1}-${pad(mm)}`})}
 const calPopHTML=c=>`<div class="cal-pop" role="listbox" aria-label="月份">${calMonths(c).map(v=>`<button type="button" role="option" data-calset="${v}" aria-selected="${v===c.month}"><span class="num">${+v.slice(5)}</span> 月</button>`).join("")}</div>`;
-const calModesHTML=c=>"";
+/* ---------- 五類模式（DESIGN-next 第九節）：本部門、會長室、活動、會議、其他（自由勾選部門）；公共版：全部、活動、會議 ----------
+   本部門＝這個看板（state）；會長室、其他勾的部門＝讀那個單位的看板（follow.js 的 fwLoad：github 部門讀資料檔、firestore 部門讀新資料庫，只讀）；
+   活動、會議＝scope 是 all-activity／all-meeting 的時間事件（store.js 的 storeScopeEvents，只有新資料庫有；都還在 github 時這兩類是空的）。
+   讀取量：選到那一類（勾了那個部門）才讀，讀過的留在記憶體（CAL_DATA；重新打開這一頁時超過 5 分鐘、或讀失敗的重讀）；活動、會議只讀那個月前後的範圍 */
+const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["meet","會議"],["other","其他"]],CAL_PMODES=[["all","全部"],["act","活動"],["meet","會議"]];
+const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
+const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");
+function calKeys(c){
+  const sc=s=>storeScopeOn()?[`scope:${s}:${c.month}`]:[];
+  if(c.pub)return c.mode==="act"?sc("all-activity"):c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting")];
+  if(c.mode==="pres")return CFG.deptId==="president"?[]:["dept:president"];
+  if(c.mode==="act")return sc("all-activity");
+  if(c.mode==="meet")return sc("all-meeting");
+  if(c.mode==="other")return c.oth.map(id=>"dept:"+id);
+  return [];
+}
+function calItems(c){
+  let xs=!c.pub&&(c.mode==="mine"||c.mode==="pres"&&CFG.deptId==="president")?notiMine():[],loading=false,err="";
+  calKeys(c).forEach(k=>{const v=CAL_DATA.get(k);if(!v||v.loading)loading=true;else{if(v.err)err=err||v.err;xs=xs.concat(v.items)}});
+  return {xs:xs.sort(byWhen),loading,err};
+}
+/* 新資料庫的時間事件 → 清單的一件事（kind：act 活動／meet 會議） */
+function scopeItems(docs,kind){
+  const raw=(v,r,all)=>r!=null&&r!==""?r:v&&v.__ts!=null?StoreMap.fmtTaipei(v.__ts,all):"";
+  return docs.map(e=>{const s=raw(e.start,e.startRaw,e.allDay),en=raw(e.end,e.endRaw,e.allDay),d=s.slice(0,10),ed=en.slice(0,10);
+    return {key:`scope:${e.id}`,date:d,end:ed&&ed>d?ed:"",time:s.slice(11,16),etime:en.slice(11,16),title:e.label||e.title||"（未命名）",place:e.place||"",ev:"",dept:e.deptId||"",kind}}).filter(x=>x.date);
+}
+function calLoad(c){
+  calKeys(c).forEach(k=>{if(CAL_DATA.has(k))return;CAL_DATA.set(k,{loading:true});
+    let p;
+    if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
+    else{const [,s,m]=k.split(":"),a=StoreMap.parseTaipei(addDays(m+"-01",-31)),b=StoreMap.parseTaipei(ym(new Date(+m.slice(0,4),+m.slice(5,7),1))+"-01");
+      p=storeScopeEvents(s,a.ms,b.ms).then(docs=>({items:scopeItems(docs,s==="all-meeting"?"meet":"act")}))}
+    p.catch(e=>({items:[],err:STORE_XERR(e)})).then(v=>{CAL_DATA.set(k,{...v,at:Date.now()});CALS.forEach(x=>{if(calKeys(x).includes(k)&&(x!==NOTI||notiOpen))calPaint(x)})});
+  });
+}
+/* 重新打開通知頁時：超過 5 分鐘或讀失敗的丟掉重讀 */
+function calStale(){CAL_DATA.forEach((v,k)=>{if(!v.loading&&(v.err||Date.now()-v.at>3e5))CAL_DATA.delete(k)})}
+function calModesHTML(c){
+  const ms=c.pub?CAL_PMODES:CAL_MODES;
+  return `<div class="cal-modes"><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
+    ${!c.pub&&c.mode==="other"?`<div class="cal-oth" role="group" aria-label="其他部門">${calOthers().map(d=>`<button type="button" class="cal-chip" role="checkbox" data-caloth="${esc(d.id)}" aria-checked="${c.oth.includes(d.id)}">${esc(d.name)}</button>`).join("")}</div>`:""}`;
+}
+function calMode(c,k){if(c.mode===k)return;c.mode=k;calLoad(c);calPaint(c)}
+function calOth(c,id){c.oth=c.oth.includes(id)?c.oth.filter(x=>x!==id):[...c.oth,id];calLoad(c);calPaint(c)}
+/* 一個行事曆的 HTML（通知頁的 renderNoti 跟 calMount 共用） */
 function calHTML(c){
   const r=calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
@@ -134,6 +177,7 @@ const calHost=c=>c===NOTI?$("#notiPage"):c.host;
 function calSwapPrep(host){const l=host&&host.querySelector(".cal-list");return l&&l.offsetParent&&!reduceMotion()?{key:l.dataset.callist,ghost:l.cloneNode(true),r:l.getBoundingClientRect()}:null}
 function calAfter(c,host,sw){
   host.dataset.calhost="";host._cal=c;
+  const sg=host.querySelector(".cal-seg");if(sg&&!sg._seg)sg._seg=new LiquidSeg(sg,{onPick:k=>calMode(c,k)});   /* 模式切換（分段切換的鏡片，anim.js） */
   const l=host.querySelector(".cal-list");if(!sw||!l||sw.key===l.dataset.callist)return;
   const par=l.parentElement,pr=par.getBoundingClientRect(),g=sw.ghost;
   g.removeAttribute("aria-live");g.setAttribute("aria-hidden","true");g.inert=true;g.classList.add("cal-ghost");
@@ -146,7 +190,7 @@ function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
 /* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
 function calMonth(c,m){
   if(m===c.month){calPop(c,false);return}
-  const dir=m>c.month?1:-1;c.month=m;c.day=today().slice(0,7)===m?today():m+"-01";c.pop=false;calPaint(c);
+  const dir=m>c.month?1:-1;c.month=m;c.day=today().slice(0,7)===m?today():m+"-01";c.pop=false;calLoad(c);calPaint(c);
   const pc=calHost(c)?.querySelector(".pc");if(pc&&!reduceMotion())pc.animate([{opacity:0,transform:`translateX(${dir*18}px)`},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.out});
   calHost(c)?.querySelector("[data-calmon]")?.focus({preventScroll:true});
 }
@@ -168,6 +212,7 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-calmon]")){calPop(c,!c.pop);return}
   const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
   const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
+  const oth=t.closest("[data-caloth]");if(oth){calOth(c,oth.dataset.caloth);return}
 });
 /* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
 document.addEventListener("keydown",e=>{
@@ -388,7 +433,7 @@ async function openNoti(){
   if(notiOpen||deptRO())return;
   if(setOpen)closeSettings(true);
   if(HS.q)hsClear();
-  notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false});
+  notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false});calStale();calLoad(NOTI);
   Back.layers.noti();$("#notiBtn").setAttribute("aria-pressed","true");
   hsBar();renderTabbar();renderNoti();
   secSwap(curSec,"noti",1);

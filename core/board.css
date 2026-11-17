@@ -1601,6 +1601,18 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .dv-tx b{font-weight:500;line-height:1.45}
 .dv-tx small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dv-tx .num{letter-spacing:.02em}
+/* ===== 行事曆的模式切換（notify.js 的 calModesHTML；DESIGN-next 第九節「五類模式」） =====
+   分段切換（LiquidSeg，在「液態分段切換」段）：本部門、會長室、活動、會議、其他；公共版：全部、活動、會議。放不下時這一列自己左右捲。
+   「其他」：下面一排部門膠囊＝自製勾選（role=checkbox；勾了＝實心 --ink 底，沒勾＝次色塊），勾了才去讀那個部門 */
+.cal-modes{margin:0 -6px;padding:0 6px;overflow-x:auto;scrollbar-width:none}
+.cal-modes::-webkit-scrollbar{display:none}
+.cal-oth{display:flex;flex-wrap:wrap;gap:8px;margin-top:-6px}
+.cal-chip{height:36px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
+.cal-chip[aria-checked="true"]{background:var(--ink);color:var(--blk)}
+.cal-chip:active{transform:scale(.94)}
+.cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
+@media (prefers-reduced-motion:reduce){.cal-chip{transition:none}.cal-oth .cal-chip{animation:none}}
+
 /* ===== 海報月曆（notify.js 的 posterHTML；DESIGN-next 第九節） =====
    超大月份（細體數字＋粗體英文縮寫）、右上兩行年份；週一開頭、MON–SUN 下一條實線；日期只有數字、沒有格線。
    選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體。事件不寫字：單天＝日期下一顆小點、跨天＝橫跨那幾天的細線（兩端圓點），同一週撞在一起的往下排一層（每層 9px） */
@@ -1640,7 +1652,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 }
 @media (prefers-reduced-motion:reduce){.pc-d,.pc-d::before,.cal-mon .ico{transition:none}}
 
-/* ===== 液態分段切換（anim.js 的 LiquidSeg；目前用在通知層的本部門／全會） =====
+/* ===== 液態分段切換（anim.js 的 LiquidSeg；行事曆的模式切換、甘特圖範圍、外觀的淺色／深色） =====
    軌道是次色塊（--blk2，平鋪不加陰影）、鏡片是主要動作的實心膠囊（--pri）、鏡片底下那一格（.lit）文字用 --pri-ink；
    整列放大與偏移、鏡片形變都由 JS 寫 inline（這裡不對 transform／scale 設 transition，避免跟彈簧打架） */
 .lseg{display:inline-flex;padding:4px;border-radius:999px;background:var(--blk2);box-shadow:none;transform-origin:0 50%;   /* 按下時往右放大，貼著內容左邊也不會被切到 */
