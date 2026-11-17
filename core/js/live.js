@@ -4,14 +4,20 @@
 
 /* ===== 狀態 =====
    lvOpen／dnOpen＝打開的即時回報／完成紀錄（一次只開一張；兩個不會同時有值）。
-   版面：寬螢幕（LV_WIDE，視窗 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
+   版面：寬螢幕（lvWide：即時回報容器可用寬度 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
    編輯中：lvPane＝卡片內容換成哪一頁（staff 人／time 時間／place 地點；null＝逐行內容），lvPop＝母議題選單開著，lvSeg＝時間頁選到的那一段 {tid,k,buf}。
    kp＝{id,before}：正在原位編輯的那張與開始前的內容（render.js 的 startEdit 設定）；kpSt＝儲存回饋 {id,st:"saving"|"ok"|"fail"|"bad",msg,before,after}。 */
-const LV_WIDE=matchMedia("(min-width:980px)");
-const lvWide=()=>LV_WIDE.matches;
 let lvOpen=null,dnOpen=null,lvPane=null,lvPop=false,lvSeg=null;
 let kp=null,kpSt=null;
-LV_WIDE.addEventListener("change",()=>{if(lvOpen||dnOpen){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()});
+/* 寬螢幕的判斷（DESIGN-next 第七節「卡片寬不到 980」）：量即時回報／完成紀錄容器（#liveMD、#doneMD）的可用寬度，不看視窗寬。
+   ResizeObserver 只記看得到的那一個（藏起來的分頁量到 0，不算）；寬窄真的變了才在下一格重畫——分不分欄只改容器的高度、不改寬度，不會形成迴圈 */
+const LV_MIN=980;
+let lvWideV=(()=>{const w=$("#liveMD")?.clientWidth;return w?w>=LV_MIN:innerWidth>=LV_MIN})(),lvWideDone=lvWideV;   /* lvWideDone＝畫面已經照著畫的那個值 */
+const lvWide=()=>lvWideV;
+{const ro=new ResizeObserver(es=>{const w=Math.max(0,...es.map(x=>x.contentRect.width));if(!w||(w>=LV_MIN)===lvWideV)return;
+    lvWideV=w>=LV_MIN;requestAnimationFrame(()=>{if(lvWideV===lvWideDone)return;lvWideDone=lvWideV;
+      if(lvOpen||dnOpen){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()})});
+  ["#liveMD","#doneMD"].forEach(k=>{const el=$(k);if(el)ro.observe(el)})}
 const kpType=b=>b.timeId?"time":b.check===null?"text":"check";
 /* 沒有連到任何一行的時間標記（03 以前的舊資料）：列在逐行內容下面（時間頁也列出來，可以改） */
 const evFreeTimes=ev=>{const on=new Set((ev.blocks||[]).map(b=>b.timeId).filter(Boolean));return evTimesSorted(ev).filter(t=>!on.has(t.id))};
