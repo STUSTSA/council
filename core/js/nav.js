@@ -183,7 +183,10 @@ document.addEventListener("click",e=>{
   /* 用滑鼠／手指點的：先放掉焦點，關掉對話框後才不會在按鈕上留下焦點框 */
   const tbBtn=t.closest("#tabbar button");if(tbBtn&&e.detail>0)tbBtn.blur();
   const tab=t.closest("#tabbar .tab");if(tab){tabGo(tab.dataset.tab);return}
-  if(t.closest("#setBtn")){if(notiOpen)closeNoti(true);setOpen?closeSettings():openSettings();return}
+  if(t.closest("#setBtn")){
+    /* 通知頁開著：把它那一筆瀏覽紀錄直接換成設定（Back.replace），不先 history.back() 再推一筆——非同步的退一筆會跟設定推的那筆打架，紀錄變 null、系統返回直接離站（ui-06 審查 P2-7） */
+    if(notiOpen&&!setOpen){Back.replace("noti","settings",i=>closeSettings(i));closeNoti(true)}
+    setOpen?closeSettings():openSettings();return}
 },true);
 
 /* ---------- 設定頁 ---------- */
