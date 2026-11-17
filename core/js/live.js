@@ -135,9 +135,9 @@ function lcFullSync(){
   let host=$("#lcFull");
   const ev=!lvWide()&&lvOpen&&state.events.find(e=>e.id===lvOpen&&!e.doneAt);
   const html=ev?lcLiveHTML(ev,{k:"live",ids:liveOrder().map(e=>e.id),full:true}):!lvWide()&&dnOpen&&typeof doneCardHTML==="function"?doneCardHTML(dnOpen,true):"";
-  if(!html){if(host&&!host.hidden){host.textContent="";host.hidden=true}document.body.classList.remove("lc-full-on");return}
+  if(!html){if(host&&!host.hidden){host.textContent="";host.hidden=true}return}
   if(!host){document.body.insertAdjacentHTML("beforeend",'<div id="lcFull" class="lc-host" role="dialog" aria-modal="true" aria-label="即時回報卡片" hidden></div>');host=$("#lcFull")}
-  morphTo(host,html);host.hidden=false;document.body.classList.add("lc-full-on");
+  morphTo(host,html);host.hidden=false;
 }
 
 /* ===== 打開、收回、上一張／下一張（容器轉化：DESIGN-next 第五節） ===== */

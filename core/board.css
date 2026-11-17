@@ -819,7 +819,6 @@ a.doc-pill:active{scale:.96}
 .tag.sm{font-size:11px;min-height:20px;padding:0 7px 2px!important;line-height:17px}
 .card{padding:16px var(--cpx,18px);display:flex;flex-direction:column;gap:8px;scroll-margin-top:60px;border-radius:0;transition:background-color .25s,opacity .2s;background:transparent;border:0;border-top:1px solid var(--line)}
 .card.open{background:color-mix(in srgb,var(--ink) 5%,transparent)}
-.md-pane[hidden]{display:none}
 .card-title{font-weight:700;font-size:16px;line-height:1.4}
 .card-tools{display:none;gap:4px;flex:none}
 .sec-edit .card-tools{display:flex}
