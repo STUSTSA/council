@@ -1278,12 +1278,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-lg{position:absolute;right:8%;bottom:9%;width:58%;height:58%;pointer-events:none;transition:transform var(--mo-slow) cubic-bezier(.3,1.45,.45,1)}
 .hm-tile.on .hm-lg{transform:scale(1.1) translate(-2%,-2%)}
 .hm-n{position:absolute;left:20px;bottom:16px;font-size:clamp(28px,3vw,38px);font-weight:300;line-height:1}
-.hm-n[hidden]{display:none}
 .hm-ring{position:absolute;left:0;top:0;z-index:2;border:3px solid var(--acc2);border-radius:26px;pointer-events:none;transition:transform 380ms cubic-bezier(.3,1.45,.45,1)}
 /* 手機（640px 以下）：錢包式卡片堆（.hm-wal；位置、縮放、淡出都由 home.js 的 walDraw 寫 transform／opacity）。
-   卡片疊在一起，用一層柔和的陰影分出前後（陰影只給浮在內容上面的東西：手機卡片堆、主頁下排） */
-:root{--wal-sh:rgba(10,42,77,.13)}
-:root[data-theme="dark"]{--wal-sh:rgba(0,0,0,.62)}
+   卡片疊在一起，用一層柔和的陰影分出前後（陰影只給浮在內容上面的東西：手機卡片堆、主頁下排；--wal-sh 在 core/theme.css） */
 .hm-wal{position:relative;flex:1;min-height:0;margin-top:22px;touch-action:none}
 .hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

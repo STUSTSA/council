@@ -4,8 +4,9 @@
    任何元素加上 data-pal 屬性，裡面的變數就換成那一組主題的顏色（深淺跟著外層的 data-theme）：設定 → 帳號 → 外觀的主題按鈕用這個顯示各自的顏色。
    色碼照規格表一字不差；改色碼要先改規格。 */
 [data-pal]{--blk-sh:none}   /* 色塊與膠囊的陰影：只有柔光主題有值 */
-:root{color-scheme:light}
-:root[data-theme="dark"]{color-scheme:dark}
+/* 浮在內容上面的東西的陰影（主頁手機卡片堆、主頁下排；board.css「主頁」段）：不跟主題變，只分深淺 */
+:root{color-scheme:light;--wal-sh:rgba(10,42,77,.13)}
+:root[data-theme="dark"]{color-scheme:dark;--wal-sh:rgba(0,0,0,.62)}
 /* 米黃（fin）：預設 */
 :root:not([data-pal]),[data-pal="fin"]{--bg:#f5f0e1;--blk:#fffdf6;--blk2:#ebe2c8;--ink:#0a2a4d;--muted:#6d6a5c;--hair:#e2d9bf;--acc:#f0bc23;--acc-ink:#0a2a4d;--acc2:#0a5baa;--acc2-ink:#fff;--pri:#0a2a4d;--pri-ink:#fffdf6;--ok:#2f9d62;--late:#d8412f}
 [data-theme="dark"][data-pal="fin"],[data-theme="dark"] [data-pal="fin"]{--bg:#000;--blk:#151517;--blk2:#232327;--ink:#f1f1f4;--muted:#9a9aa6;--hair:#2c2c34;--acc:#f0bc23;--acc-ink:#111114;--acc2:#f0bc23;--acc2-ink:#111114;--pri:#f1f1f4;--pri-ink:#151517;--ok:#3ccf7f;--late:#ff5a4e}
@@ -35,7 +36,7 @@
 [data-theme="dark"][data-pal="sun"],[data-theme="dark"] [data-pal="sun"]{--bg:#131211;--blk:#1e1c1a;--blk2:#2c2926;--ink:#f3f0ec;--muted:#a39a8d;--hair:#32302c;--acc:#fdb92e;--acc-ink:#1a1712;--acc2:#d9a08f;--acc2-ink:#131211;--pri:#fdb92e;--pri-ink:#1a1712;--ok:#a9c45a;--late:#ff6a58}
 /* 沒有 JavaScript（theme.js 沒跑、沒有 data-pal／data-theme）時：米黃，深淺色跟系統 */
 @media (prefers-color-scheme:dark){
-  :root:not([data-pal]):not([data-theme]){color-scheme:dark;--bg:#000;--blk:#151517;--blk2:#232327;--ink:#f1f1f4;--muted:#9a9aa6;--hair:#2c2c34;--acc:#f0bc23;--acc-ink:#111114;--acc2:#f0bc23;--acc2-ink:#111114;--pri:#f1f1f4;--pri-ink:#151517;--ok:#3ccf7f;--late:#ff5a4e}
+  :root:not([data-pal]):not([data-theme]){color-scheme:dark;--wal-sh:rgba(0,0,0,.62);--bg:#000;--blk:#151517;--blk2:#232327;--ink:#f1f1f4;--muted:#9a9aa6;--hair:#2c2c34;--acc:#f0bc23;--acc-ink:#111114;--acc2:#f0bc23;--acc2-ink:#111114;--pri:#f1f1f4;--pri-ink:#151517;--ok:#3ccf7f;--late:#ff5a4e}
 }
 /* 換主題、換深淺色（theme.js 的 UI.set）：整頁 140ms 等速淡過去（淡的途中點按：theme.js 讓淡出立刻結束、點擊照樣算數） */
 ::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation-duration:140ms;animation-timing-function:linear}

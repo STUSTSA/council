@@ -169,9 +169,11 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
   /* ---------- 7. 跳脫、深色 ---------- */
   {const p=await mk(1300,860,{cfg:1,scheme:'dark'});await go(p,'home.html');
     const r=await p.evaluate(()=>({xss:window.__xss,img:document.querySelectorAll('#hmStage img').length,txt:[...document.querySelectorAll('.hm-nm')].some(x=>x.textContent.includes('<img')),
-      y:getComputedStyle(document.querySelector('#hmMe .su-y')).fill,ys:getComputedStyle(document.querySelector('#hmMe .su-y')).stroke}));
+      y:getComputedStyle(document.querySelector('#hmMe .su-y')).fill,ys:getComputedStyle(document.querySelector('#hmMe .su-y')).stroke,
+      sh:getComputedStyle(document.documentElement).getPropertyValue('--wal-sh').trim(),hid:[...document.querySelectorAll('.hm-n')].map(n=>{const h=n.hidden;n.hidden=true;const d=getComputedStyle(n).display;n.hidden=h;return d})}));
     ok(!r.xss&&r.img===0&&r.txt,'部門名含 <img onerror>：當成文字（esc），沒有執行');
     ok(r.y==='none'&&r.ys!=='none','深色：左邊小人只留線稿');
+    ok(r.sh==='rgba(0,0,0,.62)'&&r.hid.length>0&&r.hid.every(x=>x==='none'),`深色的浮起陰影（theme.css 的 --wal-sh ${r.sh}）；張數藏起來時不顯示（${r.hid.length} 個都是 display:none）`);
     ok(!p.errs.length,'沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
 
