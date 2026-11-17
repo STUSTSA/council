@@ -180,7 +180,7 @@ const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
 function settingsInner(){
-  if(storeSource()==="firestore")return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js） */
+  if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
   if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()+" · 生成週報、歷史週報"))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
     :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`);
@@ -354,7 +354,7 @@ const SET_HUBS={
     {k:"report",ic:"doc",t:"工作報告",sub:"選期間、補寫內容，再存成 PDF",flow:()=>reportDialog()}]),
   backup:()=>hubRun("備份",()=>[
     {k:"export",ic:"download",t:"匯出備份",sub:"把目前的看板內容存成 JSON 檔，之後可以再匯入",act:()=>exportBackup()},
-    {k:"import",ic:"upload",t:"匯入備份",sub:"用備份檔取代目前的看板內容（會先問一次）",act:()=>$("#importFile").click()}]),
+    ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",sub:"用備份檔取代目前的看板內容（會先問一次）",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
     return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${esc(n)}（登入時勾選「在這個裝置上記住密碼」）`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]},
     "<b>安裝成 App</b><br>全會共用一個 App「學生會看板」，打開就是各部門總覽，從那裡選部門。以前每個部門各裝一個的，建議刪掉重裝。<br>iPhone：用 Safari 打開 → 分享 → 加入主畫面。<br>Android／電腦：瀏覽器選單裡的「安裝」。"),

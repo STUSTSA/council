@@ -23,6 +23,7 @@ document.addEventListener("click",async e=>{
     if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);state.events.forEach(e=>{e.report=false});newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
   /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
   if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
+  if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   if(t.closest("#addWeek")){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
     const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:"",ph:"貼上本週概述文字"}],{wide:true});
@@ -30,7 +31,7 @@ document.addEventListener("click",async e=>{
 
   const wk=t.closest("[data-week]");
   if(wk&&t.closest("[data-editweek]")){const w=state.weeks.find(x=>x.id===wk.dataset.week);
-    const v=await ask("編輯週報",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:"刪除此週"});
+    const v=await ask("編輯週報",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:fsDelOk()?"刪除此週":undefined});
     if(v)await settingSave(()=>{if(v==="delete")state.weeks=state.weeks.filter(x=>x!==w);else Object.assign(w,{date:v.date||w.date,text:v.text})},v==="delete"?"已刪除週報":"已更新週報");return}
   if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的週報？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除週報");return}
 
@@ -230,15 +231,27 @@ document.addEventListener("pointerup",async()=>{
 /* import data from a backup / older version file */
 $("#importFile").addEventListener("change",async e=>{
   const f=e.target.files[0];e.target.value="";if(!f)return;
+  if(storeSource()!=="github"){toast(fsMode()?"新資料庫的看板不能匯入備份（會整份取代）":STORE_NOTE.frozen);return}   /* 鈕在這兩個模式不出現；這裡再擋一次 */
   try{
     const txt=await f.text();
     const m=txt.match(/<script id="state" type="application\/json">([\s\S]*?)<\/script>/);
     const raw=JSON.parse(m?m[1]:txt);
     if(!raw||!Array.isArray(raw.issues))throw 0;
+    const has=new Set(Object.keys(raw)),memHas=new Map((Array.isArray(raw.members)?raw.members:[]).map(m=>[m&&m.id,new Set(Object.keys(m||{}))]));   /* normalize 會補預設值（例如 minutes:[]），先記下備份裡原本有哪些欄位 */
     const data=normalize(raw);
     const v=await ask(`匯入「${f.name}」？`,[],{});
     if(v===null)return;
-    data.locked=false;data.id=state.id;state=data;state.savedAt=nowStr();
+    data.locked=false;data.id=state.id;
+    /* 02D：從新資料庫匯出的備份（切換後退回 GitHub 的回復路徑，docs/architecture/migration.md 第 7 節）沒有只在 GitHub 模式有的欄位：
+       雲端設定與權杖、共用密碼、身分的密碼與權杖、會議紀錄。備份裡沒有的就沿用目前看板的值，匯入不會把它們清掉。
+       權杖（sync）是用共用密碼加密的，所以 sync、pwKdf、pwHash 是一組，看備份裡有沒有 sync 決定：有＝整組用備份的；沒有＝整組沿用目前的
+       （不會把現在的權杖配上備份裡舊的密碼，也不會留下對不上的組合）。每個身分的 kdf、tok 也是一組（02D 審查） */
+    const PW=["sync","pwKdf","pwHash"];
+    if(!has.has("sync"))PW.forEach(k=>{if(state[k]!==undefined)data[k]=JSON.parse(JSON.stringify(state[k]));else delete data[k]});
+    if(!has.has("minutes")&&state.minutes!==undefined)data.minutes=JSON.parse(JSON.stringify(state.minutes));
+    data.members.forEach(m=>{const o=(state.members||[]).find(x=>x.id===m.id),r=memHas.get(m.id)||new Set();
+      if(o&&!r.has("kdf")&&!r.has("tok"))["kdf","tok"].forEach(k=>{if(o[k]!==undefined)m[k]=o[k]})});
+    state=data;state.savedAt=nowStr();
     editing=false;dirty=false;progOpen=null;render();await persist(`已匯入並${HOSTED?'發布':'儲存'}`);
     toast(`已匯入：${state.issues.length} 個議題、${state.events.length} 則即時回報、${state.weeks.length} 份週報`);
   }catch(err){toast("這個檔案讀不到看板資料")}

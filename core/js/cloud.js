@@ -61,6 +61,6 @@ async function cloudPush(){
   if(r.status===403||r.status===404)return {ok:false,msg:"權杖沒有這個 repo 的寫入權限（需要 Contents: Read and write）"};
   return {ok:false,msg:"同步失敗（"+r.status+"），已先存在這台電腦"};
 }
-if(!boardLocked()&&!HOSTED&&!cloudOn()){
+if(storeSource()==="github"&&!boardLocked()&&!HOSTED&&!cloudOn()){   /* firestore 模式不用本機暫存的看板資料（讀取失敗時保持唯讀，見 store.js 的 storeFsBase） */
   try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.issues&&(s.savedAt||"")>=(state.savedAt||""))state=normalize(s)}catch(e){localOK=false}
 }

@@ -15,10 +15,11 @@
 | Q3 | 部門看板：進行中 | `cards` where `deptId == X` and `state == 'open'` order by `order` | `deptId ASC, state ASC, order ASC` | L1 |
 | Q4 | 部門看板：已完成（分頁） | `cards` where `deptId == X` and `state == 'done'` order by `doneAt DESC` limit 20 | `deptId ASC, state ASC, doneAt DESC` | L1 |
 | Q5 | 接續未完成的永久刪除（02A 修正：沒有「最近刪除」了） | `cards` where `deptId == X` and `state == 'purging'` | 兩個等號條件，免複合索引（02A 拿掉 `deptId, state, deletedAt` 索引；`events` 的兩個 `cardDeleted` 索引也一起拿掉） | 部門編輯者以上 |
+| Q5b | 接續永久刪除時查這張卡片現存的時間事件（02D 審查） | `events` where `cardId == X` | 單一欄位，免複合索引 | L1 |
 | Q6 | 秘書處會議報告事項 | `cards` where `report == true` and `state == 'open'` | `report ASC, state ASC, deptId ASC` | L1 |
 | Q7 | 母議題底下的卡片 | `cards` where `issueId == X` and `state in ['open','done']` | `issueId ASC, state ASC` | L1 |
 | Q8 | 卡片版本歷史 | `cards/X/versions` order by `version DESC`（01A-R 改成子集合） | 單一欄位，免複合索引 | 卡片可讀時（刪除中的卡片只有 L2，用來由新往舊清除） |
-| Q9 | 會長室各部門編輯量 | collection group `versions` where `deptId == X` and `at >= 起` | collection group：`deptId ASC, at ASC` | 總管理員或該部門編輯者（01A-R） |
+| Q9 | 會長室各部門編輯量；02D 起也給編輯紀錄 | collection group `versions` where `deptId == X` and `at >= 起`；編輯紀錄 order by `at` ＋ `limitToLast(50)`、`endBefore`（由新往舊翻頁，同一個索引，不用 DESC 索引） | collection group：`deptId ASC, at ASC` | 總管理員或該部門編輯者（01A-R） |
 | Q10 | 母議題 | `issues` where `deptId == X` order by `order` | `deptId ASC, order ASC` | L1 |
 | Q11 | 週報 | `weeks` where `deptId == X` order by `date DESC` | `deptId ASC, date DESC` | L1 |
 | Q12 | 本部門行事曆 | `events` where `deptId == X` and `start` 範圍 | `deptId ASC, start ASC` | L1 |
@@ -36,7 +37,7 @@
 | Q24 | 邀請清單 | `invitations` where `status == 'active'` order by `expiresAt` | `status ASC, expiresAt ASC` | L4 |
 | Q24b | 最近的邀請（02B 會長室管理 → QR 邀請，含已使用、已撤銷） | `invitations` order by `createdAt DESC` limit 30 | 單一欄位 | L4 |
 | Q25 | 稽核：某人的權限歷史 | `auditLogs` where `col == 'roles'` and `docId == uid` order by `rev DESC` | `col ASC, docId ASC, rev DESC` | L4 |
-| Q26 | 稽核：最近紀錄 | `auditLogs` order by `at DESC` limit 50 | 單一欄位 | L4 |
+| Q26 | 稽核：最近紀錄；02D 起也給編輯紀錄與會長室編輯量（`at >= 起` order by `at`） | `auditLogs` order by `at DESC` limit 50 | 單一欄位 | L4 |
 | Q27 | 稽核：某人做過什麼 | `auditLogs` where `actor == uid` order by `at DESC` | `actor ASC, at DESC` | L4 |
 | Q28 | 點名：某場次 | `attendanceRecords` where `sessionId == S` | 單一欄位 | L3 |
 | Q29 | 點名：某人出席紀錄 | `attendanceRecords` where `memberId == M` order by `sessionAt DESC` | `memberId ASC, sessionAt DESC` | L3 |

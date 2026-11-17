@@ -15,7 +15,8 @@ async function mtLoadAll(force){
   const cc=cloudCfg(),tok=ghToken();
   await Promise.all((window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId).map(async d=>{
     let data=null,sha=null,err="";
-    try{
+    if(deptSourceOf(d.id)==="firestore"){try{data=await storeDeptData(d.id)}catch(e){err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore（只讀；寫回時 mtPushAll 擋下） */
+    else try{
       if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}&t=${Date.now()}`,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+tok},cache:"no-store"});
         if(r.ok){const j=await r.json();sha=j.sha;data=JSON.parse(b64dec(j.content))}else if(r.status===404)err="還沒有資料"}
       if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="還沒有資料"}
@@ -35,9 +36,9 @@ const MTS={sel:"",open:new Set()};
 const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&e.report):[];
 function mtGroupHTML(m,ed){
   const evs=mtEvs(m);if(!evs.length)return "";
-  return `<section class="mt-dept" data-mtdept="${m.id}" data-fk="mt${m.id}">${ed&&m.dirty?'<p class="sub mt-dirty">已修改，按「儲存」後寫回</p>':""}
+  return `<section class="mt-dept" data-mtdept="${esc(m.id)}" data-fk="mt${esc(m.id)}">${ed&&m.dirty?'<p class="sub mt-dirty">已修改，按「儲存」後寫回</p>':""}
     <div class="events mt-list">${withState(m.data,()=>evs.map(e=>{const st=evStatus(e),par=parentOf(e);
-      return `<details class="ev mt-ev" data-ev="${e.id}" data-mtev="${e.id}" data-st="${st}"${MTS.open.has(e.id)?" open":""}>
+      return `<details class="ev mt-ev" data-ev="${esc(e.id)}" data-mtev="${esc(e.id)}" data-st="${st}"${MTS.open.has(e.id)?" open":""}>
         <summary><span class="live-dot" aria-hidden="true"></span><b>${esc(e.name)}</b><span class="mt-st">${EV_ST[st]}</span><span class="ev-chev" aria-hidden="true">▾</span></summary>
         <div class="ev-body">${ed?evFieldsHTML(e):`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${e.desc?`<p>${esc(e.desc)}</p>`:`<p class="sub">沒有說明</p>`}${evTimesHTML(e)}${staffHTML(e.staff)}${labelChipsHTML(e.labels)}${evLinksHTML(e)}`}</div></details>`}).join(""))}</div></section>`;
 }
@@ -52,16 +53,16 @@ function renderMeet(){
   const ms=[...MT.depts.values()],has=ms.filter(m=>mtEvs(m).length),none=ms.filter(m=>m.data&&!mtEvs(m).length),errs=ms.filter(m=>!m.data&&m.err!=="還沒有資料");
   if(!has.some(m=>m.id===MTS.sel))MTS.sel=has[0]?has[0].id:"";
   const g=mtGrant(),btn=edp.querySelector("[data-edit]");
-  btn.hidden=!g;   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段） */
+  btn.hidden=!g||fsMode();   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段）；firestore 模式不開放會議編輯（render.js 的 fsSecOk） */
   /* 狀態只寫一行短的 */
   $("#meetEdSt").innerHTML=g?`<span class="grant-on">開放修改中</span> · ${esc(g.by||"會長室")} ${esc((g.at||"").slice(11,16))} 開，今天有效`
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
-  $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${m.id}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
+  $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${esc(m.id)}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
     +(MTS.sel?`<a class="fw-open mt-open" href="?d=${encodeURIComponent(MTS.sel)}" target="_blank" rel="noopener">開啟看板 →</a>`:"");   /* 開啟看板放在部門膠囊那一排的右邊，不另外佔一列 */
-  const ed=mtCanEdit(),loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
+  const ed=mtCanEdit()&&deptSourceOf(MTS.sel)==="github",loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
   $("#meetEdList").innerHTML=loading+(MTS.sel?mtGroupHTML(MT.depts.get(MTS.sel),ed):MT.depts.size?`<p class="empty">目前沒有部門標「會議要報告」。各部門在自己的即時回報按「會議要報告」後會出現在這裡。</p>`:"")
     +(none.length?`<p class="sub mt-none">沒有報告事項：${none.map(m=>esc(m.name)).join("、")}</p>`:"")
-    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(ed&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
+    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(mtCanEdit()&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
   const i=has.findIndex(m=>m.id===MTS.sel);
   $("#meetStep").innerHTML=has.length>1?`<button type="button" class="icon" data-mtstep="-1"${i>0?"":" disabled"}>${ico("prev")}${i>0?esc(has[i-1].name):"上一個部門"}</button><span class="sub num">${i+1} / ${has.length}</span><button type="button" class="icon" data-mtstep="1"${i<has.length-1?"":" disabled"}>${i<has.length-1?esc(has[i+1].name):"下一個部門"}${ico("next")}</button>`:"";
   const mins=state.minutes||[];
@@ -87,9 +88,10 @@ const grantOn=()=>!!(state.meetGrant&&state.meetGrant.date===today());
 function renderGrant(){
   const p=$("#grantPanel");if(!p)return;p.hidden=!CFG.grant;if(!CFG.grant)return;
   const sw=$("#grantSw"),on=grantOn(),g=state.meetGrant;
-  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);
+  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);sw.disabled=fsMode();   /* firestore 模式：授權存在 grants/meetingEdit（只有總管理員＋稽核），這個開關還沒接上 */
   $("#grantSt").textContent=on?`今天開放中（${g.by||""} ${(g.at||"").slice(11,16)} 開，23:59 自動關閉）`:"關閉：秘書處只能看各部門的報告事項";
   if(!sw._wired){sw._wired=true;sw.addEventListener("click",async()=>{
+    if(fsMode())return;
     const want=!grantOn();sw.classList.toggle("on",want);
     if(readOnly()||!(await ensureLogin())){renderGrant();return}
     await settingSave(()=>{state.meetGrant=want?{date:today(),by:meName(),at:nowStr()}:null},want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");
@@ -105,7 +107,7 @@ async function mtPushAll(){
   if(!g||g.date!==today()){dirty.forEach(m=>{m.data=JSON.parse(JSON.stringify(m.base));m.dirty=false});render();toast("會長室的授權已經關閉或過期，其他部門的修改沒有寫回");return}
   const fails=[],rec=[];
   for(const m of dirty){
-    if(deptSourceOf(m.id)!=="github"){fails.push(m.name+"（搬家中，暫停編輯）");continue}   /* 凍結或已搬家的部門不寫資料檔（store.js） */
+    if(deptSourceOf(m.id)!=="github"){fails.push(m.name+(deptSourceOf(m.id)==="frozen"?"（搬家中，暫停編輯）":"（已搬到新資料庫，請到那個部門的看板修改）"));continue}   /* 凍結或已搬家的部門不寫資料檔（store.js） */
     const items=mtDiff(m);
     const d=fwDept(m.id);m.data.savedAt=nowStr();m.data.savedBy=who;
     const body={message:commitMessage(m.base,m.data,who),content:b64enc(JSON.stringify(m.data,null,1)),branch:cc.branch};if(m.sha)body.sha=m.sha;
@@ -185,13 +187,13 @@ function renderWeekRead(){
   const ms=[...MT.depts.values()],ws=m=>m.data?[...m.data.weeks].filter(w=>w.text).sort((a,b)=>b.date.localeCompare(a.date)):[];
   if(WK.dept!=="all"&&!MT.depts.has(WK.dept))WK.dept="all";
   $("#wkDepts").innerHTML=[`<button type="button" role="tab" class="wk-d" data-wkd="all" aria-selected="${WK.dept==="all"}">全部最新</button>`,
-    ...ms.filter(m=>ws(m).length||m.id===WK.dept).map(m=>{const n=ws(m).length,fresh=n&&wkThisWeek(ws(m)[0].date);return `<button type="button" role="tab" class="wk-d${n?"":" none"}" data-wkd="${m.id}" aria-selected="${WK.dept===m.id}">${fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(m.name)}<span class="num">${n}</span></button>`})].join("");
+    ...ms.filter(m=>ws(m).length||m.id===WK.dept).map(m=>{const n=ws(m).length,fresh=n&&wkThisWeek(ws(m)[0].date);return `<button type="button" role="tab" class="wk-d${n?"":" none"}" data-wkd="${esc(m.id)}" aria-selected="${WK.dept===m.id}">${fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(m.name)}<span class="num">${n}</span></button>`})].join("");
   const body=$("#wkBody");
   if(MT.loading&&!ms.length){body.innerHTML=`<p class="sub">讀取各部門資料中…</p>`;return}
   const block=(m,w,head)=>`<article class="wk-doc" data-wkdoc><div class="wk-top">${head}<span class="num">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></article>`;
   if(WK.dept==="all"){
     /* 全部最新：每個部門一顆膠囊（部門、日期、本週），點了才展開全文（2026-11-06 使用者：秘書處太臃腫，要收起來） */
-    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${m.id}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
+    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${esc(m.id)}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><div class="wk-top"><button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></div></details>`;
     const docs=ms.map(m=>{const w=ws(m)[0];return w?cap(m,w):""}).filter(Boolean);
     const miss=ms.filter(m=>!ws(m).length).map(m=>m.name);
@@ -201,7 +203,7 @@ function renderWeekRead(){
   const m=MT.depts.get(WK.dept),list=ws(m);
   if(!list.length){body.innerHTML=`<p class="empty">${esc(m.name)}${m.data?"還沒有週報。":esc(m.err||"讀不到資料")}</p>`;return}
   const w=list.find(x=>x.id===WK.week)||list[0];
-  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${x.id}" aria-selected="${x.id===w.id}"><span class="num">${fmt(x.date).slice(5)}</span></button>`).join("")}</div>
+  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${esc(x.id)}" aria-selected="${x.id===w.id}"><span class="num">${fmt(x.date).slice(5)}</span></button>`).join("")}</div>
     ${block(m,w,`<span class="tag sm">${esc(m.name)}</span>`)}<a class="wk-open" href="?d=${encodeURIComponent(m.id)}" target="_blank" rel="noopener">開啟${esc(m.name)}看板 →</a>`;
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#wkBody .wk-cap"))return;if(d.open)WK.open.add(d.dataset.wkcap);else WK.open.delete(d.dataset.wkcap)},true);

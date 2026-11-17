@@ -28,7 +28,7 @@ const BOARD_BASE = {
   notify: { url: "" },
 
   // Firebase 網頁設定（不是機密）。02B：開發專案 stustsa-council-dev；正式專案建立後換成正式專案的設定。
-  // 部門的 source 是 "firestore"、或網址帶 QR 邀請（#join=）時才會載入 Firebase，其他情況完全不會用到
+  // 部門的 source 是 "firestore"／"frozen"、網址帶 QR 邀請（#join=）、或要讀某個已切到 firestore 的部門（會長室追蹤、秘書處會議、學年設定、通知「全會」）時才會載入 Firebase
   firebase: { apiKey: "AIzaSyBCgnzKIUjC_hHkLwCyiSI0KUMPQif24rA", authDomain: "stustsa-council-dev.firebaseapp.com", projectId: "stustsa-council-dev", appId: "1:252023581385:web:e248b3b1968c5796bc7b18" }
 };
 
@@ -41,7 +41,7 @@ const BOARD_BASE = {
      後台管理員可以在設定 → 網站管理「重置」它（回到剛開通的狀態，provision.js 的 pvReset）
    ext:"名稱"＝多一個分頁放這個部門專用的功能（2026-11-06：會長室「會長室」＝文件、會議開關、追蹤、編輯量；秘書處「會議」＝逐部門編輯報告事項、會議紀錄、各部門週報）；
    extIcon＝那個分頁的圖示；mergeDone:true＝完成紀錄併進「即時回報」那一頁（不另外佔一個分頁）
-   source（01B，資料來源；core/js/store.js）："github"＝讀寫 repo 的資料檔（預設）｜"frozen"＝搬家中，整個看板唯讀、不寫資料檔｜"firestore"＝讀新資料庫（02B 起 Google 登入；看板內容的寫入還沒接上，只能檢視）。
+   source（01B，資料來源；core/js/store.js）："github"＝讀寫 repo 的資料檔（預設）｜"frozen"＝搬家中，整個看板唯讀、不寫資料檔｜"firestore"＝讀寫新資料庫（02B 起 Google 登入；02D 起有這個部門角色的人可以編輯，其他人只能檢視）。
      切換一個部門＝合併一個只改這一個值的 PR（docs/architecture/migration.md 第 5 節）
    --------------------------------------------------------- */
 const BOARD_DEPTS = [

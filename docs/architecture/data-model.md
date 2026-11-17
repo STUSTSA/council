@@ -6,7 +6,7 @@
 
 | 項目 | 約定 |
 |---|---|
-| 文件 ID | 新建的資料用 SDK 產生的隨機 ID；遷移來的資料用 `{deptId}__{舊ID}`（決定性，重跑覆寫同一份） |
+| 文件 ID | 遷移來的資料用 `{deptId}__{舊ID}`（決定性，重跑覆寫同一份）。02D：看板（`firestore` 模式）新建的卡片、時間事件、議題、週報、標籤也用 `{deptId}__{畫面上的 ID}`（畫面上的 ID 是 `uid()` 產生的隨機字串；讀回來拿掉前綴，畫面上的 ID 不變）。邀請、申請等其他新資料用 SDK 產生的隨機 ID |
 | 時間 | 一律存 Firestore `Timestamp`。使用者輸入的日期時間以 `Asia/Taipei` 解讀（台灣沒有日光節約時間）。只有日期的欄位另存 `allDay: true` |
 | 伺服器時間 | `createdAt`、`updatedAt`、稽核時間用 `serverTimestamp()`，規則要求 `== request.time`〔已驗證 P5〕 |
 | 操作者 | `createdBy`、`updatedBy` 存 UID，規則要求 `== request.auth.uid`。畫面上的名字從 `profiles` 查，不在每份文件重複存信箱 |
@@ -36,6 +36,8 @@
 | `follows` | 會長室追蹤清單（只有 `president`；`follows[]`，`ref` 改成新文件 ID） |
 | `docs` | 會長室文件連結 `[{id, name, url}]`（`docs[]`） |
 | `rev`、`updatedAt`、`updatedBy` | |
+
+02D：看板每次改部門設定都同批寫 `auditLogs/deptSettings_{deptId}_{rev}`（`action: 'update'`、`after.fields`＝改了哪些欄位）。
 
 ### `org/config`：L0 讀、L4 寫
 `yearLabel`、`termStart`、`semester`（來源：秘書處檔）。

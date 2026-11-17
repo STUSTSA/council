@@ -1,6 +1,8 @@
 /* 核心｜會長室的「追蹤」面板（設定檔 follow:true 的部門才有）
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
-   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理 */
+   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
+   02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
+   會長室追蹤、秘書處會議的授權、通知「全會」、讀秘書處學年設定都經過這裡 */
 const FW_KIND={live:"即時回報",issue:"進度",done:"完成紀錄",week:"週報"};
 const fwCache=new Map();   /* dept id → {at,data|null,err} */
 const fwDept=id=>(window.BOARD_DEPTS||[]).find(d=>d.id===id);
@@ -8,13 +10,14 @@ async function fwLoad(id,force){
   const c=fwCache.get(id);if(c&&!force&&Date.now()-c.at<3e5)return c;
   const d=fwDept(id);if(!d)return {at:Date.now(),data:null,err:"沒有這個部門"};
   let data=null,err="";
-  try{
+  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){err=STORE_XERR(e)}}
+  else try{
     const cc=cloudCfg(),tok=ghToken();
     if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}`,{headers:{Accept:"application/vnd.github.raw+json",Authorization:"Bearer "+tok},cache:"no-store"});if(r.ok)data=await r.json();else if(r.status===404)err="這個部門還沒有資料"}
     if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="這個部門還沒有資料"}
   }catch(_){err="讀不到這個部門的資料"}
   if(data)data=normalize(data);
-  const v={at:Date.now(),data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;
+  const v={at:data?Date.now():Date.now()-3e5+3e4,data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;   /* 讀不到的 30 秒後再試（不是 5 分鐘） */
 }
 /* 某部門某類別可以選的項目 → [[ref,顯示文字],…] */
 function fwOptions(d,kind){
@@ -52,7 +55,7 @@ function renderFollows(){
   $("#follows").innerHTML=fs.map(f=>{
     const dp=fwDept(f.dept),c=fwCache.get(f.dept);
     const b=!c?{title:"讀取中…",html:""}:c.data?fwBody(f,c.data):{title:"（讀不到）",html:`<p class="sub">${esc(c.err)}</p>`};
-    return `<article class="fw${b.gone?" gone":""}" data-fw="${f.id}" data-dot="${b.dot||""}">
+    return `<article class="fw${b.gone?" gone":""}" data-fw="${esc(f.id)}" data-dot="${esc(b.dot)}">
       <div class="fw-top"><span class="tag sm">${esc(dp?dp.name:f.dept)}</span><span class="fw-k">${FW_KIND[f.kind]||""}</span>${dp?`<a class="fw-open" href="?d=${encodeURIComponent(dp.id)}" target="_blank" rel="noopener">開啟看板 →</a>`:""}<button type="button" class="icon danger edit-only" data-fwdel aria-label="不再追蹤">移除</button></div>
       <h3 class="fw-t">${esc(b.title)}</h3>${b.html}</article>`}).join("")
     ||`<p class="empty">還沒有追蹤任何項目。登入後按這區的「編輯」→「+ 追蹤項目」，選部門和要看的即時回報、進度、完成紀錄或週報。</p>`;
@@ -94,9 +97,9 @@ function renderDocs(){
   const p=$("#docsPanel");if(!p)return;p.hidden=!CFG.follow;if(!CFG.follow)return;
   const ds=state.docs||[],ed=docsEd();
   $("#docsList").innerHTML=ds.map((d,i)=>ed
-    ?`<div class="doc-ed" data-doc="${d.id}"><span class="doc-pill">${ico("doc")}<b>${esc(d.name)}</b></span><small class="doc-u">${esc(d.url)}</small>
+    ?`<div class="doc-ed" data-doc="${esc(d.id)}"><span class="doc-pill">${ico("doc")}<b>${esc(d.name)}</b></span><small class="doc-u">${esc(d.url)}</small>
        <span class="doc-tools"><button type="button" class="icon" data-docedit>修改</button><button type="button" class="icon" data-docmove="-1" aria-label="往前移"${i?"":" disabled"}>↑</button><button type="button" class="icon" data-docmove="1" aria-label="往後移"${i<ds.length-1?"":" disabled"}>↓</button><button type="button" class="icon danger" data-docdel aria-label="刪除「${esc(d.name)}」">刪除</button></span></div>`
-    :`<a class="doc-pill" data-doc="${d.id}" href="${esc(docURL(d.url))}" target="_blank" rel="noopener">${ico("doc")}<b>${esc(d.name)}</b><span class="doc-go" aria-hidden="true">↗</span></a>`).join("")
+    :`<a class="doc-pill" data-doc="${esc(d.id)}" href="${esc(docURL(d.url))}" target="_blank" rel="noopener">${ico("doc")}<b>${esc(d.name)}</b><span class="doc-go" aria-hidden="true">↗</span></a>`).join("")
     ||`<p class="empty">還沒有文件。登入後按這區的「編輯」→「+ 新增文件」，貼上文件的網址（例如 Google 雲端硬碟的連結）。</p>`;
 }
 async function docAsk(d){

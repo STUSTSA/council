@@ -76,8 +76,9 @@ describe('權限矩陣', () => {
     await assertSucceeds(db('ed').doc('weeks/w1').set({ deptId: 'rights', date: '2026-11-11', text: 'x', auto: false, createdAt: NOW(), updatedAt: NOW(), updatedBy: 'ed' }));
     await assertFails(db('vw').doc('labels/l1').set({ deptId: 'rights', kind: '人', name: 'x', updatedAt: NOW(), updatedBy: 'vw' }));
     await assertSucceeds(db('adm').doc('labels/l1').set({ deptId: 'rights', kind: '人', name: 'x', updatedAt: NOW(), updatedBy: 'adm' }));
+    // 02D D-d 改規格：刪除一定要同批寫刪除紀錄（管理員、總管理員都一樣），只刪不寫紀錄一律拒絕；完整的刪除測試在 rules-02d-delete.test.js
     await assertFails(db('adm').doc('labels/l1').delete());
-    await assertSucceeds(db('boss').doc('labels/l1').delete());
+    await assertFails(db('boss').doc('labels/l1').delete());
   });
   it('meetingMinutes：秘書處與總管理員', async () => {
     await assertFails(db('ed').doc('meetingMinutes/2026-11-11').set({ date: '2026-11-11', items: [] }));
