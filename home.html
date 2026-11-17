@@ -52,8 +52,8 @@ h1 svg{width:.62em;height:.62em;flex:none}
 .view.drag{cursor:grabbing}
 .belt{display:flex;gap:14px;width:max-content;will-change:transform}
 /* 卡片：平面色塊（--blk），字直接放在上面 */
-.card{position:relative;flex:none;width:clamp(236px,24vw,282px);height:360px;display:flex;flex-direction:column;padding:20px 20px 18px;border-radius:26px;overflow:hidden;color:var(--ink);text-decoration:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
-  background:var(--blk);box-shadow:var(--blk-sh);   /* 平鋪的色塊不用陰影（柔光主題的 --blk-sh 例外） */
+.card{position:relative;flex:none;width:clamp(236px,24vw,282px);height:360px;display:flex;flex-direction:column;padding:20px 20px 18px;border-radius:18px;overflow:hidden;color:var(--ink);text-decoration:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none;
+  background:var(--blk);box-shadow:var(--blk-sh);   /* 平鋪的色塊不用陰影（柔光主題的 --blk-sh 例外）；圓角 18＝大色塊與卡片（DESIGN-next 第三節） */
   scale:1;transition:scale .5s var(--spring);
   will-change:transform}   /* 每張卡片自己一層：拖曳時的微縮、斜一點只在顯示卡上變形（2026-11-06 使用者：手機滑動很卡） */
 .card>*{position:relative;z-index:1}
