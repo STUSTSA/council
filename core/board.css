@@ -1275,6 +1275,25 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-n{position:absolute;left:20px;bottom:16px;font-size:clamp(28px,3vw,38px);font-weight:300;line-height:1}
 .hm-n[hidden]{display:none}
 .hm-ring{position:absolute;left:0;top:0;z-index:2;border:3px solid var(--acc2);border-radius:26px;pointer-events:none;transition:transform 380ms cubic-bezier(.3,1.45,.45,1)}
+/* 手機（640px 以下）：錢包式卡片堆（.hm-wal；位置、縮放、淡出都由 home.js 的 walDraw 寫 transform／opacity）。
+   卡片疊在一起，用一層柔和的陰影分出前後（陰影只給浮在內容上面的東西：手機卡片堆、主頁下排） */
+:root{--wal-sh:rgba(10,42,77,.13)}
+:root[data-theme="dark"]{--wal-sh:rgba(0,0,0,.62)}
+.hm-wal{position:relative;flex:1;min-height:0;margin-top:22px;touch-action:none}
+.hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
+.hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.hm-wc .hm-nm{font-size:20px}
+.hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
+.hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}
+@media (max-width:640px){
+  .hm{padding:calc(16px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
+  .hm-top{gap:10px}
+  .hm-me{height:48px;padding:0 16px 0 12px}
+  .hm-su{height:28px}
+  .hm-clock{font-size:22px}
+  .hm-round{width:48px;height:48px}
+  .hm-stage{justify-content:flex-start}
+}
 
 /* ===== 部門標誌（dept/icons/dept-代號.svg；主頁色塊、卡片堆的 .hm-lg 裡；DESIGN-next 第五節「部門標誌」） =====
    藍 #0a5baa、黃 #f0bc23（與行銷部的橘）寫在檔案裡，不跟主題變；只有秘書處的白色零件（.dg-w）在主頁跟著色塊底色。

@@ -51,16 +51,15 @@
     if(!anim||reduceMotion()){r.style.transition="none";r.style.transform=tf;void r.offsetWidth;r.style.transition="";return}
     r.style.transform=tf;
   }
-  /* 換焦點：原地換 class，不重畫（重畫會讓放大、焦點框都變成直接跳）；超過兩端＝整列頂一下再彈回（拉過頭的回彈） */
+  /* 換焦點：原地換 class，不重畫（重畫會讓放大、焦點框都變成直接跳）；超過兩端＝頂一下再彈回（拉過頭的回彈） */
   function setFoc(i,how){
     const want=i;i=Math.max(0,Math.min(D.length-1,i));
+    if(H.mode==="wal"){if(WAL.lock)return;if(i===WAL.f&&want!==i){WAL.v+=want<i?-2.6:2.6;walRun();return}WAL.f=i;walRun();if(how==="key")walFocus(i);return}
     if(i===H.i){if(want!==i)bump(want<i?-1:1);return}
     H.i=i;
-    if(H.mode==="rail"){
-      stage.querySelectorAll(".hm-tile").forEach(t=>{const on=+t.dataset.i===i;t.classList.toggle("on",on);t.tabIndex=on?0:-1;if(on)t.setAttribute("aria-current","true");else t.removeAttribute("aria-current")});
-      ringTo(true);const on=stage.querySelector(".hm-tile.on");
-      if(on){if(how==="key")on.focus({preventScroll:true});on.scrollIntoView({inline:"center",block:"nearest",behavior:reduceMotion()?"auto":"smooth"})}
-    }
+    stage.querySelectorAll(".hm-tile").forEach(t=>{const on=+t.dataset.i===i;t.classList.toggle("on",on);t.tabIndex=on?0:-1;if(on)t.setAttribute("aria-current","true");else t.removeAttribute("aria-current")});
+    ringTo(true);const on=stage.querySelector(".hm-tile.on");
+    if(on){if(how==="key")on.focus({preventScroll:true});on.scrollIntoView({inline:"center",block:"nearest",behavior:reduceMotion()?"auto":"smooth"})}
   }
   /* 拉過頭：內容沿拉動方向被拉開一點並微微拉伸，放開用彈簧彈回（只動 transform） */
   function bump(dir){
@@ -79,27 +78,70 @@
     });
   }
 
+
+  /* ---------- 手機：錢包式卡片堆（DESIGN-next 第六節） ----------
+     間距只有一條規律：焦點卡整張露出（WH 196），其餘每張只露同樣高的一條（WU 60）；退到後面的疊在上方（每退一張縮 5%，最多露兩張，
+     第三張邊退邊淡掉），還沒輪到的疊在下方，焦點卡與下一張之間留 WG 10；整疊貼齊上緣（前面沒有卡時不留空）。
+     WAL.f＝要停在哪一張，WAL.p＝畫面現在的位置：拖曳時跟著手指（每 WDRAG 140px 一張），放開後帶著手指的速度用彈簧滑到 f
+     （勁度 230、阻尼比 .74），甩得快多走幾張（最多 3 張），拉過頭阻力 .35。點露出的那一條＝叫到焦點，點焦點卡＝進入。只動 transform／opacity */
+  const WAL={f:0,p:0,v:0,d:null,raf:0,lock:false,lr:null,els:[]},WU=60,WH=196,WG=10,WDRAG=140;
+  function walHTML(){return `<nav class="hm-wal" id="hmWal" aria-label="部門">${D.map((d,i)=>`<a class="hm-wc" data-i="${i}" href="${href(d)}" tabindex="-1">${tileIn(d,i)}</a>`).join("")}</nav>`}
+  function walDraw(){
+    const els=WAL.els,p=WAL.p,y0=WU*Math.max(0,Math.min(p,2)),rf=Math.max(0,Math.min(els.length-1,Math.round(p)));
+    els.forEach((el,i)=>{const d=i-p,y=d<=0?y0+Math.max(d,-2)*WU-(d<-2?Math.min(1,-2-d)*16:0):d<=1?y0+d*(WH+WG):y0+WH+WG+(d-1)*WU,sc=d<0?1+Math.max(d,-3)*.05:1;
+      el.style.transform=`translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;el.style.opacity=d>=-2?"":Math.max(0,3+d).toFixed(3)});
+    if(WAL.lr!==rf){WAL.lr=rf;H.i=rf;els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
+  }
+  function walRun(){
+    cancelAnimationFrame(WAL.raf);
+    if(reduceMotion()){WAL.p=WAL.f;WAL.v=0;WAL.raf=0;walDraw();return}
+    let last=performance.now();const K=230,C=2*.74*Math.sqrt(K);
+    const step=now=>{const dt=Math.min(.032,Math.max(.001,(now-last)/1000));last=now;for(let k=0;k<2;k++){WAL.v+=(-K*(WAL.p-WAL.f)-C*WAL.v)*dt/2;WAL.p+=WAL.v*dt/2}
+      if(Math.abs(WAL.p-WAL.f)<.002&&Math.abs(WAL.v)<.02){WAL.p=WAL.f;WAL.v=0;WAL.raf=0;walDraw();return}walDraw();WAL.raf=requestAnimationFrame(step)};
+    WAL.raf=requestAnimationFrame(step);
+  }
+  const walFocus=i=>{const c=WAL.els[i];if(c)c.focus({preventScroll:true})};
+  function walBind(){
+    const w=$id("hmWal");WAL.els=[...w.querySelectorAll(".hm-wc")];WAL.f=WAL.p=H.i;WAL.v=0;WAL.lr=null;walDraw();
+    w.addEventListener("pointerdown",e=>{if(WAL.lock||e.button>0)return;cancelAnimationFrame(WAL.raf);WAL.raf=0;
+      WAL.d={id:e.pointerId,y:e.clientY,p:WAL.p,moved:false,t:e.target.closest(".hm-wc"),ly:e.clientY,lt:e.timeStamp,vy:0};try{w.setPointerCapture(e.pointerId)}catch(_){}});
+    w.addEventListener("pointermove",e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.moved&&Math.abs(dy)<6)return;d.moved=true;
+      const dt=e.timeStamp-d.lt;if(dt>0){d.vy=d.vy*.4+(e.clientY-d.ly)/dt*.6;d.ly=e.clientY;d.lt=e.timeStamp}
+      const n=WAL.els.length;let q=d.p-dy/WDRAG;if(q<0)q*=.35;else if(q>n-1)q=n-1+(q-n+1)*.35;WAL.p=q;walDraw()});
+    const up=e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;WAL.d=null;const n=WAL.els.length;
+      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){WAL.tap=true;hmEnter(i);return}WAL.f=i}walRun();return}
+      WAL.tap=true;   /* 拖完放開的那一下不是點擊 */
+      const v=e.timeStamp-d.lt>90?0:d.vy,b=Math.round(d.p);   /* 手指停住才放開＝沒有速度 */
+      let to=Math.round(WAL.p-v*170/WDRAG);if(to===b&&Math.abs(v)>.35)to=b+(v<0?1:-1);
+      WAL.f=Math.max(0,Math.min(n-1,Math.max(b-3,Math.min(b+3,to))));WAL.v=-v*1000/WDRAG;walRun()};
+    w.addEventListener("pointerup",up);w.addEventListener("pointercancel",up);
+    /* 點擊：指標的點擊已經在放開時處理（WAL.tap），這裡只擋掉連結的預設動作；鍵盤 Enter（detail 0）＝進入焦點卡；按著 Ctrl／⌘ 的照連結預設（新分頁） */
+    w.addEventListener("click",e=>{const c=e.target.closest(".hm-wc");if(!c||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();
+      if(WAL.tap){WAL.tap=false;return}if(e.detail===0&&+c.dataset.i===H.i)hmEnter(H.i)});
+  }
   /* ---------- 畫面：桌面／手機各自一套，跨過 640px 時重畫 ---------- */
   function paint(){
     const m=PHONE.matches?"wal":"rail";H.mode=m;
+    cancelAnimationFrame(WAL.raf);WAL.raf=0;WAL.d=null;
     if(m==="rail"){stage.innerHTML=railHTML();railBind();ringTo(false);const on=stage.querySelector(".hm-tile.on");if(on)on.scrollIntoView({inline:"center",block:"nearest"})}
+    else{stage.innerHTML=walHTML();walBind()}
     logosFill();countsPaint();
   }
   PHONE.addEventListener("change",paint);
   addEventListener("resize",()=>{if(H.mode==="rail")ringTo(false)});
   if(document.fonts)document.fonts.ready.then(()=>{if(H.mode==="rail")ringTo(false)});
 
-  /* 滾輪（桌面）：一格換一張（每 170ms 最多一次）；方向鍵：左右（桌面）；Enter 在色塊上＝點擊 */
+  /* 滾輪：一格換一張（每 170ms 最多一次；到兩端頂一下再彈回）；方向鍵：左右（桌面）、上下（手機）；Enter 在色塊上＝點擊 */
   let wheelAt=0;
   document.addEventListener("wheel",e=>{
-    if(H.mode!=="rail"||e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||hmLayerOpen())return;
-    const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
-    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc(H.i+(d>0?1:-1));
+    if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||hmLayerOpen())return;
+    const d=H.mode==="wal"?e.deltaY:Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
+    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1));
   },{passive:false});
   document.addEventListener("keydown",e=>{
     if(hmLayerOpen()||e.altKey||e.ctrlKey||e.metaKey||(e.target.closest&&e.target.closest("input,textarea")))return;
     const k=H.mode==="rail"?{ArrowRight:1,ArrowLeft:-1}[e.key]:{ArrowDown:1,ArrowUp:-1}[e.key];
-    if(k){e.preventDefault();setFoc(H.i+k,"key")}
+    if(k){e.preventDefault();setFoc((H.mode==="wal"?WAL.f:H.i)+k,"key")}
   });
 
   /* ---------- 進部門 ---------- */
