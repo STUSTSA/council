@@ -2,7 +2,7 @@
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
    其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
    02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
-   會長室追蹤、秘書處會議的授權、通知「全會」、讀秘書處學年設定都經過這裡 */
+   會長室追蹤、秘書處會議的授權、行事曆的「會長室」「其他」（notify.js）、讀秘書處學年設定都經過這裡 */
 const FW_KIND={live:"即時回報",issue:"進度",done:"完成紀錄",week:"週報"};
 const fwCache=new Map();   /* dept id → {at,data|null,err} */
 const fwDept=id=>(window.BOARD_DEPTS||[]).find(d=>d.id===id);

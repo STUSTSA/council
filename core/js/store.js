@@ -30,7 +30,7 @@ function storeModLoad(file,ev,name){
 }
 const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
 function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
-/* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、通知「全會」）跟著那個部門的資料來源：
+/* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、行事曆的「會長室」「其他」）跟著那個部門的資料來源：
    firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
    回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
 function storeDeptData(id){
