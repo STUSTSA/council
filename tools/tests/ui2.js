@@ -130,7 +130,7 @@ const sameColor=(a,b)=>hex(a)===hex(b);
 
   /* 6. 總覽 home.html：讀同一個設定、吃同一組變數 */
   {const p=await mk({init:'{"pal":"sage","mode":"dark"}',page:'home.html',wait:3200});const s=await st(p);
-    const card=await p.evaluate(()=>{const c=document.querySelector('.card');const cs=getComputedStyle(c);return [cs.backgroundColor,cs.backgroundImage,cs.borderRadius]});
+    const card=await p.evaluate(()=>{const c=document.querySelector('.hm-tile');   /* ui-07：主頁的部門色塊（舊的 .card 卡片列已換掉） */const cs=getComputedStyle(c);return [cs.backgroundColor,cs.backgroundImage,cs.borderRadius]});
     ok(s.pal==='sage'&&s.theme==='dark'&&s.body==='rgb(13, 16, 14)',`home.html 讀同一個設定：${s.pal} ${s.theme} ${s.body}`);
     ok(card[0]==='rgb(23, 27, 24)'&&card[1]==='none'&&card[2]==='18px',`home.html 卡片是平面色塊（--blk、沒有漸層、圓角 18）：${card}`);
     ok(!p.errs.length,'home.html 沒有錯誤 '+p.errs);
