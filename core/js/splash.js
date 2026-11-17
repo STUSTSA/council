@@ -1,8 +1,10 @@
 /* 核心｜開頁的學生會開場（2026-11-06 從 shell.js／boot.js 拆出來：看板 index.html 與主頁 home.html 共用；樣式在 core/splash.css）
-   - mountSplash()：從網站外面進來（或重新整理）才放，站內換頁（主頁 ↔ 看板）不放（那時有換頁動畫）。
+   - mountSplash()：從網站外面進來（或重新整理）才放，站內換頁（主頁 ↔ 看板）不放（那時有換頁動畫）；
+     系統返回鍵從部門回主頁（home.html 開頭設的 html[data-hm-back]）也算站內。
    - splashOut(onStart,onGone,to)：等動畫真的播完、字型好了（至少 0.6 秒、最多 3.5 秒）才收；onStart 在開始收時、onGone 在收掉後呼叫；
      to＝主頁左上標誌裡的小人（.su-emb）：開場的兩個小人縮到那裡（DESIGN-next 第五節「登入到主頁」），沒有就整個淡出。
-   這個檔不依賴看板的其他程式（總覽頁只載入它跟 pagefx.js），要在 body 一開始就能跑。 */
+   這個檔不依賴其他程式檔（看板 index.html、主頁 home.html 都載入它；主頁在 body 一開始就載入、先跑 mountSplash，其他程式檔在後面），
+   suLogoH 給主頁左上的橫式標誌（home.js）用。 */
 /* 學生會 logo（assets/學生會logo-彩色文字版.svg）拆成：標誌（黃藍兩個小人）＋ 14 個字（STUSTSA 7、南臺科大學生會 7）。
    box＝整個 logo 裁掉空白後的範圍；emb＝[x,y,w,h,[[顏色,路徑]…]]；g＝[[x,y,w,h,顏色,路徑]…]（座標都是原檔的 viewBox）。
    開場（直式：小人在上、字在下）與主頁左上的橫式標誌（suLogoH）都用這一份 */
