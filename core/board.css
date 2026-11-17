@@ -1559,9 +1559,13 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
 .pc-d.sel .pc-n{color:var(--acc-ink)}
-/* 事件（不寫字）：時段＝細線（兩端小圓點）橫跨開始到結束那幾天的中心；單天＝那天下面一顆小點。--ln＝第幾層（每層 9px），看幾條線就知道幾件事；點日期才在上方「這一天」區塊看文字 */
+/* 事件（不寫字）：時段＝細線（兩端小圓點）橫跨開始到結束那幾天的中心；單天＝那天下面一顆小點。--ln＝第幾層（每層 9px），看幾條線就知道幾件事；點日期才在下面的清單看文字。
+   跨週（或跨月）延續的那一端（.cont-l 左、.cont-r 右）：沒有圓點、線畫到那一格的邊緣；在某一週只佔一格時就是從那格中心到邊緣的半條線 */
 .pc-e{position:absolute;top:calc(48px + var(--ln) * var(--pc-lane));left:calc(var(--i0) / 7 * 100%);width:calc((var(--i1) - var(--i0) + 1) / 7 * 100%);height:5px;color:var(--ink);pointer-events:none}
-.pc-e.span::before{content:"";position:absolute;top:0;height:5px;left:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);right:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);background:linear-gradient(currentColor,currentColor) center/calc(100% - 5px) 1.5px no-repeat,radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent),radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent)}
+.pc-e.span::before{--in:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);--dl:radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent);--dr:radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent);--ll:2.5px;--lr:2.5px;
+  content:"";position:absolute;top:0;height:5px;left:var(--in);right:var(--in);background:var(--dl),var(--dr),linear-gradient(currentColor,currentColor) var(--ll) 50%/calc(100% - var(--ll) - var(--lr)) 1.5px no-repeat}
+.pc-e.cont-l::before{left:0;--dl:none;--ll:0px}
+.pc-e.cont-r::before{right:0;--dr:none;--lr:0px}
 .pc-e:not(.span)::after{content:"";position:absolute;top:0;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
 .pc-foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);letter-spacing:.24em}
 @media (max-width:640px){

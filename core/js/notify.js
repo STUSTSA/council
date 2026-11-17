@@ -73,6 +73,7 @@ function dayCardHTML(d,lab,cls,list){
    通知頁一份（NOTI）；畫在哪裡：通知頁＝#notiPage（renderNoti），別的地方用 calMount（host._cal 指回狀態，點擊由下面的監聽找到它）。
    海報月曆：超大月份數字加英文縮寫、右上兩行年份；週一開頭、上面一排 MON–SUN；日期只有數字、沒有格線；
    月曆上不寫字：單天的事＝日期下一顆小點、跨天＝橫跨那幾天的細線（兩端圓點），同一週撞在一起的往下排一層（每層 9px）；
+   跨週（或跨月）的那一端沒有圓點、線畫到那一格的邊緣（.cont-l／.cont-r），在某一週只佔一格時也是半條線、不會跟單天的小點混在一起；
    選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體；底下一行「部門・學生會」。
    點日期：下面的清單換成那一天（舊的原地淡出、新的一列一列浮上來，calAfter）；右上的月份鈕點開選月份（自製選單，Esc、點外面關） */
 const MON_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -90,9 +91,9 @@ function posterHTML(c,list){
       return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span></button>`}).join("");
     const lanes=[];
     const evs=list.filter(x=>x.date<=b&&(x.end||x.date)>=a).map(x=>{
-      const s=x.date<a?lo:+x.date.slice(8),e=(x.end||x.date)>b?hi:+(x.end||x.date).slice(8),i0=w.indexOf(s),i1=w.indexOf(e);
+      const cl=x.date<a,cr=(x.end||x.date)>b,s=cl?lo:+x.date.slice(8),e=cr?hi:+(x.end||x.date).slice(8),i0=w.indexOf(s),i1=w.indexOf(e);
       let ln=lanes.findIndex(z=>z<i0);if(ln<0){ln=lanes.length;lanes.push(-1)}lanes[ln]=i1;
-      return `<span class="pc-e${i1>i0?" span":""}" aria-hidden="true" style="--i0:${i0};--i1:${i1};--ln:${ln}"></span>`}).join("");
+      return `<span class="pc-e${i1>i0||cl||cr?" span":""}${cl?" cont-l":""}${cr?" cont-r":""}" aria-hidden="true" style="--i0:${i0};--i1:${i1};--ln:${ln}"></span>`}).join("");
     return `<div class="pc-week" style="--lanes:${lanes.length}">${nums}${evs}</div>`}).join("");
   return `<div class="pc-head" aria-hidden="true"><b class="pc-mon"><span class="pc-mn num">${mi+1}</span>${MON_EN[mi]}</b><span class="pc-yr num">${String(y).slice(0,2)}<br>${String(y).slice(2)}</span></div>
     <div class="pc-wk" aria-hidden="true">${["MON","TUE","WED","THU","FRI","SAT","SUN"].map(x=>`<span>${x}</span>`).join("")}</div>
