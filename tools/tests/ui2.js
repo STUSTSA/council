@@ -140,7 +140,7 @@ const sameColor=(a,b)=>hex(a)===hex(b);
   {const p=await mk({init:null});
     for(const mode of ['light','dark'])for(const k of PALS){
       const v=await p.evaluate(([k,mode])=>{const r=document.documentElement;r.dataset.pal=k;r.dataset.theme=mode;const q=document.querySelector('#boardQ');q.focus();
-        const hs=q.closest('.hero-search'),cs=getComputedStyle(hs);const o=cs.outlineStyle!=='none'&&parseFloat(cs.outlineWidth)>0;const r2=[o,cs.outlineStyle,cs.outlineWidth,cs.boxShadow];q.blur();return r2},[k,mode]);
+        const hs=q.closest('.dsearch'),cs=getComputedStyle(hs);const o=cs.outlineStyle!=='none'&&parseFloat(cs.outlineWidth)>0;const r2=[o,cs.outlineStyle,cs.outlineWidth,cs.boxShadow];q.blur();return r2},[k,mode]);
       ok(v[0]||v[3]!=='none',`${k} ${mode} #boardQ 聚焦時看得到聚焦框：outline ${v[1]} ${v[2]}、box-shadow ${v[3].slice(0,40)}`)}
     await p.context().close()}
 
