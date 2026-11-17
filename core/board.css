@@ -17,8 +17,9 @@
 /* 工具列讓出的空間：手機在下方（--bar-in），桌面 900px 以上改成左側細欄（--rail-in）；細欄本身在「底部工具列」段 */
 :root{--bar-in:88px;--rail-in:0px;--fab-in:0px}
 @media (min-width:900px){:root{--bar-in:0px;--rail-in:78px}}
-/* 新增即時回報的浮動圓鈕出現時（body.fab-on，nav.js 的 fabSync），內容最下面多讓出它的高度，最後一顆膠囊不會被蓋住 */
-body.fab-on{--fab-in:76px}
+/* 新增即時回報的浮動圓鈕可能出現的畫面（body.fab-room：可編輯的單位的即時回報分頁，nav.js 的 fabSync），內容最下面一律多讓出它的高度，
+   最後一顆膠囊不會被蓋住；圓鈕出現、消失（打開卡片、搜尋、唯讀檢視）時留白不變，內容不會跳 */
+body.fab-room{--fab-in:76px}
 html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
@@ -1231,8 +1232,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @media print{.fab{display:none}}
 .fab .ico{width:24px;height:24px;stroke-width:2}
 .fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+/* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
 @media (max-width:899px){
-  .fab{right:max(18px,env(safe-area-inset-right));bottom:calc(106px + env(safe-area-inset-bottom))}
+  .fab{right:calc(max(12px,(100vw - 480px) / 2) + 1px);bottom:calc(106px + env(safe-area-inset-bottom))}
 }
 
 /* ===== 設定頁 ===== */

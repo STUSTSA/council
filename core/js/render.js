@@ -39,6 +39,8 @@ const canEdit=()=>loggedIn()&&!readOnly()&&!roView;
 document.addEventListener("click",e=>{if(!e.target.closest||!e.target.closest("#peekBtn"))return;
   if(editing||!deptCan())return;   /* 編輯中不切換（先存好或取消） */
   roView=!roView;render()});
+/* 從瀏覽紀錄回來（bfcache）：唯讀檢視重設為關（跟重新開頁一樣） */
+addEventListener("pageshow",e=>{if(e.persisted&&roView){roView=false;render()}});
 const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${esc(key)}">${ico("edit")}編輯</button>`;
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */

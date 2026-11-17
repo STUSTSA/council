@@ -121,7 +121,9 @@ function fabSync(){
   let fb=$("#addEvent");
   if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
   const on=secTab("live")&&curSec==="live"&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
-  Anim.toggle(fb,on);document.body.classList.toggle("fab-on",on);
+  Anim.toggle(fb,on);
+  /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
+  document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
 function tabGo(k){if(setOpen)closeSettings();if(notiOpen)closeNoti();setSection(k)}
 function setupTabbar(tb){
