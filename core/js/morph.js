@@ -64,11 +64,15 @@ function morphNode(a,b){
   morphKids(a,b);
   if(t==="SELECT"&&!focused){const o=[...b.options].find(x=>x.hasAttribute("selected"))||b.options[0];if(o&&a.value!==o.value)a.value=o.value}
 }
-/* el 的內容換成 html：只改有變的地方。el 本身（容器）不動 */
-function morphTo(el,html){
+/* el 的內容換成 html：只改有變的地方。el 本身（容器）不動。
+   scr＝畫面代號（同一個容器輪流放不同畫面時用，例如對話框的表單 #dlgForm：ask() 的表單與身分、標籤設定）：
+   上一次不是這個畫面畫的（代號不同、或內容被別的程式整段換掉）就整段重建，不沿用別的畫面的節點與它們身上的事件 */
+function morphTo(el,html,scr){
   if(!el)return;
+  if(scr!==undefined&&(el._mScr!==scr||el._mFirst!==el.firstChild)){el.innerHTML=html;el._mScr=scr;el._mFirst=el.firstChild;return}
   const t=document.createElement("template");t.innerHTML=html;
   morphKids(el,t.content);
+  if(scr!==undefined)el._mFirst=el.firstChild;
 }
 /* el 本身換成 html（一個根節點）：根節點同標籤就原位更新，不同才整個換掉 */
 function morphOuter(el,html){

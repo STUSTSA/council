@@ -44,7 +44,7 @@ function labelSetHTML(){
 async function labelSettings(){
   const d=$("#dlg"),f=$("#dlgForm");d.classList.add("wide");
   const syncNames=()=>f.querySelectorAll("[data-lblname]").forEach(i=>{const l=labelById(i.dataset.lblname),n=i.value.trim();if(l&&n&&n!==l.name){l.name=n;dirty=true}});
-  const paint=()=>{morphTo(f,labelSetHTML());bind()};   /* 原位更新（morph.js） */
+  const paint=()=>{morphTo(f,labelSetHTML(),"labels");bind()};   /* 原位更新（morph.js） */
   const bind=()=>{
     f.onsubmit=ev=>ev.preventDefault();
     f.onkeydown=ev=>{const k=ev.target.dataset&&ev.target.dataset.newlbl;if(ev.key==="Enter"&&!ev.isComposing&&k){ev.preventDefault();f.querySelector(`[data-x="add"][data-k="${k}"]`).click()}};

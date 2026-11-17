@@ -163,7 +163,7 @@ function teamHTML(){
 }
 async function teamSettings(){
   const d=$("#dlg"),f=$("#dlgForm");d.classList.add("wide");
-  const paint=()=>{morphTo(f,teamHTML());bind()};   /* 原位更新（morph.js） */
+  const paint=()=>{morphTo(f,teamHTML(),"team");bind()};   /* 原位更新（morph.js） */
   const reopen=()=>{paint();d.oncancel=ev=>{ev.preventDefault();f.querySelector('[data-x="done"]')?.click()};if(!d.open)dlgOpen(false)};
   const leave=async()=>{d.oncancel=null;d.onclose=null;if(d.open)await new Promise(r=>{d.addEventListener("close",()=>setTimeout(r,0),{once:true});d.close()})};
   const bind=()=>{
