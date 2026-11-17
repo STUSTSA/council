@@ -58,6 +58,7 @@ function linksFix(l){(l=Array.isArray(l)?l.filter(x=>x&&typeof x==="object"):[])
 function migrate(s){
   let v=+s.schemaVersion||+s.v||2;if(v<2)v=2;
   if(v>SCHEMA_VERSION){s._newer=true;return s}   /* 比這個程式還新的資料：不動它 */
+  delete s._newer;   /* 舊網站讀到比它新的資料時會加這個記號、存回資料檔；這裡讀得懂，拿掉（release-03 檢查 C） */
   while(v<SCHEMA_VERSION){s=(MIGRATIONS[v]||(x=>x))(s);v++}
   s.schemaVersion=SCHEMA_VERSION;return s;
 }

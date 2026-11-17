@@ -80,7 +80,9 @@
     const out = (desc ? String(desc).split("\n") : []).map(line => {
       const m = (pool.get(line) || []).shift();
       if (m) { keep.add(m.id); return copy(m); }
-      return { id: null, text: line.replace(/\r/g, ""), check: null, timeId: null };
+      /* 對不上的行：開頭是「☑ 」「☐ 」就還原成核取行（舊網站或會議編輯改了核取行的文字、存回的是攤平的 desc；release-03 檢查 C） */
+      const t = line.replace(/\r/g, ""), ck = t.startsWith(CHK.done) ? true : t.startsWith(CHK.todo) ? false : null;
+      return { id: null, text: ck === null ? t : t.slice(CHK.done.length), check: ck, timeId: null };
     });
     out.forEach((b, n) => { if (!b.id) b.id = freshId(keep, n); });
     return out;
