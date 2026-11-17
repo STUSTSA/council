@@ -473,7 +473,7 @@ document.addEventListener("click",async e=>{
   const card=t.closest(".lc:not(.lc-ghost)");
   if(!card){
     if(lvJust===e||editing||!lcCur()||!lvWide())return;
-    if(t.closest("#dlg,.csel-list,#toast,#logOv,#setOv,#notiOv,#tabbar,.dhead,#dSearch,#boardRes,#addEvent,a,input,textarea"))return;
+    if(t.closest("#dlg,.csel-list,#toast,#logOv,#setOv,#notiPage,#todayOv,#tabbar,.dhead,#dSearch,#boardRes,#addEvent,a,input,textarea"))return;
     const c=lcCur();lcShow(c[0],null);return}
   if(t.closest("[data-lcback]")){e.preventDefault();lcBack();return}
   const st=t.closest("[data-lcstep]");if(st){e.preventDefault();if(!st.disabled)lcStep(+st.dataset.lcstep);return}

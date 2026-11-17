@@ -32,7 +32,7 @@ const Back=(()=>{
   return {opened,closed,replace,home};
 })();
 /* 換頁動畫（pagefx.js）的「底下那一頁」：最上面還開著的全畫面層（skip 以外），沒有就是看板本身（#pager，含每週概述） */
-function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv","#notiOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}
+function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}
 /* 各層打開時登記：close(instant) 關掉那一層 */
 Back.layers={
   settings:()=>Back.opened("settings",i=>closeSettings(i)),

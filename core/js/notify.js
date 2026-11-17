@@ -1,12 +1,10 @@
-/* 核心｜通知層（頁首鈴鐺）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05 重新設計，交接說明四十二）
-   - 跟設定頁同一類的全畫面層（.set-ov），開關用換頁動畫，返回鍵／手勢、Esc、點下方分頁都會關。
-   - 事件只有即時回報上記錄的時間標記（ev.times；未完成的即時回報）。時段（有結束日）算頭到尾的每一天。
-     議題的開始／結束日、議題註記不再列進來。不推播，只在看板裡顯示。
-   - 本部門／全會切換：全會＝讀各部門的資料檔（跟會長室追蹤同一種讀法 fwLoad，只讀不寫）。
-     注意：各部門資料檔放在公開 repo 時，任何人本來就讀得到；這裡沒有多公開任何東西。
-   - 版面（由上到下）：範圍切換＋搜尋欄（.noti-bar，sticky，不跟著重畫）→ 今日／明日兩張卡片 → 近期（智慧堆疊）→ 行事曆（事件清單＋海報月曆）。
-   - 顏色：本部門＝即時回報的狀態色（綠／黃／紅）；全會＝部門色。 */
-let notiOpen=false,notiSeg=null;
+/* 核心｜通知與行事曆（DESIGN-next 第九節；ui-06 起是部門內的一頁 #notiPage，不再是全畫面疊層）
+   - 標題列的通知鈕進到這一頁（shell.js 的 .layout 裡的 .sg-noti；換的動畫跟換分頁同一套，render.js 的 secSwap）。
+     標題列、工具列留在原地，工具列的鏡片留在原本的分頁（這一頁不是工具列的分頁）；沒有搜尋列、沒有新增圓鈕。
+     返回原分頁：再按通知鈕、Esc、系統返回鍵（打開時推一筆瀏覽紀錄）；按工具列任一分頁＝到那個分頁。
+   - 由上到下：今日／明日 → 逾期 → 行事曆。
+   - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
+let notiOpen=false;
 const NOTI={scope:"mine",month:null,day:null,all:null,loading:false,q:""};
 const DEPT_COLORS=["#e0342a","#0a5baa","#f0bc23","#2f8f84","#a24fc0","#d84f92","#c26a12","#3d7fe0","#6b6b75"];
 const deptColor=id=>DEPT_COLORS[Math.max(0,(window.BOARD_DEPTS||[]).findIndex(d=>d.id===id))%DEPT_COLORS.length];
@@ -259,15 +257,16 @@ function openToday(card){
 }
 function closeToday(instant){
   const ov=$("#todayOv");if(!ov||!todayOpen)return;todayOpen=false;Back.closed("today");
-  const card=ov._card&&ov._card.isConnected?ov._card:$("#notiOv .nd-card.today"),done=()=>{ov.hidden=true;ov.classList.remove("on","off");ov.getAnimations({subtree:true}).forEach(a=>a.cancel());tdCardShow(card,true)};
+  const card=ov._card&&ov._card.isConnected?ov._card:$("#notiPage .nd-card.today"),done=()=>{ov.hidden=true;ov.classList.remove("on","off");ov.getAnimations({subtree:true}).forEach(a=>a.cancel());tdCardShow(card,true)};
   if(instant===true||reduceMotion()||!card){done();return}
   ov.getAnimations({subtree:true}).forEach(a=>a.cancel());ov.querySelector(".td-scroll").scrollTo({top:0});
   tdCardShow(card,false);   /* 收合期間卡片藏著（底板收到卡片的位置與圓角時換回卡片，看起來就是同一張；剩下的縮過頭、彈回由卡片接著播） */
   todayMorph(ov,card,true).then(tail=>{done();tdCardLand(card,tail)}).catch(done);
 }
 function renderNoti(){
-  const el=$("#notiOv .noti-inner");if(!el||!notiOpen)return;
-  const snap=Anim.capture();morphTo(el,notiInner());Anim.play(snap);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */flowWatch();dkBind();notiSearch();
+  const el=$("#notiPage");if(!el||!notiOpen)return;
+  const snap=Anim.capture();morphTo(el,notiInner());Anim.play(snap);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
+  dkBind();
 }
 
 /* ---------- 常駐搜尋欄（毛玻璃膠囊，貼在通知層最上面） ----------
@@ -292,37 +291,26 @@ function resBox(on){
 }
 const searchClose=()=>resBox(false);
 
-/* ---------- 開關 ---------- */
-function openNoti(){
-  let ov=$("#notiOv");
-  if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov noti-ov" id="notiOv" role="dialog" aria-modal="true" aria-label="通知" hidden>
-      <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">NOTICE</span><b>通知與行事曆</b></div><div class="anim-ctl"><button type="button" id="notiClose" aria-label="關閉通知">${ico("close")}關閉</button></div></div>
-      <div class="set-body"><div class="set-scroll"><div class="noti-bar"><div class="noti-seg lseg" role="tablist" aria-label="範圍"><span class="lseg-lens" aria-hidden="true"></span>${[["mine",CFG.dept.name||"本部門"],["all","全會"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${NOTI.scope===k}">${esc(t)}</button>`).join("")}</div>
-        <div class="noti-find"><label class="noti-search"><svg class="ns-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4"/></svg><input id="notiQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件、地點、即時回報" aria-label="搜尋事件" aria-controls="notiRes"><button type="button" class="nq-clear" aria-label="清除搜尋">${ico("close")}</button></label>
-        <div class="noti-res glass" id="notiRes" role="listbox" aria-label="搜尋結果" hidden></div></div></div><div class="noti-inner" data-flow></div></div></div></div>`);ov=$("#notiOv");
-    /* 本部門／全會：液態分段切換（anim.js 的 LiquidSeg，跟底部工具列同一套）。放在 .noti-inner 外面，重畫內容時不會被換掉、動畫不會被打斷 */
-    notiSeg=new LiquidSeg(ov.querySelector(".noti-seg"),{onPick:k=>{NOTI.scope=k;NOTI.day=null;if(k==="all"&&!NOTI.all)notiLoadAll();else renderNoti()}});
-    glassify(ov.querySelector(".noti-search"));
-    const q=ov.querySelector("#notiQ");
-    q.addEventListener("input",()=>{NOTI.q=q.value;notiSearch()});
-    q.addEventListener("focus",()=>{if(NOTI.q.trim())notiSearch()});
-    q.addEventListener("keydown",e=>{if(e.key==="Escape"&&q.value){e.preventDefault();e.stopPropagation();q.value=NOTI.q="";notiSearch()}else if(e.key==="Enter"){e.preventDefault();const f=$("#notiRes .nr");if(f)f.click()}});
-    ov.querySelector(".nq-clear").addEventListener("click",()=>{q.value=NOTI.q="";notiSearch();q.focus()});
-    elastic(ov.querySelector(".set-scroll"),ov.querySelector(".noti-inner"))}
-  if(notiOpen)return;
+/* ---------- 進出這一頁 ----------
+   打開：編輯中的卡片先存檔（名稱空白等不能存就不進來）、設定頁收起、搜尋清掉；推一筆瀏覽紀錄；從原分頁換到這一頁（render.js 的 secSwap）。
+   沒有權限、唯讀檢視時沒有通知鈕（views.js 的 renderHero），這一頁進不來；開著時變成唯讀就直接回原分頁 */
+async function openNoti(){
+  if(notiOpen||deptRO())return;
+  if(editing&&!(await lvEndEdit()))return;
+  if(notiOpen||deptRO())return;
   if(setOpen)closeSettings(true);
-  const from=pageUnder(ov);PageFx.settle(ov);
-  notiOpen=true;NOTI.month=today().slice(0,7);NOTI.day=null;NOTI.q="";ov.querySelector("#notiQ").value="";$("#notiRes").hidden=true;$("#notiRes")._on=false;
-  ov.getAnimations().forEach(a=>a.cancel());ov.hidden=false;Back.layers.noti();document.body.classList.add("set-open");
-  renderNoti();requestAnimationFrame(()=>notiSeg.set(NOTI.scope,true));PageFx.swap(from,ov);   /* 換頁動畫 */
-  if(NOTI.scope==="all")notiLoadAll();
+  if(HS.q)hsClear();
+  notiOpen=true;NOTI.month=today().slice(0,7);NOTI.day=null;
+  Back.layers.noti();$("#notiBtn").setAttribute("aria-pressed","true");
+  hsBar();renderTabbar();renderNoti();
+  secSwap(curSec,"noti",1);
 }
-function closeNoti(instant){
-  const ov=$("#notiOv");if(!ov||!notiOpen)return;
-  if(todayOpen)closeToday(true);notiOpen=false;Back.closed("noti");
-  const done=()=>{if(!notiOpen){ov.hidden=true;ov.getAnimations().forEach(a=>a.cancel());if(!setOpen)document.body.classList.remove("set-open")}};
-  if(instant){PageFx.settle(ov);return done()}
-  PageFx.swap(ov,pageUnder(ov),{done});   /* 換頁動畫：通知往後退、底下那頁從後面浮上來 */
+/* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
+function closeNoti(instant,to){
+  if(!notiOpen)return;
+  if(todayOpen)closeToday(true);notiOpen=false;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(to&&SECS.includes(to))curSec=to;
+  hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
 async function notiLoadAll(){
   NOTI.loading=true;renderNoti();
@@ -361,10 +349,7 @@ document.addEventListener("pointerdown",e=>{const c=e.target.closest&&e.target.c
 document.addEventListener("click",e=>{
   const t=e.target;if(!t.closest)return;
   if(t.closest("#notiBtn")){notiOpen?closeNoti():openNoti();return}
-  if(!notiOpen||!t.closest("#notiOv"))return;
-  if(!t.closest(".noti-find"))searchClose();
-  if(t.closest("#notiClose")){closeNoti();return}
-  const nr=t.closest(".nr");if(nr){searchClose();$("#notiQ").blur();notiFocus(nr.dataset.nd,nr.dataset.ne);return}
+  if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
   const mo=t.closest("[data-nmon]");if(mo){const k=+mo.dataset.nmon,d=pd(NOTI.month+"-01");if(k)d.setMonth(d.getMonth()+k);const nm=k?ym(d):today().slice(0,7);if(nm===NOTI.month)return;
     NOTI.day=null;notiMonth(nm,k<0?-1:1);return}
@@ -373,7 +358,8 @@ document.addEventListener("click",e=>{
   const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
   if(t.closest("[data-dkundo]")){triUndo();return}
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!$("#dlg").open&&!setOpen){e.preventDefault();closeNoti()}});
+/* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!todayOpen&&!$("#dlg").open&&!setOpen&&!(typeof rptOpen!=="undefined"&&rptOpen)){e.preventDefault();closeNoti()}});
 
 
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("[data-tdclose]"))closeToday()});

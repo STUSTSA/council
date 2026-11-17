@@ -151,7 +151,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn .ico{width:22px;height:22px;stroke-width:1.8}
 .dh-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .dh-btn[hidden]{display:none}
-.dh-eye.on{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中：實心 */
+.dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
 .dh-name{display:grid;min-width:0;line-height:1.15}
 .dh-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;margin-bottom:2px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1379,11 +1379,13 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .look-sw i:nth-child(3){background:var(--acc)}
 .look-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:15px}
 
-/* ===== 通知層（notify.js）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05，交接說明四十二） =====
-   版面沿用設定頁的 .set-ov；內容寬度上限 920px 置中。顏色：本部門＝即時回報狀態色、全會＝部門色（--c，由 JS 給） */
-.noti-ov{z-index:37}
-.noti-inner{max-width:920px;margin:0 auto;padding:18px 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:30px}
-.noti-ov .set-scroll{padding-inline:10px;margin-inline:-10px}   /* 本部門／全會貼著內容左邊：捲動區左右多留 10px，按下放大時玻璃的外陰影不會被切掉（內容位置不變） */
+/* ===== 通知頁（notify.js 的 #notiPage；DESIGN-next 第九節） =====
+   部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：由上到下今日／明日、逾期、行事曆，區塊之間 28px。
+   區塊標題：上面很小的英文小標＋粗體名稱（.nt-h）。列印不印這一頁 */
+.sg-noti{gap:28px;padding-bottom:12px}
+@media print{.sgroup.sg-noti{display:none}}
+.nt-h{display:grid;justify-items:start;gap:3px;margin:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2}
+.nt-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
 .noti-note{margin:-14px 0 -8px}
 /* 小標題：粗體名稱＋次要色說明 */
 .noti-h{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font-size:12.5px;font-weight:400;color:var(--muted);letter-spacing:.08em}

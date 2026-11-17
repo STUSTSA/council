@@ -50,5 +50,13 @@ async function auditSince(cfg, since) {
   return qs.docs.map(s => { const a = s.data(); return { kind: "audit", id: s.id, t: a.at ? a.at.toMillis() : 0, by: a.actor || "", col: a.col, docId: a.docId, action: a.action, before: a.before || {}, after: a.after || {} }; });
 }
 
-window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince };
+/* ui-06：行事曆「活動」「會議」與主頁的全會行事曆：scope 是 all-activity／all-meeting 的時間事件（索引 Q13：scope＋start）。
+   讀取量：只讀 [from, to) 開始的那幾筆（呼叫端給一個月份前後的範圍，讀過的留在記憶體）；只讀不寫。回傳 {id, ...時間值換成 __ts} */
+async function eventsByScope(cfg, scope, from, to) {
+  await authReady(cfg);
+  return many(query(collection(fb(cfg).db, "events"), where("scope", "==", scope),
+    where("start", ">=", Timestamp.fromMillis(from)), where("start", "<", Timestamp.fromMillis(to)), orderBy("start")));
+}
+
+window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope };
 dispatchEvent(new Event("board-firestore-ready"));

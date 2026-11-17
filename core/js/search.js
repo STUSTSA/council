@@ -28,7 +28,7 @@ function hsIndex(ql){
 }
 const hsHL=(s,q)=>{const t=String(s||"");const i=t.toLowerCase().indexOf(q.toLowerCase());return i<0||!q?esc(t):esc(t.slice(0,i))+`<mark>${esc(t.slice(i,i+q.length))}</mark>`+esc(t.slice(i+q.length))};
 /* 搜尋列只在三頁出現（會長室、秘書處自己的分頁沒有）；不在那三頁時順便清掉 */
-const hsHere=()=>curSec!=="ext";
+const hsHere=()=>curSec!=="ext"&&!notiOpen;   /* 通知與行事曆那一頁也沒有搜尋列（notify.js） */
 function hsBar(){const bar=$("#dSearch");if(!bar)return;const on=hsHere();bar.hidden=!on;if(!on&&HS.q)hsClear()}
 /* 有沒有在搜尋：看板內容（.layout）換成結果清單。換的時候新的一塊一塊由下浮上來 */
 function hsMode(on){
