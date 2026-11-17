@@ -8,6 +8,10 @@
    6. 跳脫：事件名稱含 <img onerror>；公共版參數（calMount）；唯讀時沒有通知鈕、開著時變唯讀就回原分頁
    7. 關掉動態（reduced-motion）：進出、今日層、換日期、卡片堆都沒有程式動畫
    8. 412 寬：沒有橫捲、鏡片留在原分頁
+   9. 審查修正：沒登入／沒選身分時逾期卡片堆唯讀（沒有延後／改時間鈕、拖不動、notiPostpone 回 false 且沒有寫入）；
+      30px 快甩不觸發延後；延後後出現「復原」、按了寫回原值；固定 11/30 點明日會讀新月份；11/27–12/08 在 11/30 那格畫成半條線；
+      時刻欄位含 <!--x 版面不壞；calMount→calUnmount 五次 resize 監聽不累積、拆掉的不吃 Esc；未登入的公共版查詢帶 visibility（替身 Firebase 模組）；
+      通知頁開著按設定鍵：瀏覽紀錄不為 null、系統返回關設定
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -176,7 +180,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     ok(r.pub&&r.modes==='全部,活動,會議'&&/全會行事曆/.test(r.h)&&r.foot==='全會・學生會'&&!r.extra,`公共版：全部／活動／會議、沒有今日／明日與逾期（${r.modes}，${r.foot}）`);
     await p.click('#pubT .cal-seg [data-k="meet"]');await p.waitForTimeout(400);
     ok(await p.evaluate(()=>__pc.mode==='meet'&&NOTI.mode==='mine'),'公共版自己一份狀態（換模式不影響通知頁）');
-    await p.evaluate(()=>$('#pubT').remove());}
+    await p.evaluate(()=>{calUnmount($('#pubT'));$('#pubT').remove()});}
 
   /* 6c. 唯讀：開著時按眼睛（唯讀檢視）→ 通知鈕消失、回原分頁 */
   {await p.click('#notiBtn');await p.waitForTimeout(800);
@@ -208,6 +212,111 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await q.screenshot({path:'ui6_412.png'});
     ok(q.errs.length===0,`412 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
     await q.close();}
+
+  /* 9. 審查修正 */
+  const flick=async(pg,dx,steps,wait)=>{const bb=await (await pg.$('#notiDeck .dk-card[data-i="0"]')).boundingBox();const x0=bb.x+bb.width/2,y0=bb.y+bb.height/2;
+    await pg.mouse.move(x0,y0);await pg.mouse.down();for(let i=1;i<=steps;i++){await pg.mouse.move(x0+dx*i/steps,y0);if(wait)await pg.waitForTimeout(wait)}await pg.mouse.up()};
+  const tOf=(pg,id)=>pg.evaluate(id=>{const t=state.events.flatMap(e=>e.times||[]).find(x=>x.id===id);return t&&{start:t.start,end:t.end||''}},id);
+  /* 9a. P1-1：沒選身分（GitHub 模式沒登入）＝唯讀 */
+  {const q=await mk(1300,900,'light',false);const evId=await seed(q);await q.click('#notiBtn');await q.waitForTimeout(900);
+    await q.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await q.waitForTimeout(300);
+    const ls0=await q.evaluate(()=>JSON.stringify(Object.entries(localStorage).sort()));const n0=st.commits.length,t0=await tOf(q,'tL3');
+    const r=await q.evaluate(()=>({btn:document.querySelectorAll('[data-dkgo]').length,cards:document.querySelectorAll('#notiDeck .dk-card').length,n:$('.dk-n')?.textContent}));
+    ok(r.btn===0&&r.cards===3&&r.n==='3',`沒選身分：逾期卡片堆還看得到（${r.cards} 張、${r.n} 件），沒有延後／改時間鈕（${r.btn}）`);
+    await flick(q,-320,10,16);await q.waitForTimeout(1200);
+    const t1=await tOf(q,'tL3'),d1=await q.evaluate(()=>({late:notiLate(),dlg:$('#dlg').open,go:!!$('#notiDeck .dk-card.go-l,#notiDeck .dk-card.go-r')}));
+    ok(JSON.stringify(t1)===JSON.stringify(t0)&&d1.late===3&&!d1.dlg&&!d1.go,`沒選身分：卡片拖不動、沒有延後（${JSON.stringify(t1)}，${JSON.stringify(d1)}）`);
+    const v=await q.evaluate(id=>Promise.race([Promise.resolve(notiPostpone(id,'tL3')),new Promise(r=>setTimeout(()=>r('還在等'),1500))]),evId);
+    const v2=await q.evaluate(id=>Promise.race([Promise.resolve(notiRetime(id,'tL3')),new Promise(r=>setTimeout(()=>r('還在等'),1500))]),evId);
+    await q.evaluate(()=>{if($('#dlg').open)$('#dlg').close()});
+    const ls1=await q.evaluate(()=>JSON.stringify(Object.entries(localStorage).sort()));
+    ok(v===false&&v2===false&&st.commits.length===n0&&ls1===ls0&&JSON.stringify(await tOf(q,'tL3'))===JSON.stringify(t0)&&await q.evaluate(()=>notiOpen),
+      `沒選身分：notiPostpone、notiRetime 回 false（${v}、${v2}），沒有寫進 GitHub（${st.commits.length-n0}）或這台裝置（${ls1===ls0?'沒變':'變了'}）`);
+    await q.close();}
+  /* 9b. P1-2：30px 快甩不觸發；延後後「復原」 */
+  {const S2=await c.setup(),st=S2.st;   /* 新的一份模擬 GitHub（上面已經建立過身分「王」，再登入一次要個人密碼） */
+    const q=await S2.mk(1300,900,'light',false);await S2.login(q);await seed(q);await q.click('#notiBtn');await q.waitForTimeout(900);
+    await q.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await q.waitForTimeout(300);
+    const t0=await tOf(q,'tL3'),n0=st.commits.length;
+    await flick(q,-30,2,0);   /* 兩步、每步約 16ms：速度約 0.9px/ms（超過速度門檻），位移 30px */await q.waitForTimeout(1200);
+    ok(JSON.stringify(await tOf(q,'tL3'))===JSON.stringify(t0)&&st.commits.length===n0&&await q.evaluate(()=>notiLate()===3),'30px 快甩：不延後（卡片彈回）');
+    await q.click('[data-dkgo="l"]');await q.waitForTimeout(1600);
+    const a=await q.evaluate(()=>({late:notiLate(),u:!!$('[data-dkundo]'),st:$('.dk-undo .kp-st')?.textContent}));const t1=await tOf(q,'tL3');
+    ok(a.late===2&&t1.end!==t0.end&&a.u&&/延後/.test(a.st||''),`延後後出現「復原」（${a.st}；${JSON.stringify(t0)} → ${JSON.stringify(t1)}）`);
+    const n1=st.commits.length;await q.click('[data-dkundo]',{timeout:3000}).catch(()=>{});await q.waitForTimeout(1600);
+    const t2=await tOf(q,'tL3');
+    ok(JSON.stringify(t2)===JSON.stringify(t0)&&st.commits.length>n1&&await q.evaluate(()=>notiLate()===3&&!$('[data-dkundo]')),`按復原：寫回原值（${JSON.stringify(t2)}）、有存檔、卡片回到卡片堆`);
+    ok(q.errs.length===0,`9b 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
+    await S2.b.close();}
+  /* 9c. 固定在 2026-11-30：P2-1 點明日讀新月份、P2-2 跨週只佔一格畫半條線、P2-4 時刻跳脫、P2-5 拆除 */
+  {const q=await mk(1300,900,'light',false);await q.context().clock.setFixedTime(new Date(2026,10,30,10,0,0));await q.reload();await q.waitForTimeout(1800);
+    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=[{id:'tW',label:'跨月',start:'2026-11-27',end:'2026-12-08',place:''},
+      {id:'tX',label:'註解今天',start:'2026-11-30T<!--x',end:'',place:''},{id:'tY',label:'註解過期',start:'2026-11-29T<!--x',end:'',place:''}];
+      e.blocks=[{id:'bW',text:'跨月',check:false,timeId:'tW'},{id:'bX',text:'註解今天',check:false,timeId:'tX'},{id:'bY',text:'註解過期',check:false,timeId:'tY'}];render()});
+    await q.click('#notiBtn');await q.waitForTimeout(900);
+    const h=await q.evaluate(()=>{const d=today(),n=notiMine().filter(x=>covers(x,d)).length;return {today:d,rows:document.querySelectorAll('#notiPage .nd-card.today .nd-row').length,er:Math.min(4,n),
+      dk:document.querySelectorAll('#notiDeck .dk-card').length,ed:Math.min(3,notiLateItems().length),ev:document.querySelectorAll('#notiPage .cal-list .cal-ev').length,en:n,
+      cal:!!$('#notiPage .pc-foot'),txt:$('#notiPage').textContent.split('<!--x').length-1}});
+    ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日 ${h.rows}/${h.er} 列、逾期 ${h.dk}/${h.ed} 張、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
+    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=e.times.filter(t=>t.id==='tW');e.blocks=e.blocks.filter(b=>b.id==='bW');render()});await q.waitForTimeout(400);   /* 下面各項跟跳脫分開測 */
+    const w=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-30"]').parentElement,e=[...wk.querySelectorAll('.pc-e')].find(x=>x.style.getPropertyValue('--i0')==='0'&&x.style.getPropertyValue('--i1')==='0'&&/cont-r/.test(x.className));
+      const cell=$('.pc-d[data-calday="2026-11-30"]').getBoundingClientRect(),b=e&&getComputedStyle(e,'::before'),a=e&&getComputedStyle(e,'::after');
+      const er=e&&e.getBoundingClientRect();return e&&{cls:e.className,bw:parseFloat(b.width)||0,dot:a.content!=='none'&&a.content!=='normal',right:er.right,cellMid:cell.left+cell.width/2}});
+    ok(w&&/cont-r/.test(w.cls)&&!w.dot&&w.bw>12,`11/27–12/08 在 11/30 那格：畫成到右邊緣的半條線（${JSON.stringify(w)}），不是小點`);
+    const w2=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-27"]').parentElement;return [...wk.querySelectorAll('.pc-e')].map(x=>x.className).join()});
+    ok(/span/.test(w2)&&/cont-r/.test(w2),`11/27 那一週：延續到下一週的一端標 cont-r（${w2}）`);
+    /* P2-1：活動模式（替身模組）、點明日（12/01）→ 讀十二月 */
+    await q.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';window.__q=[];
+      storeFsMod=Promise.resolve({eventsByScope:async(cfg,s,a,b,o)=>{__q.push([s,new Date(a).toISOString().slice(0,10),new Date(b).toISOString().slice(0,10),!!(o&&o.pub)]);
+        return [{id:'events__d1',deptId:'events',label:'十二月活動',startRaw:'2026-12-01 18:00',endRaw:'',allDay:false,place:'',scope:s}]}})});
+    await q.click('.cal-seg [data-k="act"]');await q.waitForTimeout(700);
+    await q.click('#notiPage .nd-card:not(.today)');await q.waitForTimeout(1200);
+    const m=await q.evaluate(()=>({month:NOTI.month,day:NOTI.day,q:__q.length,last:__q[__q.length-1],list:$('.cal-list').textContent.trim()}));
+    ok(m.month==='2026-12'&&m.day==='2026-12-01'&&m.q===2&&!/讀取中/.test(m.list)&&/十二月活動/.test(m.list),`11/30 點明日：換到十二月、發出新月份的查詢（${JSON.stringify(m.last)}，共 ${m.q} 次），清單顯示（${m.list.slice(0,20)}）`);
+    /* P2-5：calMount → calUnmount 五次：resize 監聽不累積、CALS 復原、拆掉的不吃 Esc */
+    const u=await q.evaluate(async()=>{let n=0;const add=window.addEventListener,rm=window.removeEventListener;
+      window.addEventListener=function(t,...a){if(t==='resize')n++;return add.call(this,t,...a)};window.removeEventListener=function(t,...a){if(t==='resize')n--;return rm.call(this,t,...a)};
+      const c0=CALS.length;document.body.insertAdjacentHTML('beforeend','<div id="pubU"></div>');const h=$('#pubU');let peak=0;
+      if(typeof calUnmount!=='function'){window.addEventListener=add;window.removeEventListener=rm;return {err:'沒有 calUnmount'}}
+      for(let i=0;i<5;i++){const c=calMount(h);await new Promise(r=>setTimeout(r,60));peak=Math.max(peak,n);if(i===4){c.pop=true;calPaint(c)}calUnmount(h)}
+      const ev=new KeyboardEvent('keydown',{key:'Escape',cancelable:true,bubbles:true});document.dispatchEvent(ev);
+      window.addEventListener=add;window.removeEventListener=rm;h.remove();
+      return {n,peak,cals:CALS.length===c0,cal:h._cal===undefined,esc:ev.defaultPrevented}});
+    ok(!u.err&&u.n===0&&u.peak>=1&&u.cals&&u.cal&&!u.esc,`calMount→calUnmount 五次：resize 監聽淨增 ${u.n}（最多 ${u.peak}）、CALS 復原、拆掉的不吃 Esc（${JSON.stringify(u)}）`);
+    ok(q.errs.length===0,`9c 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
+    await q.close();}
+  /* 9d. 未登入的公共版：Firestore 查詢帶 visibility=='public'（替身 Firebase 模組，記下查詢條件；不連任何真的專案）；登入後照舊用 scope */
+  {const ctxq=await mk(1300,900,'light',false);const q=ctxq;
+    const stub={'firebase-app.js':'export const initializeApp=()=>({});',
+      'firebase-auth.js':'export const getAuth=()=>({get currentUser(){return window.__fbUser||null},authStateReady:()=>Promise.resolve(),languageCode:""});export const connectAuthEmulator=()=>{};',
+      'firebase-firestore.js':`const T=v=>v&&v.ms!=null?'ts':v;export const getFirestore=()=>({});export const connectFirestoreEmulator=()=>{};export const doc=()=>({});export const getDoc=async()=>({exists:()=>false});
+        export const collection=(d,n)=>n;export const collectionGroup=(d,n)=>n;export const query=(col,...cs)=>({col,cs});export const where=(f,op,v)=>({f,op,v});export const orderBy=f=>({f,op:'orderBy'});
+        export const limitToLast=n=>({op:'limit'});export const endBefore=()=>({op:'endBefore'});export const Timestamp={fromMillis:ms=>({ms})};
+        export const getDocs=async q=>{(window.__fsq=window.__fsq||[]).push(q.col+':'+q.cs.filter(c=>c.op!=='orderBy').map(c=>c.f+c.op+T(c.v)).join('&'));return {docs:(window.__fsDocs||[]).map(d=>({id:d.id,data:()=>d}))}};`};
+    await q.route('https://www.gstatic.com/**',r=>{const f=r.request().url().split('/').pop();return r.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:stub[f]||''})});
+    const r=await q.evaluate(async()=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';
+      window.__fsDocs=[{id:'events__p1',deptId:'events',title:'公開活動',startRaw:today()+' 18:00',endRaw:'',allDay:false,scope:'all-activity',visibility:'public'},
+        {id:'events__p2',deptId:'events',title:'部門公開事件',startRaw:today()+' 19:00',endRaw:'',allDay:false,scope:'dept',visibility:'public'}];
+      document.body.insertAdjacentHTML('beforeend','<div id="pubV"></div>');calMount($('#pubV'));
+      for(let i=0;i<40&&/讀取中/.test($('#pubV .cal-list').textContent);i++)await new Promise(r=>setTimeout(r,100));
+      const out={q:[...(window.__fsq||[])],list:$('#pubV .cal-list').textContent};
+      calUnmount&&calUnmount($('#pubV'));$('#pubV').remove();CAL_DATA.clear();window.__fsq=[];window.__fbUser={uid:'u1'};
+      document.body.insertAdjacentHTML('beforeend','<div id="pubW"></div>');calMount($('#pubW'));
+      for(let i=0;i<40&&/讀取中/.test($('#pubW .cal-list').textContent);i++)await new Promise(r=>setTimeout(r,100));
+      out.q2=[...window.__fsq];calUnmount&&calUnmount($('#pubW'));$('#pubW').remove();return out}).catch(e=>({err:e.message}));
+    ok(!r.err&&r.q.length===2&&r.q.every(x=>/^events:visibility==public&/.test(x)&&!/scope==/.test(x))&&/公開活動/.test(r.list)&&!/部門公開事件/.test(r.list),
+      `未登入的公共版：查詢帶 visibility=='public'（${JSON.stringify(r.q)}），只列活動／會議（${(r.list||'').trim().slice(0,30)}）`);
+    ok(!r.err&&r.q2&&r.q2.length===2&&r.q2.every(x=>/^events:scope==all-(activity|meeting)&/.test(x)&&!/visibility/.test(x)),`登入後的公共版：照舊用 scope 查（${JSON.stringify(r.q2)}）`);
+    await q.close();}
+  /* 9e. P2-7：通知頁開著時按設定鍵 */
+  {const S3=await c.setup(),q=await S3.mk(1300,900,'light',false);await S3.login(q);await q.click('#notiBtn');await q.waitForTimeout(800);
+    await q.click('#setBtn');await q.waitForTimeout(1000);
+    const a=await q.evaluate(()=>({st:history.state&&history.state.bl,set:setOpen,noti:notiOpen}));
+    ok(a.st==='settings'&&a.set&&!a.noti,`通知頁開著按設定鍵：設定打開、瀏覽紀錄是設定那一筆（${JSON.stringify(a)}）`);
+    await q.goBack();await q.waitForTimeout(900);
+    const b2=await q.evaluate(()=>({set:setOpen,path:location.pathname,st:history.state}));
+    ok(!b2.set&&b2.path.endsWith('index.html'),`系統返回：關掉設定、還在看板（${JSON.stringify(b2)}）`);
+    await S3.b.close();}
 
   console.log(`\n${passes} 通過、${fails} 失敗`);await b.close();process.exit(fails?1:0);
 })().catch(e=>{console.log('FAIL 例外：'+e.message);process.exit(1)});

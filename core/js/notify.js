@@ -419,9 +419,9 @@ function closeNoti(instant,to){
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
-/* 明日卡片：行事曆選到那一天（換到那個月），捲到行事曆 */
+/* 明日卡片：行事曆選到那一天（換到那個月：要讀那個月的活動、會議，calLoad），捲到行事曆 */
 function notiOpenDay(d){
-  NOTI.month=d.slice(0,7);calDay(NOTI,d);renderNoti();
+  const m=d.slice(0,7);if(m!==NOTI.month){NOTI.month=m;calLoad(NOTI)}calDay(NOTI,d);renderNoti();
   const c=$("#notiPage .cal");if(c)c.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"});
 }
 /* 今日／明日卡片的按壓回饋：按下微縮到 .97、放開略帶回彈地彈回（只動 transform） */
