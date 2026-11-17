@@ -1,0 +1,54 @@
+/* 核心｜Firestore 讀取橋接（01B；02B 改用 fb-app.js 共用的 app，讀之前先等登入狀態）。ES module：
+   只有部門設成 source:"firestore" 時由 store.js 載入，其他部門完全不載入 Firebase。
+   只讀，不寫（02D 的寫入在 store-write.js）：查詢條件照 docs/architecture/indexes.md（規則不是篩選器，查詢要帶規則需要的條件，例如卡片只查 open／done）。
+   cfg＝dept/config.js 的 BOARD_BASE.firebase（網頁設定，不是機密）。
+   回傳 {data（schemaVersion 13 的部門資料）, src（每份文件 {id, ...時間值換成 __ts}）, orig（原始文件，寫入時沿用沒改的欄位，時間戳記保留微秒）}。 */
+import { fb, authReady } from "./fb-app.js";
+import { doc, getDoc, getDocs, collection, collectionGroup, query, where, orderBy, limitToLast, endBefore, Timestamp }
+  from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+const plain = v => window.StoreMap.plain(v);                 /* Timestamp → {__ts}（store-map.js） */
+const one = async (ref, o) => { const s = await getDoc(ref); if (!s.exists()) return null; if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; };
+const many = async (q, o) => (await getDocs(q)).docs.map(s => { if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; });
+
+async function loadDept(cfg, dept) {
+  await authReady(cfg);
+  const d = fb(cfg).db, by = c => where("deptId", "==", dept);
+  const orig = { settings: {}, cards: {}, issues: {}, weeks: {}, labels: {}, events: {} };
+  const [settings, org, grant, cards, issues, weeks, labels, events, legacy] = await Promise.all([
+    one(doc(d, "deptSettings", dept), orig.settings),
+    one(doc(d, "org", "config")),
+    dept === "president" ? one(doc(d, "grants", "meetingEdit")) : null,
+    many(query(collection(d, "cards"), by(), where("state", "in", ["open", "done"])), orig.cards),
+    many(query(collection(d, "issues"), by()), orig.issues),
+    many(query(collection(d, "weeks"), by()), orig.weeks),
+    many(query(collection(d, "labels"), by()), orig.labels),
+    many(query(collection(d, "events"), by()), orig.events),
+    many(query(collection(d, "legacyIdentities"), by())),
+  ]);
+  const src = { settings, org, grant, cards, issues, weeks, labels, events, legacy };
+  return { data: window.StoreMap.toState(dept, src), src, orig };
+}
+
+/* 02D：編輯紀錄與會長室的各部門編輯量。版本歷史＝collection group versions（索引 Q9：deptId＋at；規則只給總管理員與該部門編輯者，
+   其他人讀不到＝permission-denied）；稽核紀錄只有總管理員讀得到（依 at，單一欄位索引）。回傳 {t（毫秒）, by（UID）, ...}。 */
+const verRow = s => { const v = s.data(); return { kind: "ver", t: v.at ? v.at.toMillis() : 0, by: v.by || "", version: v.version, title: v.title || "", deptId: v.deptId, imported: v.imported === true }; };
+async function versionsSince(cfg, dept, since) {
+  await authReady(cfg);
+  const qs = await getDocs(query(collectionGroup(fb(cfg).db, "versions"), where("deptId", "==", dept), where("at", ">=", Timestamp.fromMillis(since)), orderBy("at")));
+  return qs.docs.map(verRow);
+}
+/* 一頁（由新往舊）：cursor＝上一頁最舊的那一筆（同一個時間的不會漏掉） */
+async function versionsPage(cfg, dept, cursor, n) {
+  await authReady(cfg);
+  const qs = await getDocs(query(collectionGroup(fb(cfg).db, "versions"), where("deptId", "==", dept), orderBy("at"), ...(cursor ? [endBefore(cursor)] : []), limitToLast(n)));
+  return { rows: qs.docs.map(verRow), cursor: qs.docs[0] || cursor, more: qs.docs.length === n };
+}
+async function auditSince(cfg, since) {
+  await authReady(cfg);
+  const qs = await getDocs(query(collection(fb(cfg).db, "auditLogs"), where("at", ">=", Timestamp.fromMillis(since)), orderBy("at")));
+  return qs.docs.map(s => { const a = s.data(); return { kind: "audit", id: s.id, t: a.at ? a.at.toMillis() : 0, by: a.actor || "", col: a.col, docId: a.docId, action: a.action, before: a.before || {}, after: a.after || {} }; });
+}
+
+window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince };
+dispatchEvent(new Event("board-firestore-ready"));

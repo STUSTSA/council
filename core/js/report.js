@@ -321,7 +321,7 @@ function rptBind(ov){
 const RPT_LV={h1:{tag:"H3",cls:"rpt-h1",name:"大段"},h2:{tag:"H4",cls:"rpt-h2",name:"小段"},p:{tag:"P",cls:"",name:"內文"}};
 function rptParaTool(ov){
   const pt=document.createElement("div");pt.className="rpt-pt";pt.contentEditable="false";pt.hidden=true;
-  pt.innerHTML=Object.entries(RPT_LV).map(([k,v])=>`<button type="button" data-lv="${k}" title="${v.name}：游標在段尾＝換新段落，在段中＝改成這一層">${v.name}</button>`).join("");
+  pt.innerHTML=Object.entries(RPT_LV).map(([k,v])=>`<button type="button" data-lv="${k}">${v.name}</button>`).join("");
   /* 把區塊裡的純文字、瀏覽器自己產生的 <div>／<br> 整理成一段一個 <p> */
   const tidy=box=>{
     if(!box.textContent.trim()&&!box.querySelector("h3,h4")){box.innerHTML="";return}

@@ -2,9 +2,10 @@
 const MIN_PW=12;
 const ME_KEY="workboard:me:"+state.id;
 let meId="",sharedPwSession="";   /* 只存在記憶體，不寫進資料 */
-const meMember=()=>state.members.find(x=>x.id===meId)||null;
-const meName=()=>(meMember()||{}).name||"";
-const isAdmin=()=>(meMember()||{}).role==="admin";
+/* 02D：firestore 模式不用舊身分（members、密碼）：誰能編輯看 Google 登入的角色（store.js 的 fsWriter／fsAdmin），名字用 profiles（account.js 的 acctName） */
+const meMember=()=>fsMode()?null:state.members.find(x=>x.id===meId)||null;
+const meName=()=>fsMode()?acctName():(meMember()||{}).name||"";
+const isAdmin=()=>fsMode()?fsAdmin():(meMember()||{}).role==="admin";
 const adminCount=()=>state.members.filter(m=>m.role==="admin").length;
 /* 記住這台裝置：只存身分和「密碼雜湊的指紋」（不存密碼、不上傳）；密碼一改指紋就對不上，自動失效 */
 const REM_KEY="workboard:remember:"+state.id;
@@ -20,9 +21,10 @@ async function remLogin(){
   meId=m.id;try{localStorage.setItem(ME_KEY,m.id)}catch(_){}
   return true;
 }
-const loggedIn=()=>!!meMember();
+const loggedIn=()=>fsMode()?fsWriter():!!meMember();
 /* 需要登入的操作（進入編輯、設定頁各項）共用：這次已經登入就直接通過 */
 async function ensureLogin(){
+  if(fsMode()){if(fsBusy)toast("儲存中，請稍候");return fsWriter()&&!fsBusy}
   if(loggedIn())return true;
   if(await remLogin()){toast(`已用這台裝置記住的身分登入：${meName()}`);return true}
   return unlockEdit();
@@ -132,7 +134,7 @@ async function joinDone(first){
     +`其他人加入：請他打開設定 → 登入 →「＋ 新增身分」，輸入學生會給的密碼（各部門都一樣）${first?"。之後也可以到「設定 → 身分與專員」設定只有你們部門知道的共用密碼":""}。`});
 }
 async function createMember(first,title){
-  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）",ph:"例如：王小明"}],
+  const v=await askNewPassword(title||(first?"建立你的編輯身分（第一位會是管理員）":"新增編輯身分"),[{name:"name",label:"名字（會顯示在編輯紀錄）"}],
     [{name:"rem",label:"在這個裝置上記住密碼（下次不用再輸入）",type:"check",value:true}]);
   if(!v)return false;
   const m={id:uid("m"),name:v.name.trim(),role:first?"admin":"member",kdf:await kdfMake(v.p1),createdAt:nowStr()};
@@ -149,7 +151,7 @@ async function createMember(first,title){
 function teamHTML(){
   const me=meMember(),adm=isAdmin();
   const rows=state.members.map(m=>`<li class="tm-row"><span class="tm-name">${esc(m.name)}</span>${m.role==="admin"?'<span class="tm-pill on">管理員</span>':""}${m.id===meId?'<span class="tm-pill">我</span>':""}
-    <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${m.id}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${m.id}">刪除</button>`:""}</span></li>`).join("");
+    <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${esc(m.id)}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${esc(m.id)}">刪除</button>`:""}</span></li>`).join("");
   return `<b>身分與專員</b>
   <section class="tm-sec"><div class="att-h">編輯身分${me?`（目前：${esc(me.name)}）`:""}</div><ul class="tm-list">${rows||'<li class="sub">還沒有身分</li>'}</ul>
     <p class="sub tm-note">即時回報與議題上的「專員」就是從這些身分挑選；沒有身分的人不能被標。新成員：在設定頁按「登入」→「＋ 新增身分」，輸入部門共用密碼後自己設定個人密碼。${adm?"":"刪除身分、指定管理員需要管理員。"}</p>
@@ -195,7 +197,31 @@ async function teamSettings(){
 /* ---------- 專員標籤 ---------- */
 /* 專員＝本看板的編輯身分（members）；ev.staff／issues[].staff 存 member id（schemaVersion 8 起） */
 const staffOpts=()=>state.members.map(m=>[m.id,m.name]);
-const staffNames=ids=>(ids||[]).map(id=>state.members.find(m=>m.id===id)).filter(Boolean).map(m=>m.name);
+/* 03 負責人（暫定，不改權限）：firestore 模式的帳號（UID）用 profiles 的名稱，總管理員另外看得到信箱；舊身分照舊用 members 的名字 */
+const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name;if(!fsMode())return "";
+  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?"":String(id).slice(0,8))};
+const staffNames=ids=>(ids||[]).map(staffName).filter(Boolean);
+/* 即時回報「專員」欄的選項：github 模式＝本看板的身分；firestore 模式（staffPplLoad 讀）：
+   總管理員＝這個部門有角色的帳號（roles）；部門的編輯者、管理員＝已標的＋自己＋這個部門的專員名單（03 F3，deptMembers：同部門有角色的人，只有 uid，名字從 profiles） */
+const staffPpl={key:"",roles:null,editors:null,mail:{}};
+/* 讀到的名單只給同一個帳號、同一個角色、同一個部門用（登出、換帳號、撤權後不沿用，信箱只有總管理員看得到） */
+const staffKey=()=>`${CFG.deptId}|${typeof acct!=="undefined"&&acct.user?acct.user.uid:""}|${fsRole()}`;
+function staffOptsFor(ev){
+  if(!fsMode())return staffOpts();
+  const me=typeof acct!=="undefined"&&acct.user?acct.user.uid:"";
+  const ok=staffPpl.key===staffKey(),ids=fsRole()==="super"?[...(ev.staff||[]),...(ok&&staffPpl.roles||[])]:[...(ev.staff||[]),me,...(ok&&staffPpl.editors||[])];
+  return [...new Set(ids.filter(Boolean))].map(id=>[id,staffName(id)||String(id).slice(0,8)]);
+}
+async function staffPplLoad(){
+  const key=staffKey();if(!fsMode()||staffPpl.key===key)return;
+  Object.assign(staffPpl,{key,roles:null,editors:null,mail:{}});
+  try{
+    if(fsRole()==="super"){const A=await acctLoad(),[rs,us]=await Promise.all([A.rolesList(),A.usersList()]);
+      staffPpl.roles=rs.filter(r=>(r.depts||{})[CFG.deptId]).map(r=>r.uid);us.forEach(u=>{if(u.email)staffPpl.mail[u.uid]=u.email})}
+    else{const A=await acctLoad();staffPpl.editors=await A.roster(CFG.deptId)}
+  }catch(_){staffPpl.key=""}   /* 讀不到：只有已標的與自己，下次開始編輯再試 */
+  if(editing&&kp&&!document.querySelector(".csel.open"))render();   /* 原位編輯器的專員選項 */
+}
 function staffHTML(ids){
   const names=staffNames(ids);
   return names.length?`<div class="staff-row"><span class="staff-h">專員</span>${names.map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")}</div>`:"";
@@ -315,6 +341,7 @@ function renderLog(msg){
 }
 async function loadLog(){
   if(logState.busy||logState.done)return;
+  if(fsMode())return fsLoadLog();
   if(!cloudOn()){renderLog("這個看板沒有連上 GitHub，所以沒有編輯紀錄");return}
   logState.busy=true;renderLog();
   const c=cloudCfg(),h={Accept:"application/vnd.github+json"};if(ghToken())h.Authorization="Bearer "+ghToken();
@@ -326,6 +353,33 @@ async function loadLog(){
   }catch(_){msg="連不上 GitHub（離線中？）"}
   logState.busy=false;renderLog(msg);
 }
+/* 02D：firestore 模式的編輯紀錄＝這個部門的版本歷史（卡片每存一版一筆，遷移產生的第 1 版是「匯入」）＋總管理員才讀得到的稽核紀錄
+   （部門設定的修改、卡片刪除）。同一個人相隔 10 秒內的寫入併成一筆（一次儲存可能分成好幾批）。版本歷史只有總管理員與這個部門的編輯者讀得到 */
+const fsLog={vers:[],cur:null,audits:[]};
+const FS_DEL_T={issues:"議題",weeks:"週報",labels:"標籤"};   /* 02D D-d 刪除紀錄 */
+const FS_FIELD={title:"看板名稱",range:"時間軸",reportBase:"週報基準",docs:"文件",follows:"追蹤"};
+const fsLogLine=x=>x.kind==="ver"?`${x.imported?"遷移｜匯入":x.version===1?"即時回報｜新增":"即時回報｜修改"}｜${x.title}`
+  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:FS_DEL_T[x.col]?`${FS_DEL_T[x.col]}｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
+function fsLogItems(rows){
+  const out=[];
+  rows.slice().sort((a,b)=>b.t-a.t).forEach(x=>{const g=out[out.length-1];
+    if(g&&g.by===x.by&&g.t0-x.t<=1e4){g.lines.push(fsLogLine(x));return}
+    out.push({by:x.by,t0:x.t,date:new Date(x.t),old:false,who:acct.names[x.by]||x.by.slice(0,8),lines:[fsLogLine(x)]})});
+  out.forEach(g=>g.lines.reverse());
+  return out;
+}
+async function fsLoadLog(){
+  logState.busy=true;renderLog();
+  let msg="";
+  try{
+    const F=await storeFsGet(),r=await F.versionsPage(CFG.firebase,CFG.deptId,fsLog.cur,50);
+    fsLog.vers.push(...r.rows);fsLog.cur=r.cursor;logState.done=!r.more;
+    if(fsRole()==="super"){const from=logState.done||!fsLog.vers.length?0:Math.min(...fsLog.vers.map(v=>v.t));
+      fsLog.audits=(await F.auditSince(CFG.firebase,from)).filter(a=>fsAuditDept(a)===CFG.deptId)}
+    logState.items=fsLogItems([...fsLog.vers,...fsLog.audits]);
+  }catch(e){msg=e&&e.code==="permission-denied"?"沒有權限":"讀取失敗"}
+  logState.busy=false;renderLog(msg);
+}
 /* host：設定頁桌面版的右側面板（沒有就是全螢幕）。回傳的 Promise 在關閉時完成 */
 let logDone=null;
 function openLog(host){
@@ -334,7 +388,7 @@ function openLog(host){
     <div class="anim-top"><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b><span class="sub">每次「儲存並同步」都會留下一筆</span></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
     <div class="log-scroll"><div class="log-inner"><ol class="log-list" id="logList"></ol><p class="sub log-msg" id="logMsg"></p><button type="button" class="ghost log-more" id="logMore">載入更早的紀錄</button></div></div></div>`);
     ov=$("#logOv");$("#logClose").onclick=closeLog;elastic(ov.querySelector(".log-scroll"),ov.querySelector(".log-inner"));$("#logMore").onclick=loadLog;}
-  Object.assign(logState,{page:0,done:false,busy:false,items:[]});
+  Object.assign(logState,{page:0,done:false,busy:false,items:[]});Object.assign(fsLog,{vers:[],cur:null,audits:[]});
   ov.classList.toggle("in-pane",!!host);const at=host||document.body;if(ov.parentNode!==at)at.append(ov);
   const from=host?null:pageUnder(ov);
   ov.hidden=false;if(!host){document.body.classList.add("log-open");Back.layers.log()}

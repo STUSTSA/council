@@ -6,6 +6,8 @@ function selfDoc(){
   return `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${reset}</style></head><body>${body}</body></html>`;
 }
 async function persist(msg){
+  if(fsMode())return fsPersist(msg);   /* 02D：firestore 模式寫進新資料庫（store.js） */
+  if(storeLocked()){toast(STORE_NOTE[storeSource()]);return false}   /* 搬家中或已搬到新資料庫：不寫資料檔（store.js） */
   if(artifactNS){
     try{await artifactNS.publish(selfDoc());toast(msg||"已發布，所有人都會看到最新版");return true}
     catch(e){
@@ -25,15 +27,33 @@ async function persist(msg){
 }
 function save(){
   state.savedAt=nowStr();if(meName())state.savedBy=meName();
+  if(fsMode())return fsSave();
   editing=false;dirty=false;render();
   persist().then(()=>{if(CFG.meeting)mtPushAll()});   /* 秘書處：改過的其他部門各自寫回 */
 }
-/* 匯出單一 HTML：把拆開的 CSS / JS / 設定檔全部打包回同一個檔案 */
+/* 02D：firestore 模式的儲存。先結束編輯、寫入；失敗時保留畫面上的修改、回到編輯中（取消＝還原到編輯前）。
+   編輯中的那張已經不在畫面上（例如永久刪除失敗）就還原成編輯前，卡片照舊在 */
+async function fsSave(){
+  const key=editing?cardEdit:"",snap=snapshot;
+  editing=false;dirty=false;render();
+  if(await persist())return;
+  if(!key){dirty=true;return}
+  const id=key.slice(2),alive=key.startsWith("s:")||(key[0]==="e"?state.events:state.issues).some(x=>x.id===id);
+  if(!alive){state=normalize(JSON.parse(snap));render();return}
+  editing=true;cardEdit=key;snapshot=snap;dirty=true;render();
+}
+/* 匯出備份：JSON（只有資料，用「匯入備份」還原） */
 async function exportBackup(){
   const s=JSON.parse(JSON.stringify(state));s.locked=false;if(!s.savedAt)s.savedAt=nowStr();
+  s.schemaVersion=13;   /* 03：v14 只多了即時回報的 blocks（desc 照樣有、核取攤成文字），標 13 讓舊網站（main）的匯入備份照常讀；新網站讀到 13 會再對齊 blocks（state.js 的 v13 → v14） */
+  if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
-  const kind={mime:"application/json",ext:".json",desc:"JSON"},doc=JSON.stringify(s,null,1);
-  const name=`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,label="備份";
+  const doc=JSON.stringify(s,null,1);
+  await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
+}
+/* 存一個 JSON 檔：看板「匯出備份」與會長室管理「匯出全部資料」（02D D-c）共用 */
+async function saveJsonFile(name,doc,label){
+  const kind={mime:"application/json",ext:".json",desc:"JSON"};
   if(HOSTED){
     const dl=await window.claude.use("downloads");
     if(dl){try{await dl.save({filename:name,data:new Blob([doc],{type:kind.mime})});toast(`已下載${label}`)}catch(e){if(e&&e.code!=="declined")toast("下載失敗："+(e&&e.code||""))}return}

@@ -1,0 +1,142 @@
+# 後端資料架構（階段 01A）
+
+- 產出日期：2026-11-11。分支 `claude/cool-ramanujan-qg4y8o`，疊在階段 00（[#52](https://github.com/LinkMasterKing/-/pull/52)，`docs/upgrade-plan.md`）之上。
+- **01A-R（架構驗收修正）**：同日依審查意見補強，修改內容與待驗證項目見 [review-01A-R.md](review-01A-R.md)。
+- 本階段只有設計文件：沒有改網站功能、沒有碰 `data*.json`、沒有建立 Firebase 專案、沒有開始 01B。
+- **02D D1（`firestore` 模式的看板寫入）已在模擬器完成**（2026-11-15）：有部門角色的 Google 帳號可以編輯，規則不變，寫法與每批讀取次數見 [permissions.md](permissions.md) 第 5.1d 節。
+- **02B（Google 登入、角色、QR 邀請、撤權、稽核紀錄、卡片刪除紀錄）已在模擬器完成**（2026-11-13）：實作見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 9.6 節、卡片刪除紀錄見 [permissions.md](permissions.md) 第 5.1c 節，實測見 [verification.md](verification.md) 第 8 節。規則**還沒部署**到開發專案（等你同意）。
+- **02A（02B 開工前的缺口）已完成**：寫入四項已定決策（下方「02A 定案」）、補 02B 的登入／角色／QR／撤權／稽核畫面流程（[invitations-roles-audit.md](invitations-roles-audit.md) 第 9 節）、規則負面測試 N-01～N-17（[permissions.md](permissions.md) 第 5.1b 節）、repo 移轉檢查清單（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節）。實測見 [verification.md](verification.md) 第 7 節。
+- **01B（模擬器實作）已完成**：正式規則 `backend/firestore.rules`、索引、遷移程式、規則與遷移測試、網頁的資料來源開關（`dept/config.js` 的 `source`，預設全部 `github`）。實測結果見 [verification.md](verification.md) 第 6 節；01B 對設計的調整見下方「01B 實作調整」。
+- 設計依據：`CLAUDE.md`、`docs/upgrade-plan.md`、使用者在 01A 指示的四項架構決定，以及對 `core/js/cloud.js`、`state.js` 與現有資料檔欄位的唯讀檢查。
+- 注意：01A 指示要讀的 `stustsa-change-spec/CHANGE_SCOPE.md` 與 `stages/01A_backend_architecture.md` **不在 repo 的任何分支裡**（階段 00 時應該是另外提供的）。這次以階段 00 計畫第 7.3 節「01A」的產出與驗收清單代替。如果規格檔對 01A 有額外要求，請再提供，我會補上差異。
+
+## 已採用的架構決定（使用者 01A 指示）
+
+| # | 決定 | 在設計中的落點 |
+|---|---|---|
+| A1 | Firebase Spark 免費方案優先，不預設啟用 Cloud Functions | 全部權限靠 Security Rules＋交易／批次寫入；需要 Functions 的地方明確列出（[booking.md](booking.md) 第 6 節、[permissions.md](permissions.md) 第 6 節） |
+| A2 | 部門名稱、公開活動免登入可看；內部看板資料要 Google 登入；一般使用者預設唯讀 | 分級 L0～L4，見 [permissions.md](permissions.md)。**這改掉了階段 00 第 5.2 節「看板內容維持公開」的建議** |
+| A3 | Firebase 專案由學生會可交接的公用 Google 帳號持有；管理員 UID 在 02 配置 | 規則不寫死任何信箱或 UID；第一位總管理員由主控台手動建立，見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 7 節 |
+| A4 | 舊身分不自動取得權限；經會長室審核或 QR 邀請重新授權；保留原始歷史對照 | `legacyIdentities` 集合＋邀請／申請上的 `legacyRef`，見 [migration.md](migration.md) 第 4 節 |
+
+## 文件清單
+
+| 檔案 | 內容 |
+|---|---|
+| [data-model.md](data-model.md) | 集合、欄位、文件 ID、分級 |
+| [indexes.md](indexes.md) | 查詢清單、複合索引、免索引欄位 |
+| [permissions.md](permissions.md) | 資料分級、角色、權限矩陣、規則共用函式、一般資料的規則設計 |
+| [invitations-roles-audit.md](invitations-roles-audit.md) | QR 邀請核銷、角色建立與撤銷、稽核紀錄鏈：規則設計與攻擊測試（階段 00 風險 2） |
+| [booking.md](booking.md) | 會長預約：時段鎖、不同時長、部分重疊、併發：規則設計與攻擊測試（階段 00 風險 3） |
+| [github-token-retirement.md](github-token-retirement.md) | GitHub 權杖的最早安全撤銷方案（階段 00 風險 1） |
+| [migration.md](migration.md) | 欄位對照、遷移流程、凍結與切換、回復 |
+| [verification.md](verification.md) | 已驗證／官方文件記載／待模擬器驗證的區分；01A 探針結果；01B 工作清單 |
+| [github-ownership-migration.md](github-ownership-migration.md) | Repository 移轉到學生會 GitHub Organization（階段 11） |
+| [review-01A-R.md](review-01A-R.md) | 01A-R 審查意見的處理、規格核對、仍待驗證項目、01B 前置條件 |
+
+## 狀態標記
+
+每個技術主張都標其中一種：
+
+| 標記 | 意思 |
+|---|---|
+| 〔已驗證〕 | 01A 在本機 Firestore 模擬器用探針實際跑過（結果見 [verification.md](verification.md) 第 2 節）。探針是拋棄式程式，放在暫存資料夾，沒有進 repo |
+| 〔文件〕 | 官方文件明載，但這次沒有實測（這個雲端環境連不到 firebase.google.com，數字以搜尋到的官方頁摘要為準，02 前要你在主控台或官方頁再看一次） |
+| 〔待驗證〕 | 本文件的設計，01B 要寫成正式規則並用模擬器測試 |
+| 〔推論〕 | 依經驗判斷，沒有文件或測試支持 |
+| 〔啟用前核准〕 | 01B 照設計實作與測試，但 02 在真的 Firebase 專案啟用前要你核准（原本只有「已授權檢視者」，02A 取消後目前沒有） |
+
+## 與階段 00 計畫的差異（修正）
+
+1. **資料分級**：看板內容從「L0 公開」改成「L1 登入可讀」（決定 A2）。公開的只剩部門名稱與標成公開的活動。
+2. **GitHub 權杖**：不再「留到最後」。改成三段式：現在就降低風險並加上到期日、第 02 階段驗收後逐部門切換、最後一個部門切換後 3 個工作天內作廢。見 [github-token-retirement.md](github-token-retirement.md)。
+3. **QR 邀請**：邀請文件 ID 改成「權杖的 SHA-256」，規則要求核銷者提出原始權杖；角色變更與稽核紀錄用「版本號鏈」綁在同一批寫入，不能略過、不能補寫、不能改。
+4. **預約**：不只靠「規則檢查重疊」，而是靠「固定格線時段鎖文件的唯一性＋原子批次寫入」，規則只負責強制「預約一定要鎖住它涵蓋的每一格」。並列出規則做不到、需要人工或 Functions 的情況。
+5. **稽核紀錄**：與 `roleEvents` 合併成一個 `auditLogs`，用「集合＿文件＿版本號」決定性 ID。
+6. **文件 ID**：遷移的文件 ID 一律加部門前綴（`{deptId}__{舊ID}`），不再假設舊 ID 跨部門唯一（目前 50 張卡片的 ID 實際上沒有重複，但不依賴這一點）。
+
+## 決策定案（01A-R）
+
+**01A-R 是最後一次獨立架構修訂。** 以下都已定案，01B 起直接照做，不再另開規劃階段；之後發現的非阻斷問題記在下方「待辦」或當階段處理（工作原則見 `CLAUDE.md`「改版階段工作原則」）。
+
+| # | 事項 | 定案 | 備註 |
+|---|---|---|---|
+| D1 | 誰能讀內部看板 | **02A 修正：任何已登入的 Google 帳號，不需審核**（取代 01A-R 的已授權檢視者 `roles.viewer`，檢視申請與檢視邀請一起取消）。秘書處點名名單、會議紀錄與會長私人行程維持原本的限制。見 [permissions.md](permissions.md) 第 2.1 節 | 撤權只收回寫入、收不回閱讀 |
+| D2 | 保留「部門編輯者」 | 保留 | |
+| D3 | 部門管理員自己發邀請 | 不行，全部由會長室發 | 之後要開放只改一行規則 |
+| D4 | 誰能把活動標成公開 | 活動部編輯者與總管理員 | |
+| D5 | 預約格線 | 30 分鐘一格、最長 4 格（2 小時）、送出就佔位 | 私人忙碌同樣最多 4 格 |
+| D6 | 誰能申請預約 | 有部門角色的人；每人最多 3 筆待審 | |
+| D7 | App Check | 02 再評估 | 記在待辦 |
+| D8 | Spark 的取捨（沒有通知、手動清理、手動備份） | 接受 | |
+| D11 | 備份 | 每週一次＋每次部門切換前後；公用帳號雲端硬碟的幹部資料夾 | |
+| D12 | 檢視資格期限 | 02A 起不適用（沒有檢視資格了） | |
+| D13 | QR 邀請有效期 | 預設與規則上限都是 10 分鐘；總管理員可撤銷；一次性核銷；**可重新產生**（02A：同一批撤銷舊的＋建立新的，同一張不能延長） | 測試 N-07～N-10 |
+| D14 | ~~已刪除卡片的時間標記採用 `events.cardDeleted`~~ | **02A 取消**，由 D16 取代（卡片刪除後時間標記一併移除，不需要標記） | `cardDeleted` 欄位與兩個索引已拿掉 |
+| D15 | Organization 移轉時機 | **02A 修正：02B 建立正式 Google 登入網域之前，由你手動移轉**（移轉文件的時機 A）。02A 只寫檢查清單，不執行 | [github-ownership-migration.md](github-ownership-migration.md) 第 9 節 |
+| D16 | 卡片刪除（02A 新增） | **直接永久刪除**，卡片連同它的版本與時間標記一起移除；不做軟刪除、不能復原。卡片有時間標記時，刪除前要求再確認一次。刪除權限＝該部門編輯者以上與總管理員 | 規則與流程見 [permissions.md](permissions.md) 第 5.1 節；取代 01A／01A-R 的「`deleted` 狀態、L2 可看、可復原」 |
+| D17 | 卡片刪除紀錄（02B，使用者 2026-11-13 決定要） | 開始永久刪除的同一批一定要新建一筆刪除紀錄（誰、何時、卡片標題）；只有總管理員讀得到；任何人都不能改、刪 | [permissions.md](permissions.md) 第 5.1c 節，測試 D-01～D-07；開始那一批改成不刪時間事件（讀取次數） |
+| D18 | QR 圖（02B，使用者 2026-11-13 決定用現成開源單檔程式） | qrcode-generator 1.4.4（MIT），原檔放 `core/vendor/qrcode-generator/`，附授權檔 | 階段 00 決策 8-8 |
+
+### 01B 實作調整（照已核准架構，以下是實作時補上的細節，不改變權限設計）
+
+| # | 調整 | 原因 |
+|---|---|---|
+| R1 | （02A 修正：版本現在可以隨卡片的永久刪除由新往舊刪掉，見 D16；「不能單獨刪、不能改」不變）版本歷史一律不能改、不能刪（含總管理員、含一般的卡片硬刪）。唯一例外是**遷移失敗回復**（使用者 2026-11-11 決定）：批次已由總管理員改成 `rollingBack`（有稽核；只有 `running`／`failed` 能進入）、版本是遷移產生的第 1 版且 `importBatch` 是這個批次、母卡片也是這個批次匯入且沒被改過（`version == 1`）並在同一批刪除。流程見 [migration.md](migration.md) 第 7 節 | C-12 要求版本必須同批新建，失敗的匯入不清掉就不能用同一個文件 ID 重新匯入；例外綁在遷移批次上，不會延伸到正常業務資料 |
+| R2 | 遷移分成約 67 批（每批規則讀取估算 ≤ 18），不是 1～3 批；卡片與它的第 1 版一定在同一批；重跑時已存在且內容相同的文件跳過，存在但不同的不覆寫、列為衝突 | 整批 20 次讀取上限（每張卡片約 12 次）；模擬器不執行這個上限，所以保守分批 |
+| R3 | `bookingQuota` 記的是「未釋放的預約數」（待審＋已核准），只能隨同批新建的自己的預約 +1、隨同批轉成拒絕／取消的預約 −1；`lastRef` 指向那筆預約 | 設計稿留給 01B 定稿；額度不是安全邊界 |
+| R4 | D6「有部門角色的人才能申請預約」寫進 `bookings` 的建立規則（`hasDeptRole()`） | 設計稿的規則草稿早於 D6 定案 |
+| R5 | ~~時間事件一律有 `cardDeleted`~~（02A 隨 D14 取消；改成屬於卡片的時間事件必須列在卡片 `timeIds`） | 永久刪除靠 `timeIds` 確認全部刪光 |
+| R6 | 欄位補充：`issues.startAt`／`endAt`（原字串另存時間）、`weeks.updatedAt`、`meetingMinutes.deptId` | 對照時發現需要；白名單已含 |
+| R7 | 網頁的 `firestore` 模式在 02 之前只能檢視（沒有登入，正式專案上會被規則擋下，畫面提示要登入；02B 起 Google 登入，02D 起有部門角色的人可以編輯，見 [permissions.md](permissions.md) 第 5.1d 節）；總覽、追蹤、各部門彙整這些「讀別的部門」的功能仍讀 GitHub 上的資料檔 | 登入與寫入是 02 的範圍；跨部門讀取在 02D 逐部門切換時一起改 |
+
+### 待辦（不擋 01B）
+
+| 項目 | 何時 | 誰 |
+|---|---|---|
+| D10 GitHub 權杖 T1～T5（檢查權限、重發有到期日的權杖、換全會密碼、開通知、存緊急程序） | 越早越好 | 你本人；我不經手權杖 |
+| D9 Firebase 專案 IAM 只放公用帳號＋1 個備援帳號，都開兩步驟驗證 | 02 建專案時 | 你 |
+| 建立 Firebase 開發與正式專案（asia-east1）、開 Google 登入、授權網域 | 02 之前 | 你 |
+| `stustsa-change-spec` 原文：01A-R 讀不到（[review-01A-R.md](review-01A-R.md) 第 2 節）。01B 先以 `upgrade-plan.md` 與本資料夾為準；之後提供時再逐條比對，差異在當階段處理 | 方便時 | 你提供 |
+| 「行事曆五類」的確切定義 | 05 開工前 | 依規格原文 |
+| 10 分鐘有效期在手機（含 LINE 跳外部瀏覽器）是否夠用 | 02 實機 | 02 驗收 |
+| App Check（D7） | 02 | 02 評估 |
+| 開發專案實測整批讀取次數（核銷含舊身分、核准申請、預約拒絕／取消、私人忙碌建立／釋放；模擬器不執行 20 次上限） | 02 | 02 驗收 |
+| 卡片併發編輯：交易被規則拒絕時重讀重試（C-15 的模擬器行為） | 03 | 03 實作 |
+| 跨部門讀取（`home.html`、`follow.js` 的 `fwLoad`、秘書處會議）改讀 Firestore | 02D | 02D |
+
+### 02A 新增的待辦與待決定
+
+| 項目 | 何時 | 誰 |
+|---|---|---|
+| 要不要能擋特定 Google 帳號閱讀（封鎖名單）：D1 之後撤權只收回寫入 | 仍待決定（02B 沒做） | 你決定 |
+| ~~卡片永久刪除要不要留紀錄~~ | 02B 定案（D17） | |
+| 永久刪除每批的讀取次數（估算：開始 6、清除 17～18）在開發專案實測 | 開發專案部署規則後 | 02 驗收（併入上面「整批讀取次數」） |
+| 時間標記超過 3 個的卡片，第一批之後剩下的時間標記在清除完之前仍是登入可讀（N-17） | 03 | 前端在同一個動作裡接著清完；不接受的話要再討論 |
+| ~~QR 圖的產生方式~~ | 02B 定案（D18） | |
+| repo 移轉（[github-ownership-migration.md](github-ownership-migration.md) 第 9 節的檢查清單） | 02B 建立正式登入網域之前 | 你操作（開發專案的授權網域已經有 `stustsa.github.io`，看起來已移轉；請確認 F 段其他項目） |
+
+### 02B 新增的待辦與待決定
+
+| 項目 | 何時 | 誰 |
+|---|---|---|
+| 把規則與索引部署到開發專案 `stustsa-council-dev`（`firebase deploy --only firestore:rules,firestore:indexes`） | 你同意後 | 我執行或你執行 |
+| 開發專案的 OAuth 同意畫面（Google Auth Platform → 目標對象）：使用者類型要是「外部」、發布狀態「正式版」，任何 Google 帳號才能登入。專案若在學校 Google 組織底下而且設成「內部」，只有學校帳號能登入（D1 要求任何帳號）。從外部查不到這個設定，見 [verification.md](verification.md) 第 8 節 | 部署前 | 你在主控台看 |
+| 開發專案的 `departments` 十個部門文件（邀請與申請的規則要求部門存在）：用遷移程式只匯入部門、或在主控台手動建 | 部署後、實測前 | 你決定方式 |
+| 第一位總管理員（[第 7 節](invitations-roles-audit.md)）：先登入一次取得 UID，再在主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1` | 實測前 | 你 |
+| 實機測試要一個 `source: "firestore"` 的部門：把水果部切成 `firestore`（一行的 PR；水果部在開發專案沒有資料，看板會是空的） | 實測前 | 你決定 |
+| ~~看板內容在 `firestore` 模式的寫入~~ | 02D D1 完成（模擬器）：[permissions.md](permissions.md) 第 5.1d 節 | |
+| 彈出視窗被擋時的轉址登入在 Safari／iPhone 安裝版是否可用（`authDomain` 與網站不同網域） | 實機測試 | 02 驗收 |
+| `dept/config.js` 現在填的是開發專案的網頁設定：這串 PR 合併進 main 之前要換成正式專案的設定（否則正式網站的 QR、角色會寫進開發專案） | 進 main 之前 | 你決定 |
+| 核銷後原始權杖會寫進 `invitations.token`（已核准設計第 2 節：規則靠它驗證；用過的權杖沒有作用）。驗收條件「資料庫不存權杖」若要照字面，要改成另一種驗證方式 | 方便時 | 你確認是否接受 |
+
+### 02D 新增的待辦與待決定
+
+| 項目 | 何時 | 誰 |
+|---|---|---|
+| ~~瀏覽器匯入頁~~：**已做（02D D-a）**——會長室管理 → 匯入（`core/js/migrate-web.js`＋跟命令列共用的 `core/js/migrate-core.js`），走正式規則；凍結中的部門也能登入進會長室管理。網頁版的「回復這一批」（`rollbackImport`）沒做：中途失敗時按「再匯入一次」補完（內容相同跳過） | — | — |
+| ~~跨部門讀取改讀 Firestore~~：**已做（02D D-b）**，見 [migration.md](migration.md) 第 5 節 | — | — |
+| ~~「匯出全部資料」~~：**已做（02D D-c）**——會長室管理 → 匯出全部資料（migration.md 第 8 節） | — | — |
+| 編輯紀錄、會長室編輯量的「稽核紀錄」解讀（使用者原文「改讀稽核紀錄」）：卡片的修改記在版本歷史，不是 `auditLogs`（已核准的設計），所以 02D 把「版本歷史＋`auditLogs`（部門設定的修改、卡片刪除）」合起來當稽核紀錄；議題、週報、標籤的修改沒有歷史，不在這兩個畫面裡 | 方便時 | 你確認 |
+| 匯入頁的「清空這個部門」與「回復這一批」（回復後再切換時用：刪掉這個部門的 `cards`＋`versions`、`events`、`issues`、`weeks`、`labels`、`deptSettings`，保留舊身分、角色、稽核紀錄；規則目前只允許總管理員走永久刪除的流程或主控台刪除，要一起設計規則路徑與測試）。做好之前用主控台手動刪（`docs/遷移步驟.md` 第 4.1 節） | 第一個部門要回復後再切換之前 | 待做（02D 審查發現；D-a 沒有要求，沒做） |
+| 會議紀錄 `minutes`：看板 firestore 模式不讀；回復到 GitHub 時沿用資料檔原本的值（`events.js` 的匯入備份）。會議功能搬到 Firestore 時要一起處理 | 秘書處切換前 | 待決定 |

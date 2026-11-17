@@ -14,7 +14,7 @@ function cloudCfg(){
   const c=Object.assign({},CFG.data,state.sync||{}),pg=pagesRepo();
   return {owner:pg?pg.owner:c.owner||"",repo:pg?pg.repo:c.repo||"",branch:c.branch||"main",path:c.path||"data.json"};
 }
-const cloudOn=()=>{const c=cloudCfg();return !!(c.owner&&c.repo)&&!HOSTED};
+const cloudOn=()=>{const c=cloudCfg();return storeSource()==="github"&&!!(c.owner&&c.repo)&&!HOSTED};   /* frozen／firestore 模式不讀寫 GitHub（store.js） */
 const ghToken=()=>{try{return localStorage.getItem(TOKEN_KEY)||""}catch(_){return ""}};
 /* 後台管理員（2026-11-06）：設定頁「網站管理」（雲端同步、分享預覽、全會密碼）只給這台裝置是後台管理員的人看。
    記號只存在這台裝置的瀏覽器（localStorage），不上傳。自己貼過權杖（雲端同步、儲存前的權杖欄）就記上；
@@ -76,6 +76,6 @@ async function cloudPush(){
   if(r.status===403||r.status===404)return {ok:false,msg:"權杖沒有這個 repo 的寫入權限（需要 Contents: Read and write）"};
   return {ok:false,msg:"同步失敗（"+r.status+"），已先存在這台電腦"};
 }
-if(!state.locked&&!HOSTED&&!cloudOn()){
+if(storeSource()==="github"&&!boardLocked()&&!HOSTED&&!cloudOn()){   /* firestore 模式不用本機暫存的看板資料（讀取失敗時保持唯讀，見 store.js 的 storeFsBase） */
   try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.issues&&(s.savedAt||"")>=(state.savedAt||""))state=normalize(s)}catch(e){localOK=false}
 }

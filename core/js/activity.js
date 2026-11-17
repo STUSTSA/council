@@ -1,11 +1,12 @@
 /* 核心｜會長室「各部門編輯量」曲線（2026-11-05，使用者要求；只在 follow:true 的看板＝會長室）
+   - 02D：會長室切到 firestore 模式後改讀新資料庫的版本歷史與稽核紀錄（actLoadFs）；下面是 github 模式（不變）。
    - 資料：GitHub 上各部門資料檔的存檔紀錄（commits，編輯紀錄頁讀的同一份；只算帶 Board-Log: 1 的）。不新增任何儲存。
      每次存檔算「改了幾項」：標題「〔名字〕更新 N 項：…」＝N；「存檔（沒有內容變更）」＝0；其他單項（「〔名字〕即時回報｜新增｜…」等）＝1。
    - 範圍：最近 7 天（168 個小時，到現在這一個小時為止），以小時為單位統計，每個部門一條平滑曲線（單調三次插值，不會畫到 0 以下）。
    - 讀取：有權杖時帶權杖（每 5 分鐘、回到分頁時更新）；沒有權杖用公開讀取（GitHub 每小時 60 次，所以 15 分鐘才更新一次）。
      repo 是公開的話，這些存檔紀錄本來任何人都看得到；這裡沒有多公開任何東西。
    - 互動：滑過（手機按住左右拖）＝直線游標＋各曲線上的點＋黑色小標籤列出那個小時各部門的數字；點圖例＝只看那個部門（再點一次取消）。 */
-const ACT={at:0,busy:false,rows:null,err:"",focus:null,idx:null,start:0,ro:null};
+const ACT={at:0,busy:false,again:false,rows:null,err:"",focus:null,idx:null,start:0,ro:null};
 const ACT_H=168,HOUR=36e5;
 /* 一則 commit 訊息 → 改了幾項（不是看板存的回傳 null） */
 function actCount(msg){
@@ -27,15 +28,37 @@ async function actFetch(d,since){
   return out;
 }
 async function actLoad(force){
-  if(ACT.busy||!CFG.follow)return;
+  if(!CFG.follow)return;
+  if(ACT.busy){if(force&&fsMode())ACT.again=true;return}   /* firestore 模式：讀取中登入狀態或角色變了，讀完再讀一次 */
+  if(fsMode())return actLoadFs(force);
   const ttl=ghToken()?3e5:9e5;if(!force&&ACT.rows&&Date.now()-ACT.at<ttl)return;
   if(!cloudOn()){ACT.err="這個看板沒有連上 GitHub，看不到各部門的存檔紀錄。";ACT.rows=null;ACT.at=Date.now();renderActivity();return}
   ACT.busy=true;renderActivity();
   const now=new Date();now.setMinutes(0,0,0);const start=now.getTime()+HOUR-ACT_H*HOUR;   /* 最後一格＝現在這一個小時 */
   const ds=window.BOARD_DEPTS||[];let err="";
   const res=await Promise.all(ds.map(d=>actFetch(d,start).catch(s=>{err=s===403?"GitHub 讀取次數暫時用完，請過一陣子再試（有權杖的裝置不受限制）":s===404?"找不到 repo":"有部門讀取失敗";return null})));
+  actSet(ds,res,start,err);
+}
+/* res[i]＝第 i 個部門的 [{t,n}]，null＝讀不到（圖例顯示「—」） */
+function actSet(ds,res,start,err){
   ACT.start=start;ACT.rows=ds.map((d,i)=>{const v=new Array(ACT_H).fill(0);(res[i]||[]).forEach(x=>{const k=Math.floor((x.t-start)/HOUR);if(k>=0&&k<ACT_H)v[k]+=x.n});return {id:d.id,name:d.name,v,sum:v.reduce((a,b)=>a+b,0),fail:!res[i]}});
   ACT.err=err;ACT.at=Date.now();ACT.busy=false;renderActivity();
+}
+/* 02D：會長室在 firestore 模式（docs/architecture/migration.md 第 5 節）：已切到新資料庫的部門讀版本歷史（卡片每存一版算一項，遷移產生的第 1 版不算），
+   總管理員另外加上稽核紀錄（部門設定的修改、卡片刪除，各算一項）。版本歷史只有總管理員與該部門的編輯者讀得到，讀不到的部門顯示「—」。
+   還在 GitHub 的部門照舊讀存檔紀錄（有設定 repo 時；沒有就是「—」）。每 5 分鐘、回到分頁時更新。 */
+async function actLoadFs(force){
+  if(!force&&ACT.rows&&Date.now()-ACT.at<3e5)return;
+  ACT.busy=true;renderActivity();
+  const now=new Date();now.setMinutes(0,0,0);const start=now.getTime()+HOUR-ACT_H*HOUR;
+  const ds=window.BOARD_DEPTS||[],c=cloudCfg(),gh=!!(c.owner&&c.repo);
+  let F=null;try{F=await storeFsGet()}catch(_){}
+  const audits=F&&fsRole()==="super"?await F.auditSince(CFG.firebase,start).catch(()=>[]):[];
+  const res=await Promise.all(ds.map(d=>deptSourceOf(d.id)==="firestore"
+    ?(F?F.versionsSince(CFG.firebase,d.id,start):Promise.reject()).then(v=>[...v.filter(x=>!x.imported),...audits.filter(a=>fsAuditDept(a)===d.id)].map(x=>({t:x.t,n:1}))).catch(()=>null)
+    :gh?actFetch(d,start).catch(()=>null):Promise.resolve(null)));
+  actSet(ds,res,start,"");
+  if(ACT.again){ACT.again=false;actLoadFs(true)}
 }
 /* 單調三次插值（Fritsch–Carlson）：曲線平滑但不會超過相鄰兩點的範圍（不會出現負數或假的高峰） */
 function actPath(pts){

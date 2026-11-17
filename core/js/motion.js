@@ -3,18 +3,12 @@
 function morph(fn){
   if(reduceMotion()){fn();return}
   const ease=EXPAND.easing,D=560;
-  const arrow=document.querySelector(".eyebrow .arrow-line"),aw=arrow?arrow.getBoundingClientRect().width:0;
   const lay=document.querySelector(".layout"),ly=lay.getBoundingClientRect().top;
   const hr=document.querySelector(".hero-rule"),hh=hr.offsetHeight;
-  const wasEdit=editing;
   fn();
-  const arrow2=document.querySelector(".eyebrow .arrow-line");
-  if(arrow2){const aw2=arrow2.getBoundingClientRect().width;if(Math.abs(aw-aw2)>1)arrow2.animate([{maxWidth:aw+"px",minWidth:aw+"px"},{maxWidth:aw2+"px",minWidth:aw2+"px"}],{duration:D,easing:ease})}
   const hh2=hr.offsetHeight;if(Math.abs(hh-hh2)>1){hr.style.overflow="hidden";hr.animate([{height:hh+"px"},{height:hh2+"px"}],{duration:D,easing:ease}).onfinish=()=>{hr.style.overflow=""}}
   const dy=ly-lay.getBoundingClientRect().top;
   if(Math.abs(dy)>1)lay.animate([{transform:`translateY(${dy}px)`},{transform:"none"}],{duration:D,easing:ease});
-  const cls=editing&&!wasEdit?"edit-anim":(!editing&&wasEdit?"view-anim":"");
-  if(cls){document.body.classList.remove("edit-anim","view-anim");void document.body.offsetWidth;document.body.classList.add(cls);clearTimeout(morph._t);morph._t=setTimeout(()=>document.body.classList.remove(cls),1200)}
 }
 /* ---------- expand / collapse motion (app-launch style) ---------- */
 const EXPAND={duration:560,easing:"cubic-bezier(.2,.9,.25,1)"};

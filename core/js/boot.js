@@ -6,7 +6,7 @@
   SHELL_IDS.forEach(id=>root.querySelector("#"+id)?.remove());
   root.querySelector("#dept-theme")?.remove();
   root.querySelector("body").removeAttribute("class");
-  TEMPLATE="<!doctype html>\n"+root.outerHTML;BODY_SRC=root.querySelector("body").innerHTML;
+  BODY_SRC=root.querySelector("body").innerHTML;
 })();
 
 /* 進場畫面：等 logo 的動畫真的播完（getAnimations 的 finished）、資料與字型也好了才收；最多等 3.5 秒。
@@ -16,17 +16,22 @@
 const INTRO_SEL=".fill,.tk i,.card,.ev,.g-row";
 const boardSplashOut=()=>splashOut(()=>{document.querySelectorAll(INTRO_SEL).forEach(e=>e.setAttribute("data-intro",""));document.body.classList.add("intro");
   setTimeout(()=>{document.body.classList.remove("intro");document.querySelectorAll("[data-intro]").forEach(e=>e.removeAttribute("data-intro"))},1400)},()=>tbContrastSoon());
-/* 拆檔版：資料放在 data.json（與網頁同一個 repo），開頁時先讀它 */
-const dataReady=SEEDED&&location.protocol!=="file:"?fetch(CFG.data.path,{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(d=>{
+/* 拆檔版：資料放在 data.json（與網頁同一個 repo），開頁時先讀它；
+   部門設成 source:"firestore" 時改讀新資料庫（store.js），讀到的就是最新的，不跟本機暫存比 savedAt，也不存進本機暫存 */
+let storeFsErr=null;
+const dataReady=!(SEEDED&&location.protocol!=="file:")?Promise.resolve()
+:storeSource()==="firestore"?storeFsLoad().then(r=>{netFail=false;storeFsUse(r)}).catch(e=>{netFail=!(e&&e.code==="permission-denied");storeFsErr=e})
+:fetch(CFG.data.path,{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(d=>{
   netFail=false;
   if(d&&(d.savedAt||"")>=(state.savedAt||"")){const keep=state.sync;state=normalize(d);if(!state.sync&&keep)state.sync=keep;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(_){}}
-}).catch(()=>{netFail=true}):Promise.resolve();
+}).catch(()=>{netFail=true});
 /* 這台裝置記住了身分：開頁就直接登入，卡片上的「編輯」一進來就看得到（2026-11-06 使用者：要進設定再回來才出現）。
    有雲端時等雲端資料讀完才比對（本機舊資料的密碼指紋可能過期，比對失敗會清掉記住的身分） */
 const remBoot=async()=>{if(!loggedIn()&&remRead()&&await remLogin())render()};
 dataReady.then(()=>{
 setBaseline();
 render();
+acctStart();   /* 02B：新資料庫的部門、或網址帶 QR 邀請時，開始監聽 Google 登入（account.js） */
 if(!cloudOn())remBoot();
 /* 學年、開學日、甘特圖預設學期跟著秘書處（state.js 的 termCfg）：讀到秘書處的資料檔就重畫 */
 if(!termOwn())fwLoad(TERM_OWNER).then(c=>{if(c&&c.data){termSrc={yearLabel:c.data.yearLabel,termStart:c.data.termStart,semester:c.data.semester};render()}});
@@ -46,5 +51,8 @@ if(HOSTED)(async()=>{
   render();
 })();
 boardSplashOut();
+{const t0=Date.now();   /* firestore 模式等角色讀到（account.js 的 acctKnown，最多 5 秒）再判斷，有編輯權限的人不提示唯讀 */
+  (fsMode()?Promise.race([acctKnown,new Promise(r=>setTimeout(r,5000))]):Promise.resolve()).then(()=>setTimeout(()=>{
+    if(storeLocked())toast(storeFsErr&&storeFsErr.code==="permission-denied"?(inAppBrowser()?"這個部門要登入才能看：請用瀏覽器開啟":"這個部門要登入才能看"):STORE_NOTE[storeSource()])},Math.max(0,1200-(Date.now()-t0))));}   /* LINE 等內建瀏覽器不能用 Google 登入（account.js） */
 if(MIGRATE_NOTE.staffDropped)setTimeout(()=>toast(`專員改成引用帳號：有 ${MIGRATE_NOTE.staffDropped} 筆專員標記找不到同名帳號，已拿掉（儲存後生效）`),4200);
 });
