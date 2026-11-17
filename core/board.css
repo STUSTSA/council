@@ -1547,12 +1547,43 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .dk-main b{font-size:16px}
 }
 
-/* --- 行事曆：月份列＋「這一天」＋海報月曆 --- */
-.noti-cal{display:grid;gap:14px}
-.cal-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cal-top .noti-h{margin:0 auto 0 0}
-.cal-top :is([data-nmon="-1"],[data-nmon="1"]){width:36px;height:36px;min-height:0;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}   /* 上一月、下一月：正圓（「回到本月」是一般膠囊鈕，不能套到） */
-/* 海報月曆：超大月份縮寫（Jost 粗體）＋右上兩行年份；不畫格線；今天＝綠色數字；選到的日子＝實心圓 */
+/* ===== 行事曆（notify.js 的 calHTML；通知頁最下面，主頁的全會行事曆是公共版 .cal.pub） =====
+   上面一大塊色塊（.cal-top）：英文小標＋「行事曆」、右上月份鈕（外框膠囊，點開月份選單）、模式切換、海報月曆；
+   下面＝選到那一天的清單（.cal-list，一件事一張色塊；寬的時候兩欄）。換內容時舊的清單分身（.cal-ghost）原地淡出 */
+.cal{position:relative;display:grid;gap:14px;container-type:inline-size}
+.cal-top{display:grid;gap:18px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.cal-h{display:flex;align-items:flex-start;gap:14px}
+.cal-h .nt-h{margin-right:auto}
+.cal-mp{position:relative;flex:none}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
+.cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
+/* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
+.cal-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:8;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:236px;padding:8px;border-radius:var(--r-md);background:var(--pop);box-shadow:var(--pop-sh);transform-origin:100% 0}
+.cal-pop button{height:40px;min-height:0;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink);font-size:14px}
+.cal-pop button[aria-selected="true"]{background:var(--acc);color:var(--acc-ink);font-weight:700}
+@media (hover:hover){.cal-pop button:hover{transform:none;box-shadow:none;background:color-mix(in srgb,var(--ink) 7%,transparent)}}
+.cal-list{display:grid;gap:12px}
+@container (min-width:760px){.cal-list{grid-template-columns:1fr 1fr}}
+.cal-ghost{position:absolute;margin:0;pointer-events:none}
+.cal-ev{display:grid;gap:12px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.ce-t{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--hair)}
+.ce-t b{font-size:17px;font-weight:500}
+.ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
+.ce-n{font-size:15.5px;font-weight:500;line-height:1.45}
+.ce-b{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--muted)}
+.ce-pl{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ce-pl .ico{flex:none;width:15px;height:15px}
+/* 所屬的小膠囊：本部門與活動＝主要動作色、會長室＝選中色、會議＝外框（跟活動分得開）、其他部門＝次色塊 */
+.ce-k{flex:none;margin-left:auto;display:grid;place-items:center;height:26px;padding:0 12px;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:12px;line-height:1;white-space:nowrap}
+.ce-k.pri{background:var(--pri);color:var(--pri-ink)}
+.ce-k.acc{background:var(--acc);color:var(--acc-ink)}
+.ce-k.line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
+@media (max-width:640px){
+  .cal-top{padding:18px 16px}
+  .cal-mon{height:46px;padding:0 14px 0 18px}
+}
 /* 「這一天」：點了月曆上某一天才出現（在月曆上方），一列事件標籤：顏色點＋時刻＋名稱＋小字出處；右上 ✕ 收起 */
 .noti-dayview{scroll-margin-top:150px;display:grid;gap:10px;padding:14px 16px 16px;border-radius:var(--r-lg);background:color-mix(in srgb,var(--ink) 5%,var(--bg))}
 .dv-top{display:flex;align-items:baseline;gap:10px}
@@ -1570,40 +1601,44 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .dv-tx b{font-weight:500;line-height:1.45}
 .dv-tx small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dv-tx .num{letter-spacing:.02em}
-.pc{--pc-lane:9px;padding-top:4px}   /* 每一層事件線 9px（不寫字，只看幾條線） */
+/* ===== 海報月曆（notify.js 的 posterHTML；DESIGN-next 第九節） =====
+   超大月份（細體數字＋粗體英文縮寫）、右上兩行年份；週一開頭、MON–SUN 下一條實線；日期只有數字、沒有格線。
+   選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體。事件不寫字：單天＝日期下一顆小點、跨天＝橫跨那幾天的細線（兩端圓點），同一週撞在一起的往下排一層（每層 9px） */
+.pc{--pc-lane:9px;container-type:inline-size}
 .pc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-.pc-mon{font-family:"Jost",sans-serif;font-weight:600;font-size:clamp(68px,13vw,120px);line-height:.82;letter-spacing:-.02em}
+.pc-mon{font-family:"Jost",sans-serif;font-weight:600;font-size:clamp(60px,19cqw,116px);line-height:.82;letter-spacing:-.02em}
 /* 月份數字（2026-11-06 使用者：只有英文縮寫不直觀）：放在縮寫前面，同樣大小、Jost 細體，跟粗體縮寫一細一粗 */
-.pc-mn{font-weight:200;margin-right:.14em;letter-spacing:-.04em}
-.pc-yr{font-weight:600;font-size:clamp(26px,4.4vw,40px);line-height:.95;text-align:right}
+.pc-mn{font-weight:300;margin-right:.14em;letter-spacing:-.04em}
+.pc-yr{font-weight:600;font-size:clamp(24px,6.4cqw,40px);line-height:.95;text-align:right}
 .pc-wk,.pc-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-.pc-wk{padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--ink);font-family:"Jost",sans-serif;font-weight:500;font-size:12px;letter-spacing:.08em;text-align:center;color:var(--muted)}
-.pc-week{position:relative;align-content:start;min-height:calc(46px + var(--lanes) * var(--pc-lane));padding-bottom:6px}
-.pc-d{position:relative;isolation:isolate;justify-self:center;display:grid;place-items:center;width:38px;height:38px;min-height:0;margin-top:4px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink)}
-.pc-d::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--ink);opacity:0;transform:scale(.7);transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
+.pc-wk{padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--ink);font-family:"Jost",sans-serif;font-weight:500;font-size:11.5px;letter-spacing:.08em;text-align:center;color:var(--muted)}
+.pc-week{position:relative;align-content:start;min-height:calc(48px + var(--lanes) * var(--pc-lane));padding-bottom:6px}
+.pc-d{position:relative;isolation:isolate;justify-self:center;display:grid;place-items:center;width:40px;height:40px;min-height:0;margin-top:4px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);transition:transform .42s var(--mo-spring),color var(--mo-base) var(--mo-out)}
+.pc-d::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--acc);opacity:0;transform:scale(.6);transition:opacity var(--mo-base) var(--mo-out),transform .42s var(--mo-spring)}
 .pc-d:hover{transform:none;box-shadow:none}
-@media (hover:hover){.pc-d:hover::before{opacity:.07;transform:none}}
+.pc-d:active{transform:scale(.9)}
+@media (hover:hover){.pc-d:not(.sel):hover::before{opacity:.28;transform:none}}
 .pc-pad{visibility:hidden}
 .pc-n{font-size:19px;line-height:1}
 .pc-d.has .pc-n{font-weight:500}
-.pc-d.is-today .pc-n{color:var(--ok);font-weight:600}
+.pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
-.pc-d.sel .pc-n{color:var(--bg)}
+.pc-d.sel .pc-n{color:var(--acc-ink)}
 .pc-d.flash::before{animation:pcFlash .7s ease-in-out 2}
 @keyframes pcFlash{50%{opacity:.22;transform:none}}
 /* 事件（不寫字）：時段＝細線（兩端小圓點）橫跨開始到結束那幾天的中心；單天＝那天下面一顆小點。--ln＝第幾層（每層 9px），看幾條線就知道幾件事；點日期才在上方「這一天」區塊看文字 */
-.pc-e{position:absolute;top:calc(46px + var(--ln) * var(--pc-lane));left:calc(var(--i0) / 7 * 100%);width:calc((var(--i1) - var(--i0) + 1) / 7 * 100%);height:5px;color:var(--c);pointer-events:none}
-.pc-e.span::before{content:"";position:absolute;top:0;height:5px;left:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);right:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);background:radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent),radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent),linear-gradient(currentColor,currentColor) center/100% 1px no-repeat}
+.pc-e{position:absolute;top:calc(48px + var(--ln) * var(--pc-lane));left:calc(var(--i0) / 7 * 100%);width:calc((var(--i1) - var(--i0) + 1) / 7 * 100%);height:5px;color:var(--ink);pointer-events:none}
+.pc-e.span::before{content:"";position:absolute;top:0;height:5px;left:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);right:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);background:linear-gradient(currentColor,currentColor) center/calc(100% - 5px) 1.5px no-repeat,radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent),radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent)}
 .pc-e:not(.span)::after{content:"";position:absolute;top:0;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
 .pc-foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);letter-spacing:.24em}
 .cal-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
 .cal-legend span{display:inline-flex;align-items:center;gap:6px}
 .cal-legend i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 @media (max-width:640px){
-  .pc-d{width:34px;height:34px}
   .pc-n{font-size:17px}
   .pc-wk{font-size:10.5px;letter-spacing:.02em}
 }
+@media (prefers-reduced-motion:reduce){.pc-d,.pc-d::before,.cal-mon .ico{transition:none}}
 
 /* ===== 液態分段切換（anim.js 的 LiquidSeg；目前用在通知層的本部門／全會） =====
    軌道是次色塊（--blk2，平鋪不加陰影）、鏡片是主要動作的實心膠囊（--pri）、鏡片底下那一格（.lit）文字用 --pri-ink；

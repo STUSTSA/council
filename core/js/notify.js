@@ -5,19 +5,19 @@
    - 由上到下：今日／明日 → 逾期 → 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
-const NOTI={scope:"mine",month:null,day:null,all:null,loading:false,q:""};
 const DEPT_COLORS=["#e0342a","#0a5baa","#f0bc23","#2f8f84","#a24fc0","#d84f92","#c26a12","#3d7fe0","#6b6b75"];
 const deptColor=id=>DEPT_COLORS[Math.max(0,(window.BOARD_DEPTS||[]).findIndex(d=>d.id===id))%DEPT_COLORS.length];
 const NOTI_ST={ok:"var(--st-ok)",go:"var(--st-go)",stall:"var(--st-stall)"};
 const WD="日一二三四五六";
-/* 一份看板資料 → 事件清單 {key,date,end,time,title,place,ev,st,dept}（只有未完成即時回報的時間標記） */
+/* 一份看板資料 → 事件清單 {key,date,end,time,etime,title,place,ev,dept}（還沒結案的即時回報上的時間） */
 function notiItems(s,dept){
   const out=[];
-  s.events.filter(e=>!e.doneAt).forEach(e=>{const st=evStatus(e);(e.times||[]).forEach(t=>{
+  (s.events||[]).filter(e=>!e.doneAt).forEach(e=>(e.times||[]).forEach(t=>{if(!t.start)return;
     const d=t.start.slice(0,10),en=(t.end||"").slice(0,10);
-    out.push({key:`${dept}:t:${t.id}`,date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",st,dept})})});
-  return out.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    out.push({key:`${dept}:t:${t.id}`,date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
+  return out.sort(byWhen);
 }
+const byWhen=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
 const notiMine=()=>notiItems(state,CFG.deptId||"rights");
 const notiList=()=>NOTI.scope==="all"&&NOTI.all?NOTI.all:notiMine();
 /* 某一天有這件事：單日＝那天；時段＝頭到尾每一天 */
@@ -72,51 +72,116 @@ function dayCardHTML(d,lab,cls,list){
   </button>`;
 }
 
-/* ---------- 行事曆：事件清單＋海報月曆 ---------- */
-/* 海報月曆：超大月份縮寫＋右上兩行年份；週一開頭；日期是數字（沒有格線）；
-   2026-11-05 使用者：月曆上不寫字，看幾條線就知道幾件事——時段＝細線橫跨期間（兩端小圓點）、單天＝日期下一顆小點；
-   同一週會撞在一起的往下排一層（每層 9px）。點日期才在月曆上方的「這一天」區塊顯示事件的文字 */
+/* ---------- 行事曆（DESIGN-next 第九節「海報月曆」） ----------
+   一個行事曆的狀態（calState）：month（YYYY-MM）、day（選到的日期，預設今天）、pop（月份選單開著）、mode（顯示哪一類）、oth（「其他」勾的部門）。
+   通知頁一份（NOTI）；畫在哪裡：通知頁＝#notiPage（renderNoti），別的地方用 calMount（host._cal 指回狀態，點擊由下面的監聽找到它）。
+   海報月曆：超大月份數字加英文縮寫、右上兩行年份；週一開頭、上面一排 MON–SUN；日期只有數字、沒有格線；
+   月曆上不寫字：單天的事＝日期下一顆小點、跨天＝橫跨那幾天的細線（兩端圓點），同一週撞在一起的往下排一層（每層 9px）；
+   選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體；底下一行「部門・學生會」。
+   點日期：下面的清單換成那一天（舊的原地淡出、新的一列一列浮上來，calAfter）；右上的月份鈕點開選月份（自製選單，Esc、點外面關） */
 const MON_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-function posterHTML(list){
-  const m=NOTI.month,first=pd(m+"-01"),y=first.getFullYear(),mi=first.getMonth(),dim=new Date(y,mi+1,0).getDate(),off=(first.getDay()+6)%7;
-  const t=today(),ds=n=>`${m}-${pad(n)}`,all=NOTI.scope==="all";
+function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],host:null}}
+const NOTI=calState(false),CALS=[NOTI];
+/* 這個行事曆現在要列的事：{xs, loading, err} */
+function calItems(c){return {xs:notiMine(),loading:false,err:""}}
+/* 清單換內容的判斷：模式、勾的部門、月份、那一天 */
+const calKey=c=>[c.mode,c.oth.join(","),c.day].join("|");
+function posterHTML(c,list){
+  const m=c.month,first=pd(m+"-01"),y=first.getFullYear(),mi=first.getMonth(),dim=new Date(y,mi+1,0).getDate(),off=(first.getDay()+6)%7;
+  const t=today(),ds=n=>`${m}-${pad(n)}`;
   const weeks=[];for(let n=1-off;n<=dim;n+=7)weeks.push(Array.from({length:7},(_,i)=>n+i));
   const body=weeks.map(w=>{
     const lo=Math.max(1,w[0]),hi=Math.min(dim,w[6]),a=ds(lo),b=ds(hi);
-    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),c=list.filter(x=>covers(x,d)).length;
-      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===NOTI.day?" sel":""}${c?" has":""}" data-cal="${d}" aria-label="${fmt(d)}${c?`，${c} 件事`:""}"${d===NOTI.day?' aria-pressed="true"':""}><span class="pc-n num">${n}</span></button>`}).join("");
+    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),k=list.filter(x=>covers(x,d)).length;
+      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span></button>`}).join("");
     const lanes=[];
     const evs=list.filter(x=>x.date<=b&&(x.end||x.date)>=a).map(x=>{
       const s=x.date<a?lo:+x.date.slice(8),e=(x.end||x.date)>b?hi:+(x.end||x.date).slice(8),i0=w.indexOf(s),i1=w.indexOf(e);
       let ln=lanes.findIndex(z=>z<i0);if(ln<0){ln=lanes.length;lanes.push(-1)}lanes[ln]=i1;
-      return `<span class="pc-e${i1>i0?" span":""}" aria-hidden="true" style="--i0:${i0};--i1:${i1};--ln:${ln};--c:${all?deptColor(x.dept):"var(--ink)"}"></span>`}).join("");
+      return `<span class="pc-e${i1>i0?" span":""}" aria-hidden="true" style="--i0:${i0};--i1:${i1};--ln:${ln}"></span>`}).join("");
     return `<div class="pc-week" style="--lanes:${lanes.length}">${nums}${evs}</div>`}).join("");
-  return `<div class="pc-head" aria-label="${y} 年 ${mi+1} 月"><b class="pc-mon"><span class="pc-mn num">${mi+1}</span>${MON_EN[mi]}</b><span class="pc-yr num">${String(y).slice(0,2)}<br>${String(y).slice(2)}</span></div>
+  return `<div class="pc-head" aria-hidden="true"><b class="pc-mon"><span class="pc-mn num">${mi+1}</span>${MON_EN[mi]}</b><span class="pc-yr num">${String(y).slice(0,2)}<br>${String(y).slice(2)}</span></div>
     <div class="pc-wk" aria-hidden="true">${["MON","TUE","WED","THU","FRI","SAT","SUN"].map(x=>`<span>${x}</span>`).join("")}</div>
     <div class="pc-body" role="group" aria-label="${y} 年 ${mi+1} 月">${body}</div>
-    <p class="pc-foot">${all?"全會":esc(CFG.dept.name||"本部門")}・學生會</p>`;
+    <p class="pc-foot">${c.pub?"全會":esc(CFG.dept.name||"本部門")}・學生會</p>`;
 }
-/* 點了某一天：月曆上方「這一天」區塊，列出那天每件事（時刻、名稱、地點・即時回報）；平常不顯示 */
-function dayViewHTML(list){
-  const d=NOTI.day;if(!d)return "";
-  const xs=list.filter(x=>covers(x,d)),tag=x=>`<span class="dv-tag" style="--c:${itemColor(x)}"><i aria-hidden="true"></i><span class="dv-tx"><b>${esc(x.title)}</b><small><span class="num">${x.end?`${nmd(x.date)}–${nmd(x.end)}`:x.time||"整天"}</span>${notiSub(x)?`・${esc(notiSub(x))}`:""}</small></span></span>`;   /* 2026-11-06：膠囊改成清單列（標題一行、時間與所屬放第二行），長標題不會把時間擠成兩行 */
-  return `<div class="noti-dayview" id="notiDay"><div class="dv-top"><b class="num">${nmd(d)}</b><span>週${WD[pd(d).getDay()]}・${xs.length?`${xs.length} 件`:"沒有事件"}</span><button type="button" class="icon dv-x" data-nday="" aria-label="收起這一天">${ico("close","solo")}</button></div>
-    ${xs.length?`<div class="dv-tags">${xs.map(tag).join("")}</div>`:""}</div>`;
+/* 那一天的清單：每件事一張（日期、時刻；名稱；地點、所屬的小膠囊） */
+const calWhen=x=>x.end?`${nmd(x.date)}–${nmd(x.end)}`:x.time?x.time+(x.etime&&x.etime>x.time?`–${x.etime}`:""):"整天";
+const calPill=(c,x)=>c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);
+const calKind=(c,x)=>x.kind==="meet"?" line":x.kind==="act"||c.mode==="mine"?" pri":c.mode==="pres"?" acc":"";
+function calListHTML(c,r){
+  const d=c.day,xs=r.xs.filter(x=>covers(x,d));
+  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${calWhen(x)}</span></div><div class="ce-n">${esc(x.title)}</div>
+      <div class="ce-b">${x.place?`<span class="ce-pl">${ico("pin","solo")}${esc(x.place)}</span>`:""}<span class="ce-k${calKind(c,x)}">${esc(calPill(c,x))}</span></div></div>`).join("")
+    :r.loading?`<p class="cal-none">讀取中…</p>`:r.err?`<p class="cal-none">${esc(r.err)}</p>`:`<p class="cal-none num">${nmd(d)}</p>`;
+  return `<div class="cal-list" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
 }
+/* 月份選單：那個學年（8 月起算）的 12 個月 */
+function calMonths(c){const [y,mo]=c.month.split("-").map(Number),y0=mo>=8?y:y-1;return Array.from({length:12},(_,i)=>{const mm=(7+i)%12+1;return `${mm>=8?y0:y0+1}-${pad(mm)}`})}
+const calPopHTML=c=>`<div class="cal-pop" role="listbox" aria-label="月份">${calMonths(c).map(v=>`<button type="button" role="option" data-calset="${v}" aria-selected="${v===c.month}"><span class="num">${+v.slice(5)}</span> 月</button>`).join("")}</div>`;
+const calModesHTML=c=>"";
+function calHTML(c){
+  const r=calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
+  return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
+    <div class="cal-h"><h3 class="nt-h" id="${id}"><span class="nt-en">${c.pub?"STUSTSA CALENDAR":"CALENDAR"}</span>${c.pub?"全會行事曆":"行事曆"}</h3>
+      <span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+    ${calModesHTML(c)}
+    <div class="pc">${posterHTML(c,r.xs)}</div></div>
+    ${calListHTML(c,r)}</section>`;
+}
+/* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
+const calHost=c=>c===NOTI?$("#notiPage"):c.host;
+function calSwapPrep(host){const l=host&&host.querySelector(".cal-list");return l&&l.offsetParent&&!reduceMotion()?{key:l.dataset.callist,ghost:l.cloneNode(true),r:l.getBoundingClientRect()}:null}
+function calAfter(c,host,sw){
+  host.dataset.calhost="";host._cal=c;
+  const l=host.querySelector(".cal-list");if(!sw||!l||sw.key===l.dataset.callist)return;
+  const par=l.parentElement,pr=par.getBoundingClientRect(),g=sw.ghost;
+  g.removeAttribute("aria-live");g.setAttribute("aria-hidden","true");g.inert=true;g.classList.add("cal-ghost");
+  Object.assign(g.style,{left:(sw.r.left-pr.left)+"px",top:(sw.r.top-pr.top)+"px",width:sw.r.width+"px"});
+  par.append(g);const rm=()=>g.remove();g.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(rm,rm);
+  [...l.children].slice(0,12).forEach((x,i)=>x.animate([{opacity:0,transform:"translateY(12px)"},{opacity:1,transform:"none"}],{duration:MO.base+80,delay:60+i*40,easing:"cubic-bezier(.25,1.12,.4,1)",fill:"backwards"}));
+}
+function calPaint(c){if(c===NOTI){renderNoti();return}const h=c.host;if(!h)return;const sw=calSwapPrep(h);morphTo(h,calHTML(c));calAfter(c,h,sw)}
+function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
+/* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
+function calMonth(c,m){
+  if(m===c.month){calPop(c,false);return}
+  const dir=m>c.month?1:-1;c.month=m;c.day=today().slice(0,7)===m?today():m+"-01";c.pop=false;calPaint(c);
+  const pc=calHost(c)?.querySelector(".pc");if(pc&&!reduceMotion())pc.animate([{opacity:0,transform:`translateX(${dir*18}px)`},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.out});
+  calHost(c)?.querySelector("[data-calmon]")?.focus({preventScroll:true});
+}
+/* 月份選單開關：打開時由右上長出來、焦點到選到的那個月；關的時候淡出再拿掉 */
+function calPop(c,on){
+  if(c.pop===on)return;const h=calHost(c);
+  if(on){c.pop=true;calPaint(c);const p=h&&h.querySelector(".cal-pop");if(!p)return;
+    if(!reduceMotion())p.animate([{opacity:0,transform:"translateY(-6px) scale(.96)"},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.spring});
+    p.querySelector('[aria-selected="true"]')?.focus({preventScroll:true});return}
+  const p=h&&h.querySelector(".cal-pop");c.pop=false;
+  if(!p||reduceMotion()){calPaint(c);return}
+  p.inert=true;p.animate([{opacity:1},{opacity:0,transform:"translateY(-4px) scale(.97)"}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(()=>{if(!c.pop)calPaint(c)},()=>{});
+}
+document.addEventListener("click",e=>{
+  const t=e.target;if(!t.closest)return;
+  const host=t.closest("[data-calhost]"),c=host&&host._cal;
+  CALS.forEach(x=>{if(x.pop&&!(x===c&&t.closest(".cal-mp")))calPop(x,false)});   /* 點選單以外＝關掉 */
+  if(!c)return;
+  if(t.closest("[data-calmon]")){calPop(c,!c.pop);return}
+  const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
+  const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
+});
+/* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
+document.addEventListener("keydown",e=>{
+  const c=CALS.find(x=>x.pop);if(!c)return;
+  if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();calPop(c,false);calHost(c)?.querySelector("[data-calmon]")?.focus({preventScroll:true});return}
+  const os=[...(calHost(c)?.querySelectorAll(".cal-pop [data-calset]")||[])],i=os.indexOf(document.activeElement),k={ArrowRight:1,ArrowDown:3,ArrowLeft:-1,ArrowUp:-3}[e.key];
+  if(k&&i>=0){e.preventDefault();os[Math.max(0,Math.min(os.length-1,i+k))].focus()}
+},true);
+/* 這一頁的內容：今日／明日、逾期、行事曆 */
 function notiInner(){
-  const list=notiList(),t=today(),all=NOTI.scope==="all";
-  const legend=all
-    ?(window.BOARD_DEPTS||[]).map(d=>`<span><i style="--c:${deptColor(d.id)}"></i>${esc(d.name)}</span>`).join("")
-    :Object.entries(NOTI_ST).map(([k,c])=>`<span><i style="--c:${c}"></i>${EV_ST[k]}</span>`).join("");
-  return `${all?`<p class="sub noti-note">${NOTI.loading?"讀取各部門資料中…":"全會：讀各部門的資料檔，只能看、不能改。"}</p>`:""}
-    <div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
+  const list=notiMine(),t=today();
+  return `<div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
     ${lateHTML()}
-    <section class="noti-cal">
-      <div class="cal-top"><h3 class="noti-h"><b>行事曆</b></h3><button type="button" class="icon" data-nmon="-1" aria-label="上個月">${ico("prev","solo")}</button><button type="button" class="icon" data-nmon="1" aria-label="下個月">${ico("next","solo")}</button><button type="button" class="icon" data-nmon="0">回到本月</button></div>
-      ${dayViewHTML(list)}
-      <div class="pc" id="notiCal">${posterHTML(list)}</div>
-      <div class="cal-legend">${legend}</div>
-    </section>`;
+    ${calHTML(NOTI)}`;
 }
 /* ---------- 整理：交友軟體式左滑右滑（2026-11-05 使用者要求） ----------
    卡片堆＝所有還沒處理的事件（今天起還沒結束、今天還沒滑過的時間標記），一次一張、後面露出兩張。
@@ -288,7 +353,7 @@ function closeToday(instant){
 }
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
-  const snap=Anim.capture();morphTo(el,notiInner());Anim.play(snap);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
+  const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
   dkBind();
 }
 
@@ -323,7 +388,7 @@ async function openNoti(){
   if(notiOpen||deptRO())return;
   if(setOpen)closeSettings(true);
   if(HS.q)hsClear();
-  notiOpen=true;NOTI.month=today().slice(0,7);NOTI.day=null;
+  notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false});
   Back.layers.noti();$("#notiBtn").setAttribute("aria-pressed","true");
   hsBar();renderTabbar();renderNoti();
   secSwap(curSec,"noti",1);
@@ -331,7 +396,7 @@ async function openNoti(){
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
   if(!notiOpen)return;
-  if(todayOpen)closeToday(true);notiOpen=false;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
@@ -357,8 +422,8 @@ function notiFocus(d,e){
 }
 /* 明日卡片：行事曆選到那一天（換到那個月），捲到行事曆 */
 function notiOpenDay(d){
-  NOTI.day=d;NOTI.month=d.slice(0,7);renderNoti();
-  const c=$("#notiPage .noti-cal");if(c)c.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"});
+  NOTI.month=d.slice(0,7);calDay(NOTI,d);renderNoti();
+  const c=$("#notiPage .cal");if(c)c.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"});
 }
 /* 今日／明日卡片的按壓回饋：按下微縮到 .97、放開略帶回彈地彈回（只動 transform） */
 function ndPress(el,down){
@@ -374,10 +439,6 @@ document.addEventListener("click",e=>{
   if(t.closest("#notiBtn")){notiOpen?closeNoti():openNoti();return}
   if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
-  const mo=t.closest("[data-nmon]");if(mo){const k=+mo.dataset.nmon,d=pd(NOTI.month+"-01");if(k)d.setMonth(d.getMonth()+k);const nm=k?ym(d):today().slice(0,7);if(nm===NOTI.month)return;
-    NOTI.day=null;notiMonth(nm,k<0?-1:1);return}
-  if(t.closest("[data-nday]")){NOTI.day=null;renderNoti();return}
-  const cd=t.closest("[data-cal]");if(cd){const d=cd.dataset.cal,was=NOTI.day;NOTI.day=was===d?null:d;renderNoti();const v=$("#notiDay");if(v&&!was)Anim.enter(v,"down");return}   /* 點日期：上方出現「這一天」；再點一次收起 */
   const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
