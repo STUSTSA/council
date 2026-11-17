@@ -148,7 +148,7 @@ function calLoad(c){
     if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
     else{const [kind,s,m]=k.split(":"),a=StoreMap.parseTaipei(addDays(m+"-01",-31)),b=StoreMap.parseTaipei(ym(new Date(+m.slice(0,4),+m.slice(5,7),1))+"-01");
       p=storeScopeEvents(s,a.ms,b.ms,{pub:kind==="pub"}).then(docs=>({items:scopeItems(docs,s==="all-meeting"?"meet":"act")}))}
-    p.catch(e=>({items:[],err:STORE_XERR(e)})).then(v=>{CAL_DATA.set(k,{...v,at:Date.now()});CALS.forEach(x=>{if(calKeys(x).includes(k)&&(x!==NOTI||notiOpen))calPaint(x)})});
+    p.catch(e=>({items:[],err:!k.startsWith("dept:")&&e&&e.code==="permission-denied"?"登入後才看得到":STORE_XERR(e)})).then(   /* 活動、會議不是「某個部門搬家」：沒權限只說要登入 */v=>{CAL_DATA.set(k,{...v,at:Date.now()});CALS.forEach(x=>{if(calKeys(x).includes(k)&&(x!==NOTI||notiOpen))calPaint(x)})});
   });
 }
 /* 重新打開通知頁時：超過 5 分鐘或讀失敗的丟掉重讀 */
