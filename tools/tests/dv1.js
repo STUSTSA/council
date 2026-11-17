@@ -32,8 +32,8 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
   const read=async p=>{let v;await admin(async d=>{const s=await d.doc(p).get();v=s.exists?s.data():null});return v};
   const roster=async dept=>{let v;await admin(async d=>{v=(await d.collection('deptMembers').where('deptId','==',dept).get()).docs.map(x=>x.data().uid).sort()});return v};
   const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
-  const open=async(dept,{ua,standalone,w=1000,h=850}={})=>{
-    const ctx=await b.newContext({viewport:{width:w,height:h},serviceWorkers:'block',...(ua?{userAgent:ua,isMobile:true,hasTouch:true}:{})});
+  const open=async(dept,{ua,standalone,w=1000,vh=850}={})=>{
+    const ctx=await b.newContext({viewport:{width:w,height:vh},serviceWorkers:'block',...(ua?{userAgent:ua,isMobile:true,hasTouch:true}:{})});
     if(standalone)await ctx.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{get:()=>true})});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
     await ctx.route('https://www.gstatic.com/firebasejs/**',r=>{const f=path.join(ROOT,'backend/node_modules/firebase',r.request().url().split('/').pop());r.fulfill({contentType:'text/javascript',body:fs.readFileSync(f,'utf8')})});
@@ -41,7 +41,7 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc;s=s.replace(new RegExp(`(\\{ id: "${dept}",[^\\n]*?)( \\},?\\n)`),`$1, source: "firestore"$2`);
       s=s.replace(/firebase: \{[^}]*\}/,`firebase: { apiKey: "demo-key", authDomain: "", projectId: "${PROJECT}", appId: "", emulator: { host: "${h}", port: ${pt}, auth: "http://${AEMU}" } }`);
       r.fulfill({contentType:'text/javascript',body:s})});
-    const p=await ctx.newPage();p.errs=[];p.toasts=[];p.on('pageerror',e=>p.errs.push(e.message));
+    const p=await ctx.newPage();p.errs=[];p.toasts=[];p.on('pageerror',e=>p.errs.push(e.message));if(process.env.DVDBG)p.on('console',m=>console.log('CONSOLE',m.type(),m.text().slice(0,300)));
     await p.exposeFunction('__toast',m=>p.toasts.push(m));
     await p.addInitScript(()=>{new MutationObserver(()=>{const t=document.querySelector('#toast');if(t&&t.textContent&&t.classList.contains('show'))window.__toast(t.textContent)}).observe(document,{subtree:true,childList:true,characterData:true,attributes:true})});
     await p.goto(`${BASE}/index.html?d=${dept}`);await p.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await p.waitForTimeout(1200);
@@ -96,15 +96,15 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     ok(p.errs.length===0,`F4：沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);await p.ctx.close();}
   const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
   const IOS_CHROME='Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1';
-  {const p=await open('rights',{ua:IOS,w:390,h:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
+  {const p=await open('rights',{ua:IOS,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
     ok((await setText(p)).includes('這台裝置'),'F4 iPhone Safari 還沒加入主畫面：有「這台裝置」');
     await p.click('[data-set="device"]');await p.waitForTimeout(900);
     const st=await p.evaluate(()=>[...document.querySelectorAll('.dev-steps li')].map(x=>x.textContent));
     ok(st.length===3&&st[1].includes('加入主畫面')&&!(await p.$('[data-hub="install"]')),`F4 iPhone Safari：顯示加入主畫面的步驟、沒有「安裝」鈕（${st.join('／')}）`);
     await p.ctx.close();}
-  {const p=await open('rights',{ua:IOS,w:390,h:844,standalone:true});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
+  {const p=await open('rights',{ua:IOS,w:390,vh:844,standalone:true});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
     ok(!(await setText(p)).includes('這台裝置'),'F4 iPhone 已加入主畫面（從主畫面打開）：沒有「這台裝置」');await p.ctx.close();}
-  {const p=await open('rights',{ua:IOS_CHROME,w:390,h:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
+  {const p=await open('rights',{ua:IOS_CHROME,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
     ok(!(await setText(p)).includes('這台裝置'),'F4 iPhone 的 Chrome（不是 Safari）：不顯示步驟');await p.ctx.close();}
 
   await b.close();srv.close();await t.cleanup();

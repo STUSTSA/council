@@ -119,7 +119,9 @@ service cloud.firestore {
     // 寫：本人（自己真的有這個部門的角色時）或總管理員建立；刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
     match /deptMembers/{id} {
       function rosterRole(u, dept) { return getAfter(doc('roles', u)).data.get('depts', {}).get(dept, null); }
-      allow get, list: if isSuper() || isEditor(resource.data.deptId);
+      function mine() { return signedIn() && id.split('__').size() == 2 && id.split('__')[1] == me(); }   // 自己那一份（不論存不存在：登入時先查有沒有再補）
+      allow get: if mine() || isSuper() || isEditor(resource.data.deptId);
+      allow list: if isSuper() || isEditor(resource.data.deptId);
       allow create: if d().keys().hasOnly(['deptId', 'uid', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
         && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
         && (d().uid == me() || isSuper())

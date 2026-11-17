@@ -54,6 +54,10 @@ describe('M-01～M-07 專員名單（03 F3）', () => {
       await assertFails(x.collection('deptMembers').get());
     }
     await assertFails(db('ed').collection('deptMembers').get());   // 有角色的人也不能不帶部門條件列全部
+    // 自己那一份不論存不存在都查得到（登入時先查有沒有再補）；別人的、不存在的別人那一份查不到
+    await assertSucceeds(db('nb').doc('deptMembers/rights__nb').get());
+    await assertSucceeds(db('evAdm').doc('deptMembers/rights__evAdm').get());
+    await assertFails(db('nb').doc('deptMembers/rights__nobody').get());
     await assertSucceeds(q(db('evAdm'), 'events'));
   });
   it('M-04 替別人登記（非總管理員）、登記自己沒有的部門、沒有角色的人登記、未登入：拒絕', async () => {
