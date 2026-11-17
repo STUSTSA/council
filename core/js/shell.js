@@ -4,7 +4,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
   <!-- main page -->
   <div class="page page-main" id="pageMain">
     <div class="wrap">
-      <header class="hero">
+      <header class="hero" data-fx-keep>
         <a class="logo-box" href="home.html" aria-label="各部門總覽"></a>
         <div class="hero-find">
           <label class="hero-search"><svg class="hs-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="搜尋這個看板" aria-controls="boardRes"><button type="button" class="hq-clear" aria-label="清除搜尋"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>

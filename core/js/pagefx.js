@@ -22,21 +22,23 @@ const PageFx=(()=>{
   function reset(el){(anims.get(el)||[]).forEach(a=>a.cancel());anims.delete(el);const k=keep.get(el);if(!k)return;keep.delete(el);el.style.opacity=k.o;el.style.pointerEvents=k.p}
   /* 先藏起來（新頁還沒輪到它浮上來時）：只動透明度 */
   function hold(el){save(el);el.style.opacity="0"}
-  /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊 */
-  function pieces(el){
+  /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊。
+     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico、.logo）與按鈕不往裡面拆，不會挑到圖形的零件。
+     標題列（data-fx-keep）是換畫面時沿用的節點：一直留在畫面上，不參加進場動畫；只有跨頁到達（all）時整頁一起浮上來 */
+  function pieces(el,all){
     const H=innerHeight,W=innerWidth,out=[];
     const walk=(n,depth)=>{for(const c of n.children){
       if(out.length>=MAXP)return;
-      if(c.matches("script,style,template,link,[hidden]"))continue;
+      if(c.matches("script,style,template,link,[hidden]")||(!all&&c.matches("[data-fx-keep]")))continue;
       const cs=getComputedStyle(c);if(cs.display==="none"||cs.visibility==="hidden")continue;
       if(cs.display==="contents"){walk(c,depth);continue}
       const r=c.getBoundingClientRect();if(!(r.bottom>0&&r.top<H&&r.right>0&&r.left<W&&r.width>1&&r.height>1))continue;
-      if(r.height>H*.42&&c.children.length&&depth<7)walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
+      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico,.logo"))walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
     }};
     walk(el,0);return out;
   }
   /* 一段動畫：dir＝"out"（離開）或 "in"（進來）；back＝返回；fadeIn＝新頁在前幾成變成不透明；lag＝整段晚多久開始（期間區塊停在起始狀態） */
-  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0){
+  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false){
     if(!el)return Promise.resolve();
     save(el);el.style.pointerEvents="none";(anims.get(el)||[]).forEach(a=>a.cancel());
     const o=dir==="out",H=innerHeight||1,list=[];
@@ -46,7 +48,7 @@ const PageFx=(()=>{
       list.push(el.animate(back?[{transform:"translateY(0)"+B,opacity:1},{transform:"translateY(80px)"+B,opacity:0}]:[{opacity:1},{opacity:0}],
         {duration:(back?BOUT:OUT)+lag,easing:EASE_OUT,fill:"both",delay:0}));
     }else{
-      const ps=pieces(el),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
+      const ps=pieces(el,all),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
       ps.forEach(({el:p,r,base})=>{
         const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread),B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
         list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:1,offset:.4},{transform:`translateY(0)${B}`,opacity:1}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
@@ -103,7 +105,7 @@ const PageFx=(()=>{
     const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=5||now-t0>1600)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
     const start=()=>calm(()=>{
       const my=++tok;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
-      run(document.body,"in",my).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
+      run(document.body,"in",my,FADE_IN,false,0,true).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
     });
     let go=false;const once=()=>{if(!go){go=true;start()}};
     if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 最多等 0.9 秒（字型、圖片很慢時不要一直空白） */

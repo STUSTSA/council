@@ -44,7 +44,7 @@ function labelSetHTML(){
 async function labelSettings(){
   const d=$("#dlg"),f=$("#dlgForm");d.classList.add("wide");
   const syncNames=()=>f.querySelectorAll("[data-lblname]").forEach(i=>{const l=labelById(i.dataset.lblname),n=i.value.trim();if(l&&n&&n!==l.name){l.name=n;dirty=true}});
-  const paint=()=>{f.innerHTML=labelSetHTML();bind()};
+  const paint=()=>{morphTo(f,labelSetHTML());bind()};   /* 原位更新（morph.js） */
   const bind=()=>{
     f.onsubmit=ev=>ev.preventDefault();
     f.onkeydown=ev=>{const k=ev.target.dataset&&ev.target.dataset.newlbl;if(ev.key==="Enter"&&!ev.isComposing&&k){ev.preventDefault();f.querySelector(`[data-x="add"][data-k="${k}"]`).click()}};
@@ -52,7 +52,7 @@ async function labelSettings(){
       const x=b.dataset.x;syncNames();
       if(x==="add"){const k=b.dataset.k,inp=f.querySelector(`[data-newlbl="${k}"]`),n=inp.value.trim();if(!n)return;
         if(state.labels.some(l=>l.kind===k&&l.name===n)){toast("已經有這個標籤");return}
-        state.labels.push({id:uid("g"),kind:k,name:n});dirty=true;paint();f.querySelector(`[data-newlbl="${k}"]`).focus();return}
+        state.labels.push({id:uid("g"),kind:k,name:n});dirty=true;inp.value="";paint();f.querySelector(`[data-newlbl="${k}"]`).focus();return}
       if(x==="del"){const id=b.dataset.id;state.labels=state.labels.filter(l=>l.id!==id);[...state.events,...state.issues].forEach(o=>{if(o.labels)o.labels=o.labels.filter(v=>v!==id)});dirty=true;paint();return}
       if(x==="done"){d.oncancel=null;if(d.open)await new Promise(r=>{d.addEventListener("close",()=>setTimeout(r,0),{once:true});d.close()});d.classList.remove("wide");
         if(editing)changed();else if(dirty)await settingSave(()=>{},"已更新標籤");else render();finish()}

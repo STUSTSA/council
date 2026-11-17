@@ -251,7 +251,7 @@ function closeToday(instant){
 }
 function renderNoti(){
   const el=$("#notiOv .noti-inner");if(!el||!notiOpen)return;
-  const snap=Anim.capture();el.innerHTML=notiInner();Anim.play(snap);flowWatch();dkBind();notiSearch();
+  const snap=Anim.capture();morphTo(el,notiInner());Anim.play(snap);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */flowWatch();dkBind();notiSearch();
 }
 
 /* ---------- 常駐搜尋欄（毛玻璃膠囊，貼在通知層最上面） ----------
@@ -280,7 +280,7 @@ const searchClose=()=>resBox(false);
 function openNoti(){
   let ov=$("#notiOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov noti-ov" id="notiOv" role="dialog" aria-modal="true" aria-label="通知" hidden>
-      <div class="anim-top"><div class="anim-title"><span class="anim-k">NOTICE</span><b>通知與行事曆</b></div><div class="anim-ctl"><button type="button" id="notiClose" aria-label="關閉通知">${ico("close")}關閉</button></div></div>
+      <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">NOTICE</span><b>通知與行事曆</b></div><div class="anim-ctl"><button type="button" id="notiClose" aria-label="關閉通知">${ico("close")}關閉</button></div></div>
       <div class="set-body"><div class="set-scroll"><div class="noti-bar"><div class="noti-seg lseg" role="tablist" aria-label="範圍"><span class="lseg-lens" aria-hidden="true"></span>${[["mine",CFG.dept.name||"本部門"],["all","全會"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${NOTI.scope===k}">${esc(t)}</button>`).join("")}</div>
         <div class="noti-find"><label class="noti-search"><svg class="ns-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4"/></svg><input id="notiQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件、地點、即時回報" aria-label="搜尋事件" aria-controls="notiRes"><button type="button" class="nq-clear" aria-label="清除搜尋">${ico("close")}</button></label>
         <div class="noti-res glass" id="notiRes" role="listbox" aria-label="搜尋結果" hidden></div></div></div><div class="noti-inner" data-flow></div></div></div></div>`);ov=$("#notiOv");
