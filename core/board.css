@@ -398,8 +398,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
 @media (hover:hover){.lc-tl button:hover{transform:scale(1.14)}}
 .lc-tl.paned button{color:color-mix(in srgb,var(--ink) 28%,transparent)}
 .lc-tl.paned button.on{color:var(--ink);transform:scale(1.42)}
-.lc-pop{position:absolute;left:var(--pad);bottom:78px;z-index:8;display:grid;gap:4px;min-width:200px;max-width:calc(100% - 2*var(--pad));max-height:50vh;overflow:auto;padding:8px;border-radius:var(--r-md);background:var(--pop);box-shadow:var(--pop-sh);animation:fadeSlide var(--mo-base) var(--mo-out) both}
-.lc.full .lc-pop{bottom:calc(78px + env(safe-area-inset-bottom))}
+.lc-pop{position:absolute;left:var(--pad);bottom:calc(100% + 8px);z-index:8;display:grid;gap:4px;min-width:200px;max-width:calc(100% - 2*var(--pad));max-height:50vh;overflow:auto;padding:8px;border-radius:var(--r-md);background:var(--pop);box-shadow:var(--pop-sh);animation:fadeSlide var(--mo-base) var(--mo-out) both}
 .lc-pop button{min-height:40px;padding:0 16px;border:0;border-radius:var(--r-md);text-align:left;font-size:14px;transition:background-color var(--mo-fast) var(--mo-out),transform .24s var(--mo-spring)}
 .lc-pop button[aria-selected="true"]{background:var(--blk2);font-weight:700}
 /* --- 人、時間、地點頁（卡片內容換成那一頁）：人＝負責人勾選膠囊；時間＝每個時間行一組（日期、時：分、結束、可加結束日期；選到的那一段實心）；

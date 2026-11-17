@@ -28,7 +28,7 @@ const liveOrder=()=>{const a=state.events.filter(ev=>!ev.doneAt);return[...a.fil
 function cpHTML(ev,o={}){const st=evStatus(ev);
   return `<button type="button" class="cp${o.sel?" sel":""}${o.away?" away":""}" data-cp="${esc(ev.id)}" data-ev="${esc(ev.id)}" data-st="${st}"${o.sel?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(ev.name)}</b>${ev.report?'<span class="cp-rp">報告</span>':""}</button>`}
 /* 卡片外框（即時回報、完成紀錄共用）：第一排（全螢幕時返回鍵）燈號、名稱、編輯次數；第二排上一張／下一張、報告；第三排狀態、負責人、時間；
-   內容；儲存回饋（role=status）；母議題選單；底部工具列。o＝{k,id,key,st,ids,full,ro,ed,attr,title,cnt,rep,meta,body,view,tail,save,pop,tools} */
+   內容；儲存回饋（role=status）；底部工具列（母議題選單在工具列裡、往上長）。o＝{k,id,key,st,ids,full,ro,ed,sec,attr,title,cnt,rep,meta,body,view,tail,save,tools} */
 function lcFrame(o){
   const ix=o.ids.indexOf(o.id),tri=d=>`<button type="button" class="lc-tri" data-lcstep="${d}" aria-label="${d<0?"上一張":"下一張"}"${(d<0?ix<=0:ix<0||ix>=o.ids.length-1)?" disabled":""}>${ico("tri")}</button>`;
   return `<article class="lc${o.ro?" ro":""}${o.ed?" lc-ed sec-edit":o.sec?" sec-edit":""}${o.full?" full":""}" data-lc="${o.k}" data-edbox="${esc(o.key)}" data-st="${o.st}" ${o.attr}>
@@ -36,7 +36,7 @@ function lcFrame(o){
       <div class="lc-nav">${tri(-1)}${tri(1)}<span class="lc-sp"></span>${o.rep||""}</div>
       <div class="lc-meta">${o.meta}</div>
       <div class="lc-body" data-view="${o.view||"main"}">${o.body}</div>${o.tail||""}
-      <div class="lc-save">${o.save||'<span class="kp-st" role="status"></span>'}</div></div>${o.pop||""}${o.tools||""}</article>`;
+      <div class="lc-save">${o.save||'<span class="kp-st" role="status"></span>'}</div></div>${o.tools||""}</article>`;
 }
 const lcCntHTML=n=>n?`<button type="button" class="lc-cnt num" data-lclog aria-label="編輯紀錄，${n} 次">${n}</button>`:"";
 const lcWhen=s=>s?`<span class="num">${esc(fmt(s).slice(5))}${String(s).length>10?" "+esc(String(s).slice(11,16)):""}</span>`:"";
@@ -96,7 +96,7 @@ function lcSaveHTML(ev){const s=kpSt&&kpSt.id===ev.id&&(!editing||["bad","fail"]
 function lcToolsHTML(ev,ed){const par=parentOf(ev),pane=ed&&lvPane;
   const tb=(k,i,l)=>`<button type="button"${pane===k?' class="on"':""} data-lctool="${k}" aria-label="${l}"${["staff","time","place"].includes(k)?` aria-pressed="${pane===k}"`:""}>${ico(i)}</button>`;
   return `<div class="lc-tools"><button type="button" class="lc-pa" data-lcpa aria-haspopup="listbox" aria-expanded="${ed&&lvPop}" aria-label="母議題"><span>${esc(par?par.title:"母議題")}</span><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 2l4 6H1z"/></svg></button>
-    <div class="lc-tl${pane?" paned":""}">${tb("text","text","文字")}${tb("staff","user","人")}${tb("time","clock","時間")}${tb("place","pin","地點")}${tb("check","box","核取")}${tb("link","link","超連結")}</div></div>`}
+    <div class="lc-tl${pane?" paned":""}">${tb("text","text","文字")}${tb("staff","user","人")}${tb("time","clock","時間")}${tb("place","pin","地點")}${tb("check","box","核取")}${tb("link","link","超連結")}</div>${ed&&lvPop?lcPopHTML(ev):""}</div>`}
 function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   return `<div class="lc-pop" role="listbox" aria-label="母議題">${opts.map(([v,t])=>`<button type="button" role="option" data-lcpar="${esc(v)}" aria-selected="${(ev.issueId||"")===v}">${esc(t)}</button>`).join("")}</div>`}
 /* 一張即時回報卡片。o＝{k:"live"|"done",ids,full,body,tail}（完成紀錄：唯讀，k="done"；編輯中的完成紀錄由 views.js 傳 body／tail）。
@@ -108,7 +108,7 @@ function lcLiveHTML(ev,o){
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
   const body=o.body!=null?o.body:view==="staff"?lcStaffHTML(ev):view==="time"?lcTimeHTML(ev):view==="place"?lcPlaceHTML(ev):lcLinesHTML(ev,ed,ro);
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
-    save:done?"":lcSaveHTML(ev),pop:ed&&lvPop?lcPopHTML(ev):"",tools:ro?"":lcToolsHTML(ev,ed)});
+    save:done?"":lcSaveHTML(ev),tools:ro?"":lcToolsHTML(ev,ed)});
 }
 /* 整區：膠囊清單（報告在上、細線、其他）＋寬螢幕右邊的卡片；全螢幕的卡片在 #lcFull（lcFullSync） */
 function renderEvents(){
