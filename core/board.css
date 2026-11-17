@@ -108,7 +108,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 
 /* ===== 頁面：主頁（每週概述 2026-11-06 起改在設定裡，pager 只剩主頁一頁） ===== */
 .pager{display:flex;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
-.page{flex:none;height:100%;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}
+.page{flex:none;height:100%;overflow-x:hidden;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}   /* 不橫向捲動：手機換分頁時左右滑進滑出的內容超出畫面也不會撐出橫捲 */
 .page-main{width:100vw}
 .wrap{max-width:1500px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
 .pager::-webkit-scrollbar{display:none}
@@ -218,7 +218,7 @@ body.searching .layout{display:none}
 }
 
 /* ===== 版面與區塊外框 ===== */
-.layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.layout{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}   /* 一次只放一區；relative＝換分頁時舊區塊那一層（.sg-out）的定位基準 */
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .count{font-size:12px;border-radius:999px;padding:1px 8px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -1011,9 +1011,11 @@ a.link:active{transform:scale(.96)}
 .sgroup:not(.cur){opacity:.5;scale:.985}
 .sgroup:not(.cur):is(:hover,:focus-within){opacity:1;scale:1}
 @media (prefers-reduced-motion:reduce){.sgroup:not(.cur){scale:none}}
-@media (max-width:640px){
-  .sgroup:not(.cur){display:none}
-}
+/* 一次只顯示一區（手機、桌面都一樣；DESIGN-next 第一節）。換分頁時舊的那一區留成一層（.sg-out，render.js 的 setSection）：
+   原地絕對定位（top／left／width 由程式寫）、不能點，退出去之後拿掉 */
+.sgroup:not(.cur){display:none}
+.sgroup.sg-out{display:grid;position:absolute;pointer-events:none}
+@media print{.sgroup:not(.cur){display:grid}}   /* 列印照舊印全部區塊（依序往下排） */
 
 /* ===== 開頁進場畫面（學生會）：2026-11-06 起樣式在 core/splash.css（看板與總覽頁共用） ===== */
 
