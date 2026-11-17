@@ -60,7 +60,7 @@ async function acctStart(){
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
@@ -110,7 +110,8 @@ function acctSettingsInner(){
       +setRow("backup","download","備份")):"";
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
+    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
+    +((pwaCanInstall()||pwaIosSteps())?setSec(setRow("device","device","這台裝置")):"");   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現 */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -206,6 +207,7 @@ function peoplePanel(){
     const A=await acctLoad();
     let roles=[],users=[],who=null;
     const load=async()=>{[roles,users]=await Promise.all([A.rolesList(),A.usersList()]);acct.names=await A.profiles().catch(()=>acct.names)};
+    A.rosterSync().catch(()=>{});   /* 03 F3：打開人員時把全部的專員名單對齊角色（補上 F3 之前就有角色的人、清掉已撤權的） */
     const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
@@ -220,7 +222,7 @@ function peoplePanel(){
       p.box.innerHTML=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="sr-t"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
-    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){await load();draw()}};
+    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});await load();draw()}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補） */
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
@@ -397,7 +399,7 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){await load();draw()}}
+      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});await load();draw()}}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")){await load();draw()}}
     });
     await load();draw();

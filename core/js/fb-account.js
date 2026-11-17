@@ -6,7 +6,7 @@
 import { fb } from "./fb-app.js";
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut as fbSignOut }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, startAfter, onSnapshot, runTransaction, writeBatch,
+import { doc, getDoc, getDocs, setDoc, collection, query, where, orderBy, limit, startAfter, onSnapshot, runTransaction, writeBatch,
          serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const TEN_MIN = 10 * 60000;
@@ -225,6 +225,38 @@ async function inviteRedeem(token) {
 
 /* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
    mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
+/* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}，只有部門與 uid；名字從 profiles） ---------- */
+const rosterId = (d, u) => `${d}__${u}`;
+const ROLE_OK = ["admin", "editor"];
+/* 同部門的名單（編輯者、管理員、總管理員讀得到；別人 permission-denied） */
+async function roster(dept) { return (await getDocs(query(collection(db, "deptMembers"), where("deptId", "==", dept)))).docs.map(s => s.data().uid); }
+/* 本人：自己有角色的部門補上名單（第一次登入、QR 加入、核准之後都會補）。讀不到或沒寫成不影響其他功能 */
+async function rosterSelf(roles) {
+  const me = uid(); if (!me || !roles) return;
+  for (const [d, r] of Object.entries(roles.depts || {})) {
+    if (!ROLE_OK.includes(r)) continue;
+    try { if (!(await getDoc(ref("deptMembers", rosterId(d, me)))).exists()) await setDoc(ref("deptMembers", rosterId(d, me)), { deptId: d, uid: me, at: NOW() }); } catch (_) { /* 下次登入再試 */ }
+  }
+}
+/* 總管理員：讓名單跟角色一致（改角色、核准、撤權之後，與打開「人員」時）。only＝只看這個 uid */
+async function rosterSync(only) {
+  const rs = only ? [await getDoc(ref("roles", only))].filter(s => s.exists()).map(s => ({ uid: s.id, depts: s.data().depts || {} }))
+    : (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, depts: s.data().depts || {} }));
+  const have = (await getDocs(only ? query(collection(db, "deptMembers"), where("uid", "==", only)) : collection(db, "deptMembers"))).docs.map(s => s.data());
+  const want = new Set(rs.flatMap(r => Object.entries(r.depts).filter(([, v]) => ROLE_OK.includes(v)).map(([d]) => rosterId(d, r.uid))));
+  const got = new Set(have.map(x => rosterId(x.deptId, x.uid)));
+  if (only && !rs.length) want.clear();
+  const add = [...want].filter(k => !got.has(k)), del = [...got].filter(k => !want.has(k));
+  for (let i = 0; i < add.length + del.length; i += 5) {   /* 每份寫入的規則讀取約 3～4 次，整批上限 20（不依賴快取）：一批 5 份 */
+    const b = writeBatch(db);
+    [...add.map(k => ["add", k]), ...del.map(k => ["del", k])].slice(i, i + 5).forEach(([op, k]) => {
+      const [d, u] = k.split("__");
+      if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, at: NOW() }); else b.delete(ref("deptMembers", k));
+    });
+    await b.commit();
+  }
+  return { add: add.length, del: del.length };
+}
 async function rolesList() { return (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, ...plainRole(s.data()), rev: s.data().rev })); }
 async function usersList() { return (await getDocs(collection(db, "users"))).docs.map(s => ({ uid: s.id, email: s.data().email || "", lastLoginAt: ms(s.data().lastLoginAt) })); }
 async function roleWrite(target, mutate, via, r = "") {
@@ -307,7 +339,7 @@ async function auditChain(col, id) {
   return { rev, missing };
 }
 
-const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList,
+const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterSelf, rosterSync,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
   rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };

@@ -328,12 +328,12 @@ function forgetDevice(){remClear();if(!editing){meId="";sessionPw="";sharedPwSes
    - act（直接執行的，例如匯出備份、忘記這台裝置）：合併頁留著，執行完更新文字。
    返回（子頁的「返回」、系統返回、Esc）一次退一層：先退出功能回到合併頁，再退才離開（paneDismiss）。 */
 let hubNow=null;
-function hubRun(title,rows){
+function hubRun(title,rows,foot=()=>""){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟） */
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b><div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`;weekDotSync()};
+    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync()};
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{
@@ -356,8 +356,11 @@ const SET_HUBS={
   backup:()=>hubRun("備份",()=>[
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
+  /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
-    return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]}),
+    return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",sub:"",act:()=>pwaInstall()}]:[]),
+      ...(fsMode()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}])]},
+    ()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
@@ -386,7 +389,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);

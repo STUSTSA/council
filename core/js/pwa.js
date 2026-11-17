@@ -9,6 +9,23 @@ function offlinePill(){
 window.addEventListener("offline",()=>{if(!editing)render();else offlinePill()});
 window.addEventListener("online",async()=>{netFail=false;if(cloudOn()){const r=await cloudPull({force:true});if(r==="updated")toast("已重新連線，看板已更新")}if(!editing)render();else offlinePill()});
 
+/* ---------- 安裝成 App（03 F4，設定 →「這台裝置」）----------
+   瀏覽器支援安裝（Android Chrome、電腦的 Chrome／Edge：beforeinstallprompt）時記下事件，「這台裝置」頁顯示一顆「安裝」；
+   已經是安裝後的 App 打開的、或瀏覽器不支援時不顯示。iPhone／iPad 的 Safari（沒有安裝事件）尚未加入主畫面時，改顯示加入主畫面的步驟。 */
+let pwaPrompt=null;
+const pwaStandalone=()=>{try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(_){return false}};
+const pwaIosSafari=()=>{const u=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(u)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  return ios&&/Safari\//.test(u)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|YaBrowser|DuckDuckGo|Line\/|FBAN|FBAV|Instagram/.test(u)};
+const pwaCanInstall=()=>!!pwaPrompt&&!pwaStandalone();
+const pwaIosSteps=()=>!pwaPrompt&&!pwaStandalone()&&pwaIosSafari();
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();pwaPrompt=e;if(typeof renderSettings==="function")renderSettings()});
+addEventListener("appinstalled",()=>{pwaPrompt=null;if(typeof renderSettings==="function")renderSettings()});
+async function pwaInstall(){
+  const e=pwaPrompt;if(!e)return;
+  try{await e.prompt();const r=await e.userChoice;if(r&&r.outcome==="accepted"){pwaPrompt=null;toast("已安裝")}}catch(_){}
+}
+const PWA_IOS_STEPS=["點 Safari 下方的「分享」","選「加入主畫面」","按「新增」"];
+
 /* Service Worker：只在正式網址（https / localhost）且頁面有 manifest 時註冊 */
 if("serviceWorker" in navigator&&document.querySelector('link[rel="manifest"]')&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
   window.addEventListener("load",()=>{

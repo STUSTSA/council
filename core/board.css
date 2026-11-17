@@ -1273,6 +1273,11 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
 .set-hub-t{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;border-bottom:1px solid var(--hair)}
+/* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。外框同 .set-list，一步一列、前面等寬步驟號 */
+.dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:13px 20px;font-size:15px}
+.dev-steps li+li{border-top:1px solid var(--hair)}
+.dev-steps li::before{content:counter(dev);flex:0 0 auto;color:var(--muted);font-family:"Jost",sans-serif;font-variant-numeric:tabular-nums}
 /* 「報告」那一列、合併頁裡「每週概述」那一列（登入前是清單上的「每週概述」）：本週週報還沒產出時，圖示右上角紅點 */
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]) .sr-ico{position:relative}
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]).due .sr-ico::after{content:"";position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
