@@ -1,6 +1,8 @@
 /* 核心｜會長室的「追蹤」面板（設定檔 follow:true 的部門才有）
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
-   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理 */
+   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
+   02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
+   會長室追蹤、秘書處會議的授權、通知「全會」、讀秘書處學年設定都經過這裡 */
 const FW_KIND={live:"即時回報",issue:"進度",done:"完成紀錄",week:"週報"};
 const fwCache=new Map();   /* dept id → {at,data|null,err} */
 const fwDept=id=>(window.BOARD_DEPTS||[]).find(d=>d.id===id);
@@ -8,7 +10,8 @@ async function fwLoad(id,force){
   const c=fwCache.get(id);if(c&&!force&&Date.now()-c.at<3e5)return c;
   const d=fwDept(id);if(!d)return {at:Date.now(),data:null,err:"沒有這個部門"};
   let data=null,err="";
-  try{
+  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){err=STORE_XERR(e)}}
+  else try{
     const cc=cloudCfg(),tok=ghToken();
     if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}`,{headers:{Accept:"application/vnd.github.raw+json",Authorization:"Bearer "+tok},cache:"no-store"});if(r.ok)data=await r.json();else if(r.status===404)err="這個部門還沒有資料"}
     if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="這個部門還沒有資料"}

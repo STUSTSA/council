@@ -30,6 +30,14 @@ function storeModLoad(file,ev,name){
 }
 const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
 function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
+/* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、通知「全會」）跟著那個部門的資料來源：
+   firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
+   回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
+function storeDeptData(id){
+  if(!(CFG.firebase&&CFG.firebase.projectId))return Promise.reject(Object.assign(new Error("firebase"),{code:"unavailable"}));
+  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id)).then(r=>r.data);
+}
+const STORE_XERR=e=>e&&e.code==="permission-denied"?"這個部門已搬到新資料庫，登入後才看得到":"讀不到這個部門的資料";
 /* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除、議題／週報／標籤的刪除（D-d）＝被刪文件的部門；其他（角色、邀請、遷移）不算 */
 const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId
   :(a.col==="cards"&&a.action==="purge")||(["issues","weeks","labels"].includes(a.col)&&a.action==="delete")?(a.before||{}).deptId||"":"";
