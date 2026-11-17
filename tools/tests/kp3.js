@@ -195,7 +195,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
       await goLine(p,k2,(await evOf(p,k2)).blocks[1].id);
       cs=await contrast(p,KE,S(p,k2));ok(cs.length>=8&&!low(cs).length,`深色 編輯中對比都夠（${cs.length} 個，不夠的：${JSON.stringify(low(cs))}）`);
       let wl=await whiteLeft(p);ok(!wl.length,`深色 卡片以外沒有白底殘留（${wl.join(' ')}）`);
-      ok(await p.evaluate(()=>getComputedStyle(document.body).backgroundColor==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#evDetail')).backgroundColor==='rgb(246, 246, 248)'),'深色 頁面黑底、詳情卡淺灰底');
+      ok(await p.evaluate(()=>getComputedStyle(document.body).backgroundColor==='rgb(0, 0, 0)'&&getComputedStyle(document.querySelector('#evDetail')).backgroundColor==='rgb(21, 21, 23)'),'深色 頁面黑底、詳情卡是主題的色塊 --blk（ui-02 起不再強制淺灰）');
       const hair=await p.evaluate(()=>[getComputedStyle(document.querySelector('#evDetail .kp-f')).borderBottomColor,getComputedStyle(document.querySelector('#evDetail')).getPropertyValue('--hair').trim()]);
       ok(hair[0]==='rgb(226, 226, 232)'&&hair[1]==='#e2e2e8',`深色 詳情卡的分隔線是淺色那一組（${hair.join(' ')}）`);
       await outside(p);
