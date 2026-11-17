@@ -70,7 +70,9 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const lineSel=(id,n)=>`${box(id)} .kp-lines:not(.kp-frees) .kp-line:nth-child(${n})`;
   const setType=async(p,id,n,k)=>{await p.click(`${lineSel(id,n)} .kp-type .csel-btn`);await p.waitForTimeout(250);await p.click(`${lineSel(id,n)} .csel-opt[data-v="${k}"]`);await p.waitForTimeout(350)};
   /* 新卡片（小表單：名稱、沒有說明）→ 直接儲存 */
-  const newCard=async(p,name)=>{await p.click('#addEvent');await p.waitForSelector('#dlg[open]');await p.fill('#dlgForm [name="name"]',name);await p.click('#dlg [data-act="ok"]');await settled(p);
+  /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收合打開的卡片 */
+  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});openEv.clear();openDone.clear();selEv=null;render()}).then(()=>p.waitForTimeout(400));
+  const newCard=async(p,name)=>{await liveTop(p);await p.click('#addEvent');await p.waitForSelector('#dlg[open]');await p.fill('#dlgForm [name="name"]',name);await p.click('#dlg [data-act="ok"]');await settled(p);
     const id=await p.evaluate(n=>state.events.find(e=>e.name===n).id,name);await expand(p,id);return id};
   /* 原位編輯：點「沒有說明」開始、每一行打字＋Enter */
   const typeLines=async(p,id,lines)=>{await p.click(`${box(id)} [data-kpgo=""]`);await p.waitForTimeout(500);

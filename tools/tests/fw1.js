@@ -73,10 +73,13 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await m.signInWithCredential(m.getAuth(),m.GoogleAuthProvider.credential(JSON.stringify({sub,email:`${sub}@example.test`,email_verified:true,name:`${sub} 同學`})))},sub);
     return p.waitForFunction(()=>acct.user&&acct.user.uid&&storeFsBase,null,{timeout:10000}).then(()=>p.evaluate(()=>acct.user.uid))};
   const setRole=(uid,depts,sup=false)=>admin(d=>d.doc(`roles/${uid}`).set({super:sup,depts,rev:1,lastVia:'manual',lastRef:'bootstrap',updatedAt:TS.now(),updatedBy:'su'}));
+  /* editBtns：看得到的編輯鈕、新增鈕；部門內一次只顯示一區（ui-04）之後，別的分頁裡、切過去就看得到的也算（以前桌面全部區塊同時顯示） */
   const ui=p=>p.evaluate(()=>({locked:boardLocked(),authed:document.body.classList.contains('authed'),
-    editBtns:[...document.querySelectorAll('.card-edit-btn,.auth-only')].filter(x=>x.offsetParent).length,cards:state.events.length}));
+    editBtns:[...document.querySelectorAll('.card-edit-btn,.auth-only')].filter(x=>x.offsetParent||x.closest('.sgroup:not(.cur)')&&getComputedStyle(x).display!=='none'&&!x.closest('details:not([open])')).length,cards:state.events.length}));
   const toastHas=(p,s)=>until(()=>p.toasts.some(x=>x.includes(s)));
   const settled=p=>until(()=>p.evaluate(()=>!fsBusy&&storeFsBase&&!document.querySelector('#dlg[open]')),15000).then(()=>sleep(300));
+  /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收合打開的卡片 */
+  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});openEv.clear();openDone.clear();selEv=null;render()}).then(()=>p.waitForTimeout(400));
   const dlg=p=>p.waitForSelector('#dlg[open]',{timeout:8000}).then(()=>p.evaluate(()=>document.querySelector('#dlgForm b').textContent));
   const dlgSet=(p,o)=>p.evaluate(o=>{for(const [k,v] of Object.entries(o)){const i=document.querySelector(`#dlgForm [name="${k}"]`);i.value=v}},o);
   const dlgAct=async(p,a)=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(500)};
@@ -179,7 +182,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(await ed.evaluate(id=>!state.events.some(e=>e.id===id),del.id),'刪除：畫面上也不在了');
 
   /* j. 時間標記多的卡片：一次加 5 個（分批建立）、一次拿掉 4 個（規則一批最多 3 個：分兩個版本）、永久刪除時分兩批清除 */
-  await ed.click('#addEvent');await dlg(ed);await dlgSet(ed,{name:'FW 多標記',desc:''});await dlgAct(ed,'ok');await settled(ed);
+  await liveTop(ed);await ed.click('#addEvent');await dlg(ed);await dlgSet(ed,{name:'FW 多標記',desc:''});await dlgAct(ed,'ok');await settled(ed);
   const mid=await ed.evaluate(()=>state.events.find(e=>e.name==='FW 多標記').id);
   await editCard(ed,mid,ev=>{for(let i=1;i<=5;i++)ev.times.push({id:'tmany'+i,label:'標記'+i,start:'2026-12-0'+i,end:'',place:'',toIssue:false})});await settled(ed);
   c=await read(C(mid));let evs=await Promise.all([1,2,3,4,5].map(i=>read(`events/${DEPT}__tmany${i}`)));
@@ -344,7 +347,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await e3.ctx.close();}
 
   /* ---------- 10. 分批儲存中途失敗（02D 審查 P1）：前面的批已寫入 → 重新讀一次、只補寫剩下的；完成這一段的時間標記不會重複 ---------- */
-  {await e2.click('#addEvent');await dlg(e2);await dlgSet(e2,{name:'FW 分批',desc:''});await dlgAct(e2,'ok');await settled(e2);
+  {await liveTop(e2);await e2.click('#addEvent');await dlg(e2);await dlgSet(e2,{name:'FW 分批',desc:''});await dlgAct(e2,'ok');await settled(e2);
     const pid=await e2.evaluate(()=>state.events.find(e=>e.name==='FW 分批').id);
     await editCard(e2,pid,ev=>{ev.times.push({id:'tpart1',label:'分批一',start:'2020-01-01',end:'',place:'',toIssue:false},{id:'tpart2',label:'分批二',start:'2020-01-02',end:'',place:'',toIssue:false})});await settled(e2);
     let n=0,failed=0;

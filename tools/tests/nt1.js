@@ -7,7 +7,10 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const
    {id:'tA',label:'開會',start:t+'T14:00',end:'',place:'行政大樓'},{id:'tB',label:'問卷期間',start:t,end:addDays(t,4),place:''},{id:'tC',label:'明日回覆',start:addDays(t,1),end:'',place:''},
    {id:'tD',label:'副校長約談',start:addDays(t,3)+'T15:30',end:'',place:'副校長室'},{id:'tE',label:'提案收件',start:addDays(t,2),end:addDays(t,5),place:'學生會辦公室'},{id:'tF',label:'成果發表',start:addDays(t,9),end:'',place:'演講廳'}];
    state.issues.forEach(i=>{i.start=t;i.end=addDays(t,1)});render()});
- console.log(w,'badge',await p.evaluate(()=>$('#notiBtn .noti-n').textContent),'(want 3: 開會、問卷期間、明日回覆；議題不算)');
+ /* 鈴鐺數字＝逾期數（ui-04）：上面的時間標記都沒有連到行（沒有勾選狀態）→ 不算，數字是空的；加一行連到過去時間、沒勾的 → 1 */
+ {const bd=await p.evaluate(()=>{const e=state.events.find(x=>!x.doneAt),a=$('#notiBtn .noti-n').textContent;e.times.push({id:'tZ',label:'過期',start:addDays(today(),-2),end:'',place:''});e.blocks=[...(e.blocks||[]),{id:'bZ',text:'過期',check:false,timeId:'tZ'}];render();
+    const b=$('#notiBtn .noti-n').textContent;e.times=e.times.filter(x=>x.id!=='tZ');e.blocks=e.blocks.filter(x=>x.id!=='bZ');render();return [a,b,$('#notiBtn .noti-n').textContent]});
+  console.log(`${bd[0]===''&&bd[1]==='1'&&bd[2]===''?'':'FAIL '}${w} badge 逾期數：時間標記沒有連到行時是空的（${JSON.stringify(bd[0])}），加一行過期沒勾的變 ${bd[1]}，拿掉回到空的`)}
  await p.click('#notiBtn');await p.waitForTimeout(900);
  console.log(w,'cards',await p.evaluate(()=>[...document.querySelectorAll('#notiOv .nd-card')].map(c=>c.querySelectorAll('.nd-row').length+':'+c.classList.contains('today'))));
  console.log(w,'no recent stack',await p.evaluate(()=>!document.querySelector('.nstack')),'poster',await p.evaluate(()=>[$('.pc-mon').textContent.replace(/^\d+/,''),document.querySelectorAll('.pc-e.span').length,Math.max(...[...document.querySelectorAll('.pc-week')].map(x=>+x.style.getPropertyValue('--lanes')))]));

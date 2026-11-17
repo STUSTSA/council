@@ -10,14 +10,13 @@ const p=await mk(w,h,'dark',tag==='m');await p.waitForFunction(()=>!document.get
 await p.evaluate(()=>localStorage.setItem('workboard:ghtoken','T'));
 const ok=(c,m)=>{console.log((c?'OK  ':'FAIL')+' '+tag+' '+m);if(!c)bad++};
 const sec=async k=>{await p.evaluate(k=>{setSection(k,{instant:true});if(k==='progress')progShow(null)},k);await p.waitForTimeout(500)};
-/* box：正在編輯的那張（data-edbox）；手機一次只顯示一區，進度區的工具切過去再看 */
+/* box：正在編輯的那張（data-edbox）；部門內一次只顯示一區（2026-11-17 ui-04 起手機、桌面都是），進度區的工具切過去再看 */
 const st=async box=>{const r=await p.evaluate(box=>{const V=x=>x.checkVisibility({visibilityProperty:true}),vis=s=>[...document.querySelectorAll(s)].filter(V).length;
   const inBox=x=>box&&(x.closest(`[data-edbox="${box}"]`)||x.closest('#evDetail.sec-edit,#evDetail .sec-edit'));
   return {editing,cardEdit,secBtns:document.querySelectorAll('[data-secedit]').length,headerEdit:!!document.getElementById('editBtn'),
    pens:[...document.querySelectorAll('[data-evpen],[data-ifpen],.kp')].filter(V).length,pensOut:[...document.querySelectorAll('[data-evpen],[data-ifpen],.kp')].filter(x=>V(x)&&!inBox(x)).length,
    evDel:vis('#events [data-evdel],#evDetail [data-evdel]'),editBtns:vis('.card-edit-btn'),addEv:vis('#addEvent'),bars:vis('.card-edbar')}},box);
-  if(tag==='m'){const cur=await p.evaluate(()=>curSec);await sec('progress');const r2=await p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {range:[...document.querySelectorAll('.range')].filter(V).length,addIssue:[...document.querySelectorAll('#addIssue')].filter(V).length,ganttBtn:[...document.querySelectorAll('#ganttEdBtn')].filter(V).length}});await sec(cur);return {...r,...r2}}
-  return {...r,...await p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {range:[...document.querySelectorAll('.range')].filter(V).length,addIssue:[...document.querySelectorAll('#addIssue')].filter(V).length,ganttBtn:[...document.querySelectorAll('#ganttEdBtn')].filter(V).length}})}};
+  {const cur=await p.evaluate(()=>curSec);await sec('progress');const r2=await p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {range:[...document.querySelectorAll('.range')].filter(V).length,addIssue:[...document.querySelectorAll('#addIssue')].filter(V).length,ganttBtn:[...document.querySelectorAll('#ganttEdBtn')].filter(V).length}});await sec(cur);return {...r,...r2}}};
 let s0=await st();ok(!s0.editing&&!s0.headerEdit&&s0.pens===0&&s0.evDel===0&&s0.editBtns===0&&s0.addIssue===0&&s0.range===0,'沒登入：沒有任何編輯工具、頁首沒有「編輯」 '+JSON.stringify(s0));
 await login(p);
 await sec('live');
