@@ -11,6 +11,7 @@
    8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：ID 不合格的文件不顯示、欄位值跳脫，總管理員打開看板不執行（跑在第 6 段之前）
    9. 中斷的永久刪除（timeIds 有不存在的時間標記）不擋別的修改、會接著清完；兩個編輯者同時接著清不會卡住（02D 審查 P1）
    10. 分批儲存中途失敗（route 擋下第二個 commit）：重新讀、只補寫剩下的，完成這一段的時間標記不重複（02D 審查 P1）
+   11. 裝置上 github 模式留下的本機暫存（比 Firestore 新、帶雲端設定與權杖）：切到 firestore 後不讀進畫面、不存回 Firestore、不讀寫 GitHub（02D D-e）
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');
@@ -53,15 +54,16 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
 
   const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
   const pages=[];
-  const open=async(dept=DEPT,fsDepts=[DEPT])=>{
+  const open=async(dept=DEPT,fsDepts=[DEPT],init=null)=>{
     const ctx=await b.newContext({viewport:{width:900,height:850},serviceWorkers:'block'});
+    if(init)await ctx.addInitScript(init.fn,init.arg);   /* 開頁前先放進這台裝置的東西（第 11 段：github 模式留下的本機暫存） */
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
     await ctx.route('https://www.gstatic.com/firebasejs/**',r=>{const f=path.join(ROOT,'backend/node_modules/firebase',r.request().url().split('/').pop());r.fulfill({contentType:'text/javascript',body:fs.readFileSync(f,'utf8')})});
-    const puts=[];await ctx.route('https://api.github.com/**',r=>{if(r.request().method()!=='GET')puts.push(r.request().url());r.fulfill({status:404,body:'{}'})});
+    const puts=[],gets=[];await ctx.route('https://api.github.com/**',r=>{if(r.request().method()!=='GET')puts.push(r.request().url());else gets.push(r.request().url());r.fulfill({status:404,body:'{}'})});
     await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc;for(const x of fsDepts)s=s.replace(new RegExp(`(\\{ id: "${x}",[^\\n]*?)( \\},?\\n)`),`$1, source: "firestore"$2`);
       s=s.replace(/firebase: \{[^}]*\}/,`firebase: { apiKey: "demo-key", authDomain: "", projectId: "${PROJECT}", appId: "", emulator: { host: "${h}", port: ${pt}, auth: "http://${AEMU}" } }`);
       r.fulfill({contentType:'text/javascript',body:s})});
-    const p=await ctx.newPage();p.errs=[];p.toasts=[];p.puts=puts;p.on('pageerror',e=>p.errs.push(e.message));
+    const p=await ctx.newPage();p.errs=[];p.toasts=[];p.puts=puts;p.gets=gets;p.on('pageerror',e=>p.errs.push(e.message));
     await p.exposeFunction('__toast',m=>p.toasts.push(m));
     await p.addInitScript(()=>{new MutationObserver(()=>{const t=document.querySelector('#toast');if(t&&t.textContent&&t.classList.contains('show'))window.__toast(t.textContent)}).observe(document,{subtree:true,childList:true,characterData:true,attributes:true})});
     await p.goto(`${BASE}/index.html?d=${dept}`);
@@ -349,6 +351,33 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     ok(rc&&rc.state==='done'&&rc.version===2&&pc.timeIds.length===0&&evs.length===2&&evs.every(x=>x.cardId===`${DEPT}__${rec}`)&&!(await read(`events/${DEPT}__tpart1`)),
       `補寫後收斂：完成紀錄 done（第 2 版）、原卡片的時間標記拿掉、時間標記只有 2 份都在完成紀錄（${evs.length} 份，沒有重複）`);
     ok(await e2.evaluate(()=>!editing&&!document.querySelector('#dlg[open]')),'補寫成功：結束編輯、沒有跳出儲存失敗');}
+
+  /* ---------- 11. 裝置上 github 模式留下的本機暫存（02D D-e）：部門切到 firestore 後不會被讀進畫面、也不會被存回 Firestore ----------
+     這台裝置在切換前用 github 模式開過權益部：localStorage 的 workboard:board-main 有一份比 Firestore「新」的看板（savedAt 2099、多一張卡片、改過的名稱）、
+     還有雲端設定（sync）與權杖。切換後：讀到的只有 Firestore；儲存只寫畫面上的修改；本機暫存原封不動；不讀 GitHub。讀取失敗（未登入）時也不拿本機暫存頂上 */
+  {const fileData=JSON.parse(fs.readFileSync(path.join(ROOT,'data.json'),'utf8'));
+    const stale={...fileData,savedAt:'2099-01-01 00:00',title:'LOCAL 舊暫存看板',sync:{owner:'stale-owner',repo:'stale-repo',branch:'main',path:'data.json'},
+      events:[...fileData.events.map((e,i)=>i===0?{...e,name:'LOCAL 舊名稱'}:e),{id:'eLOCAL1',name:'LOCAL 舊暫存卡片',desc:'',createdAt:'2026-11-01',staff:[],links:[],times:[],round:1,touched:[]}]};
+    const seedLocal={fn:s=>{try{if(!sessionStorage.getItem('seeded')){localStorage.setItem('workboard:board-main',s);localStorage.setItem('workboard:ghtoken','stale-token');sessionStorage.setItem('seeded','1')}}catch(_){}},arg:JSON.stringify(stale)};
+    const anon=await open(DEPT,[DEPT],seedLocal);
+    const a=await anon.evaluate(()=>({cards:state.events.length,local:state.events.some(e=>e.id==='eLOCAL1'||e.name.startsWith('LOCAL')),title:state.title,base:!!storeFsBase,sync:!!state.sync}));
+    ok(!a.local&&a.title!=='LOCAL 舊暫存看板'&&!a.base&&!a.sync,`本機暫存（未登入、讀取被拒）：畫面不拿本機暫存頂上（${JSON.stringify(a)}）`);
+    ok(await anon.evaluate(()=>persist('x'))===false,'本機暫存（未登入）：儲存不寫入');
+    const e3=await open(DEPT,[DEPT],seedLocal);const e3Uid=await signIn(e3,'e3');await setRole(e3Uid,{[DEPT]:'editor'});
+    await until(async()=>!(await ui(e3)).locked);
+    const live=await read(`deptSettings/${DEPT}`);
+    const s1=await e3.evaluate(()=>({local:state.events.some(e=>e.id==='eLOCAL1'||e.name.startsWith('LOCAL')),title:state.title,sync:!!state.sync}));
+    ok(!s1.local&&s1.title===live.title&&!s1.sync,'本機暫存（編輯者登入後）：看板＝Firestore 的內容（沒有本機的卡片、名稱、雲端設定）');
+    const tgt=await e3.evaluate(()=>state.events.find(e=>!e.doneAt).id);
+    await editCard(e3,tgt,ev=>{ev.blocks=[...(ev.blocks||[]),{id:'bl'+Date.now(),text:'切換後的修改',check:null,timeId:null}];ev.desc=(ev.desc?ev.desc+'\n':'')+'切換後的修改'});await settled(e3);
+    const c=await read(C(tgt));
+    ok(c&&JSON.stringify(c.blocks).includes('切換後的修改'),'本機暫存：編輯者的修改照常寫進 Firestore');
+    ok(!(await read(C('eLOCAL1')))&&!JSON.stringify(await read(C(fileData.events[0].id))||'').includes('LOCAL 舊名稱')&&(await read(`deptSettings/${DEPT}`)).title!=='LOCAL 舊暫存看板',
+      '本機暫存：沒有被存回 Firestore（沒有本機那張卡片、改過的名稱、看板名稱）');
+    const kept=await e3.evaluate(()=>{const s=JSON.parse(localStorage.getItem('workboard:board-main')||'null');return s&&s.title});
+    ok(kept==='LOCAL 舊暫存看板','本機暫存：firestore 模式不讀也不改它（原封不動，切回 github 時照原本的規則處理）');
+    ok(!anon.gets.length&&!e3.gets.length&&!anon.puts.length&&!e3.puts.length,'本機暫存裡有雲端設定與權杖：firestore 模式不讀、不寫 GitHub');
+    await anon.ctx.close();}
 
   /* ---------- 6. 其他部門不受影響、沒有頁面錯誤 ---------- */
   const after=await others();
