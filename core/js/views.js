@@ -209,7 +209,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
 }
 
 /* ===== 即時回報、完成紀錄、秘書處會議卡共用的小片段 =====
-   即時回報專屬的畫面（狀態列、原位編輯器、時間選取器、膠囊 evCapHTML、右側詳情 evDetailHTML、整區 renderEvents）在 live.js。 */
+   即時回報專屬的畫面（膠囊、卡片、逐行內容、時間頁、整區 renderEvents）在 live.js。 */
 /* 時間標記清單（即時回報區、完成紀錄、秘書處會議卡共用）；free＝只列沒有連到任何一行的（即時回報：連到行的畫在那一行上） */
 function evTimesHTML(ev,free){
   const par=parentOf(ev),ts=free?evFreeTimes(ev):evTimesSorted(ev);if(!ts.length)return "";
@@ -274,10 +274,6 @@ function evFieldsHTML(ev){
         ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):ev.links.length<StoreMap.LNK_MAX?`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`:""}</div>
     </div>`;
 }
-/* 左右兩欄詳情卡上的「上一個／下一個」（開會時照清單順序一路講下去；鍵盤左右鍵同功能，見 motion.js） */
-function mdStepHTML(k,ids,id){const i=ids.indexOf(id);
-  return `<span class="md-step"><button type="button" class="icon" data-mdstep="${k}" data-dir="-1" ${i<=0?"disabled":""} aria-label="上一個">${ico("prev")}上一個</button><button type="button" class="icon" data-mdstep="${k}" data-dir="1" ${i<0||i>=ids.length-1?"disabled":""} aria-label="下一個">下一個${ico("next")}</button></span>`}
-
 /* 完成紀錄（DESIGN-next 第七節「完成紀錄」）：一筆一顆膠囊（半透明、右邊完成日），點了打開卡片——跟即時回報同一套卡片外框（live.js 的 lcFrame），
    寬螢幕在右邊、其他全螢幕。完成的即時回報：狀態「完成」、負責人、完成日、逐行內容唯讀、編輯次數；結案的議題：完成日、期間、階段、處理紀錄、連結。
    有權限的人卡片最下面「編輯」＝原本的逐欄編輯（doneFieldsHTML；議題的「取消結案」、即時回報的「移回即時回報」照舊在編輯中，位置不變）。 */
@@ -313,6 +309,4 @@ function renderDone(){
   if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   prevDone=ids;lcFullSync();Anim.syncPings();
 }
-/* 左右兩欄時換選一筆：右側內容淡入（完成紀錄與個別進度共用） */
-function mdPaneIn(el){if(el&&!reduceMotion())el.animate([{opacity:0,transform:"translateX(14px)"},{opacity:1,transform:"none"}],{duration:280,easing:"cubic-bezier(.2,.9,.25,1)"})}
 

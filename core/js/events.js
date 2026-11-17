@@ -45,15 +45,11 @@ document.addEventListener("click",async e=>{
   /* 以下都是編輯中那張卡片裡的工具（即時回報卡的原位編輯在 live.js） */
   if(!editing)return;
 
-  const evAct=t.closest("[data-evdone],[data-evundo],[data-evdel]");
+  /* 完成紀錄卡片（編輯中）的「移回即時回報」「刪除」：卡片會離開原本的位置（找不到它的「儲存」），做完直接儲存、結束這次編輯。
+     即時回報卡的完成、刪除是拖到角落（live.js 的 lvComplete／lvDelete） */
+  const evAct=t.closest("[data-evundo],[data-evdel]");
   if(evAct){e.preventDefault();const ev=evOf(evAct);
-    /* 結案、移回、刪除都會讓這張卡片離開原本的位置（找不到它的「儲存」）：做完直接儲存，結束這次編輯。
-       原位編輯中的卡片結案時先走跟點外面一樣的檢查與整理（kpReady：時間選取器、名稱與超連結的按鈕名稱不能空白、blocks 同步 desc；03 審查 P2-6）。
-       刪除不檢查（03 F2：名稱被清空也能直接刪，不用先填回名稱）：只收掉開著的時間選取器 */
-    const inKp=kp&&kp.id===ev.id&&cardEdit==="e:"+ev.id;
-    if(inKp&&evAct.dataset.evdel===undefined&&evAct.dataset.evundo===undefined&&!kpReady(ev))return;
-    if(evAct.dataset.evdone!==undefined){if(!fldCommitOpen())return;ev.doneAt=today();evTouch(ev);syncLink(ev);dirty=true;await saveFlow();toast(parentOf(ev)?`已結案，並記錄到「${parentOf(ev).title}」`:"已結案，移到完成紀錄")}
-    else if(evAct.dataset.evundo!==undefined){if(!fldCommitOpen())return;ev.doneAt=null;evTouch(ev);syncLink(ev);dirty=true;await saveFlow()}
+    if(evAct.dataset.evundo!==undefined){if(!fldCommitOpen())return;ev.doneAt=null;evTouch(ev);syncLink(ev);dirty=true;await saveFlow()}
     else{const n=(ev.times||[]).length;   /* 刪除是永久的（D16）：有時間標記再確認一次，寫出會一起刪掉幾個 */
       const v=await ask((ev.name||"").trim()?`刪除「${ev.name.trim()}」？`:"刪除這張卡片？",[],{danger:"刪除"});if(v!=="delete")return;
       if(n&&await ask(`一起刪掉 ${n} 個時間標記？`,[],{danger:"刪除"})!=="delete")return;
@@ -67,25 +63,6 @@ document.addEventListener("click",async e=>{
   const ipen=t.closest("[data-ifpen]");if(ipen){const r=ipen.closest("[data-ifid]");
     if(!fldCommitOpen())return;evFld=null;ifFld={t:r.dataset.ift,id:r.dataset.ifid,k:ipen.dataset.ifpen};render();ifFldFocus();return}
   const ifx=t.closest("[data-iffx]");if(ifx){ifFldAct(ifx);return}
-  /* 右側詳情（編輯中）：完成這一段的展開框 */
-  const evd=t.closest("#evDetail [data-evd]");
-  if(evd){const ev=evOf(evd),k=evd.dataset.evd,box=$("#evDetail .evd-round");
-    /* 展開的當下才用目前的逐行內容填「這一段完成了什麼」（畫面是開始編輯時畫的，之後打的字不會在裡面；03 審查 P1-3） */
-    if(k==="round"){const ta=box.querySelector('[data-rf="done"]');ta.value=kpDescNow(ev);Anim.show(box,"down");ta.focus();return}
-    if(k==="roundcancel"){Anim.hide(box);return}
-    if(k==="roundok"){const f=n=>box.querySelector(`[data-rf="${n}"]`),d=f("done").value.trim(),nx=f("next").value.trim(),m=descTooBig(d)?"done":descTooBig(nx)?"next":"";
-      if(m){toast(descTooBig(m==="done"?d:nx));f(m).focus();return}   /* 行數、每行字數的上限跟膠囊的對話框同一組（descTooBig） */
-      evRoundDone(ev,d,nx);return}
-    return}
-  /* 膠囊裡的「完成這一段」：填對話框（右側詳情用上面的展開框）；evRoundDone 把這段的內容複製一份到完成紀錄，卡片留著進入下一段 */
-  const evRound=t.closest("[data-evround]");
-  if(evRound){const ev=evOf(evRound);
-    const v=await ask(`完成「${ev.name}」第 ${ev.round} 段`,[
-      {name:"done",label:"這一段完成了什麼（存進完成紀錄）",type:"textarea",rows:4,value:kpDescNow(ev)},
-      {name:"next",label:"下一段要追蹤什麼（取代卡片上的說明；留空就沿用）",type:"textarea",rows:3}],{validate:o=>descTooBig(o.done)||descTooBig(o.next)});
-    if(!v)return;
-    evRoundDone(ev,v.done||"",v.next||"");return}
-
 
   /* issues */
   if(t.closest("#autoRange")){const ds=state.issues.flatMap(i=>[i.start,i.end,...i.markers.map(m=>m.date)]).filter(Boolean).sort();if(!ds.length){toast("還沒有填日期的議題");return}state.range={start:ds[0].slice(0,7),end:ds[ds.length-1].slice(0,7)};changed();return}
@@ -98,21 +75,10 @@ document.addEventListener("click",async e=>{
   if(mv){const list=activeIssues();const k=list.indexOf(it),o=list[k+(+mv.dataset.move)];if(o){const a=state.issues.indexOf(it),b=state.issues.indexOf(o);[state.issues[a],state.issues[b]]=[o,it];changed()}return}
   if(t.closest("[data-addmarker]")){const tr=t.closest("[data-issue]").querySelector(".c-track");tr.scrollIntoView({behavior:"smooth",block:"center"});makePending(tr,schedPct(it)??50);toast("把虛線標記拖到想要的位置後放開");return}
 });
-document.addEventListener("toggle",e=>{const d=e.target;if(d.classList&&d.classList.contains("week")&&!d.classList.contains("closing")){openWeeks=openWeeks||new Set();d.open?openWeeks.add(d.dataset.week):openWeeks.delete(d.dataset.week)}if(d.classList&&d.dataset.done){const id=d.dataset.issue||d.dataset.ev;d.open?openDone.add(id):openDone.delete(id);fabSync()}if(d.classList&&d.classList.contains("ev")&&!d.dataset.done){d.open?openEv.add(d.dataset.ev):openEv.delete(d.dataset.ev);fabSync();
-    if(!d.open&&kpSt&&kpSt.id===d.dataset.ev&&!editing){kpSt=null;d.querySelector(".kp-done")?.remove()}}},true);   /* 收合＝「復原這次修改」消失 */
+document.addEventListener("toggle",e=>{const d=e.target;if(d.classList&&d.classList.contains("week")&&!d.classList.contains("closing")){openWeeks=openWeeks||new Set();d.open?openWeeks.add(d.dataset.week):openWeeks.delete(d.dataset.week)}},true);
 ["rStart","rEnd"].forEach(id=>$("#"+id).addEventListener("change",e=>{const k=id==="rStart"?"start":"end";if(e.target.value){state.range[k]=e.target.value;if(state.range.end<state.range.start)state.range.end=state.range.start;changed()}}));
 
 const evOf=el=>{const m=mtOf(el);return (m?m.data:state).events.find(x=>x.id===el.closest("[data-ev]").dataset.ev)};   /* 元素所在的即時回報（膠囊、完成紀錄、右側詳情都帶 data-ev）；秘書處面板裡的卡片屬於別的部門（meeting.js） */
-/* 完成這一段：把這段的內容複製一份到完成紀錄（已經過去的時間標記跟著走），卡片留著進入下一段 */
-function evRoundDone(ev,done,next){
-  const now=nowStr().replace(" ","T"),past=ev.times.filter(x=>x.start<=now);
-  const rec={id:uid("e"),name:ev.name,createdAt:ev.createdAt,doneAt:today(),issueId:ev.issueId||null,links:ev.links.map(l=>({...l})),staff:[...ev.staff],labels:[...(ev.labels||[])],times:past,round:ev.round,fromEv:ev.id};
-  evSetDesc(rec,done||"");
-  ev.times=ev.times.filter(x=>!past.includes(x));ev.round+=1;ev.roundAt=now;if(next)evSetDesc(ev,next);else evBlocksFix(ev);evTouch(ev);
-  if(kp&&kp.id===ev.id)kp.noUndo=true;   /* 這次修改還動到完成紀錄：不提供「復原這次修改」 */
-  state.events.push(rec);syncLink(ev);syncLink(rec);openEv.add(ev.id);changed();
-  toast(`第 ${rec.round} 段已存進完成紀錄，接著追第 ${ev.round} 段`);
-}
 /* ---------- 即時回報的逐欄編輯（畫面在 views.js 的 evFieldsHTML） ----------
    按「完成」（或點別欄、按卡片的「儲存」）寫回 state；按「取消」（或 Esc）放棄這一欄的修改。Enter＝完成，說明欄是 Ctrl／⌘＋Enter（鍵盤處理在本檔後面） */
 function evFldFocus(){fldFocus($("#evDetail .evf.open")||document.querySelector("#events .evf.open"))}
@@ -144,7 +110,7 @@ function evFldWrite(box){
   const ev=evOf(box),before=JSON.stringify(ev);
   if(!fldApply(box,ev,box.dataset.evfk))return false;
   if(JSON.stringify(ev)===before)return true;   /* 沒改東西：不算「更新」，燈號不動 */
-  evTouch(ev);syncLink(ev);openEv.add(ev.id);dirty=true;return true;
+  evTouch(ev);syncLink(ev);dirty=true;return true;
 }
 /* ---------- 進度、完成紀錄的逐欄編輯：按鈕與存回 ----------
    跟即時回報一樣：按「完成」才寫回 state；議題的階段（stg）在打開的欄位裡直接加列、刪列、換「目前」，按完成才一起存 */
@@ -267,7 +233,3 @@ $("#importFile").addEventListener("change",async e=>{
 /* 關分頁、重新整理前：編輯中有改動就提醒（原位編輯的判斷 kpDirty 在 live.js） */
 window.addEventListener("beforeunload",e=>{if(editing&&(dirty||kpDirty())){e.preventDefault();e.returnValue=""}});
 
-/* Esc：收起即時回報／完成紀錄的右側（有對話框、設定或通知層開著時不管） */
-document.addEventListener("keydown",e=>{if(e.key!=="Escape"||setOpen||notiOpen||$("#dlg").open)return;
-  const k=selEv&&mdOn("live")?"live":selDone&&mdOn("done")?"done":null;if(!k)return;
-  if(document.activeElement&&document.activeElement.closest&&document.activeElement.closest(MD[k].pane))document.activeElement.blur();mdSelect(k,MD[k].get())});

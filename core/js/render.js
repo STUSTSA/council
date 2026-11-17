@@ -1,5 +1,5 @@
 /* 核心｜整體重繪＋區塊切換 */
-let openWeeks=null,newWeekId=null,prevDone=null,openDone=new Set(),openEv=new Set(),editing=false,dirty=false,snapshot="",keepIds=new Set();
+let openWeeks=null,newWeekId=null,prevDone=null,editing=false,dirty=false,snapshot="",keepIds=new Set();
 
 /* ---------- timeline math ---------- */
 /* 甘特圖看的範圍（2026-11-05）：「全部」＝設定的時間軸（state.range）；「上學期」＝8 月～隔年 1 月；「下學期」＝2 月～7 月。
@@ -99,14 +99,8 @@ function render(){
 const SECS=["live","progress","done","ext"].filter(secTab);
 let curSec=(SECS.includes(appStartSec)&&appStartSec)||SECS[0]||"live",secTok=0;   /* appStartSec：app.js 留下的初始區塊（現在都是空的，從第一個區塊開始） */
 const isPhone=()=>matchMedia("(max-width:640px)").matches;
-function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec));
-  /* 切換區塊時，個別進度／完成紀錄要不要改成左右兩欄跟著變 */
-  if(mdOn("live")!==mdLast.live)renderEvents();if(mdOn("done")!==mdLast.done)renderDone()}
-/* 桌面（1000px 以上）、區塊被選到放大成全寬時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
-const MD_MQ=matchMedia("(min-width:1000px)");
-const mdOn=sec=>MD_MQ.matches&&curSec===sec;
-let progOpen=null,selDone=null,selEv=null;const mdLast={};
-MD_MQ.addEventListener("change",()=>render());
+function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec))}
+let progOpen=null;   /* 進度：甘特圖／議題詳情切換（views.js 的 progShow）。即時回報、完成紀錄的左右兩欄在 live.js（lvWide） */
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
   const tok=++secTok,prev=curSec,lay=document.querySelector(".layout"),sc=$("#pageMain");
