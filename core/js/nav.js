@@ -179,6 +179,8 @@ const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div>
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 /* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
 const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
+/* 「外觀」：firestore 模式登入後在「帳號」合併頁裡；其他情況（舊的看板登入、沒登入、唯讀）是設定清單最後一列 */
+const lookSec=()=>setSec(setRow("look","sliders","外觀"));
 const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=>w.date).sort().pop())}`:"還沒有週報";
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
@@ -186,8 +188,8 @@ function settingsInner(){
   if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
   if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
-    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec();
-  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec();
+    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec()+lookSec();
+  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec()+lookSec();
   const rem=remRead(),remName=rem&&(state.members.find(m=>m.id===rem.id)||{}).name,t=termCfg();
   return setSec(setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"))+
     setSec(setRow("title","edit","看板名稱",state.title)+
@@ -196,8 +198,31 @@ function settingsInner(){
       (termOwn()?setRow("term","calendar","學年與開學日",`${t.yearLabel||"學年未設定"}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"}`):""))+
     setSec(setRow("backup","download","備份")+
       setRow("device","device","這台裝置",remName?`記住：${remName}`:"沒有記住身分"))+
-    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"");
+    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
+/* ---------- 設定頁：外觀（主題、深淺色、音效；設定存取在 core/js/theme.js 的 UI） ----------
+   淺色／深色的分段切換（anim.js 的 LiquidSeg）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
+   每顆主題按鈕帶自己的 data-pal，按鈕裡的顏色變數就是那一組主題的顏色（深淺跟著目前的 data-theme，見 core/theme.css）。
+   畫在合併頁（hubRun）下面：firestore 模式登入後在「帳號」（account.js 的 acctHub），其他情況在設定清單的「外觀」（SET_HUBS.look） */
+function lookHTML(head){
+  const u=UI.get();
+  return `<section class="look">${head?'<b class="look-t">外觀</b>':""}
+    <div class="lseg look-mode" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
+    <div class="look-pals" role="radiogroup" aria-label="主題">${UI_PALS.map(([k,t])=>`<button type="button" class="look-pal" role="radio" data-look-pal="${k}" data-pal="${k}" aria-checked="${u.pal===k}"><span class="look-sw" aria-hidden="true"><i></i><i></i><i></i></span>${t}</button>`).join("")}</div>
+    <div class="look-row"><span id="lookSndL">音效</span><button type="button" class="sw${u.sound?" on":""}" data-look-snd role="switch" aria-checked="${u.sound}" aria-labelledby="lookSndL"><i aria-hidden="true"></i></button></div></section>`;
+}
+function lookMount(box){const sg=box.querySelector(".look-mode");if(sg&&!sg._seg)sg._seg=new LiquidSeg(sg,{onPick:k=>UI.set({mode:k})})}
+/* 設定一變（這裡點的、系統深淺色換了、別的分頁改的）：畫面上的外觀區原地更新，不重畫（分段切換的鏡片才滑得過去） */
+function lookSync(){const u=UI.get();document.querySelectorAll(".look").forEach(el=>{
+  const sg=el.querySelector(".look-mode");if(sg&&sg._seg)sg._seg.set(u.mode);
+  el.querySelectorAll("[data-look-pal]").forEach(b=>b.setAttribute("aria-checked",b.dataset.lookPal===u.pal));
+  const sw=el.querySelector("[data-look-snd]");if(sw){sw.classList.toggle("on",u.sound);sw.setAttribute("aria-checked",u.sound)}})}
+document.addEventListener("uichange",lookSync);
+document.addEventListener("click",e=>{
+  if(!e.target.closest)return;
+  const p=e.target.closest("[data-look-pal]");if(p){UI.set({pal:p.dataset.lookPal});return}
+  if(e.target.closest("[data-look-snd]"))UI.set({sound:!UI.get().sound});
+});
 /* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
 function settingsHTML(){
@@ -330,12 +355,12 @@ function forgetDevice(){remClear();if(!editing){meId="";sessionPw="";sharedPwSes
    - act（直接執行的，例如匯出備份、忘記這台裝置）：合併頁留著，執行完更新文字。
    返回（子頁的「返回」、系統返回、Esc）一次退一層：先退出功能回到合併頁，再退才離開（paneDismiss）。 */
 let hubNow=null;
-function hubRun(title,rows,foot=()=>""){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟） */
+function hubRun(title,rows,foot=()=>"",mount){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟、外觀）；mount(box)：每次畫完之後（外觀的分段切換） */
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync()};
+    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync();if(mount)mount(box)};
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{
@@ -363,6 +388,8 @@ const SET_HUBS={
     return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",sub:"",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}])]},
     ()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""),
+  /* 外觀：沒有「帳號」合併頁時（舊的看板登入、沒登入、唯讀）的入口，內容跟帳號裡的外觀同一份（lookHTML） */
+  look:()=>hubRun("外觀",()=>[],()=>lookHTML(false),lookMount),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
@@ -391,7 +418,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」「外觀」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);

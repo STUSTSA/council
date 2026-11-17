@@ -221,7 +221,7 @@ let drag=null;
 function makePending(tr,pct){
   tr.querySelector(".marker.pending")?.remove();
   const el=document.createElement("div");el.className="marker up pending";el.dataset.marker="__pending";
-  el.style.left=pct+"%";el.style.setProperty("--mc","var(--acc)");
+  el.style.left=pct+"%";el.style.setProperty("--mc","var(--tone)");
   el.innerHTML='<span class="stem"></span><span class="dot"></span><span class="lbl">拖到位置後放開</span>';
   tr.append(el);layoutTrack(tr);return el;
 }

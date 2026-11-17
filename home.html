@@ -7,14 +7,15 @@
 <meta name="description" content="南臺科技大學學生會各部門的工作看板入口。">
 <link rel="icon" href="dept/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="dept/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#f5f0e1">
+<link rel="stylesheet" href="core/theme.css">
+<script src="core/js/theme.js"></script>   <!-- 主題、深淺色：開頁前套好（跟看板同一份設定） -->
 <link rel="stylesheet" href="core/splash.css">
 <link rel="manifest" href="manifest.webmanifest">   <!-- 2026-11-06：全會共用一個 App，打開就是這一頁（core/js/app.js 的說明） -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="學生會看板">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -22,8 +23,8 @@
 /* 各部門總覽（2026-11-06 第四版）。版面參考使用者給的網頁：導覽列、左邊大標題、右邊一排可以左右拖的卡片、下面箭頭與進度條。
    使用者：卡片整張都是霧面漸層（不要包成一塊）；卡片列兩端淡出、不要硬切；拖起來要流暢、Q 彈；點下去要有過渡；會長室／秘書處不要在三個地方重複。
    App 打開：學生會開場動畫（core/js/splash.js）→ 這一頁。卡片內容都是固定文字，大小固定。自成一頁，不載入看板程式 */
-:root{--bg:#efefef;--ink:#141416;--muted:#77777f;--hair:#d6d6da;--pill:#e4e4e7;--ease:cubic-bezier(.2,.9,.25,1);--spring:cubic-bezier(.34,1.5,.5,1);color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#050506;--ink:#f1f1f4;--muted:#8d8d96;--hair:#2a2a30;--pill:#1b1b1f;color-scheme:dark}}
+/* 顏色跟看板同一組主題變數（core/theme.css；--bg、--blk、--ink、--muted、--hair…），這裡不另外寫顏色、也不另寫深色 */
+:root{--pill:var(--blk);--ease:cubic-bezier(.2,.9,.25,1);--spring:cubic-bezier(.34,1.5,.5,1)}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;-webkit-tap-highlight-color:transparent;background:var(--bg);color:var(--ink);font-family:"Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif;-webkit-font-smoothing:antialiased}   /* 數字、英文用 Jost（跟看板一致），中文落到 Noto Sans TC */
 body{overflow-x:hidden}
@@ -38,7 +39,7 @@ a{color:inherit}
 .mk-under{fill:var(--bg)}
 .mk-line{display:none}   /* 深色（單色）：標誌換成使用者提供的單色線稿（左邊小人線框、右邊小人實心，跟看板頁首、開場同一份；2026-11-11 使用者）。線太細，另外描一圈不隨縮放變粗的細線 */
 .mk-line path{fill:var(--ink);stroke:var(--ink);stroke-width:.75px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-@media (prefers-color-scheme:dark){.hm-svg :is(.mk-under,.mk-y,.mk-b){display:none}.hm-svg .mk-line{display:inline}}
+[data-theme="dark"] .hm-svg :is(.mk-under,.mk-y,.mk-b){display:none}[data-theme="dark"] .hm-svg .mk-line{display:inline}
 .date{display:flex;align-items:center;padding:9px 16px;border-radius:999px;background:var(--pill);font-size:12.5px;letter-spacing:.06em;white-space:nowrap}
 /* --- 主區：大標題、左欄說明、右邊卡片列 --- */
 .main{position:relative;z-index:1;flex:1;display:grid;grid-template-columns:minmax(180px,230px) minmax(0,1fr);grid-template-rows:auto 1fr;gap:28px 24px;padding-top:clamp(36px,8vh,90px)}
