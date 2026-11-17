@@ -231,7 +231,8 @@ function notiInner(){
 }
 /* ---------- 逾期（DESIGN-next 第九節）：卡片堆只列逾期的時間（定義跟標題列通知鈕的數字一樣，notiLateItems） ----------
    一次一張、後面露出兩張；最上面那張跟手指走並傾斜：左滑＝延後（明天同一時刻，notiPostpone）、右滑＝改成具體時間（打開那張卡片的時間頁，notiRetime）。
-   下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity */
+   下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity。
+   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時卡片堆照樣看得到，但沒有延後／改時間鈕、卡片拖不動（ui-06 審查 P1-1） */
 function dkCardHTML(x,i){
   const d=x.t.start.slice(0,10),en=(x.t.end||"").slice(0,10),tm=x.t.start.slice(11,16);
   return `<div class="dk-card" data-dk="${esc(x.t.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':""}>
@@ -241,13 +242,14 @@ function dkCardHTML(x,i){
   </div>`;
 }
 function lateHTML(){
-  const xs=notiLateItems();if(!xs.length)return "";
+  const xs=notiLateItems(),ed=canEdit();if(!xs.length)return "";
   return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="nt-h" id="ntLateH"><span class="nt-en">OVERDUE</span>逾期</h3>
-    <div class="dk-stack" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
-    <div class="dk-ctl"><button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button><span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span><button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button></div></section>`;
+    <div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
+    <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div></section>`;
 }
 /* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著） */
 function notiPostpone(evId,tid){
+  if(!canEdit())return false;
   const tm=addDays(today(),1);
   return settingSave(()=>{const ev=state.events.find(e=>e.id===evId),t=ev&&(ev.times||[]).find(y=>y.id===tid);if(!t)return false;
     const sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
@@ -257,6 +259,7 @@ function notiPostpone(evId,tid){
 }
 /* 改成具體時間：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
 async function notiRetime(evId,tid){
+  if(!canEdit())return false;
   closeNoti(true,"live");
   if(!state.events.some(e=>e.id===evId&&!e.doneAt))return;
   lcShow("live",evId);
@@ -266,7 +269,7 @@ async function notiRetime(evId,tid){
 }
 /* 最上面那張飛出去（dir：l 往左＝延後、r 往右＝改時間），播完才做 */
 function dkFly(card,dir,from={x:0,y:0}){
-  if(!card||card._gone)return;card._gone=true;
+  if(!card||card._gone||!canEdit())return;card._gone=true;
   const W=card.offsetWidth||320,sx=dir==="r"?1:-1,tid=card.dataset.dk,x=notiLateItems().find(y=>y.t.id===tid);
   const reset=()=>{if(!card.isConnected)return;card._gone=false;card.getAnimations().forEach(a=>a.cancel());card.classList.remove("go-l","go-r");card.style.transform="";card.style.transition="";card.style.setProperty("--l",0);card.style.setProperty("--r",0)};
   const act=()=>{if(!x){reset();return}if(dir==="l")Promise.resolve(notiPostpone(x.ev.id,tid)).finally(reset);else{reset();notiRetime(x.ev.id,tid)}};
@@ -278,11 +281,11 @@ function dkFly(card,dir,from={x:0,y:0}){
     .finished.then(()=>{if(next)next.getAnimations().forEach(a=>a.cancel());act()}).catch(()=>{});
 }
 function dkBind(){
-  const st=$("#notiDeck");if(!st||st._dk)return;st._dk=true;
+  const st=$("#notiDeck");if(!st||st._dk||!canEdit())return;st._dk=true;   /* 不能編輯＝不綁（之後登入、重畫時才綁） */
   ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".dk-card"))e.stopPropagation()},{passive:true}));
   let d=null;
   st.addEventListener("pointerdown",e=>{
-    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone)return;
+    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone||!canEdit())return;   /* 綁過之後才變成不能編輯（登出、唯讀） */
     d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",vx:0,lx:e.clientX,lt:performance.now()};
     c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
   });

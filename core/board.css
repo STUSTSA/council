@@ -1458,6 +1458,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .dk-card[data-i="1"]{opacity:.7}
 .dk-card[data-i="2"]{opacity:.4}
 .dk-card[data-i="0"]:active{cursor:grabbing}
+.dk-stack.ro .dk-card{cursor:default}   /* 不能編輯：只能看（notify.js 的 lateHTML） */
 .dk-card:not([data-i="0"]){pointer-events:none}
 .dk-date{display:grid;justify-items:center;min-width:3.6em;padding-right:20px;border-right:1px solid var(--hair);line-height:1}
 .dk-date b{font-family:"Jost",sans-serif;font-weight:300;font-size:46px;line-height:.9}
