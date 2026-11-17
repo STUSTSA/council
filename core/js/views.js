@@ -9,11 +9,17 @@ function renderHeader(){
 
 function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
 function termWeek(d){const ts=termCfg().termStart;if(!ts)return 0;const diff=Math.floor((pd(ymd(d))-pd(ts))/864e5);return diff<0?0:Math.floor(diff/7)+1}
+/* 標題列（shell.js 的 .dhead）：只改有變的地方，節點一直留著。
+   唯讀標籤＝沒有編輯權限的單位或唯讀檢視中；眼睛鈕＝可編輯的單位才有（render.js 的 deptCan、roView）；通知鈕＝沒有權限、唯讀檢視時不出現（DESIGN-next 第十四節） */
 function renderHero(){
-  /* 頁首只留 logo、搜尋欄（提示字含開學第幾週）、通知鈕（2026-11-05 使用者要求精簡；看板名稱、學年、大日期、上次儲存不再顯示在頁首） */
-  const tw=termWeek(new Date());
-  /* 2026-11-06：週次不再是獨立的膠囊（那個位置換成通知鈕），寫進搜尋欄的提示字：「搜尋 權益部 第9週」 */
-  {const q=$("#boardQ"),ph=`搜尋 ${CFG.dept.name||state.title||"看板"} ${tw>0?`第${tw}週`:"開學前"}`;if(q&&q.placeholder!==ph)q.placeholder=ph}
+  const home=$(".dhead .dh-home"),eye=$("#peekBtn"),nb=$("#notiBtn");if(!home)return;
+  if(!home.firstElementChild)home.innerHTML=ico("home","solo");   /* 骨架（shell.js）載入時還沒有 icon 可用，第一次畫時補上 */
+  if(!eye.firstElementChild)eye.innerHTML=ico("eye","solo");
+  if(!nb.querySelector(".ico"))nb.insertAdjacentHTML("afterbegin",ico("bell","solo"));
+  if(roView&&!deptCan())roView=false;   /* 登出、權限被撤掉：唯讀檢視跟著結束 */
+  Anim.toggle($("#dhRo"),deptRO());
+  Anim.toggle(eye,deptCan());eye.setAttribute("aria-pressed",String(roView));eye.classList.toggle("on",roView);
+  Anim.toggle(nb,!deptRO());
   weekDotSync();
 }
 

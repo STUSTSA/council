@@ -29,13 +29,21 @@ const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
 /* 出處文字：地點・所屬即時回報（全會再加部門） */
 const notiSub=x=>[NOTI.scope==="all"?deptName(x.dept):"",x.place,x.ev].filter(Boolean).join("・");
-/* 頁首鈴鐺上的數字：今天＋明天本部門的時間標記（時段算每一天，同一件事只算一次） */
+/* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了
+   （有結束日看結束日；沒有結束日看開始日，當天有時刻的過了時刻才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
+function notiLate(s=state){
+  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`;let n=0;
+  s.events.filter(e=>!e.doneAt).forEach(e=>{const tm=new Map((e.times||[]).map(x=>[x.id,x]));
+    (e.blocks||[]).forEach(b=>{const x=b.timeId&&tm.get(b.timeId);if(!x||b.check||!x.start)return;
+      const sd=x.start.slice(0,10),ed=(x.end||"").slice(0,10),st=x.start.slice(11,16);
+      if((ed||sd)<t||(!ed&&sd===t&&st&&st<hm))n++})});
+  return n;
+}
 function notiBadge(){
   const b=$("#notiBtn");if(!b)return;
-  const t=today(),m=addDays(t,1),n=notiMine().filter(x=>covers(x,t)||covers(x,m)).length;
-  const el=b.querySelector(".noti-n");const txt=n?String(n>99?"99+":n):"";
+  const n=notiLate(),el=b.querySelector(".noti-n"),txt=n?String(n>99?"99+":n):"";
   if(el.textContent!==txt){el.textContent=txt;el.hidden=!n;if(n)Anim.enter(el,"pop")}
-  b.setAttribute("aria-label",n?`通知：今明兩天有 ${n} 件事`:"通知");
+  b.setAttribute("aria-label",n?`通知：${n} 件逾期`:"通知");
 }
 
 /* ---------- 今日／明日：左右兩張卡片（手機也並排） ---------- */

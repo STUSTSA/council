@@ -4,15 +4,18 @@ const SHELL_HTML=`<div class="pager" id="pager">
   <!-- main page -->
   <div class="page page-main" id="pageMain">
     <div class="wrap">
-      <header class="hero" data-fx-keep>
-        <a class="logo-box" href="home.html" aria-label="各部門總覽"></a>
-        <div class="hero-find">
-          <label class="hero-search"><svg class="hs-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="搜尋這個看板" aria-controls="boardRes"><button type="button" class="hq-clear" aria-label="清除搜尋"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
-          <div class="hero-res glass" id="boardRes" role="listbox" aria-label="搜尋結果" hidden></div>
-        </div>
-        <button type="button" class="noti-btn" id="notiBtn" aria-label="通知"><svg class="ico solo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g class="i-bell"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10.2 20.4a2 2 0 0 0 3.6 0"/></g></svg><span class="noti-n num" hidden></span></button>
+      <!-- 部門標題列（DESIGN-next 第六節「部門內」）：首頁鍵、部門標誌、英文小標與部門名、（沒有權限）唯讀標籤、（可編輯的單位）唯讀檢視的眼睛鈕、通知鈕。
+           換分頁、進出設定與通知都是同一個節點（data-fx-keep，不參加進場動畫）；顯示哪些鈕由 views.js 的 renderHero 決定 -->
+      <header class="dhead" data-fx-keep>
+        <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>
+        <img class="dh-logo" src="dept/icons/favicon.svg" alt="" width="46" height="46">
+        <div class="dh-name"><span class="dh-en" id="dhEn"></span><b id="dhName"></b></div>
+        <span class="dh-ro" id="dhRo" hidden>唯讀</span>
+        <span class="dh-st"><span class="sr-only" id="saveInfo" role="status"></span></span>
+        <span class="dh-sp"></span>
+        <button type="button" class="dh-btn dh-eye" id="peekBtn" aria-pressed="false" aria-label="用唯讀檢視看這個單位" hidden></button>
+        <button type="button" class="dh-btn noti-btn" id="notiBtn" aria-label="通知" hidden><span class="noti-n num" hidden></span></button>
       </header>
-      <div class="hero-rule"><span class="hero-info"><span class="sub sr-only" id="saveInfo" role="status"></span></span><span class="actions"><span class="hero-btns" id="actions"></span></span></div>
 
       <!-- 會長室：文件連結（follow.js 的 renderDocs）。會長自己新增的超連結按鈕，點了用新分頁打開 -->
       <section class="panel docs-panel" id="docsPanel" data-edbox="s:docs" aria-labelledby="dcH" hidden>
@@ -107,6 +110,9 @@ const SHELL_HTML=`<div class="pager" id="pager">
 <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 `;
+/* 部門英文名（DESIGN-next 第四節）：標題列名稱上面的英文小標。用部門代號（dept/config.js 的 id）對照，不改設定檔；
+   表上沒有的部門（例如測試用的水果部）不放英文小標 */
+const DEPT_EN={president:"PRESIDENT",secretariat:"SECRETARIAT",rights:"STUDENT RIGHTS",marketing:"MARKETING",finance:"FINANCE",events:"EVENTS",affairs:"CLUB AFFAIRS",pr:"PUBLIC RELATIONS",works:"FACILITIES"};
 /* 頁首學生會 logo：同一份 SU_LOGO 路徑。淺色模式用原檔的彩色（2026-11-06 使用者）；深色模式是單色（跟著文字色，board.css「頁首」段）。
    深色的標誌用使用者提供的單色線稿（2026-11-11 使用者：所有黑白模式的 logo 都換成線稿；splash.js 的 SU_LINE，跟開場動畫同一份：左邊小人線框、右邊小人實心），
    線稿用 SU_LINE.t 疊在彩色標誌的同一個位置，兩組只顯示一組（.logo-color／.logo-line）；字照舊填文字色。
@@ -126,9 +132,10 @@ function suLogoColor(label){
 (function mountShell(){
   if(!document.getElementById("pager"))document.body.insertAdjacentHTML("afterbegin",SHELL_HTML);
   mountSplash();   /* 開頁的學生會進場畫面（core/js/splash.js，總覽頁也用同一份） */
-  /* 頁首 logo：所有部門都放學生會 logo（標誌＋STUSTSA＋南臺科大學生會，見 suLogoMono），淺色彩色、深色單色線稿跟著文字色 */
-  const box=document.querySelector(".logo-box");
-  if(box&&!box.firstElementChild)box.innerHTML=suLogoMono(CFG.brand||"南臺科大學生會");
+  /* 標題列的部門名與英文小標（設定檔與 DEPT_EN 的文字，用 textContent 放） */
+  const nm=document.getElementById("dhName"),en=document.getElementById("dhEn");
+  if(nm)nm.textContent=CFG.dept.name||"";
+  if(en){en.textContent=DEPT_EN[CFG.deptId]||"";en.hidden=!en.textContent}
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
      設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light */
   const c=CFG.colors||{},map={accentLight:"--accent-light",accentDark:"--accent-dark"};

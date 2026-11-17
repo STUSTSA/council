@@ -195,6 +195,36 @@ a.logo-box:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 }
 
 
+/* ===== 部門標題列（shell.js 的 .dhead；DESIGN-next 第六節「部門內」、第十四節） =====
+   首頁鍵、部門標誌（dept/icons 的學生會標誌，藍黃不跟主題）、英文小標（Jost 10.5px、字距 .22em）與部門名（700 加字距）、
+   （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
+   標題列跟著頁面捲動；換分頁不重建。深色只靠變數 */
+.dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 18px;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none}
+.dh-btn .ico{width:22px;height:22px;stroke-width:1.8}
+.dh-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.dh-btn[hidden]{display:none}
+.dh-eye.on{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中：實心 */
+.dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
+.dh-name{display:grid;min-width:0;line-height:1.15}
+.dh-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;margin-bottom:2px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dh-en[hidden]{display:none}
+.dh-name b{font-size:19px;font-weight:700;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 唯讀：外框標籤（次要，不是按鈕，不放大） */
+.dh-ro{flex:none;display:inline-flex;align-items:center;height:26px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 32%,transparent);font-size:12.5px;letter-spacing:.14em;line-height:1;white-space:nowrap}
+.dh-ro[hidden]{display:none}
+.dh-st{display:contents}
+.dh-sp{flex:1;min-width:0}
+/* 通知鈕的紅色數字（彈出動畫由 anim.js 的 pop） */
+.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:#fff;font-size:11.5px;line-height:20px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
+.noti-n[hidden]{display:none}
+@media (max-width:640px){
+  .dhead{gap:10px;margin-bottom:14px;padding-top:0}
+  .dh-logo{width:40px;height:40px;margin-left:0}
+  .dh-name b{font-size:18px}
+  .dh-ro{padding:0 10px}
+}
+
 /* ===== 版面與區塊外框 ===== */
 .layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */

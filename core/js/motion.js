@@ -4,9 +4,7 @@ function morph(fn){
   if(reduceMotion()){fn();return}
   const ease=EXPAND.easing,D=560;
   const lay=document.querySelector(".layout"),ly=lay.getBoundingClientRect().top;
-  const hr=document.querySelector(".hero-rule"),hh=hr.offsetHeight;
   fn();
-  const hh2=hr.offsetHeight;if(Math.abs(hh-hh2)>1){hr.style.overflow="hidden";hr.animate([{height:hh+"px"},{height:hh2+"px"}],{duration:D,easing:ease}).onfinish=()=>{hr.style.overflow=""}}
   const dy=ly-lay.getBoundingClientRect().top;
   if(Math.abs(dy)>1)lay.animate([{transform:`translateY(${dy}px)`},{transform:"none"}],{duration:D,easing:ease});
 }

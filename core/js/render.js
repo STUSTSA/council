@@ -28,7 +28,17 @@ function months(){const r=viewRange(),out=[],d=pd(r.start+"-01"),end=pd(r.end+"-
 let cardEdit="";
 const cardEd=(t,id)=>editing&&cardEdit===`${t}:${id}`;
 const secEd=k=>editing&&cardEdit==="s:"+k;
-const canEdit=()=>loggedIn()&&!readOnly();
+/* 唯讀檢視（DESIGN-next 第十四節）：可編輯的單位按標題列的眼睛鈕，看沒有權限的人看到的樣子。只是這個畫面的切換（不存、不影響資料與權限）；
+   開著的時候 canEdit 為假（編輯鈕、新增、拖曳、勾選都沒有），標「唯讀」，通知鈕與設定鍵不出現。
+   deptCan＝可編輯的單位（登入、看板沒有被鎖、不是不能寫的託管版；離線暫時不能存不算）；deptRO＝要標「唯讀」：沒有編輯權限的單位（boardLocked）或唯讀檢視中。
+   GitHub 模式還沒登入的人不算沒有權限（登入就能編輯），不標唯讀 */
+let roView=false;
+const deptCan=()=>loggedIn()&&!boardLocked()&&!(HOSTED&&!canWrite);
+const deptRO=()=>boardLocked()||roView;
+const canEdit=()=>loggedIn()&&!readOnly()&&!roView;
+document.addEventListener("click",e=>{if(!e.target.closest||!e.target.closest("#peekBtn"))return;
+  if(editing||!deptCan())return;   /* 編輯中不切換（先存好或取消） */
+  roView=!roView;render()});
 const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${esc(key)}">${ico("edit")}編輯</button>`;
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */
