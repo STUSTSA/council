@@ -250,19 +250,22 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await S2.b.close();}
   /* 9c. 固定在 2026-11-30：P2-1 點明日讀新月份、P2-2 跨週只佔一格畫半條線、P2-4 時刻跳脫、P2-5 拆除 */
   {const q=await mk(1300,900,'light',false);await q.context().clock.setFixedTime(new Date(2026,10,30,10,0,0));await q.reload();await q.waitForTimeout(1800);
-    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=[{id:'tW',label:'跨月',start:'2026-11-27',end:'2026-12-08',place:''},
+    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=[{id:'tW',label:'跨月',start:'2026-11-27',end:'2026-12-08',place:''},{id:'tH',label:'跨週',start:'2026-11-29',end:'2026-12-02',place:''},
       {id:'tX',label:'註解今天',start:'2026-11-30T<!--x',end:'',place:''},{id:'tY',label:'註解過期',start:'2026-11-29T<!--x',end:'',place:''}];
-      e.blocks=[{id:'bW',text:'跨月',check:false,timeId:'tW'},{id:'bX',text:'註解今天',check:false,timeId:'tX'},{id:'bY',text:'註解過期',check:false,timeId:'tY'}];render()});
+      e.blocks=[{id:'bW',text:'跨月',check:false,timeId:'tW'},{id:'bH',text:'跨週',check:false,timeId:'tH'},{id:'bX',text:'註解今天',check:false,timeId:'tX'},{id:'bY',text:'註解過期',check:false,timeId:'tY'}];render()});
     await q.click('#notiBtn');await q.waitForTimeout(900);
     const h=await q.evaluate(()=>{const d=today(),n=notiMine().filter(x=>covers(x,d)).length;return {today:d,rows:document.querySelectorAll('#notiPage .nd-card.today .nd-row').length,er:Math.min(4,n),
       dk:document.querySelectorAll('#notiDeck .dk-card').length,ed:Math.min(3,notiLateItems().length),ev:document.querySelectorAll('#notiPage .cal-list .cal-ev').length,en:n,
       cal:!!$('#notiPage .pc-foot'),txt:$('#notiPage').textContent.split('<!--x').length-1}});
     ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日 ${h.rows}/${h.er} 列、逾期 ${h.dk}/${h.ed} 張、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
-    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=e.times.filter(t=>t.id==='tW');e.blocks=e.blocks.filter(b=>b.id==='bW');render()});await q.waitForTimeout(400);   /* 下面各項跟跳脫分開測 */
+    await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=e.times.filter(t=>/^t[WH]$/.test(t.id));e.blocks=e.blocks.filter(b=>/^b[WH]$/.test(b.id));render()});await q.waitForTimeout(400);   /* 下面各項跟跳脫分開測 */
     const w=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-30"]').parentElement,e=[...wk.querySelectorAll('.pc-e')].find(x=>x.style.getPropertyValue('--i0')==='0'&&x.style.getPropertyValue('--i1')==='0'&&/cont-r/.test(x.className));
       const cell=$('.pc-d[data-calday="2026-11-30"]').getBoundingClientRect(),b=e&&getComputedStyle(e,'::before'),a=e&&getComputedStyle(e,'::after');
       const er=e&&e.getBoundingClientRect();return e&&{cls:e.className,bw:parseFloat(b.width)||0,dot:a.content!=='none'&&a.content!=='normal',right:er.right,cellMid:cell.left+cell.width/2}});
-    ok(w&&/cont-r/.test(w.cls)&&!w.dot&&w.bw>12,`11/27–12/08 在 11/30 那格：畫成到右邊緣的半條線（${JSON.stringify(w)}），不是小點`);
+    ok(w&&/cont-r/.test(w.cls)&&/cont-l/.test(w.cls)&&!w.dot&&w.bw>12&&w.right>w.cellMid+12,`11/27–12/08 在 11/30 那格（月底、前後都延續）：畫成到格子兩邊的線（${JSON.stringify(w)}），不是小點`);
+    const hf=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-29"]').parentElement,e=[...wk.querySelectorAll('.pc-e')].find(x=>x.style.getPropertyValue('--i0')==='6'&&x.style.getPropertyValue('--i1')==='6');
+      if(!e)return null;const r=e.getBoundingClientRect(),b=getComputedStyle(e,'::before');return {cls:e.className,ratio:Math.round((parseFloat(b.width)||0)/r.width*100)/100,dot:getComputedStyle(e,'::after').content}});
+    ok(hf&&/cont-r/.test(hf.cls)&&!/cont-l/.test(hf.cls)&&hf.ratio>.4&&hf.ratio<.65,`11/29–12/02 在 11/29（週日）那格：從中心到右邊緣的半條線（${JSON.stringify(hf)}）`);
     const w2=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-27"]').parentElement;return [...wk.querySelectorAll('.pc-e')].map(x=>x.className).join()});
     ok(/span/.test(w2)&&/cont-r/.test(w2),`11/27 那一週：延續到下一週的一端標 cont-r（${w2}）`);
     /* P2-1：活動模式（替身模組）、點明日（12/01）→ 讀十二月 */
@@ -273,16 +276,24 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await q.click('#notiPage .nd-card:not(.today)');await q.waitForTimeout(1200);
     const m=await q.evaluate(()=>({month:NOTI.month,day:NOTI.day,q:__q.length,last:__q[__q.length-1],list:$('.cal-list').textContent.trim()}));
     ok(m.month==='2026-12'&&m.day==='2026-12-01'&&m.q===2&&!/讀取中/.test(m.list)&&/十二月活動/.test(m.list),`11/30 點明日：換到十二月、發出新月份的查詢（${JSON.stringify(m.last)}，共 ${m.q} 次），清單顯示（${m.list.slice(0,20)}）`);
-    /* P2-5：calMount → calUnmount 五次：resize 監聽不累積、CALS 復原、拆掉的不吃 Esc */
+    /* 小項：活動、會議沒權限（沒登入）＝「登入後才看得到」，不是「這個部門已搬到新資料庫」 */
+    await q.evaluate(()=>{storeFsMod=Promise.resolve({eventsByScope:async()=>{throw Object.assign(new Error('x'),{code:'permission-denied'})}})});
+    await q.click('.cal-seg [data-k="meet"]');await q.waitForTimeout(700);
+    const dn=await q.evaluate(()=>$('.cal-list').textContent.trim());
+    ok(dn==='登入後才看得到',`會議沒權限：顯示「${dn}」`);
+    /* P2-5：calMount → calUnmount 五次：resize 監聽不累積、CALS 復原、拆掉的不吃 Esc（先關通知頁，Esc 才不會被通知頁接走） */
+    await q.evaluate(()=>closeNoti(true));await q.waitForTimeout(300);
     const u=await q.evaluate(async()=>{let n=0;const add=window.addEventListener,rm=window.removeEventListener;
       window.addEventListener=function(t,...a){if(t==='resize')n++;return add.call(this,t,...a)};window.removeEventListener=function(t,...a){if(t==='resize')n--;return rm.call(this,t,...a)};
       const c0=CALS.length;document.body.insertAdjacentHTML('beforeend','<div id="pubU"></div>');const h=$('#pubU');let peak=0;
       if(typeof calUnmount!=='function'){window.addEventListener=add;window.removeEventListener=rm;return {err:'沒有 calUnmount'}}
       for(let i=0;i<5;i++){const c=calMount(h);await new Promise(r=>setTimeout(r,60));peak=Math.max(peak,n);if(i===4){c.pop=true;calPaint(c)}calUnmount(h)}
-      const ev=new KeyboardEvent('keydown',{key:'Escape',cancelable:true,bubbles:true});document.dispatchEvent(ev);
+      const esc=()=>{const ev=new KeyboardEvent('keydown',{key:'Escape',cancelable:true,bubbles:true});document.dispatchEvent(ev);return ev.defaultPrevented};
+      const gone=esc();   /* 拆掉的（月份選單開著時拆的）不吃 Esc */
+      const c=calMount(h);c.pop=true;calPaint(c);const live=esc();calUnmount(h);   /* 對照：還掛著、選單開著時 Esc 被它吃掉 */
       window.addEventListener=add;window.removeEventListener=rm;h.remove();
-      return {n,peak,cals:CALS.length===c0,cal:h._cal===undefined,esc:ev.defaultPrevented}});
-    ok(!u.err&&u.n===0&&u.peak>=1&&u.cals&&u.cal&&!u.esc,`calMount→calUnmount 五次：resize 監聽淨增 ${u.n}（最多 ${u.peak}）、CALS 復原、拆掉的不吃 Esc（${JSON.stringify(u)}）`);
+      return {n,peak,cals:CALS.length===c0,cal:h._cal===undefined,esc:gone,live}});
+    ok(!u.err&&u.n===0&&u.peak>=1&&u.cals&&u.cal&&!u.esc&&u.live,`calMount→calUnmount 五次：resize 監聽淨增 ${u.n}（最多 ${u.peak}）、CALS 復原、拆掉的不吃 Esc（${JSON.stringify(u)}）`);
     ok(q.errs.length===0,`9c 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
     await q.close();}
   /* 9d. 未登入的公共版：Firestore 查詢帶 visibility=='public'（替身 Firebase 模組，記下查詢條件；不連任何真的專案）；登入後照舊用 scope */
