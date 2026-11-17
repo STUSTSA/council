@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-17 19:21",
+ "savedAt": "2026-11-17 19:22",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -532,7 +532,7 @@
     {
      "id": "lmvqlr6quzwgj",
      "name": "建議方案",
-     "url": "https://drive.google.com/file/d/1qv76O5Or6Qs0bb6EMvLNNf5E5OvLV4qH/view?usp=drive_link",
+     "url": "https://drive.google.com/file/d/1fN_IB_ZY_i0dspiXa7d-XKKLtgck19Qo/view?usp=sharing",
      "color": "#3d7fe0"
     }
    ],
@@ -542,7 +542,8 @@
     "2026-10-27",
     "2026-11-03",
     "2026-11-05",
-    "2026-11-16"
+    "2026-11-16",
+    "2026-11-17"
    ],
    "times": [
     {
@@ -555,7 +556,7 @@
     }
    ],
    "round": 3,
-   "touchedAt": "2026-11-16T17:34",
+   "touchedAt": "2026-11-17T19:22",
    "roundAt": "2026-11-05T17:12",
    "report": true,
    "labels": []
