@@ -219,13 +219,13 @@ function settingsInner(){
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
 /* ---------- 設定頁：外觀（主題、深淺色、音效；設定存取在 core/js/theme.js 的 UI） ----------
-   淺色／深色的分段切換（anim.js 的 LiquidSeg）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
+   淺色／深色的分段切換（anim.js 的 LiquidSeg；平面色塊 .glass 直接寫在 HTML 裡，不靠 LiquidSeg 執行時加：合併頁重畫走原位更新，執行時加的 class 會被拿掉）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
    每顆主題按鈕帶自己的 data-pal，按鈕裡的顏色變數就是那一組主題的顏色（深淺跟著目前的 data-theme，見 core/theme.css）。
    畫在合併頁（hubRun）下面：firestore 模式登入後在「帳號」（account.js 的 acctHub），其他情況在設定清單的「外觀」（SET_HUBS.look） */
 function lookHTML(head){
   const u=UI.get();
   return `<section class="look">${head?'<b class="look-t">外觀</b>':""}
-    <div class="lseg look-mode" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
+    <div class="lseg look-mode glass" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
     <div class="look-pals" role="radiogroup" aria-label="主題">${UI_PALS.map(([k,t])=>`<button type="button" class="look-pal" role="radio" data-look-pal="${k}" data-pal="${k}" aria-checked="${u.pal===k}"><span class="look-sw" aria-hidden="true"><i></i><i></i><i></i></span>${t}</button>`).join("")}</div>
     <div class="look-row"><span id="lookSndL">音效</span><button type="button" class="sw${u.sound?" on":""}" data-look-snd role="switch" aria-checked="${u.sound}" aria-labelledby="lookSndL"><i aria-hidden="true"></i></button></div></section>`;
 }

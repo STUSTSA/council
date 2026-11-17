@@ -62,15 +62,24 @@ async function startEdit(key,then){
 function cancelEdit(){morph(()=>{if(CFG.meeting)mtDiscard();if(dirty)state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;evFld=null;ifFld=null;kp=null;render()})}
 /* 編輯中按卡片上的按鈕不讓輸入欄失焦（DESIGN-next 第五節）：游標在編輯中卡片（.sec-edit）的文字欄時，按下同一張卡片上的按鈕、核取框、勾選膠囊，
    那一下不搶焦點（擋 mousedown 的預設動作；觸控時瀏覽器補發的 mousedown 也一樣），點擊照常觸發，手機鍵盤不會收起再彈出。
+   label（專員、標籤的勾選膠囊，核取框外面那一圈）：mousedown 擋得住，但放開後 label 的 click 會把焦點移到它的核取框，所以按下時記下那一欄（keepFld），
+   click／change 處理完放回去——只在焦點被移到那個核取框（或沒有焦點）時放；處理函式自己把游標移到別欄的（逐行內容的核取框＝到那一行）照它的。
    自製下拉（.csel）要把焦點移到選單、包著文字欄的 label 點了本來就是去那一欄，這兩種照舊。拖曳排序只在沒有編輯時才有，不受影響 */
+let keepFld=null;
+const keepBack=()=>{const k=keepFld;if(!k||performance.now()-k.at>1500)return;const f=document.activeElement;
+  if(k.a.isConnected&&f!==k.a&&(!f||f===document.body||f===k.c))k.a.focus({preventScroll:true})};
 document.addEventListener("mousedown",e=>{
+  keepFld=null;
   const a=document.activeElement,t=e.target;if(!a||!t.closest||e.button>0)return;
   if(!(a.isContentEditable||a.matches("textarea,input:not([type=checkbox]):not([type=radio]):not([type=hidden])")))return;
   const box=a.closest(".sec-edit");if(!box||!box.contains(t)||t.closest(".csel"))return;
   const hit=t.closest("button,[role=button],label,input[type=checkbox],input[type=radio]");if(!hit||!box.contains(hit))return;
   if(hit.tagName==="LABEL"&&hit.control&&!/^(checkbox|radio)$/.test(hit.control.type))return;
   e.preventDefault();
+  if(hit.tagName==="LABEL"&&hit.control)keepFld={a,c:hit.control,at:performance.now()};
 });
+document.addEventListener("click",()=>{const k=keepFld;if(!k)return;keepBack();clearTimeout(k.t);k.t=setTimeout(()=>{keepBack();if(keepFld===k)keepFld=null},0)});
+document.addEventListener("change",keepBack);
 /* 固定在頁面上的整區（追蹤、會議編輯、甘特圖時間軸）：編輯中加 .sec-edit、最下面補上「取消｜儲存」；卡片本身（即時回報、議題、完成紀錄）每次重畫時自己帶 */
 function renderSecEdit(){
   document.body.classList.toggle("authed",canEdit());
