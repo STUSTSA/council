@@ -3,7 +3,8 @@
    - localStorage「stustsa-ui」：讀寫、壞值與不認得的值用預設（米黃、跟系統、音效開）
    - 沒選過深淺色時跟系統（Playwright 的 colorScheme 換了就跟著換）；選過就不跟
    - 設定 → 外觀：點主題 data-pal 改變、存起來、重新整理仍保留；點深色／淺色；音效開關；每顆主題按鈕顯示自己那一組的顏色
-   - 換主題時整頁淡過去（View Transitions）；關掉動態時不淡；淡的途中點別的主題，那一下照樣算數
+   - 換主題時整頁淡過去（View Transitions）；關掉動態時不淡；淡的途中點別的主題，那一下照樣算數；淡的途中點工具列 SVG 圖示會換分頁、沒有錯誤；淡的途中拖曳不算點擊
+   - 搜尋欄聚焦框九組主題都看得到
    - 頁面上沒有 backdrop-filter、沒有 title 屬性；總覽 home.html 讀同一個設定
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');const fs=require('fs'),path=require('path');
@@ -133,6 +134,39 @@ const sameColor=(a,b)=>hex(a)===hex(b);
     ok(s.pal==='sage'&&s.theme==='dark'&&s.body==='rgb(13, 16, 14)',`home.html 讀同一個設定：${s.pal} ${s.theme} ${s.body}`);
     ok(card[0]==='rgb(23, 27, 24)'&&card[1]==='none'&&card[2]==='18px',`home.html 卡片是平面色塊（--blk、沒有漸層、圓角 18）：${card}`);
     ok(!p.errs.length,'home.html 沒有錯誤 '+p.errs);
+    await p.context().close()}
+
+  /* 7. 搜尋欄聚焦框：九組主題（淺深色）都看得到（outline 或 box-shadow 不是 none；以前跟 --blk-sh 串在一起，--blk-sh 是 none 時整條失效） */
+  {const p=await mk({init:null});
+    for(const mode of ['light','dark'])for(const k of PALS){
+      const v=await p.evaluate(([k,mode])=>{const r=document.documentElement;r.dataset.pal=k;r.dataset.theme=mode;const q=document.querySelector('#boardQ');q.focus();
+        const hs=q.closest('.hero-search'),cs=getComputedStyle(hs);const o=cs.outlineStyle!=='none'&&parseFloat(cs.outlineWidth)>0;const r2=[o,cs.outlineStyle,cs.outlineWidth,cs.boxShadow];q.blur();return r2},[k,mode]);
+      ok(v[0]||v[3]!=='none',`${k} ${mode} #boardQ 聚焦時看得到聚焦框：outline ${v[1]} ${v[2]}、box-shadow ${v[3].slice(0,40)}`)}
+    await p.context().close()}
+
+  /* 8. 淡的途中用滑鼠點工具列的 SVG 圖示：淡出結束後照樣換分頁、沒有錯誤（以前轉點擊時呼叫 svg 的 .click() 丟錯） */
+  {const p=await mk({init:null});
+    await p.waitForFunction(()=>{const s=document.getElementById('splash');return !s||getComputedStyle(s).display==='none'||getComputedStyle(s).pointerEvents==='none'},null,{timeout:15000}).catch(()=>{});   /* 開場畫面收掉之後才點得到工具列 */
+    await p.evaluate(()=>{window.__pd=[];addEventListener('pointerdown',e=>window.__pd.push(e.target===document.documentElement?'root':e.target.tagName),true)});
+    const fade=async pal=>{await p.evaluate(pal=>UI.set({pal}),pal);await p.waitForTimeout(30)};
+    const pick=()=>p.evaluate(()=>{const b=[...document.querySelectorAll('#tabbar .tab')].find(b=>!b.classList.contains('on'));const r=b.querySelector('svg').getBoundingClientRect();return {k:b.dataset.tab,x:r.x+r.width/2,y:r.y+r.height/2}});
+    const onTab=()=>p.evaluate(()=>document.querySelector('#tabbar .tab.on')?.dataset.tab);
+    let t=await pick();const before=await onTab();
+    const hit=await p.evaluate(([x,y])=>{const e=document.elementFromPoint(x,y);return e&&e.closest('svg')?'svg':e&&e.tagName},[t.x,t.y]);
+    await fade('neu');await p.mouse.click(t.x,t.y);await p.waitForTimeout(700);
+    let pd=await p.evaluate(()=>window.__pd.splice(0));
+    ok(hit==='svg'&&pd[0]==='root',`點的位置是工具列的 SVG 圖示（${hit}），淡的途中點按落在 <html>（${pd}）`);
+    ok(await onTab()===t.k&&before!==t.k,`淡的途中點工具列圖示：換到「${t.k}」分頁（現在 ${await onTab()}）`);
+    ok(!p.errs.length,'淡的途中點 SVG 圖示：沒有錯誤 '+p.errs);
+    /* 淡的途中按住拖走再放開：不算點擊 */
+    t=await pick();const b2=await onTab();
+    await fade('sun');await p.mouse.move(t.x,t.y);await p.mouse.down();await p.mouse.move(t.x,t.y-30,{steps:4});await p.mouse.move(t.x,t.y-60,{steps:4});await p.mouse.up();await p.waitForTimeout(700);
+    pd=await p.evaluate(()=>window.__pd.splice(0));
+    ok(pd[0]==='root'&&await onTab()===b2,`淡的途中拖曳：不觸發點擊（按下落在 ${pd}，分頁仍是 ${await onTab()}）`);
+    /* 拖曳之後再正常點一下：照樣有效（held 沒有殘留把點擊轉到別處） */
+    await p.mouse.click(t.x,t.y);await p.waitForTimeout(600);
+    ok(await onTab()===t.k,`拖曳之後正常點一下：換到「${t.k}」（現在 ${await onTab()}）`);
+    ok(!p.errs.length,'拖曳：沒有錯誤 '+p.errs);
     await p.context().close()}
 
   await b.close();
