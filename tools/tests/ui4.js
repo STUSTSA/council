@@ -167,6 +167,114 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     ok(await q.evaluate(()=>$('#dhEn').textContent===''&&$('#dhEn').hidden&&$('#dhName').textContent==='水果部'),'對照表上沒有的部門（水果部）：不放英文小標');
     await q.context().close()}
 
+  /* 9. 審查修正（2026-11-17）與部門內一次只顯示一區 */
+  const shown=q=>q.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].filter(g=>getComputedStyle(g).display!=='none').map(g=>g.dataset.sec));
+  /* 點分頁的當下讀出舊區塊、新區塊（含裡面的面板）身上的位移動畫（transform 的起點／終點，去掉空白） */
+  const secFx=(q,k)=>q.evaluate(k=>{const prev=curSec;document.querySelector(`#tabbar .tab[data-tab="${k}"]`).click();
+    const tf=a=>{const f=a.effect.getKeyframes().map(x=>(x.transform||'').replace(/\s/g,''));return f.filter(Boolean)};
+    const out=document.querySelector(`.layout>.sgroup[data-sec="${prev}"]`),inn=document.querySelector(`.layout>.sgroup[data-sec="${k}"]`);
+    return {out:out.getAnimations().flatMap(tf),inn:[inn,...inn.children].flatMap(e=>e.getAnimations()).flatMap(tf),outOn:getComputedStyle(out).display!=='none'}},k);
+  {/* P1-1：秘書處（完成紀錄併在即時回報裡）：打開的完成卡移回即時回報或被刪掉之後，新增圓鈕要回來。
+       秘書處用自己的測試資料（照 sm1.js：沒有身分、共用密碼 0000；網站上真的 data-secretariat.json 登入流程不一樣） */
+    const E=(id,name,done)=>({id,name,desc:'',createdAt:'2026-10-01',doneAt:done||null,staff:[],links:[],times:[],round:1,touched:[]});
+    const SEC={schemaVersion:10,id:'secretariat',savedAt:'2099-01-01 00:00',title:'秘書處',yearLabel:'115學年',termStart:'2026-09-07',semester:'',issues:[],weeks:[],members:[],events:[E('L1','進行中'),E('D1','完成一','2026-11-01'),E('D2','完成二','2026-11-02')]};
+    const D=await c.setup();c.q='?d=secretariat';const s=await D.mk(412,860,'light',true);c.q='';let secR=JSON.parse(JSON.stringify(SEC)),sha='x0';
+    await s.route('https://api.github.com/**/data-secretariat.json*',async r=>{const q=r.request();
+      if(q.method()==='GET')return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha,content:Buffer.from(JSON.stringify(secR)).toString('base64')})});
+      secR=JSON.parse(Buffer.from(JSON.parse(q.postData()).content,'base64').toString());sha='x'+Date.now();return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({content:{sha}})})});
+    await s.route('http://127.0.0.1:8300/data-secretariat.json*',r=>r.fulfill({contentType:'application/json',body:JSON.stringify(secR)}));
+    await s.evaluate(()=>{localStorage.clear();localStorage.setItem('workboard:ghtoken','T')});await s.reload();await s.waitForTimeout(2000);await D.login(s);await s.waitForTimeout(600);
+    const fab=()=>s.evaluate(()=>!$('#addEvent').hidden&&$('#addEvent')._tgl===true);
+    const f0=await fab();
+    await s.click('[data-done="D1"] summary');await s.waitForTimeout(700);const f1=await fab();
+    await s.evaluate(()=>{state.events.find(e=>e.id==='D1').doneAt=null;render()});await s.waitForTimeout(600);const f2=await fab();
+    await s.click('[data-done="D2"] summary');await s.waitForTimeout(700);const f3=await fab();
+    await s.evaluate(()=>{state.events=state.events.filter(e=>e.id!=='D2');render()});await s.waitForTimeout(600);const f4=await fab();
+    ok(f0&&!f1&&f2&&!f3&&f4,`P1-1 秘書處：完成卡打開時圓鈕不出現（${f1}），移回即時回報（${f2}）、刪除之後（${f4}）圓鈕回來`);
+    ok(!s.errs.length,'秘書處沒有錯誤'+(s.errs.length?'：'+s.errs.slice(0,3).join(' | '):''));
+    await D.b.close();}
+  {/* P1-2：唯讀檢視切換後（圓鈕正在消失）馬上點圓鈕，不會開始編輯 */
+    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(600);
+    const fb=await box(p,'#addEvent'),n0=await p.evaluate(()=>state.events.length);
+    await p.evaluate(()=>$('#peekBtn').click());await p.waitForTimeout(30);
+    await p.mouse.click(fb.l+fb.w/2,fb.t+fb.h/2);await p.waitForTimeout(500);
+    const r=await p.evaluate(async n0=>{const ev=state.events.find(e=>!e.doneAt);const se=await startEdit('e:'+ev.id);return {ro:roView,editing,n:state.events.length===n0,se,inert:$('#addEvent').inert}},n0);
+    ok(r.ro&&!r.editing&&r.n&&r.se===false&&r.inert,`P1-2 唯讀檢視切換後 30ms 點圓鈕不會進編輯；唯讀檢視時 startEdit 直接回 false（${JSON.stringify(r)}）`);
+    await p.evaluate(()=>{if(editing)cancelEdit();selEv=null;openEv.clear();$('#peekBtn').click()});await p.waitForTimeout(700);
+    ok(await p.evaluate(()=>!roView&&!$('#addEvent').hidden&&!$('#addEvent').inert),'P1-2 唯讀檢視結束：圓鈕回來、可以點');}
+  {/* P2-3：搜尋中焦點不在搜尋欄時按 Esc 也清掉搜尋，而且先於收起右側詳情 */
+    await p.fill('#boardQ','停車');await p.waitForTimeout(400);
+    const id=await p.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt);selEv=ev.id;render();document.activeElement.blur();return ev.id});
+    await p.keyboard.press('Escape');await p.waitForTimeout(400);
+    const r=await p.evaluate(id=>({q:$('#boardQ').value,mode:HS.mode,sel:selEv===id,res:$('#boardRes').hidden}),id);
+    ok(r.q===''&&!r.mode&&r.res&&r.sel,`P2-3 焦點不在搜尋欄時 Esc 清掉搜尋，右側詳情這一下不收（${JSON.stringify(r)}）`);
+    await p.evaluate(()=>{selEv=null;render()});await p.waitForTimeout(400);}
+  {/* P2-4：有結束時間、結束是今天而且時刻已過，也算逾期 */
+    const r=await p.evaluate(()=>{const d=new Date();if(d.getHours()===23&&d.getMinutes()===59||d.getHours()===0&&d.getMinutes()===0)return {skip:true};
+      const t=today(),ev=state.events.find(e=>!e.doneAt);ev.times=ev.times||[];ev.blocks=ev.blocks||[];const n0=notiLate();
+      ev.times.push({id:'tL1',start:t+' 00:00',end:t+' 00:00',label:'結束已過',place:''});ev.blocks.push({id:'bL1',text:'結束已過',check:false,timeId:'tL1'});
+      ev.times.push({id:'tL2',start:t+' 00:00',end:t+' 23:59',label:'還沒結束',place:''});ev.blocks.push({id:'bL2',text:'還沒結束',check:false,timeId:'tL2'});
+      const n1=notiLate();ev.times=ev.times.filter(x=>!/^tL/.test(x.id));ev.blocks=ev.blocks.filter(x=>!/^bL/.test(x.id));render();return {n0,n1}});
+    ok(r.skip||r.n1===r.n0+1,`P2-4 結束是今天、結束時刻已過算逾期，還沒到結束時刻的不算（${JSON.stringify(r)}）`);
+    /* 跨過時刻時數字自己更新（每分鐘一次；用 Playwright 的時鐘快轉） */
+    const ctx=await b.newContext({viewport:{width:1300,height:900},serviceWorkers:'block'});
+    await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
+    const q=await ctx.newPage();const d0=new Date();d0.setHours(10,0,30,0);await q.clock.install({time:d0});
+    await q.goto('http://127.0.0.1:8300/index.html');await q.waitForTimeout(1800);
+    const a=await q.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt);ev.times=ev.times||[];ev.blocks=ev.blocks||[];
+      ev.times.push({id:'tC1',start:today()+' 10:01',end:'',label:'十點一分',place:''});ev.blocks.push({id:'bC1',text:'十點一分',check:false,timeId:'tC1'});render();return {n:notiLate(),t:$('#notiBtn .noti-n').textContent}});
+    await q.clock.fastForward(61000);await q.waitForTimeout(300);
+    const a2=await q.evaluate(()=>({n:notiLate(),t:$('#notiBtn .noti-n').textContent}));
+    ok(a2.n===a.n+1&&a2.t===String(a2.n),`P2-4 跨過時刻後一分鐘內通知鈕數字自己更新（${a.t||0}→${a2.t}）`);
+    await ctx.close();}
+  {/* P2-5：搜尋中列印：印看板，不印搜尋結果 */
+    await p.fill('#boardQ','停車');await p.waitForTimeout(400);await p.emulateMedia({media:'print'});
+    const r=await p.evaluate(()=>({lay:getComputedStyle(document.querySelector('.layout')).display,res:getComputedStyle($('#boardRes')).display}));
+    await p.emulateMedia({media:'screen'});await p.fill('#boardQ','');await p.waitForTimeout(400);
+    ok(r.lay!=='none'&&r.res==='none',`P2-5 搜尋中列印：看板照常（${r.lay}）、搜尋結果不印（${r.res}）`);}
+  {/* P2-7：標題列圓鈕（含首頁鍵 <a>）被指到放大、按下縮回 */
+    const sc=()=>p.evaluate(()=>{const m=getComputedStyle(document.querySelector('.dh-home')).transform;const x=/matrix\(([-\d.]+)/.exec(m);return x?+x[1]:1});
+    await p.hover('.dh-home');await p.waitForTimeout(400);const s1=await sc();
+    await p.mouse.down();await p.waitForTimeout(400);const s2=await sc();
+    await p.mouse.move(700,450);await p.mouse.up();await p.waitForTimeout(400);const s3=await sc();
+    const eye=await p.evaluate(()=>{const a=getComputedStyle(document.querySelector('.dh-home')),b=getComputedStyle($('#notiBtn'));return a.transition===b.transition});
+    ok(s1>1.01&&s2<.99&&Math.abs(s3-1)<.01&&eye,`P2-7 首頁鍵被指到放大（${s1}）、按下縮回（${s2}），跟通知鈕同一組過渡`);}
+  {/* 一次只顯示一區（桌面）：換分頁時舊的往上退、新的從下面進（方向跟左側工具列一致） */
+    await p.waitForTimeout(300);
+    const s0=await shown(p);
+    const f1=await secFx(p,'progress');await p.waitForTimeout(900);const s1=await shown(p);
+    const f2=await secFx(p,'live');await p.waitForTimeout(900);const s2=await shown(p);
+    ok(s0.join()==='live'&&s1.join()==='progress'&&s2.join()==='live',`1300：一次只顯示一區（${s0}｜${s1}｜${s2}）`);
+    ok(f1.outOn&&f1.out.includes('translate(0px,-48px)')&&f1.inn.includes('translate(0px,48px)')&&f2.out.includes('translate(0px,48px)')&&f2.inn.includes('translate(0px,-48px)'),
+      `1300：往後面的分頁＝舊的往上退、新的從下面進；往前反過來（${JSON.stringify([f1.out,f1.inn,f2.out,f2.inn])}）`);
+    ok(await p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].every(g=>!g.getAnimations().length&&!g.classList.contains('sg-out')&&!g.style.position&&!g.inert)),'換完之後舊區塊的退場層拿掉');
+    await p.click('#events .ev summary');await p.waitForTimeout(1000);
+    const md=await p.evaluate(()=>{const L=$('#events').getBoundingClientRect(),R=$('#evDetail').getBoundingClientRect(),g=document.querySelector('.sgroup[data-sec="live"]');
+      return {split:!$('#evDetail').hidden&&R.left>=L.right-1&&R.width>200,inLive:g.contains($('#events'))&&g.contains($('#evDetail')),others:[...document.querySelectorAll('.layout>.sgroup:not([data-sec="live"])')].every(x=>getComputedStyle(x).display==='none')}});
+    ok(md.split&&md.inLive&&md.others,`1300：即時回報左邊膠囊清單、右邊卡片，是同一區的內部兩欄（${JSON.stringify(md)}）`);
+    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(500);}
+  {const c3=await c.setup();const q=await c3.mk(412,860,'light',true);await c3.login(q);await q.waitForTimeout(500);
+    /* P2-8a：手機上圓鈕跟設定鍵中心對齊（右緣以設定鍵為準） */
+    const al=async()=>{const f=await box(q,'#addEvent'),g=await box(q,'#setBtn');return Math.abs((f.l+f.w/2)-(g.l+g.w/2))};
+    const a412=await al();await q.setViewportSize({width:700,height:860});await q.waitForTimeout(500);const a700=await al();await q.setViewportSize({width:412,height:860});await q.waitForTimeout(500);
+    ok(a412<=1&&a700<=1,`P2-8a 圓鈕與設定鍵中心對齊（412 差 ${a412}、700 差 ${a700}）`);
+    /* P2-8b：圓鈕出現／消失時內容底部留白不變（不跳動） */
+    const pb=()=>q.evaluate(()=>getComputedStyle(document.querySelector('#pageMain .wrap')).paddingBottom);
+    const p0=await pb();await q.evaluate(()=>$('#peekBtn').click());await q.waitForTimeout(600);const p1=await pb();
+    /* P2-8c：bfcache 回來時唯讀檢視重設為關 */
+    await q.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await q.waitForTimeout(600);
+    const r=await q.evaluate(()=>({ro:roView,tag:$('#dhRo').hidden,fab:!$('#addEvent').hidden}));const p2=await pb();
+    ok(p0===p1&&p1===p2,`P2-8b 圓鈕出現、消失時底部留白不變（${p0}／${p1}／${p2}）`);
+    ok(!r.ro&&r.tag&&r.fab,`P2-8c bfcache 回來（pageshow persisted）唯讀檢視重設為關（${JSON.stringify(r)}）`);
+    /* 一次只顯示一區（手機）：方向左右，跟底部工具列一致 */
+    const f1=await secFx(q,'done');await q.waitForTimeout(900);const s1=await shown(q);const f2=await secFx(q,'progress');await q.waitForTimeout(900);const s2=await shown(q);
+    ok(s1.join()==='done'&&s2.join()==='progress'&&f1.out.includes('translate(-60px,0px)')&&f1.inn.includes('translate(60px,0px)')&&f2.out.includes('translate(60px,0px)')&&f2.inn.includes('translate(-60px,0px)'),
+      `412：一次只顯示一區，往右邊的分頁＝舊的往左退、新的從右邊進；往左反過來（${JSON.stringify([s1,s2,f1.out,f1.inn,f2.out,f2.inn])}）`);
+    const sw=await q.evaluate(()=>{const pg=$('#pageMain');return pg.scrollWidth<=pg.clientWidth+1});
+    ok(sw,'412：換分頁時沒有橫向捲動');
+    ok(!q.errs.length,'412 沒有錯誤'+(q.errs.length?'：'+q.errs.slice(0,3).join(' | '):''));
+    await c3.b.close()}
+
   /* 8. 關掉動態 */
   {const ctx=await b.newContext({viewport:{width:412,height:860},reducedMotion:'reduce',hasTouch:true,isMobile:true,serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
@@ -177,6 +285,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await q.evaluate(()=>{roView=false;$('#boardQ').value='停車';$('#boardQ').dispatchEvent(new Event('input'));$('#boardQ').value='';$('#boardQ').dispatchEvent(new Event('input'));render()});
     const r=await q.evaluate(()=>({an:window.__an.length,run:document.getAnimations().filter(a=>a.playState==='running'&&!(a instanceof CSSTransition)).length}));
     ok(icoN===0&&r.an===0&&r.run===0,`關掉動態：圖示沒有動作（${icoN}）、搜尋與重畫沒有動畫（${r.an}、${r.run}）`);
+    await q.evaluate(()=>{window.__an=[];document.querySelector('#tabbar .tab[data-tab="done"]').click()});
+    const rs=await q.evaluate(()=>({an:window.__an.length,run:document.getAnimations().filter(a=>a.playState==='running'&&!(a instanceof CSSTransition)).length,shown:[...document.querySelectorAll('.layout>.sgroup')].filter(g=>getComputedStyle(g).display!=='none').map(g=>g.dataset.sec).join()}));
+    ok(rs.an===0&&rs.run===0&&rs.shown==='done',`關掉動態：換分頁直接換，沒有位移動畫（${JSON.stringify(rs)}）`);
     await ctx.close()}
 
   ok(!p.errs.length,'沒有錯誤'+(p.errs.length?'：'+p.errs.slice(0,3).join(' | '):''));
