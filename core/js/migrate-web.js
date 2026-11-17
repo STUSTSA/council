@@ -1,5 +1,5 @@
 /* 核心｜網頁匯入頁的資料操作（02D D-a；正式切換用，取代命令列）。ES module：總管理員在「會長室管理 → 匯入」按下匯入時才由 account.js 載入。
-   - 讀這個部門的資料檔（只讀）：網站在 github.io 時用 GitHub 讀 dept/config.js 設定的分支最新的 commit（記下 commit SHA），不用權杖；
+   - 讀這個部門的資料檔（只讀）：網站在 github.io 時用 GitHub 讀 dept/config.js 設定的 repo、分支最新的 commit（記下 commit SHA），不用權杖；
      本機開發（不是 github.io）讀網站上的同一個檔案。算 SHA-256，跟操作手冊第 B 步抄下來的比對。
    - 照 migrate-core.js（跟命令列同一份）寫進這個網站設定的 Firebase 專案（dept/config.js 的 firebase：開發專案或正式專案），
      走正式規則的匯入分支（importing()：只有總管理員、批次是 running）；不是總管理員一定被規則拒絕。
@@ -68,13 +68,20 @@ async function importDept(cfg, gh, depts, dept, onStep = () => {}) {
   const src = await loadSource(gh, depts, dept);
   const X = io(f.db), batch = `web-${dept}-${Date.now()}`;
   onStep("write");
-  const result = await C().runImport(X, src, { batch, uid, log: (m, i, n) => onStep("write", i, n) });
-  onStep("check");
-  const report = await C().deptReport(X, src, dept);
+  let result, report;
+  try {
+    result = await C().runImport(X, src, { batch, uid, log: (m, i, n) => onStep("write", i, n) });
+    onStep("check");
+    report = await C().deptReport(X, src, dept);
+  } catch (e) {
+    /* 中途失敗：批次已建立的話改成 failed（不留在 running），再把錯誤丟出去；已寫入的內容按「再試一次」時相同的會跳過（02D 審查 P2-1） */
+    try { const m = await X.get(`migrations/${batch}`); if (m && m.status === "running") await C().setMigrationStatus(X, batch, uid, "failed", { error: String(e && (e.code || e.message) || "error").slice(0, 300) }); } catch (_) { /* 狀態改不了：留在 running */ }
+    throw e;
+  }
   const ok = report.ok && !result.conflicts.length;
   await C().setMigrationStatus(X, batch, uid, ok ? "done" : "failed",
     { written: result.written, skipped: result.skipped, conflicts: result.conflicts, verify: report.verify, rows: report.rows });
-  return { batch, commit: src.commit, sha256: src.files[0].sha256, path: src.files[0].path, result, report, ok };
+  return { batch, repo: gh && gh.owner ? `${gh.owner}/${gh.repo}@${gh.branch || "main"}` : "", commit: src.commit, sha256: src.files[0].sha256, path: src.files[0].path, result, report, ok };
 }
 
 /* ---------- 匯出全部資料（02D D-c，migration.md 第 8 節） ----------

@@ -59,10 +59,10 @@ function renderMeet(){
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
   $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${esc(m.id)}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
     +(MTS.sel?`<a class="fw-open mt-open" href="?d=${encodeURIComponent(MTS.sel)}" target="_blank" rel="noopener">開啟看板 →</a>`:"");   /* 開啟看板放在部門膠囊那一排的右邊，不另外佔一列 */
-  const ed=mtCanEdit(),loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
+  const ed=mtCanEdit()&&deptSourceOf(MTS.sel)==="github",loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
   $("#meetEdList").innerHTML=loading+(MTS.sel?mtGroupHTML(MT.depts.get(MTS.sel),ed):MT.depts.size?`<p class="empty">目前沒有部門標「會議要報告」。各部門在自己的即時回報按「會議要報告」後會出現在這裡。</p>`:"")
     +(none.length?`<p class="sub mt-none">沒有報告事項：${none.map(m=>esc(m.name)).join("、")}</p>`:"")
-    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(ed&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
+    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(mtCanEdit()&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
   const i=has.findIndex(m=>m.id===MTS.sel);
   $("#meetStep").innerHTML=has.length>1?`<button type="button" class="icon" data-mtstep="-1"${i>0?"":" disabled"}>${ico("prev")}${i>0?esc(has[i-1].name):"上一個部門"}</button><span class="sub num">${i+1} / ${has.length}</span><button type="button" class="icon" data-mtstep="1"${i<has.length-1?"":" disabled"}>${i<has.length-1?esc(has[i+1].name):"下一個部門"}${ico("next")}</button>`:"";
   const mins=state.minutes||[];

@@ -170,10 +170,11 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
       if (!opt.admin) throw fail("permission-denied");
       const r = R[kind].get(id), o = orig[kind][id];
       if (!o || !o.updatedAt || typeof o.updatedAt.toMillis !== "function") throw fail("conflict");
-      /* 紀錄 ID 由被刪的那一版決定（updatedAt 的毫秒）；交易裡確認文件還是那一版 */
+      /* 紀錄 ID 由被刪的那一版決定（updatedAt 的毫秒）；交易裡確認文件還是那一版。
+         正式專案的伺服器時間到微秒，SDK 的 toMillis() 會帶小數，規則的 toMillis() 是整數（捨去）：取整數才對得上（02D 審查 P1-1） */
       const title = kind === "issues" ? r.title : kind === "weeks" ? r.date : r.name;
       units.push(unit(COST.delLogged, [{ path: `${kind}/${id}`, op: "delete" },
-        { path: `auditLogs/${kind}_${id}_delete_${o.updatedAt.toMillis()}`, op: "set", data: { col: kind, docId: id, rev: rev ? r.rev : 0, action: "delete", actor: me,
+        { path: `auditLogs/${kind}_${id}_delete_${Math.floor(o.updatedAt.toMillis())}`, op: "set", data: { col: kind, docId: id, rev: rev ? r.rev : 0, action: "delete", actor: me,
           at: serverTimestamp(), before: { title, deptId: r.deptId }, after: {}, ref: "" } }],
         [{ path: `${kind}/${id}`, ok: s => s && sameTs(s.updatedAt, o.updatedAt) && (!rev || s.rev === r.rev) }]));
     }

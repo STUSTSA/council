@@ -263,6 +263,13 @@ function migLoad(){
   return migMod;
 }
 const SRC_T={github:"GitHub",frozen:"凍結中",firestore:"新資料庫"};
+/* 匯入讀哪個 repo：只看 dept/config.js 的 data（owner／repo 留空＝從 github.io 網址推）與它的分支，不看資料檔或本機暫存裡的 sync（02D 審查 P1-2）。
+   不是 github.io 又沒設 owner／repo（本機開發）＝讀網站上的檔案 */
+function impRepo(){
+  let owner=CFG.data.owner||"",repo=CFG.data.repo||"";
+  if(!owner&&/\.github\.io$/i.test(location.hostname)){owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];repo=seg&&!/\.html?$/i.test(seg)?seg:location.hostname}
+  return {owner,repo,branch:CFG.data.branch||"main"};
+}
 const IMP_STEP={read:"讀取資料檔",write:"寫入",check:"檢查"};
 const IMP_ERR={source:"讀不到資料檔","permission-denied":"沒有權限",unavailable:"沒有連上網路"};
 function importPanel(){
@@ -279,7 +286,7 @@ function importPanel(){
         if(err){p.box.innerHTML=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p><div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
         const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
         p.box.innerHTML=p.head()+head
-          +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
+          +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`${esc(res.repo)} · commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
           +rowsHTML(res)
           +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
           +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
@@ -290,8 +297,8 @@ function importPanel(){
     const run=async()=>{
       if(busy)return;busy=true;err="";res=null;step=IMP_STEP.read;draw();
       try{
-        const B=await migLoad(),c=cloudCfg();
-        res=await B.importDept(CFG.firebase,{owner:c.owner,repo:c.repo,branch:c.branch},BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
+        const B=await migLoad();
+        res=await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
       }catch(e){console.error(e);err=IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`}
       busy=false;draw();
     };

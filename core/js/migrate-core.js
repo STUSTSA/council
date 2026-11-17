@@ -199,7 +199,7 @@
     return { dept, path: f.path, sha256: f.sha256, commit: src.commit, rows, verify: v.items, pending: v.pending, ok: v.ok && rows.every(r => r.ok) };
   }
 
-  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport, MAP };
+  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.MigrateCore = api;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -52,8 +52,8 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     const puts=[];await ctx.route('https://api.github.com/**',r=>{const q=r.request(),u=new URL(q.url());
       if(q.method()!=='GET'){puts.push(q.url());return r.fulfill({status:403,body:'{}'})}
       if(ghFail)return r.fulfill({status:500,body:'{}'});
-      if(/\/repos\/[^/]+\/[^/]+\/commits\/main$/.test(u.pathname)){gh.commits++;return r.fulfill({status:200,contentType:'text/plain',headers:{'Access-Control-Allow-Origin':'*'},body:SHA})}
-      const m=u.pathname.match(/\/repos\/[^/]+\/[^/]+\/contents\/(.+)$/);
+      if(/\/repos\/test-owner\/test-repo\/commits\/main$/.test(u.pathname)){gh.commits++;return r.fulfill({status:200,contentType:'text/plain',headers:{'Access-Control-Allow-Origin':'*'},body:SHA})}
+      const m=u.pathname.match(/\/repos\/test-owner\/test-repo\/contents\/(.+)$/);
       if(m&&u.searchParams.get('ref')===SHA&&/^data(-[a-z]+)?\.json$/.test(decodeURIComponent(m[1]))){gh.files.push(decodeURIComponent(m[1]));return r.fulfill({status:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:fs.readFileSync(path.join(ROOT,decodeURIComponent(m[1])))})}
       r.fulfill({status:404,body:'{}'})});
     await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc;for(const x of frozen)s=s.replace(new RegExp(`(\\{ id: "${x}",[^\\n]*?)( \\},?\\n)`),`$1, source: "frozen"$2`);
@@ -101,7 +101,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   const reads0=su.siteReads.length;
   const t1=await importVia(su,'fruit');
   ok(t1.includes('結果：通過'),'水果部：結果通過');
-  ok(t1.includes(`commit ${SHA.slice(0,12)}`)&&t1.includes(fileSha('data-fruit.json')),'水果部：報告上的 commit 是 GitHub 最新的、SHA-256＝資料檔的雜湊');
+  ok(t1.includes(`test-owner/test-repo@main · commit ${SHA.slice(0,12)}`)&&t1.includes(fileSha('data-fruit.json')),'水果部：報告上的 repo＠分支是 dept/config.js 設定的（不是資料檔裡的 sync）、commit 是最新的、SHA-256＝資料檔的雜湊');
   {const rows=await su.evaluate(()=>[...document.querySelectorAll('.acct-panel .imp-tbl tbody tr')].map(r=>[...r.cells].map(c=>c.textContent)));
     ok(rows.length===9&&rows.every(r=>r[3]==='相同'&&r[1]===r[2]),`水果部：筆數報告 9 列都相同（${rows.map(r=>r[0]+r[1]).join('、')}）`);}
   ok(['V1','V2','V3','V4','V6'].every(v=>t1.includes(v))&&!t1.includes('失敗\nV'),'水果部：V1～V6 通過');
@@ -132,7 +132,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   /* ---------- 5. 不是總管理員：規則拒絕；讀不到資料檔 ---------- */
   {const p=await open('fruit');const uid=await signIn(p,'adm2');await setRole(uid,{rights:'admin',fruit:'admin'});await p.waitForTimeout(1200);
     const n0=(await q(async d=>(await d.collection('migrations').get()).size));
-    const r=await p.evaluate(async()=>{const B=await migLoad();const c=cloudCfg();try{await B.importDept(CFG.firebase,{owner:c.owner,repo:c.repo,branch:c.branch},BOARD_DEPTS,'works');return 'ok'}catch(e){return e.code||e.message}});
+    const r=await p.evaluate(async()=>{const B=await migLoad();try{await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,'works');return 'ok'}catch(e){return e.code||e.message}});
     const n1=(await q(async d=>(await d.collection('migrations').get()).size));
     ok(r==='permission-denied'&&n1===n0&&(await deptDocs('works')).n===0,`部門管理員直接呼叫匯入：規則拒絕（${r}），沒有寫進任何東西`);
     const x=await p.evaluate(async()=>{const B=await migLoad();try{await B.exportAll(CFG.firebase,BOARD_DEPTS);return 'ok'}catch(e){return e.code}});
@@ -144,6 +144,20 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     const s=await importVia(p,'finance');
     ok(s.includes('讀不到資料檔')&&(await q(async d=>(await d.collection('migrations').get()).size))===n0,'讀不到資料檔：顯示錯誤，沒有建立批次、沒有寫入');
     await p.ctx.close();}
+  {const p=await open('fruit');await signIn(p,'su');await p.waitForTimeout(1500);
+    await openSet(p);await p.click('[data-set="council"]');await p.waitForTimeout(800);await p.click('[data-hub="import"]');await p.waitForSelector('[data-imp="events"]',{timeout:8000});
+    /* 寫到一半失敗（route 擋下第二批 commit）：批次改成 failed（不留在 running）；再試一次補完、結果通過 */
+    /* 匯入程式一批一批寫（writeBatch 走寫入串流，不能用 route 擋）：在頁面上把第 3 次寫入換成斷線錯誤 */
+    await p.evaluate(()=>migLoad());await p.evaluate(()=>{const orig=MigrateCore.runImport;window.__restore=()=>{MigrateCore.runImport=orig};
+      MigrateCore.runImport=(io,src,o)=>{let n=0;const c=io.commit;io.commit=w=>++n===3?Promise.reject(Object.assign(new Error('test'),{code:'unavailable'})):c(w);return orig(io,src,o)}});
+    await p.click('[data-imp="events"]');await dlg(p);await dlgAct(p,'delete');
+    await until(async()=>/結果：|失敗（|讀不到|沒有權限/.test(await panel(p)),60000);const s2=await panel(p);
+    const ms=await q(async d=>(await d.collection('migrations').get()).docs.map(x=>x.data()).filter(m=>m.fileHashes&&m.fileHashes.events));
+    ok(/沒有連上網路/.test(s2)&&ms.length===1&&ms[0].status==='failed',`寫到一半失敗：顯示錯誤、批次改成 failed（${ms.map(m=>m.status).join(',')}）`);
+    await p.evaluate(()=>window.__restore());
+    await p.click('.acct-panel [data-run]');await until(async()=>/結果：/.test(await panel(p)),60000);
+    ok((await panel(p)).includes('結果：通過'),'寫到一半失敗後按「再試一次」：補完、結果通過');
+    await p.ctx.close();}
 
   /* ---------- 6. 匯出全部資料 ---------- */
   await su.evaluate(()=>{window.__saved=null;saveJsonFile=async(name,doc)=>{window.__saved={name,doc}}});
@@ -152,9 +166,9 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   const saved=await until(()=>su.evaluate(()=>window.__saved),20000);
   ok(saved&&/^學生會看板_全部資料_demo-stustsa-board_\d{4}-\d{2}-\d{2}\.json$/.test(saved.name),`匯出全部資料：存成一個 JSON（${saved&&saved.name}）`);
   if(saved){const x=JSON.parse(saved.doc);
-    const nCards=['data.json','data-fruit.json'].reduce((n,f)=>n+(JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8')).events||[]).length,0);
+    const nCards=['data.json','data-fruit.json','data-events.json'].reduce((n,f)=>n+(JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8')).events||[]).length,0);
     ok(x.collections.cards.length===nCards&&x.collections.versions.length>=42&&x.collections.roles.length>=1&&x.collections.auditLogs.length>0,`匯出：各集合的文件（卡片 ${x.collections.cards.length}、版本 ${x.collections.versions.length}、角色、稽核紀錄）`);
-    ok(x.batches.length===3&&x.batches.every(b=>b.status==='done'&&b.sourceCommit===SHA),'匯出：批次資訊（3 批、done、來源 commit）');
+    ok(x.batches.length===5&&x.batches.filter(b=>b.status==='done').length===4&&x.batches.some(b=>b.status==='failed')&&x.batches.every(b=>b.sourceCommit===SHA),`匯出：批次資訊（${x.batches.length} 批：done 4、中途失敗的 failed 1，都有來源 commit）`);
     ok(x.unreadable.includes('bookings')&&x.unreadable.includes('busyBlocks')&&!x.unreadable.includes('roles'),`匯出：讀不到的集合列出（${x.unreadable.join('、')}）`);
     const mig=await import(path.join(ROOT,'backend/migrate/run.js'));const db=t.authenticatedContext(suUid,{email:'su@example.test',email_verified:true,firebase:{sign_in_provider:'google.com'}}).firestore();
     const strip=s=>{const o=JSON.parse(JSON.stringify(s));delete o.savedAt;return o};

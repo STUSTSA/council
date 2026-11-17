@@ -17,7 +17,7 @@ async function fwLoad(id,force){
     if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="這個部門還沒有資料"}
   }catch(_){err="讀不到這個部門的資料"}
   if(data)data=normalize(data);
-  const v={at:Date.now(),data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;
+  const v={at:data?Date.now():Date.now()-3e5+3e4,data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;   /* 讀不到的 30 秒後再試（不是 5 分鐘） */
 }
 /* 某部門某類別可以選的項目 → [[ref,顯示文字],…] */
 function fwOptions(d,kind){

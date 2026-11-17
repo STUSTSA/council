@@ -222,6 +222,12 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await ad.click(`#dlgForm [data-x="del"][data-id="${lid}"]`);await ad.click('[data-x="done"]');await settled(ad);await closeSet(ad);
     const ll=await delLogs('labels');
     ok(!(await read(`labels/${DEPT}__${lid}`))&&ll.length===1&&ll[0].before.title==='FW 標籤'&&ll[0].actor===adUid,'管理員刪除標籤：文件不在、刪除紀錄有標籤名稱');
+    /* 正式專案的伺服器時間到微秒（模擬器只到毫秒）：放一個 updatedAt 有微秒的標籤，管理員從畫面刪除也要成功（02D 審查 P1-1） */
+    const mic=`${DEPT}__fwmicro`;await admin(d=>d.doc(`labels/${mic}`).set({deptId:DEPT,kind:'物',name:'微秒標籤',updatedAt:new TS(1763000000,123456000),updatedBy:'su'}));
+    await ad.evaluate(()=>acctReload());await until(()=>ad.evaluate(()=>state.labels.some(l=>l.name==='微秒標籤')&&!fsBusy));
+    await openSet(ad);await ad.click('[data-set="labels"]');await ad.waitForSelector('#dlgForm [data-x="del"][data-id="fwmicro"]',{timeout:8000});
+    await ad.click('#dlgForm [data-x="del"][data-id="fwmicro"]');await ad.click('[data-x="done"]');await settled(ad);await closeSet(ad);
+    ok(!(await read(`labels/${mic}`))&&!!(await read(`auditLogs/labels_${mic}_delete_1763000000123`)),'管理員刪除 updatedAt 有微秒的標籤：成功，紀錄 ID 用整數毫秒');
     /* 編輯者繞過畫面：自己寫一模一樣的刪除＋紀錄，規則拒絕 */
     const tmp=`${DEPT}__fwdel`;await admin(d=>d.doc(`labels/${tmp}`).set({deptId:DEPT,kind:'事',name:'暫時',updatedAt:TS.fromMillis(1763000000000),updatedBy:'su'}));
     const r=await ed.evaluate(async id=>{const m=await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js');const db=m.getFirestore();const b=m.writeBatch(db);

@@ -105,7 +105,7 @@ function importing() {
 - 流程：總管理員建立 `migrations/{batch}`（`status: 'running'`，有稽核）→ 匯入 → 驗證 → 改成 `done`（之後這個批次號就不能再用來寫入）。
 - 一批最多 500 筆寫入〔文件〕；全會約 170 份文件，分 1～3 批。
 - 模擬器演練時用測試身分直接跑同一支匯入程式。
-- **02D 現況**：命令列（`backend/migrate/cli.js`）只連模擬器。正式匯入＝**網頁匯入頁**（02D D-a）：總管理員在看板 → 設定 → 會長室管理 → 匯入，選部門；網頁讀 GitHub 上 `main` 最新 commit 的資料檔（只讀、不用權杖；本機開發讀網站上的檔案），照 `core/js/migrate-core.js`（命令列 `run.js` 也改成呼叫它，邏輯只有一份）寫進 `dept/config.js` 設定的 Firebase 專案，批次號 `web-{部門}-{毫秒}`，完成後改成 `done`（報告不通過或有衝突＝`failed`）並顯示筆數報告。凍結中的部門的設定頁也有 Google 登入，總管理員從那裡進會長室管理。測試：`tools/tests/im1.js`。
+- **02D 現況**：命令列（`backend/migrate/cli.js`）只連模擬器。正式匯入＝**網頁匯入頁**（02D D-a）：總管理員在看板 → 設定 → 會長室管理 → 匯入，選部門；網頁讀 GitHub 上 `dept/config.js` 的 `data` 設定的 repo（owner／repo 留空＝從 github.io 網址推）與分支（`main`）最新 commit 的資料檔（只讀、不用權杖；不看資料檔或本機暫存裡的 `sync`；本機開發讀網站上的檔案），報告印出 `owner/repo@分支 · commit`，照 `core/js/migrate-core.js`（命令列 `run.js` 也改成呼叫它，邏輯只有一份）寫進 `dept/config.js` 設定的 Firebase 專案，批次號 `web-{部門}-{毫秒}`，完成後改成 `done`（報告不通過或有衝突＝`failed`）並顯示筆數報告；中途失敗也改成 `failed`（不留在 `running`），按「再試一次」用新批次補完。凍結中的部門的設定頁也有 Google 登入，總管理員從那裡進會長室管理。測試：`tools/tests/im1.js`。
 
 ## 4. 舊身分對照（決定 A4）
 
