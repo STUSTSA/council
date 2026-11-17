@@ -186,6 +186,11 @@ function calAfter(c,host,sw){
   [...l.children].slice(0,12).forEach((x,i)=>x.animate([{opacity:0,transform:"translateY(12px)"},{opacity:1,transform:"none"}],{duration:MO.base+80,delay:60+i*40,easing:"cubic-bezier(.25,1.12,.4,1)",fill:"backwards"}));
 }
 function calPaint(c){if(c===NOTI){renderNoti();return}const h=c.host;if(!h)return;const sw=calSwapPrep(h);morphTo(h,calHTML(c));calAfter(c,h,sw)}
+/* 公共版（主頁的全會行事曆，第 7 步接上）：在 host 裡畫一份 pub 的行事曆（全部／活動／會議；沒有今日／明日與逾期），回傳它的狀態 */
+function calMount(host){
+  if(host._cal)return host._cal;
+  const c=calState(true);c.host=host;CALS.push(c);calLoad(c);calPaint(c);return c;
+}
 function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
 /* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
 function calMonth(c,m){
