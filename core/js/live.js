@@ -99,9 +99,10 @@ function lcToolsHTML(ev,ed){const par=parentOf(ev),pane=ed&&lvPane;
     <div class="lc-tl${pane?" paned":""}">${tb("text","text","文字")}${tb("staff","user","人")}${tb("time","clock","時間")}${tb("place","pin","地點")}${tb("check","box","核取")}${tb("link","link","超連結")}</div></div>`}
 function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   return `<div class="lc-pop" role="listbox" aria-label="母議題">${opts.map(([v,t])=>`<button type="button" role="option" data-lcpar="${esc(v)}" aria-selected="${(ev.issueId||"")===v}">${esc(t)}</button>`).join("")}</div>`}
-/* 一張即時回報卡片。o＝{k:"live"|"done",ids,full,body,tail}（完成紀錄：唯讀，k="done"；編輯中的完成紀錄由 views.js 傳 body／tail） */
+/* 一張即時回報卡片。o＝{k:"live"|"done",ids,full,body,tail}（完成紀錄：唯讀，k="done"；編輯中的完成紀錄由 views.js 傳 body／tail）。
+   編輯中被撤權（存檔會失敗）時照樣畫成編輯中：草稿留在畫面上，失敗訊息在卡片上 */
 function lcLiveHTML(ev,o){
-  const done=o.k==="done",ro=done||!canEdit(),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
+  const done=o.k==="done",ro=done||!canEdit()&&!cardEd("e",ev.id),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
   const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(ev.name)}</b>`;
   const rep=done?"":ro?(ev.report?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${!!ev.report}">報告</button>`;
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
@@ -496,6 +497,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("keydown",e=>{
   if(!editing&&(e.key==="Enter"||e.key===" ")&&!e.isComposing&&e.target.matches&&e.target.matches(".lc [data-kpgo][role=button]")){e.preventDefault();e.target.click();return}
   if(kp&&e.target.closest&&e.target.closest(".lc-ed")&&kpKey(e))return;
+  if(kp&&editing&&e.key==="Escape"&&!$("#dlg").open&&!document.querySelector(".csel.open")&&kpKey(e))return;   /* 焦點不在卡片上（換頁後輸入欄被拿掉）時 Esc 一樣＝存檔並離開編輯 */
   if(editing||!lcCur()||setOpen||notiOpen||$("#dlg").open||(typeof HS!=="undefined"&&HS.mode)||($("#logOv")&&!$("#logOv").hidden))return;
   const a=document.activeElement,typing=a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
   if(e.key==="Escape"){e.preventDefault();if(typing)a.blur();lcBack();return}
