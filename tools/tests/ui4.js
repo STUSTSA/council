@@ -8,6 +8,7 @@
    6. 新增圓鈕：只在即時回報分頁、沒有搜尋、沒有卡片打開時出現；點了新增一張；舊的「+ 新增即時回報」小字不在清單裡
    7. 圖示：按下工具列與標題列的圖示有動作（getAnimations）；沒有 title 屬性
    8. 關掉動態（reduced-motion）：按圖示、切換唯讀檢視、搜尋都沒有動畫
+   ui-05（2026-11-17）：打開的卡片改看 lvOpen／dnOpen（live.js），膠囊是 #events .cp
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -76,9 +77,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await p.fill('#boardQ','停車');await p.waitForTimeout(500);
     const want=await p.evaluate(()=>HS.items[0].id);
     await p.click('#boardRes .dr-sec[data-key="live"] .dr-item');await p.waitForTimeout(1300);
-    r=await p.evaluate(id=>({q:$('#boardQ').value,lay:getComputedStyle(document.querySelector('.layout')).display,res:$('#boardRes').hidden,open:selEv===id||openEv.has(id)}),want);
+    r=await p.evaluate(id=>({q:$('#boardQ').value,lay:getComputedStyle(document.querySelector('.layout')).display,res:$('#boardRes').hidden,open:lvOpen===id||dnOpen===id}),want);
     ok(!r.q&&r.lay!=='none'&&r.res&&r.open,`點結果：清掉搜尋、回到看板並打開那一項（${JSON.stringify(r)}）`);
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(500);
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(500);
     await p.fill('#boardQ','議');await p.waitForTimeout(300);await p.press('#boardQ','Escape');await p.waitForTimeout(300);
     r=await p.evaluate(()=>[$('#boardQ').value,$('#boardRes').hidden,getComputedStyle(document.querySelector('.layout')).display]);
     ok(r[0]===''&&r[1]&&r[2]!=='none','Esc 清除搜尋');
@@ -100,9 +101,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await p.click('#tabbar .tab[data-tab="progress"]');await p.waitForTimeout(700);
     ok(await p.evaluate(()=>$('#addEvent').hidden),'進度分頁：圓鈕不出現');
     await p.click('#tabbar .tab[data-tab="live"]');await p.waitForTimeout(700);
-    await p.click('#events .ev summary');await p.waitForTimeout(1000);
+    await p.click('#events .cp');await p.waitForTimeout(1000);
     ok(await p.evaluate(()=>$('#addEvent').hidden),'有卡片打開（右側詳情）：圓鈕不出現');
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(700);
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(700);
     const n0=await p.evaluate(()=>state.events.length);
     await p.click('#addEvent');await p.waitForTimeout(900);
     const s=await p.evaluate(()=>({n:state.events.length,editing,fab:$('#addEvent').hidden}));

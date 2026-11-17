@@ -1,4 +1,4 @@
-/* dl1：刪除即時回報的確認（events.js 的 [data-evdel]）。先問「刪除「名稱」？」；卡片有時間標記時再問「一起刪掉 N 個時間標記？」，
+/* dl1：刪除即時回報的確認（ui-05 起是把膠囊拖到左上角，live.js 的 lvDelete；以前是編輯中卡片的 [data-evdel]）。先問「刪除「名稱」？」；卡片有時間標記時再問「一起刪掉 N 個時間標記？」，
    兩次都按「刪除」才刪掉並儲存，任一次取消都留著；沒有時間標記的卡片只問一次。
    data_test.json 的即時回報都沒有時間標記，測試在頁面裡替第一張未完成的加 2 個（不改資料檔）。桌面 1300；預設 8300 埠，可用 PORT 改 */
 const {chromium}=require('playwright');const fs=require('fs');
@@ -29,10 +29,12 @@ ok(await p.evaluate(()=>loggedIn()),'已登入');
 const dlgTitle=()=>p.evaluate(()=>$('#dlg').open?($('#dlgForm b')||{}).textContent:null);
 const act=async a=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(600)};
 const has=id=>p.evaluate(i=>!!state.events.find(e=>e.id===i),id);
-const startEdit=async id=>{await pwFix(7);const left=await dlgTitle();if(left)console.log('（還開著的對話框：'+left+'）');await p.evaluate(()=>{if(editing)cancelEdit()});await p.waitForTimeout(400);
-  await p.click(`.ev[data-ev="${id}"]>summary`);await p.waitForTimeout(800);await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(800);
-  return p.evaluate(i=>editing&&cardEdit==='e:'+i,id)};
-const del=async()=>{await p.click('#evDetail [data-evdel]');await p.waitForTimeout(600);return dlgTitle()};
+/* ui-05：即時回報卡片沒有刪除鈕，刪除＝把膠囊拖到左上角放開（live.js 的 lvDelete，確認流程不變），不用先進入編輯 */
+let cur=null;
+const startEdit=async id=>{await pwFix(7);const left=await dlgTitle();if(left)console.log('（還開著的對話框：'+left+'）');await p.evaluate(()=>{if(editing)cancelEdit();lvOpen=null;render()});await p.waitForTimeout(400);
+  cur=id;return p.evaluate(i=>!editing&&!!document.querySelector(`#events .cp[data-cp="${i}"]`),id)};
+const del=async()=>{const r=await p.$eval(`#events .cp[data-cp="${cur}"]`,e=>{const b=e.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2}});
+  await p.mouse.move(r.x,r.y);await p.mouse.down();await p.mouse.move(r.x+10,r.y,{steps:3});await p.mouse.move(20,20,{steps:12});await p.mouse.up();await p.waitForTimeout(700);return dlgTitle()};
 
 /* 準備：第一張未完成的加 2 個時間標記，第二張確定沒有 */
 const [idT,nameT,idN]=await p.evaluate(()=>{const L=liveOrder(),a=L[0],c=L[1];
@@ -40,7 +42,7 @@ const [idT,nameT,idN]=await p.evaluate(()=>{const L=liveOrder(),a=L[0],c=L[1];
 ok(idT&&idN&&idT!==idN,'找到兩張未完成的即時回報 '+nameT);
 
 /* (0) 有時間標記：第一次就取消 → 只出現一個對話框，卡片留著 */
-ok(await startEdit(idT),'(0) 開始編輯有時間標記的卡片');
+ok(await startEdit(idT),'(0) 準備有時間標記的卡片（拖到左上角刪除）');
 let t=await del();ok(t===`刪除「${nameT}」？`,'(0) 第一個對話框標題：'+t);
 await act('cancel');ok(await dlgTitle()===null,'(0) 取消第一個後沒有第二個對話框');ok(await has(idT),'(0) 卡片還在');
 
@@ -59,7 +61,7 @@ ok(!(await has(idT)),'(2) 兩次都確認：卡片從 state.events 刪掉');
 ok(commits.length>c0&&!remote.events.some(e=>e.id===idT),'(2) 已儲存，遠端也沒有這張 '+(commits[0]||'').split('\n')[0]);
 
 /* (3) 沒有時間標記：只問一次，確認就刪掉 */
-ok(await startEdit(idN),'(3) 開始編輯沒有時間標記的卡片');
+ok(await startEdit(idN),'(3) 準備沒有時間標記的卡片（拖到左上角刪除）');
 const c1=commits.length;
 t=await del();ok(/^刪除「/.test(t||''),'(3) 對話框：'+t);await act('delete');
 ok(await dlgTitle()===null,'(3) 沒有第二個對話框');await p.waitForTimeout(1500);

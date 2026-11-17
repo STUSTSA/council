@@ -10,6 +10,9 @@
    8. 跳脫：名稱、行內容、負責人名稱放 <img src=x onerror=…> 與帶引號的字串，沒有執行、原樣顯示
    9. 沒有權限的人只能看：核取框不能按、點一行不會進入編輯；沒有頁面錯誤
    10. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，重新載入後種類、行 ID、timeId、時間事件的 blockId 不變
+   ui-05（2026-11-17）：卡片換新介面，改在 1300 寬跑（右邊卡片；點外面＝存檔，卡片留著才看得到「已儲存＋復原」）；新增是浮動圓鈕開一張空白卡片；
+   沒有種類選單：核取行、時間行用底部工具列加（第 1 項改成加一個核取行、第 7 項改成改一行的字），時間用時間頁的分段調整；「儲存」鈕拿掉，重試＝再點一次外面；
+   負責人在工具列的「人」頁
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
    只連本機模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
@@ -43,7 +46,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
 
   const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
   const open=async()=>{
-    const ctx=await b.newContext({viewport:{width:900,height:900},serviceWorkers:'block'});
+    const ctx=await b.newContext({viewport:{width:1300,height:900},serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
     await ctx.route('https://www.gstatic.com/firebasejs/**',r=>{const f=path.join(ROOT,'backend/node_modules/firebase',r.request().url().split('/').pop());r.fulfill({contentType:'text/javascript',body:fs.readFileSync(f,'utf8')})});
     await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
@@ -63,15 +66,21 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const rows=c=>{const B=c.blocks;if(Array.isArray(B))return B.map(x=>[x.text,x.check??null,x.timeId||null]);return B.id.map((_,n)=>[B.text[n],B.check[n],B.time[n]?B.time[n].replace(`${DEPT}__`,''):null])};
   const evOf=(p,id)=>p.evaluate(id=>{const e=state.events.find(x=>x.id===id);return e&&JSON.parse(JSON.stringify(e))},id);
   const settled=p=>until(()=>p.evaluate(()=>!fsBusy&&!kpBusy()&&storeFsBase&&(!kpSt||kpSt.st!=='saving')),15000).then(()=>sleep(250));
-  const box=id=>`.ev[data-ev="${id}"]`;
-  /* 打開膠囊（還沒開的話點標題列） */
-  const expand=async(p,id)=>{if(!await p.evaluate(s=>document.querySelector(s).open,box(id))){await p.click(`${box(id)}>summary`,{position:{x:30,y:20}});await p.waitForTimeout(700)}};
+  const box=id=>`.lc[data-ev="${id}"]`;
+  /* 打開卡片（還沒開的話點膠囊；1300 在右邊） */
+  const expand=async(p,id)=>{if(await p.evaluate(id=>lvOpen!==id,id)){await p.click(`#events .cp[data-cp="${id}"]`);await p.waitForTimeout(700)}};
   const outside=async p=>{await p.click('#evH');await settled(p)};
-  const lineSel=(id,n)=>`${box(id)} .kp-lines:not(.kp-frees) .kp-line:nth-child(${n})`;
-  const setType=async(p,id,n,k)=>{await p.click(`${lineSel(id,n)} .kp-type .csel-btn`);await p.waitForTimeout(250);await p.click(`${lineSel(id,n)} .csel-opt[data-v="${k}"]`);await p.waitForTimeout(350)};
-  /* 新卡片（小表單：名稱、沒有說明）→ 直接儲存 */
-  const newCard=async(p,name)=>{await p.click('#addEvent');await p.waitForSelector('#dlg[open]');await p.fill('#dlgForm [name="name"]',name);await p.click('#dlg [data-act="ok"]');await settled(p);
+  const lineSel=(id,n)=>`${box(id)} .lns .ln:nth-child(${n})`;
+  /* 新卡片（浮動圓鈕：一張空白卡片、游標在名稱）→ 打名稱、點外面存檔（卡片留著） */
+  const newCard=async(p,name)=>{await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);await outside(p);
     const id=await p.evaluate(n=>state.events.find(e=>e.name===n).id,name);await expand(p,id);return id};
+  /* 時間頁：選一段再用方向鍵、數字調整（tid＝時間標記） */
+  const teSet=async(p,tid,{d,h,m,eh,em})=>{const T=`.lc-ed .te[data-te="${tid}"]`;
+    if(d){const d0=await p.evaluate(id=>state.events.find(e=>e.id===lvOpen).times.find(t=>t.id===id).start.slice(0,10),tid),n=Math.round((new Date(d)-new Date(d0))/864e5);
+      await p.click(`${T} [data-sg="d"]`);for(let i=0;i<Math.abs(n);i++)await p.keyboard.press(n>0?'ArrowUp':'ArrowDown')}
+    if(h){await p.click(`${T} [data-sg="h"]`);await p.keyboard.type(h);await p.click(`${T} [data-sg="m"]`);await p.keyboard.type(m)}
+    if(eh){await p.click(`${T} [data-teset="e"]`);await p.waitForTimeout(200);await p.click(`${T} [data-sg="eh"]`);await p.keyboard.type(eh);await p.click(`${T} [data-sg="em"]`);await p.keyboard.type(em)}
+    await p.waitForTimeout(200)};
   /* 原位編輯：點「沒有說明」開始、每一行打字＋Enter */
   const typeLines=async(p,id,lines)=>{await p.click(`${box(id)} [data-kpgo=""]`);await p.waitForTimeout(500);
     for(let i=0;i<lines.length;i++){if(i)await p.keyboard.press('Enter');await p.keyboard.type(lines[i])}};
@@ -82,29 +91,30 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   /* ---------- 1. 三行純文字 → 第 1、3 行轉成核取 ---------- */
   const k1=await newCard(ed,'KP 三行');
   await typeLines(ed,k1,['甲','乙','丙']);
-  ok(await ed.evaluate(id=>editing&&cardEdit==='e:'+id&&!!document.querySelector('.kp'),k1),'點「沒有說明」：直接在原位編輯（有原位編輯器）');
+  ok(await ed.evaluate(id=>editing&&cardEdit==='e:'+id&&!!document.querySelector('.lc-ed'),k1),'點「沒有說明」：直接在原位編輯（卡片原位）');
   await outside(ed);
   let c=await read(C(k1));
   ok(JSON.stringify(rows(c))===JSON.stringify([['甲',null,null],['乙',null,null],['丙',null,null]]),`三行純文字存好（${JSON.stringify(rows(c))}）`);
   const ids1=c.blocks.id;
   const b1=await evOf(ed,k1);
   await ed.click(`${box(k1)} [data-kpgo="${b1.blocks[0].id}"]`);await ed.waitForTimeout(400);
-  await setType(ed,k1,1,'check');await setType(ed,k1,3,'check');
+  await ed.click(`${box(k1)} [data-lctool="check"]`);await ed.waitForTimeout(300);await ed.keyboard.type('丁');   /* ui-05：沒有種類選單，核取行用工具列加 */
   await outside(ed);
   await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.length>0,null,{timeout:15000});await ed.waitForTimeout(800);
   const r1=await evOf(ed,k1);c=await read(C(k1));
-  ok(JSON.stringify(r1.blocks.map(x=>[x.text,x.check]))===JSON.stringify([['甲',false],['乙',null],['丙',false]])&&JSON.stringify(c.blocks.id)===JSON.stringify(ids1)&&r1.desc==='☐ 甲\n乙\n☐ 丙',
-    `重新載入：第 1、3 行是核取（沒勾）、第 2 行純文字、行 ID 不變、desc 攤平（${JSON.stringify(r1.blocks.map(x=>[x.text,x.check]))}）`);
+  ok(JSON.stringify(r1.blocks.map(x=>[x.text,x.check]))===JSON.stringify([['甲',null],['乙',null],['丙',null],['丁',false]])&&JSON.stringify(c.blocks.id.slice(0,3))===JSON.stringify(ids1)&&r1.desc==='甲\n乙\n丙\n☐ 丁',
+    `重新載入：三行純文字＋一個核取行（沒勾）、原本的行 ID 不變、desc 攤平（${JSON.stringify(r1.blocks.map(x=>[x.text,x.check]))}）`);
   await until(()=>ed.evaluate(()=>!boardLocked()));
 
   /* ---------- 2. 純文字、核取（勾）、時間＋核取 ---------- */
   const k2=await newCard(ed,'KP 三種');
-  await typeLines(ed,k2,['文字一行','要勾的','開會']);
-  await setType(ed,k2,2,'check');await ed.click(`${lineSel(k2,2)} [data-kpck]`);await ed.waitForTimeout(200);
-  await setType(ed,k2,3,'time');
-  ok(await ed.evaluate(()=>!!document.querySelector('.kp .tp')&&!document.querySelector('.kp input[type=date],.kp input[type=time]')),'換成時間：打開自製時間選取器（沒有原生日期、時間欄）');
-  const month=await ed.evaluate(()=>JSON.parse(document.querySelector('.tp').dataset.st).m);
-  await ed.click(`.tp [data-tpd="${month}-20"]`);await ed.waitForTimeout(150);await ed.fill('.tp [data-tpf="sh"]','14:00');await ed.fill('.tp [data-tpf="eh"]','15:30');await ed.click('.tp [data-tpok]');await ed.waitForTimeout(300);
+  await typeLines(ed,k2,['文字一行']);
+  await ed.click(`${box(k2)} [data-lctool="check"]`);await ed.waitForTimeout(300);await ed.keyboard.type('要勾的');await ed.click(`${lineSel(k2,2)} [data-kpck]`);await ed.waitForTimeout(200);
+  await ed.click(`${box(k2)} [data-lctool="time"]`);await ed.waitForTimeout(400);
+  ok(await ed.evaluate(()=>!!document.querySelector('.lc-ed .te .sg')&&!document.querySelector('.lc-ed input[type=date],.lc-ed input[type=time]')),'時間：卡片換成時間頁、自製分段（沒有原生日期、時間欄）');
+  const month=await ed.evaluate(()=>today().slice(0,7)),tidN=await ed.evaluate(()=>document.querySelector('.lc-ed .te:last-of-type').dataset.te);
+  await ed.fill(`.lc-ed .te[data-te="${tidN}"] .te-nm`,'開會');await teSet(ed,tidN,{d:`${month}-20`,h:'14',m:'00',eh:'15',em:'30'});
+  await ed.click(`${box(k2)} [data-lctool="time"]`);await ed.waitForTimeout(300);
   await outside(ed);
   await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.length>0,null,{timeout:15000});await ed.waitForTimeout(800);
   const r2=await evOf(ed,k2);c=await read(C(k2));
@@ -112,7 +122,8 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   ok(JSON.stringify(r2.blocks.map(x=>[x.text,x.check,!!x.timeId]))===JSON.stringify([['文字一行',null,false],['要勾的',true,false],['開會',false,true]]),`重新載入：純文字、核取（勾了）、時間＋核取各自正確（${JSON.stringify(r2.blocks.map(x=>[x.text,x.check,!!x.timeId]))}）`);
   ok(ev2&&ev2.blockId===r2.blocks[2].id&&ev2.label==='開會'&&ev2.startRaw===`${month}-20T14:00`&&ev2.endRaw===`${month}-20T15:30`&&c.timeIds.includes(`${DEPT}__${tid2}`)&&c.blocks.time[2]===`${DEPT}__${tid2}`,
     `時間標記：blockId 指向那一行、名稱＝那一行的文字、時間對（${ev2&&JSON.stringify([ev2.blockId,ev2.label,ev2.startRaw,ev2.endRaw])}）`);
-  ok(await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.ev[data-ev="${id}"] .kp-vl`)];return li.length===3&&li[1].querySelector('input').checked&&!!li[2].querySelector('.kp-tm')},k2),'檢視：核取框勾著、時間行有時間');
+  await expand(ed,k2);
+  ok(await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.lc[data-ev="${id}"] .ln`)];return li.length===3&&li[1].querySelector('input').checked&&!!li[2].querySelector('.tmc')&&!!li[2].querySelector('.ln-dot')},k2),'檢視：核取框勾著、時間行有時間與圓點');
   await until(()=>ed.evaluate(()=>!boardLocked()));
 
   /* ---------- 3. 中間插入一行、刪除一行：勾選與時間沒有掛錯行 ---------- */
@@ -133,25 +144,25 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const v4=(await read(C(k1))).version;
   await ed.click(`${box(k1)} [data-kpgo="${r1.blocks[1].id}"]`);await ed.waitForTimeout(300);
   await outside(ed);
-  ok(await ed.evaluate(()=>!editing&&!document.querySelector('.kp'))&&(await read(C(k1))).version===v4,'沒改就點外面：只收合、不寫入');
+  ok(await ed.evaluate(()=>!editing&&!document.querySelector('.lc-ed'))&&(await read(C(k1))).version===v4,'沒改就點外面：只離開編輯、不寫入');
   await ed.click(`${box(k1)} [data-kpgo="${r1.blocks[1].id}"]`);await ed.waitForTimeout(300);
   await ed.keyboard.type('（改）');
   await ed.click('#evH');
-  ok(await ed.evaluate(()=>!editing&&!document.querySelector('.kp')),'點外面：馬上收合');
-  ok(await until(()=>ed.evaluate(id=>{const s=document.querySelector(`.ev[data-ev="${id}"] .kp-done .kp-st`);return s&&s.dataset.st==='ok'&&s.textContent==='已儲存'},k1)),'儲存回饋：已儲存');
+  ok(await ed.evaluate(()=>!editing&&!document.querySelector('.lc-ed')),'點外面：馬上離開編輯');
+  ok(await until(()=>ed.evaluate(id=>{const s=document.querySelector(`.lc[data-ev="${id}"] .lc-save .kp-st`);return s&&s.dataset.st==='ok'&&s.textContent==='已儲存'},k1)),'儲存回饋：已儲存');
   c=await read(C(k1));ok(c.version===v4+1&&c.blocks.text[1]==='乙（改）','點外面：寫入（新的版本）');
 
   /* ---------- 5. 復原這次修改 ---------- */
-  ok(await ed.evaluate(id=>!!document.querySelector(`.ev[data-ev="${id}"] [data-kpundo]`),k1),'存好後有「復原這次修改」');
+  ok(await ed.evaluate(id=>!!document.querySelector(`.lc[data-ev="${id}"] [data-kpundo]`),k1),'存好後有「復原這次修改」');
   await ed.click(`${box(k1)} [data-kpundo]`);await settled(ed);
   c=await read(C(k1));
-  ok(c.version===v4+2&&c.blocks.text[1]==='乙'&&JSON.stringify(c.blocks.check)===JSON.stringify([false,null,false]),`復原：存回修改前的內容（第 ${c.version} 版）`);
-  ok(await ed.evaluate(id=>!document.querySelector(`.ev[data-ev="${id}"] [data-kpundo]`)&&document.querySelector(`.ev[data-ev="${id}"] .kp-st`).dataset.st==='ok',k1),'復原後：顯示已儲存、不再有復原鈕');
+  ok(c.version===v4+2&&c.blocks.text[1]==='乙'&&JSON.stringify(c.blocks.check)===JSON.stringify([null,null,null,false]),`復原：存回修改前的內容（第 ${c.version} 版）`);
+  ok(await ed.evaluate(id=>!document.querySelector(`.lc[data-ev="${id}"] [data-kpundo]`)&&document.querySelector(`.lc[data-ev="${id}"] .kp-st`).dataset.st==='ok',k1),'復原後：顯示已儲存、不再有復原鈕');
   /* 收合就消失 */
   await ed.click(`${box(k1)} [data-kpgo="${r1.blocks[1].id}"]`);await ed.waitForTimeout(300);await ed.keyboard.type('x');await outside(ed);
-  ok(await ed.evaluate(id=>!!document.querySelector(`.ev[data-ev="${id}"] [data-kpundo]`),k1),'再改一次：又有復原鈕');
-  await ed.click(`${box(k1)}>summary`,{position:{x:30,y:20}});await ed.waitForTimeout(900);await expand(ed,k1);
-  ok(await ed.evaluate(id=>!document.querySelector(`.ev[data-ev="${id}"] [data-kpundo]`),k1),'收合後再打開：復原鈕消失');
+  ok(await ed.evaluate(id=>!!document.querySelector(`.lc[data-ev="${id}"] [data-kpundo]`),k1),'再改一次：又有復原鈕');
+  await ed.click('#evH');await ed.waitForTimeout(900);await expand(ed,k1);   /* 再點一次外面＝卡片收回 */
+  ok(await ed.evaluate(id=>!document.querySelector(`.lc[data-ev="${id}"] [data-kpundo]`),k1),'收回後再打開：復原鈕消失');
   /* 開始下一次編輯就消失 */
   await ed.click(`${box(k1)} [data-kpgo="${r1.blocks[1].id}"]`);await ed.waitForTimeout(300);await ed.keyboard.press('Backspace');await outside(ed);
   await ed.click(`${box(k1)} [data-kpgo="${r1.blocks[0].id}"]`);await ed.waitForTimeout(300);
@@ -164,20 +175,20 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   await ed.click(`${box(k2)} [data-kpgo="${r6.blocks[0].id}"]`);await ed.waitForTimeout(300);await ed.keyboard.type('（草稿）');
   await setRole(edUid,{});await until(()=>ed.evaluate(()=>boardLocked()));
   await ed.click('#evH');await settled(ed);
-  const f6=await ed.evaluate(id=>({editing,card:cardEdit,kp:!!document.querySelector('.kp'),st:(document.querySelector('.kp-bar .kp-st')||{}).dataset,txt:(document.querySelector('.kp-bar .kp-st')||{}).textContent,
+  const f6=await ed.evaluate(id=>({editing,card:cardEdit,kp:!!document.querySelector('.lc-ed'),st:(document.querySelector('.lc-ed .lc-save .kp-st')||{}).dataset,txt:(document.querySelector('.lc-ed .lc-save .kp-st')||{}).textContent,
     draft:(document.querySelector(`[data-kptx]`)||{}).value,dlg:!!document.querySelector('#dlg[open]')}),k2);
   ok(f6.editing&&f6.card==='e:'+k2&&f6.kp&&f6.st&&f6.st.st==='fail'&&/儲存失敗/.test(f6.txt)&&f6.draft==='插入的一行（草稿）'&&!f6.dlg,`儲存失敗：不收合、保留草稿、顯示「${f6.txt}」、不跳對話框`);
   ok((await read(C(k2))).version===v6,'儲存失敗：規則擋下、沒有寫入');
   await setRole(edUid,{[DEPT]:'editor'});await until(()=>ed.evaluate(()=>!boardLocked()));
-  await ed.click(`${box(k2)} [data-kpsave]`);await settled(ed);
+  await outside(ed);   /* ui-05：沒有「儲存」鈕，再點一次外面重試 */
   c=await read(C(k2));
-  ok(c.version===v6+1&&c.blocks.text[0]==='插入的一行（草稿）'&&await ed.evaluate(()=>!editing),'角色恢復後再按「儲存」：寫入、收合');
+  ok(c.version===v6+1&&c.blocks.text[0]==='插入的一行（草稿）'&&await ed.evaluate(()=>!editing),'角色恢復後再點一次外面：寫入、離開編輯');
 
   /* ---------- 7. 舊卡片 ---------- */
   const legacy=await ed.evaluate(()=>{const e=state.events.find(x=>!x.doneAt&&x.desc.includes('\n')&&x.blocks.every(b=>b.check===null));return e&&{id:e.id,desc:e.desc,n:e.desc.split('\n').length}});
   {const lc=legacy&&rows(await read(C(legacy.id)));ok(!!lc&&lc.length===legacy.n&&lc.every(x=>x[1]===null&&x[2]===null)&&lc.map(x=>x[0]).join('\n')===legacy.desc,`遷移的舊卡片（資料檔只有 desc）：每行一個純文字行（${legacy&&legacy.n} 行）`);}
   await expand(ed,legacy.id);
-  const lv=await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.ev[data-ev="${id}"] .kp-vl`)];return {n:li.length,boxes:li.filter(x=>x.querySelector('input')).length,txt:li.map(x=>x.querySelector('.kp-tx').textContent).join('\n')}},legacy.id);
+  const lv=await ed.evaluate(id=>{const li=[...document.querySelectorAll(`.lc[data-ev="${id}"] .ln`)];return {n:li.length,boxes:li.filter(x=>x.querySelector('input')).length,txt:li.map(x=>x.querySelector('.tx').textContent).join('\n')}},legacy.id);
   ok(lv.n===legacy.n&&lv.boxes===0&&lv.txt===legacy.desc,`舊卡片：每行顯示成純文字（${lv.n} 行）`);
   /* 02D 遷移的舊格式（每行一個物件），而且沒有行 ID */
   await admin(d=>d.doc(C('kpold')).set({deptId:DEPT,title:'沒有行 ID 的舊卡',blocks:[{text:'第一行'},{text:'第二行'}],timeIds:[],issueId:null,staff:[],labels:[],links:[],report:false,state:'open',
@@ -186,12 +197,12 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.some(e=>e.id==='kpold'),null,{timeout:15000});await ed.waitForTimeout(800);
   await until(()=>ed.evaluate(()=>!boardLocked()));
   await expand(ed,'kpold');
-  ok(await ed.evaluate(()=>[...document.querySelectorAll('.ev[data-ev="kpold"] .kp-vl .kp-tx')].map(x=>x.textContent).join('|')==='第一行|第二行'),'blocks 沒有行 ID 的舊卡片：每行純文字顯示');
+  ok(await ed.evaluate(()=>[...document.querySelectorAll('.lc[data-ev="kpold"] .ln .tx')].map(x=>x.textContent).join('|')==='第一行|第二行'),'blocks 沒有行 ID 的舊卡片：每行純文字顯示');
   const old=await evOf(ed,'kpold');
   await ed.click(`${box('kpold')} [data-kpgo="${old.blocks[1].id}"]`);await ed.waitForTimeout(300);
-  await setType(ed,'kpold',2,'check');await outside(ed);
+  await ed.keyboard.press('End');await ed.keyboard.type('（改）');await outside(ed);   /* ui-05：沒有種類選單，改成改這一行的字 */
   c=await read(C('kpold'));
-  ok(!Array.isArray(c.blocks)&&JSON.stringify(rows(c))===JSON.stringify([['第一行',null,null],['第二行',false,null]])&&c.blocks.id.every(x=>/^[A-Za-z0-9_-]+$/.test(x)),'改一行後存成新格式（補上行 ID）、其他行不變');
+  ok(!Array.isArray(c.blocks)&&JSON.stringify(rows(c))===JSON.stringify([['第一行',null,null],['第二行（改）',null,null]])&&c.blocks.id.every(x=>/^[A-Za-z0-9_-]+$/.test(x)),'改一行後存成新格式（補上行 ID）、其他行不變');
 
   /* ---------- 8. 跳脫 ---------- */
   await admin(d=>d.doc(`profiles/${edUid}`).set({displayName:'<img src=x onerror=window.__xss=2>"\'',photoURL:null,updatedAt:TS.now()}));
@@ -199,14 +210,15 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const k8=await newCard(ed,'KP 跳脫');
   await typeLines(ed,k8,[XSS,'第二行 "引號" \'單引號\'']);
   await ed.fill(`${box(k8)} [data-kptitle]`,XSS);
-  await ed.click(`${box(k8)} [data-kpf="staff"] label.chip:has(input[value="${edUid}"])`);await ed.waitForTimeout(300);   /* 03 T7：專員在原位直接勾選 */
+  await ed.click(`${box(k8)} [data-lctool="staff"]`);await ed.waitForTimeout(400);
+  await ed.click(`${box(k8)} .pg-ppl label.chip:has(input[value="${edUid}"])`);await ed.waitForTimeout(300);   /* ui-05：負責人在工具列的「人」頁 */
   await outside(ed);
   await expand(ed,k8);
-  const x8=await ed.evaluate(id=>{const el=document.querySelector(`.ev[data-ev="${id}"]`);
-    return {xss:window.__xss,imgs:document.querySelectorAll('#events img,#evDetail img').length,onAttr:[...document.querySelectorAll('#events *')].filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).length,
-      title:el.querySelector('summary b').textContent,lines:[...el.querySelectorAll('.kp-vl .kp-tx')].map(x=>x.textContent),staff:[...el.querySelectorAll('.staff-chip')].map(x=>x.textContent)}},k8);
+  const x8=await ed.evaluate(id=>{const el=document.querySelector(`.lc[data-ev="${id}"]`);
+    return {xss:window.__xss,imgs:document.querySelectorAll('#events img,#evDetail img').length,onAttr:[...document.querySelectorAll('#events *,#evDetail *')].filter(e=>[...e.attributes].some(a=>/^on/i.test(a.name))).length,
+      title:el.querySelector('.lc-title').textContent,pill:document.querySelector(`#events .cp[data-cp="${id}"] b`).textContent,lines:[...el.querySelectorAll('.ln .tx')].map(x=>x.textContent),staff:[...el.querySelectorAll('.lc-tag')].map(x=>x.textContent)}},k8);
   ok(x8.xss===undefined&&x8.imgs===0&&x8.onAttr===0,`沒有執行、沒有多出 img 或事件屬性（${JSON.stringify({xss:x8.xss,imgs:x8.imgs,on:x8.onAttr})}）`);
-  ok(x8.title===XSS&&x8.lines[0]===XSS&&x8.lines[1]==='第二行 "引號" \'單引號\''&&x8.staff[0]==='<img src=x onerror=window.__xss=2>"\'',`名稱、行內容、負責人名稱原樣顯示（${JSON.stringify(x8.staff)}）`);
+  ok(x8.title===XSS&&x8.pill===XSS&&x8.lines[0]===XSS&&x8.lines[1]==='第二行 "引號" \'單引號\''&&x8.staff[0]==='<img src=x onerror=window.__xss=2>"\'',`名稱、行內容、負責人名稱原樣顯示（${JSON.stringify(x8.staff)}）`);
   await ed.click(`${box(k8)} [data-kpgo="${(await evOf(ed,k8)).blocks[0].id}"]`);await ed.waitForTimeout(400);
   ok(await ed.evaluate(x=>document.querySelector('[data-kptitle]').value===x&&window.__xss===undefined&&!document.querySelector('#events img'),XSS),'編輯中：輸入框的值原樣、沒有執行');
   await outside(ed);
@@ -224,7 +236,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
     const StoreDesc=b=>b.map(x=>(typeof x.check==='boolean'?(x.check?'☑ ':'☐ '):'')+x.text).join('\n');
     await expand(ed,k2);
     /* a. 檢視時點核取框（要勾的：勾 → 不勾），點外面 */
-    await ed.click(`${box(k2)} .kp-view [data-kpck="${ids[1]}"]`);await ed.waitForTimeout(400);await outside(ed);
+    await ed.click(`${box(k2)} .ln [data-kpck="${ids[1]}"]`);await ed.waitForTimeout(400);await outside(ed);
     await check([null,false,false],'P0-1 檢視時切換勾選後點外面');
     /* b. 行首、行尾加空白，點外面 */
     await expand(ed,k2);
@@ -235,16 +247,16 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
     await check([null,false,false],'P0-1 行首行尾加空白後點外面');
     /* c. 時間行切換勾選，點外面 */
     await expand(ed,k2);
-    await ed.click(`${box(k2)} .kp-view [data-kpck="${ids[2]}"]`);await ed.waitForTimeout(400);await outside(ed);
+    await ed.click(`${box(k2)} .ln [data-kpck="${ids[2]}"]`);await ed.waitForTimeout(400);await outside(ed);
     await check([null,false,true],'P0-1 時間行切換勾選後點外面');
   }
 
   /* ---------- 9. 沒有權限的人只能看 ---------- */
   const gen=await open();await signIn(gen,'kpgen');await until(()=>gen.evaluate(()=>state.events.length>0));
   await expand(gen,k2);
-  const g9=await gen.evaluate(id=>{const el=document.querySelector(`.ev[data-ev="${id}"]`);return {disabled:[...el.querySelectorAll('[data-kpck]')].every(x=>x.disabled),go:el.querySelectorAll('[data-kpgo]').length}},k2);
-  await gen.click(`${box(k2)} .kp-vl:nth-child(1) .kp-tx`);await gen.waitForTimeout(300);
-  ok(g9.disabled&&g9.go===0&&await gen.evaluate(()=>!editing),`一般登入者：核取框不能按、點一行不會進入編輯（${JSON.stringify(g9)}）`);
+  const g9=await gen.evaluate(id=>{const el=document.querySelector(`.lc[data-ev="${id}"]`);return {disabled:[...el.querySelectorAll('[data-kpck]')].every(x=>x.disabled),go:el.querySelectorAll('[data-kpgo]').length,tools:!!el.querySelector('.lc-tools')}},k2);
+  await gen.click(`${box(k2)} .ln:nth-child(1) .tx`);await gen.waitForTimeout(300);
+  ok(g9.disabled&&g9.go===0&&!g9.tools&&await gen.evaluate(()=>!editing),`一般登入者：核取框不能按、點一行不會進入編輯（${JSON.stringify(g9)}）`);
   ok(!ed.errs.length&&!gen.errs.length,`沒有頁面錯誤（${[...ed.errs,...gen.errs].join(' | ')}）`);
 
   await b.close();await t.cleanup();srv.close();
