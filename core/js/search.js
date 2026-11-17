@@ -3,7 +3,7 @@
    - 有輸入時看板內容（.layout）換成分區的結果清單（#boardRes）：即時回報、完成紀錄、議題各一區，每區標題寫件數；符合的字加底色。
      打字時結果原位更新（morph.js 的 morphTo），沒變的列留著，新的由下浮現。
    - 點一筆＝清掉搜尋、換到那一區（底部分頁同一套 setSection），捲到那一項並打開（即時回報／完成紀錄展開膠囊或選到右側詳情、議題打開詳情）。
-   - × 與 Esc 清除；上下鍵選、Enter 打開。換分頁（render.js 的 setSection）或回主頁（離開這一頁）時清掉。 */
+   - × 與 Esc 清除（搜尋中焦點不在搜尋欄時 Esc 也清）；上下鍵選、Enter 打開。換分頁（render.js 的 setSection）或回主頁（離開這一頁）時清掉。 */
 const HS={q:"",items:[],on:-1,mode:false};
 const hsHit=(t,ql)=>!!t&&String(t).toLowerCase().includes(ql);
 /* 即時回報（進行中或已完成）符合的地方：名稱、逐行內容、負責人、地點；回傳要寫在名稱後面的小字（名稱本身符合就不寫） */
@@ -80,6 +80,12 @@ function hsGo(x){
     if(e.key==="Enter"){e.preventDefault();const x=HS.items[HS.on];if(x)hsGo(x)}
   });
   $("#dSearch .ds-x").addEventListener("click",e=>{e.preventDefault();hsClear();q.focus()});
+  /* 搜尋中按 Esc（焦點不在搜尋欄也算）：清掉搜尋。在 document 的捕獲階段先處理，排在「收起右側詳情」（events.js）之前；
+     有對話框、設定、通知層、今日層、報告預覽、編輯紀錄開著時不管（各自的 Esc 先關它們） */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!HS.mode||$("#dlg").open||setOpen||notiOpen||todayOpen||rptOpen||($("#logOv")&&!$("#logOv").hidden))return;
+    e.preventDefault();e.stopImmediatePropagation();hsClear();
+  },true);
   document.addEventListener("click",e=>{const it=e.target.closest&&e.target.closest("#boardRes [data-hs]");if(it)hsGo(HS.items[+it.dataset.hs])});
   /* 回主頁（離開這一頁）：清掉，從瀏覽紀錄回來時（bfcache）不會還停在搜尋 */
   addEventListener("pagehide",()=>{if(HS.q)hsClear()});

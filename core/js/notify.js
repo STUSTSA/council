@@ -29,14 +29,16 @@ const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
 /* 出處文字：地點・所屬即時回報（全會再加部門） */
 const notiSub=x=>[NOTI.scope==="all"?deptName(x.dept):"",x.place,x.ev].filter(Boolean).join("・");
-/* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了
-   （有結束日看結束日；沒有結束日看開始日，當天有時刻的過了時刻才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
+/* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了。
+   有結束日看結束：結束日在今天以前，或結束是今天、有結束時刻而且時刻到了；沒有結束日看開始：開始日在今天以前，或開始是今天、有時刻而且時刻到了
+   （只有日期、沒有時刻的，過了那一天才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
 function notiLate(s=state){
   const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`;let n=0;
+  const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
   s.events.filter(e=>!e.doneAt).forEach(e=>{const tm=new Map((e.times||[]).map(x=>[x.id,x]));
     (e.blocks||[]).forEach(b=>{const x=b.timeId&&tm.get(b.timeId);if(!x||b.check||!x.start)return;
-      const sd=x.start.slice(0,10),ed=(x.end||"").slice(0,10),st=x.start.slice(11,16);
-      if((ed||sd)<t||(!ed&&sd===t&&st&&st<hm))n++})});
+      const ed=(x.end||"").slice(0,10);
+      if(ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16)))n++})});
   return n;
 }
 function notiBadge(){
@@ -45,6 +47,12 @@ function notiBadge(){
   if(el.textContent!==txt){el.textContent=txt;el.hidden=!n;if(n)Anim.enter(el,"pop")}
   b.setAttribute("aria-label",n?`通知：${n} 件逾期`:"通知");
 }
+/* 跨過時刻時數字跟著變：每分鐘開頭（秒數 0）只重算通知鈕的數字（不重畫看板）；頁面不可見時不跑，回到畫面時馬上重算再接著跑 */
+let notiTick=0;
+function notiTickSet(){clearTimeout(notiTick);notiTick=0;if(document.hidden)return;const d=new Date();
+  notiTick=setTimeout(()=>{notiBadge();notiTickSet()},60000-d.getSeconds()*1000-d.getMilliseconds()+50)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)notiBadge();notiTickSet()});
+notiTickSet();
 
 /* ---------- 今日／明日：左右兩張卡片（手機也並排） ---------- */
 /* 卡片裡一列的時間欄：當天開始的寫時刻（沒有就「整天」），時段寫「第 k／N 天」 */

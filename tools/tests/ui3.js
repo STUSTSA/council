@@ -10,6 +10,10 @@
    8. 同一頁重畫時位置變了的滑到新位置（FLIP，同一個節點）、新的由下浮現、不見的留分身淡出
    9. 設定清單、外觀合併頁、通知頁重畫：沒變的節點留著、外觀的分段切換不重建
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
+   11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
+   12. 審查 P2-2：編輯中游標在一行，點 label 包著的核取框、「報告」鈕不會失焦（ui-05：專員、標籤膠囊不在卡片上，改測核取行與報告鈕；桌面、手機觸控 412）
+   13. 審查 P2-3：照順序配對時含焦點的節點只有 data-* 一樣才沿用（[a,b(焦點)]→[z,a,b]）；MORPH_KEYS 有 evfk iffk kplb lblname
+   14. 審查 P2-4：HTML 寫過、後來不寫的 style 拿掉；程式在執行時設的 style 保留
    ui-05（2026-11-17）：膠囊是 .cp、卡片是 .lc（1300 在右邊）；「+ 一行」換成工具列「文字」、核取行用工具列「核取」加；第 7 項的圖示改用編輯中一行的刪除鈕；
    手機捲動那項：膠囊不會就地展開，改成多放幾顆讓清單夠長
    失敗會印 FAIL 並以非 0 結束 */
@@ -178,6 +182,62 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     const r=await q.evaluate(()=>({an:window.__an.length,run:document.getAnimations().filter(a=>a.playState==='running'&&!(a instanceof CSSAnimation)&&!(a instanceof CSSTransition)).length}));
     ok(r.an===0&&r.run===0,`關掉動態：沒有 animate() 動畫（${r.an}）、沒有在跑的程式動畫（${r.run}）`);
     await ctx.close()}
+
+  /* 11. 審查 P2-1：外觀的深淺色分段切換重畫（合併頁 draw 的同一段 HTML）兩次後仍是平面色塊（.glass 寫在 HTML 裡，不靠執行時加）；
+     卡片堆飛出去時加的 go-yes／go-no 是執行時的 class，重畫不拿掉 */
+  {await p.click('#setBtn');await p.waitForTimeout(1100);await p.click('#setOv [data-set="look"]');await p.waitForTimeout(1000);
+    const r=await p.evaluate(()=>{const box=document.querySelector('#setOv .set-pane .set-hub'),sg=box.querySelector('.look-mode'),g0=sg.classList.contains('glass');
+      for(let i=0;i<2;i++){morphTo(box,'<b class="set-hub-t">外觀</b>'+lookHTML(false));lookMount(box)}
+      const sg2=box.querySelector('.look-mode');
+      const d=document.createElement('div');document.body.append(d);morphTo(d,'<div class="dk-card" data-dk="x">a</div>');d.firstChild.classList.add('go-yes');morphTo(d,'<div class="dk-card" data-dk="x">b</div>');const gy=d.firstChild.classList.contains('go-yes');d.remove();
+      return {g0,same:sg2===sg,glass:sg2.classList.contains('glass'),gy}});
+    ok(r.g0&&r.same&&r.glass,`外觀的分段切換重畫兩次後仍有 glass（重畫前 ${r.g0}、同一個節點 ${r.same}、重畫後 ${r.glass}）`);
+    ok(r.gy,'卡片堆飛出去時的 go-yes 重畫後還在');
+    await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(400);}
+  /* 12. 審查 P2-2：編輯中游標在一行的文字欄，點 label 包著的核取框、「報告」鈕：焦點不掉（桌面滑鼠、手機觸控） */
+  for(const [w,h,touch] of [[1300,900,false],[412,800,true]]){
+    const s2=await c.setup(),q=await s2.mk(w,h,'light',touch);await s2.login(q);   /* 各自一份測試資料（第一頁登入時已經建了身分，同一份再登入一次的流程不同） */
+    await q.evaluate(()=>{if(!state.labels.length)state.labels.push({id:'ui3lb',kind:LABEL_KINDS[0],name:'膠囊測試'});setSection('live',{instant:true});render()});await q.waitForTimeout(600);
+    const eid=await q.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt&&e.blocks&&e.blocks.length);lcShow('live',ev.id);return ev.id});await q.waitForTimeout(900);
+    const L=`.lc[data-ev="${eid}"]`,go=`${L} .ln [data-kpgo]`;if(touch)await q.tap(go);else await q.click(go);await q.waitForTimeout(600);
+    const tag=touch?'手機觸控':'桌面';
+    /* ui-05：負責人在「人」頁、標籤不在卡片上改，改測卡片上一樣是 label 包核取框的「核取行」與「報告」鈕 */
+    await q.click(`${L} [data-lctool="check"]`);await q.waitForTimeout(300);await q.keyboard.type('要勾的');
+    const bid=await q.evaluate(e=>state.events.find(x=>x.id===e).blocks[0].id,eid),ck=await q.evaluate(e=>{const b=state.events.find(x=>x.id===e).blocks;return b[b.length-1].id},eid);
+    await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);
+    {const sel=`${L} .ln[data-blk="${ck}"] label.ln-ck`;
+      const pre=await q.evaluate(()=>{const a=document.activeElement;a.__k=1;return a.matches('input.tx')});
+      if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
+      const r=await q.evaluate(([e,ck])=>{const a=document.activeElement;return {to:a.dataset.kptx===ck,on:state.events.find(x=>x.id===e).blocks.find(b=>b.id===ck).check,act:a.tagName+'.'+a.className}},[eid,ck]);
+      ok(pre&&r.to&&r.on===true,`${tag}：游標在一行時點核取框（label 包著）：勾起來、游標到那一行、沒有掉到 body（${r.act}）`);}
+    {await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);await q.evaluate(()=>{document.activeElement.__k=2});
+      const sel=`${L} .lc-rep`;if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
+      const r=await q.evaluate(e=>({same:document.activeElement.__k===2,rep:state.events.find(x=>x.id===e).report}),eid);
+      ok(r.same&&r.rep===true,`${tag}：游標在一行時按「報告」：標記改了、activeElement 還是那一欄`);}
+    ok(!q.errs.length,`${tag}：沒有錯誤`+(q.errs.length?'：'+q.errs.slice(0,3).join(' | '):''));
+    await s2.b.close();
+  }
+  /* 13. 審查 P2-3：照順序配對（沒有 key）的節點，含焦點的那一個只有 data-* 都一樣才沿用：[a,b(焦點)]→[z,a,b]，焦點那一欄的 data 跟值是同一筆 */
+  {const r=await p.evaluate(()=>{const d=document.createElement('div');document.body.append(d);
+      const it=x=>`<input class="m3" data-x="${x}" value="${x.toUpperCase()}">`;
+      morphTo(d,it('a')+it('b'));const fb=d.children[1];fb.focus();fb.value='B打到一半';
+      morphTo(d,it('z')+it('a')+it('b'));
+      const a=document.activeElement,out={x:a.dataset&&a.dataset.x,v:a.value,same:a===fb,list:[...d.children].map(c=>c.dataset.x+'='+c.value).join(',')};
+      /* 一般的 MORPH_KEYS：即時回報欄位（evfk）、議題欄位（iffk）、時間標記名稱（kplb）、標籤名稱（lblname）都用 key 配對 */
+      out.keys=['evfk','iffk','kplb','lblname'].every(k=>MORPH_KEYS.includes(k));
+      d.remove();return out});
+    ok(r.x==='b'&&r.v==='B打到一半'&&r.same,`[a,b(焦點)]→[z,a,b]：焦點那一欄 data-x=${r.x}、值「${r.v}」、同一個節點 ${r.same}（${r.list}）`);
+    ok(r.keys,'MORPH_KEYS 有 evfk、iffk、kplb、lblname');}
+  /* 14. 審查 P2-4：HTML 寫過、後來不寫的 style 會拿掉；程式在執行時改的 style 保留 */
+  {const r=await p.evaluate(()=>{const d=document.createElement('div');document.body.append(d);
+      morphTo(d,'<p class="m4" style="color: red">x</p>');const n=d.firstChild;
+      morphTo(d,'<p class="m4">x</p>');const gone=d.firstChild===n&&!n.hasAttribute('style');
+      n.style.transform='translateX(3px)';morphTo(d,'<p class="m4">y</p>');const rt=d.firstChild===n&&n.style.transform==='translateX(3px)';
+      morphTo(d,'<p class="m4" style="--c:#123">y</p>');n.style.opacity='.5';morphTo(d,'<p class="m4">z</p>');const rt2=n.style.opacity==='0.5';
+      morphTo(d,'<p class="m4" style="--c:#456">z</p>');const set=n.getAttribute('style')==='--c:#456';morphTo(d,'<p class="m4">z</p>');const gone2=!n.hasAttribute('style');
+      d.remove();return {gone,rt,rt2,set,gone2}});
+    ok(r.gone&&r.gone2,`HTML 寫過、後來不寫的 style 拿掉了（${r.gone}、${r.gone2}）`);
+    ok(r.rt&&r.rt2&&r.set,`程式在執行時設的 style 保留（沒寫過 style 的 ${r.rt}、HTML 寫過又被程式改的 ${r.rt2}）`);}
 
   ok(!p.errs.length,'沒有錯誤'+(p.errs.length?'：'+p.errs.slice(0,3).join(' | '):''));
   await b.close();

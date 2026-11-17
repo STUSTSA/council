@@ -71,8 +71,10 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const expand=async(p,id)=>{if(await p.evaluate(id=>lvOpen!==id,id)){await p.click(`#events .cp[data-cp="${id}"]`);await p.waitForTimeout(700)}};
   const outside=async p=>{await p.click('#evH');await settled(p)};
   const lineSel=(id,n)=>`${box(id)} .lns .ln:nth-child(${n})`;
+  /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收回打開的卡片 */
+  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});lvOpen=null;dnOpen=null;render()}).then(()=>p.waitForTimeout(400));
   /* 新卡片（浮動圓鈕：一張空白卡片、游標在名稱）→ 打名稱、點外面存檔（卡片留著） */
-  const newCard=async(p,name)=>{await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);await outside(p);
+  const newCard=async(p,name)=>{await liveTop(p);await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);await outside(p);
     const id=await p.evaluate(n=>state.events.find(e=>e.name===n).id,name);await expand(p,id);return id};
   /* 時間頁：選一段再用方向鍵、數字調整（tid＝時間標記） */
   const teSet=async(p,tid,{d,h,m,eh,em})=>{const T=`.lc-ed .te[data-te="${tid}"]`;
