@@ -70,6 +70,20 @@ service cloud.firestore {
     // 稽核鏈：同一批寫入裡必須新建 auditLogs/{col}_{id}_{rev}
     function auditAfter(col, id, rev) { return existsAfter(doc('auditLogs', col + '_' + id + '_' + string(rev))); }
     // 遷移：總管理員＋running 的批次（migration.md 第 3 節）
+    // 02D D-d：議題、週報、標籤的刪除＝部門管理員（自己部門）或總管理員，同一批新建一筆刪除紀錄
+    // auditLogs/{集合}_{ID}_delete_{被刪文件 updatedAt 的毫秒}（ID 由被刪的那一版決定：不能略過、不能拿舊紀錄充數，同 ID 重建再刪也不撞號）
+    function delLogRef(col, id) { return doc('auditLogs', col + '_' + id + '_delete_' + string(resource.data.updatedAt.toMillis())); }
+    function delLogged(col, id) { return (isAdmin(resource.data.deptId) || isSuper())
+                                    && !exists(delLogRef(col, id)) && existsAfter(delLogRef(col, id)); }
+    // 遷移失敗回復（01B R1，rollbackImport）：總管理員刪這個批次匯入、匯入後沒被改過、批次已是 rollingBack 的文件，不另寫刪除紀錄（批次本身有稽核鏈）。
+    // 沒被改過＝議題 rev 還是 1；週報、標籤最後寫入的人還是開始這個批次的人（同 run.js 的 rollbackImport；02D 審查 P2-2）
+    function importRollback(col) {
+      let m = get(doc('migrations', resource.data.get('importBatch', '-'))).data;
+      return isSuper() && resource.data.get('importBatch', null) is string && m.status == 'rollingBack'
+        && (col == 'issues' ? resource.data.get('rev', 0) == 1 : resource.data.get('updatedBy', '') == m.startedBy);
+    }
+    // 新建時帶 importBatch 只能走遷移（不然編輯者可以自己標成「匯入的」，回復時就能不留紀錄被刪掉；02D 審查 P2-2）
+    function importTagOk()  { return !d().keys().hasAny(['importBatch']) || importing(); }
     function importing()    { return isSuper() && d().get('importBatch', null) is string
                                 && get(doc('migrations', d().importBatch)).data.status == 'running'; }
 
@@ -289,13 +303,26 @@ service cloud.firestore {
           && a().before == { 'title': c0.title, 'deptId': c0.deptId, 'state': c0.state }
           && a().after == { 'state': 'purging' };
       }
+      // 02D D-d 議題、週報、標籤的刪除紀錄：只能在刪掉那份文件的同一批建立（批次後不存在），寫的人是部門管理員或總管理員，
+      // 內容＝被刪的那一版：標題（議題 title、週報 date、標籤 name）、部門、rev（週報與標籤沒有 rev＝0）。ID 見上面的 delLogRef
+      function delTitle(x) { return a().col == 'issues' ? x.title : (a().col == 'weeks' ? x.date : x.name); }
+      function deleteOk() {
+        let x0 = get(doc(a().col, a().docId)).data;
+        return a().col in ['issues', 'weeks', 'labels'] && a().action == 'delete'
+          && aid == a().col + '_' + a().docId + '_delete_' + string(x0.updatedAt.toMillis())
+          && !existsAfter(doc(a().col, a().docId))
+          && (isAdmin(x0.deptId) || isSuper())
+          && a().rev == x0.get('rev', 0)
+          && a().before == { 'title': delTitle(x0), 'deptId': x0.deptId }
+          && a().after == {} && a().ref == '';
+      }
       allow get, list: if isSuper();
       allow update, delete: if false;
       allow create: if signedIn()
         && a().keys().hasOnly(['col', 'docId', 'rev', 'action', 'actor', 'at', 'before', 'after', 'ref'])
         && a().docId is string && a().rev is int
         && a().actor == me() && a().at == request.time
-        && (chainOk() || cardPurgeOk());
+        && (chainOk() || (a().col == 'cards' && cardPurgeOk()) || (a().col in ['issues', 'weeks', 'labels'] && deleteOk()));
     }
 
     // ===================== 舊身分（決定 A4） =====================
@@ -477,9 +504,9 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().title is string;
       }
       allow get, list: if internalReader();
-      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
-      allow delete: if isSuper();
+      allow delete: if delLogged('issues', id) || importRollback('issues');
     }
     match /weeks/{id} {
       function shape() {
@@ -487,9 +514,9 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().text is string;
       }
       allow get, list: if internalReader();
-      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'createdAt', 'importBatch']) && stamped();
-      allow delete: if isSuper();
+      allow delete: if delLogged('weeks', id) || importRollback('weeks');
     }
     match /labels/{id} {
       function shape() {
@@ -497,9 +524,9 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().name is string;
       }
       allow get, list: if internalReader();
-      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && stamped();
-      allow delete: if isSuper();
+      allow delete: if delLogged('labels', id) || importRollback('labels');
     }
 
     // ===================== 時間事件（permissions.md 第 5.2 節） =====================

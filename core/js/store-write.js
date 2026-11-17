@@ -5,6 +5,7 @@
      只換順序＝只改 order；結案時間＝伺服器時間。新建就是完成的卡片（完成這一段）先建成進行中，下一批再結案。
    - 時間標記（events）一定列在卡片的 timeIds；換到別張卡片的時間標記（完成這一段）用新的 ID 重建。
    - 永久刪除：開始（purging＋刪除紀錄，亂數 nonce）→ 時間標記每批 3 個 → 版本由新往舊每批 3 個 → 最後一批刪卡片。
+   - 議題、週報、標籤的刪除：部門管理員或總管理員，同一批寫刪除紀錄 auditLogs/{集合}_{ID}_delete_{被刪那一版 updatedAt 的毫秒}（02D D-d）。
    - 部門設定：rev +1＋同一批稽核紀錄 auditLogs/deptSettings_{部門}_{rev}；只有部門管理員與總管理員寫（編輯者的畫面不改週報基準，weekly.js 的 snapshotBase）。
    - 上次中斷的永久刪除（卡片停在 purging）：先查哪些時間標記與版本還在，用自己的一輪寫入接著清（失敗不擋這次的儲存）。
    - 前面的批已寫入、後面失敗：e.committed＞0，並帶 e.draft（換過 ID 的畫面資料）與 e.intended（這次要寫的文件）。store.js 重新讀一次後，
@@ -18,7 +19,7 @@ import { doc, collection, query, where, getDocs, runTransaction, serverTimestamp
 
 const MAX_READS = 20;
 /* 每個寫入的規則讀取次數（不同文件的 get／exists／getAfter／existsAfter 各算一次；角色文件 2） */
-const COST = { simple: 2, cardNew: 4, cardEdit: 4, ver: 1, reorder: 2, ev: 4, settings: 4, purgeStart: 6, sweepCard: 5, verDel: 5, cardDel: 3 };
+const COST = { simple: 2, cardNew: 4, cardEdit: 4, ver: 1, reorder: 2, ev: 4, settings: 4, purgeStart: 6, sweepCard: 5, verDel: 5, cardDel: 3, delLogged: 12 };
 const M = () => window.StoreMap;
 const fail = code => Object.assign(new Error(code), { code });
 /* 比對用：鍵排序後的 JSON */
@@ -153,7 +154,7 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
       r ? [{ path: `deptSettings/${dept}`, ok: s => s && s.rev === r.rev }] : []));
   }
 
-  /* ---- 標籤、議題、週報：新增、修改；刪除只有總管理員 ---- */
+  /* ---- 標籤、議題、週報：新增、修改；刪除＝部門管理員或總管理員，同一批寫刪除紀錄（02D D-d，permissions.md 第 5.1g 節） ---- */
   for (const kind of ["labels", "issues", "weeks"]) {
     const rev = kind === "issues";
     for (const [id, d] of Object.entries(N[kind])) {
@@ -166,10 +167,16 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
     }
     for (const id of Object.keys(B[kind])) if (!N[kind][id]) {
       if (!pick(kind, id, false)) continue;
-      if (!opt.super) throw fail("permission-denied");
+      if (!opt.admin) throw fail("permission-denied");
       const r = R[kind].get(id), o = orig[kind][id];
-      units.push(unit(COST.simple, [{ path: `${kind}/${id}`, op: "delete" }],
-        [{ path: `${kind}/${id}`, ok: s => s && (rev ? s.rev === r.rev : sameTs(s.updatedAt, o && o.updatedAt)) }]));
+      if (!o || !o.updatedAt || typeof o.updatedAt.toMillis !== "function") throw fail("conflict");
+      /* 紀錄 ID 由被刪的那一版決定（updatedAt 的毫秒）；交易裡確認文件還是那一版。
+         正式專案的伺服器時間到微秒，SDK 的 toMillis() 會帶小數，規則的 toMillis() 是整數（捨去）：取整數才對得上（02D 審查 P1-1） */
+      const title = kind === "issues" ? r.title : kind === "weeks" ? r.date : r.name;
+      units.push(unit(COST.delLogged, [{ path: `${kind}/${id}`, op: "delete" },
+        { path: `auditLogs/${kind}_${id}_delete_${Math.floor(o.updatedAt.toMillis())}`, op: "set", data: { col: kind, docId: id, rev: rev ? r.rev : 0, action: "delete", actor: me,
+          at: serverTimestamp(), before: { title, deptId: r.deptId }, after: {}, ref: "" } }],
+        [{ path: `${kind}/${id}`, ok: s => s && sameTs(s.updatedAt, o.updatedAt) && (!rev || s.rev === r.rev) }]));
     }
   }
 

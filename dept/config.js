@@ -28,7 +28,7 @@ const BOARD_BASE = {
   notify: { url: "" },
 
   // Firebase 網頁設定（不是機密）。02B：開發專案 stustsa-council-dev；正式專案建立後換成正式專案的設定。
-  // 部門的 source 是 "firestore"、或網址帶 QR 邀請（#join=）時才會載入 Firebase，其他情況完全不會用到
+  // 部門的 source 是 "firestore"／"frozen"、網址帶 QR 邀請（#join=）、或要讀某個已切到 firestore 的部門（會長室追蹤、秘書處會議、學年設定、通知「全會」）時才會載入 Firebase
   firebase: { apiKey: "AIzaSyBCgnzKIUjC_hHkLwCyiSI0KUMPQif24rA", authDomain: "stustsa-council-dev.firebaseapp.com", projectId: "stustsa-council-dev", appId: "1:252023581385:web:e248b3b1968c5796bc7b18" }
 };
 
