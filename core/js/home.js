@@ -147,8 +147,45 @@
   /* ---------- 進部門 ---------- */
   function hmEnter(i){const d=D[i];if(d)location.href=href(d)}
 
-  /* 疊層（全會行事曆、外觀）開著嗎 */
-  function hmLayerOpen(){return false}
+  /* ---------- 疊層：全會行事曆（下排圓鈕）、外觀（設定鈕） ----------
+     在主頁上蓋一層畫面；打開推一筆瀏覽紀錄，關閉鈕、Esc、系統返回鍵都關掉（關閉鈕與 Esc 走 history.back，由 popstate 真的關）。
+     全會行事曆＝notify.js 的公共版 calMount（全部／活動／會議，沒有今日／明日與逾期），關掉時 calUnmount 拆掉（解除分段切換的監聽）；
+     還沒有 calUnmount 時整層留著下次再用，不會重複建分段切換。外觀＝theme.js 的 lookHTML（主題、深淺色、音效），整層留著下次再用 */
+  const LYS={},LBL={cal:"全會行事曆",look:"外觀"};let LY=null;
+  function hmLayerOpen(){return !!LY}
+  function layerOpen(kind,opener){
+    if(LY)return;
+    let L=LYS[kind];
+    if(!L){
+      const el=document.createElement("div");el.className="hm-ly";el.id=kind==="cal"?"hmCal":"hmLook";el.hidden=true;
+      el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label",LBL[kind]);
+      el.innerHTML=`<div class="hm-ly-in"><div class="hm-ly-bar"><button type="button" class="hm-round hm-ly-x" aria-label="關閉">${ico("close")}</button></div><div class="hm-ly-body"></div></div>`;
+      document.body.append(el);L=LYS[kind]={el,host:el.querySelector(".hm-ly-body")};
+      el.querySelector(".hm-ly-x").addEventListener("click",()=>layerClose());
+      el.hidden=false;
+      if(kind==="cal")calMount(L.host);else{L.host.innerHTML=lookHTML(true);lookMount(L.host)}
+    }else L.el.hidden=false;
+    LY={kind,opener,...L};$id("hm").inert=true;
+    try{history.pushState({hmLayer:kind},"")}catch(_){}
+    if(!reduceMotion()){L.el.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});L.el.firstElementChild.animate([{transform:"translateY(28px)"},{transform:"none"}],{duration:MO.layout,easing:"cubic-bezier(.25,1.12,.4,1)"})}
+    L.el.querySelector(".hm-ly-x").focus({preventScroll:true});
+  }
+  /* 關閉：fromPop＝瀏覽紀錄已經退了（popstate）；其他（關閉鈕、Esc）先退一筆，等 popstate 再關 */
+  function layerClose(fromPop){
+    if(!LY)return;
+    if(!fromPop&&history.state&&history.state.hmLayer){history.back();return}
+    const L=LY;LY=null;$id("hm").inert=false;
+    const done=()=>{L.el.hidden=true;if(L.kind==="cal"&&typeof calUnmount==="function"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
+    if(reduceMotion())done();
+    else{L.el.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(a=>{done();},()=>done()).then(()=>L.el.getAnimations().forEach(a=>a.cancel()));
+      L.el.firstElementChild.animate([{transform:"none"},{transform:"translateY(16px)"}],{duration:MO.fast,easing:MO.in})}
+    if(L.opener)L.opener.focus({preventScroll:true});
+  }
+  addEventListener("popstate",()=>{if(LY)layerClose(true)});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
+  $id("hmPub").innerHTML=ico("calendar");
+  $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
+  $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
   splashOut();   /* 開場動畫播完（字型好了、至少 0.6 秒）才淡出（core/js/splash.js） */

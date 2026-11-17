@@ -111,6 +111,8 @@ h1,.note{animation:rise .7s var(--ease) both}
     <button type="button" class="hm-round" id="hmSet" aria-label="設定"></button>
   </header>
   <div class="hm-stage" id="hmStage"></div>
+  <!-- 下排（寬度跟著內容、置中、浮在上面）：只有「全會行事曆」（公共版，notify.js 的 calMount）；個人常用連結這一輪不做 -->
+  <div class="hm-dock" id="hmDock"><button type="button" class="hm-pub" id="hmPub" aria-label="全會行事曆"></button></div>
 </main>
 <script src="core/js/pagefx.js"></script>
 <script>/* 安裝成 App：總覽頁也要註冊 Service Worker（跟看板同一個 sw.js），才能從這一頁安裝、離線打開 */if("serviceWorker" in navigator&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
@@ -120,6 +122,10 @@ h1,.note{animation:rise .7s var(--ease) both}
 <script src="core/js/morph.js"></script>
 <script src="core/js/anim.js"></script>
 <script src="core/js/icons.js"></script>
+<script src="core/js/store-map.js"></script>   <!-- 以下是全會行事曆（公共版）用的：只讀，活動、會議要等有部門切到新資料庫才讀得到 -->
+<script src="core/js/store.js"></script>
+<script src="core/js/follow.js"></script>
+<script src="core/js/notify.js"></script>
 <script src="core/js/home.js"></script>
 </body>
 </html>

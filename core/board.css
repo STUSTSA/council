@@ -1285,6 +1285,16 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-wc .hm-nm{font-size:20px}
 .hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
 .hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}
+/* 下排：寬度跟著內容、置中；浮在上面（帶陰影）。只有全會行事曆圓鈕（主要動作色） */
+.hm-dock{flex:none;display:flex;align-items:center;gap:10px;width:fit-content;max-width:100%;margin:clamp(14px,4vh,40px) auto 0;padding:8px;border-radius:999px;background:var(--blk);box-shadow:0 12px 30px -8px var(--wal-sh)}
+.hm-pub{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink)}
+.hm-pub .ico{width:20px;height:20px}
+/* 疊層（全會行事曆、外觀）：主頁上蓋一整層，內容最寬 760、自己捲動；右上關閉鈕 */
+.hm-ly{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:calc(18px + env(safe-area-inset-top)) max(clamp(16px,4vw,56px),env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(clamp(16px,4vw,56px),env(safe-area-inset-left))}
+.hm-ly[hidden]{display:none}
+.hm-ly-in{display:grid;gap:14px;max-width:760px;margin:0 auto}
+.hm-ly-bar{display:flex;justify-content:flex-end}
+.hm-ly .look{padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 @media (max-width:640px){
   .hm{padding:calc(16px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left))}
   .hm-top{gap:10px}
@@ -1293,6 +1303,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .hm-clock{font-size:22px}
   .hm-round{width:48px;height:48px}
   .hm-stage{justify-content:flex-start}
+  .hm-dock{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0;max-width:calc(100% - 32px);transform:translateX(-50%);box-shadow:0 -14px 30px -6px var(--wal-sh)}
 }
 
 /* ===== 部門標誌（dept/icons/dept-代號.svg；主頁色塊、卡片堆的 .hm-lg 裡；DESIGN-next 第五節「部門標誌」） =====
