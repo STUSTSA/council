@@ -183,4 +183,16 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     await p.keyboard.press('Enter');await p.waitForURL(/index\.html/,{timeout:4000}).catch(()=>{});
     ok(p.url().endsWith(want),`拖過之後第一次 Enter 就進焦點卡（${want} → ${p.url().replace(U,'')}）`);
     await p.ctx.close()}
+  /* 8c 系統返回鍵（沒走 bfcache）回主頁：焦點是剛才的部門、收回那一張、不放開場 */
+  {const p=await mk(1300,860);await go(p,'home.html');
+    await p.keyboard.press('ArrowLeft');await p.waitForTimeout(700);await p.click('.hm-tile.on');
+    await p.waitForURL(/index\.html/,{timeout:5000}).catch(()=>{});await p.waitForTimeout(2600);
+    await p.goBack();await p.waitForTimeout(160);
+    const bk=await p.evaluate(()=>({on:document.querySelector('.hm-tile.on')?.getAttribute('href'),fx:document.querySelectorAll('.hm-fx').length,sp:!!document.getElementById('splash'),
+      nav:performance.getEntriesByType('navigation')[0]?.type}));
+    ok(bk.nav==='back_forward'&&bk.on==='index.html?d=secretariat'&&bk.fx===1&&!bk.sp,`系統返回鍵回主頁（${bk.nav}）：焦點是秘書處、收回那一張、不放開場（${bk.on} ${bk.fx} ${bk.sp}）`);
+    await p.waitForTimeout(1800);
+    ok(await p.evaluate(()=>!document.querySelector('.hm-fx')),'收回的底板播完就拿掉');
+    ok(!p.errs.length,'沒有錯誤 '+p.errs.join(' | '));
+    await p.ctx.close()}
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();

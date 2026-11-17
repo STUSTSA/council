@@ -12,10 +12,13 @@
   const href=d=>d.id==="rights"?"index.html":`index.html?d=${encodeURIComponent(d.id)}`;
   const EN=id=>DEPT_EN[id]||"";
   const stage=$id("hmStage");
-  /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（hmFrom） */
+  /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（FROM）：
+     系統返回鍵回來（back_forward）看 home.html 開頭放的 html[data-hm-back]（sessionStorage「hm-dept」，進部門時記下，只接受部門清單裡有的），
+     其他從看板換頁過來的看 referrer 的 ?d */
   const H={i:Math.max(0,D.findIndex(d=>d.id==="rights")),cnt:{},svg:{},mode:""};
-  const hmFrom=()=>{try{const r=document.referrer&&new URL(document.referrer);if(!r||r.origin!==location.origin||!/\/(index\.html)?$/.test(r.pathname))return -1;const id=r.searchParams.get("d")||"rights";return D.findIndex(d=>d.id===id)}catch(_){return -1}};
-  {const f=hmFrom();if(f>=0)H.i=f}
+  const hmFrom=()=>{const b=document.documentElement.dataset.hmBack,bi=b?D.findIndex(d=>d.id===b):-1;if(bi>=0)return bi;
+    try{const r=document.referrer&&new URL(document.referrer);if(!r||r.origin!==location.origin||!/\/(index\.html)?$/.test(r.pathname))return -1;const id=r.searchParams.get("d")||"rights";return D.findIndex(d=>d.id===id)}catch(_){return -1}};
+  const FROM=hmFrom();if(FROM>=0)H.i=FROM;
   const tileIn=(d,i)=>`<span class="hm-tt"><i class="hm-en">${esc(EN(d.id))}</i><b class="hm-nm">${esc(d.name)}</b></span><span class="hm-lg" data-lg="${esc(d.id)}" aria-hidden="true"></span><span class="hm-n num" data-n="${esc(d.id)}" hidden></span>`;
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
@@ -152,6 +155,7 @@
      減少動態時直接換頁、不交接 */
   function hmEnter(i){
     const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";
+    try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
     if(k==="flip")walFlip(WAL.els[i],go);else tileExpand(stage.querySelector(`.hm-tile[data-i="${i}"]`),go);
@@ -256,6 +260,6 @@
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
-  if(hmFrom()>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
+  if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */
 })();

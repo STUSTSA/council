@@ -39,7 +39,8 @@ function splashPlay(){
     w.firstElementChild.animate([{transform:`translateX(${((1-26/gw)*100).toFixed(2)}%)`,opacity:.15},{transform:"none",opacity:1}],E)});
 }
 function mountSplash(){
-  let inSite=false;try{inSite=!!document.referrer&&new URL(document.referrer).origin===location.origin&&performance.getEntriesByType("navigation")[0]?.type!=="reload"}catch(_){}
+  let inSite=!!document.documentElement.dataset.hmBack;   /* 主頁：系統返回鍵從部門回來（home.html 開頭） */
+  try{inSite=inSite||!!document.referrer&&new URL(document.referrer).origin===location.origin&&performance.getEntriesByType("navigation")[0]?.type!=="reload"}catch(_){}
   if(inSite||document.getElementById("splash"))return;
   const [BW,BH]=SP_BOX,pc=(v,t)=>(v/t*100).toFixed(3)+"%",box=(x,y,w,h)=>`left:${pc(x,BW)};top:${pc(y,BH)};width:${pc(w,BW)};height:${pc(h,BH)}`;
   const [ex,ey,ew,eh,[[,dy],[,db]]]=SU_LOGO.emb,[tx,ty,ts]=SP_TXT;

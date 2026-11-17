@@ -20,7 +20,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-<script>/* 換頁動畫（core/js/pagefx.js）：從站內換頁過來的，body 先透明，等它從後面浮上來（不會先閃一下完整的畫面） */try{var r=document.referrer,n=performance.getEntriesByType("navigation")[0];if(r&&new URL(r).origin===location.origin&&(!n||n.type!=="reload")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("pfx-arrive")}catch(e){}</script>
+<script>/* 換頁動畫（core/js/pagefx.js）：從站內換頁過來的，body 先透明，等它從後面浮上來（不會先閃一下完整的畫面）。
+   系統返回鍵回來（瀏覽紀錄的上一頁、沒走 bfcache）時 referrer 是這一頁當初的來源、不是剛才的部門：改看 sessionStorage「hm-dept」（home.js 進部門時記下，
+   只在 back_forward 時用；新開 App 是新的 session，沒有這個值），放在 html[data-hm-back]，home.js 用它決定焦點與收回哪一張、開場不放（splash.js） */
+try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesByType("navigation")[0],k=n&&n.type==="back_forward"&&sessionStorage.getItem("hm-dept");if(k&&/^[a-z]+$/.test(k))h.dataset.hmBack=k;
+  if((h.dataset.hmBack||r&&new URL(r).origin===location.origin)&&(!n||n.type!=="reload")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)h.classList.add("pfx-arrive")}catch(e){}</script>
 </head>
 <body>
 <script src="core/js/splash.js"></script>
