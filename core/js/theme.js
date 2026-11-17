@@ -39,7 +39,8 @@ const UI=(()=>{
   let held=null;
   addEventListener("pointerdown",e=>{if(!vt)return;const t=vt;t.skipTransition();if(e.target===root)held={x:e.clientX,y:e.clientY,t}},true);
   addEventListener("click",e=>{if(!held||e.target!==root)return;const h=held;held=null;e.stopImmediatePropagation();e.preventDefault();
-    h.t.finished.catch(()=>{}).then(()=>{const el=document.elementFromPoint(h.x,h.y);if(el&&el!==root&&el!==document.body)el.click()})},true);
+    h.t.finished.catch(()=>{}).then(()=>{const el=document.elementFromPoint(h.x,h.y);   /* 可能是 SVG 圖示（沒有 .click()）：送一個會冒泡的點擊，跟真的點一樣 */
+      if(el&&el!==root&&el!==document.body)el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,clientX:h.x,clientY:h.y,view:window}))})},true);
   sys.addEventListener("change",()=>{if(!cur.mode)change();document.dispatchEvent(new CustomEvent("uichange"))});
   /* 別的分頁改了設定：跟著換 */
   addEventListener("storage",e=>{if(e.key!==UI_KEY&&e.key!==null)return;const n=read();if(n.pal===cur.pal&&n.mode===cur.mode&&n.sound===cur.sound)return;cur=n;change();document.dispatchEvent(new CustomEvent("uichange"))});
