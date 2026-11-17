@@ -4,7 +4,8 @@
    3. frozen 模式：照樣讀資料檔，但唯讀，persist／秘書處寫回／自動開通都不寫
    4. 未登入：讀不到，畫面提示要登入；任何已登入的 Google 帳號（沒有任何角色）：讀得到（02A 定案）
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
-   只連本機 Firestore 模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。 */
+   只連本機 Firestore 模擬器；Firebase SDK 從 backend/node_modules 供應（route 掉 gstatic），不連外。
+   2026-11-17（ui-05 審查 P1-1）：畫面上的即時回報數量改數膠囊 #events .cp（以前 #events .ev，ui-05 起是 0、兩邊都 0 會空轉通過） */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
 const {createRequire}=require('module');
 const ROOT=path.resolve(__dirname,'..','..');const breq=createRequire(path.join(ROOT,'backend','package.json'));
@@ -47,7 +48,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fails+
     await p.goto(`http://127.0.0.1:${PORT}/index.html?d=${dept}`);
     await p.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await p.waitForTimeout(2500);
     p.snap=await p.evaluate(()=>({src:storeSource(),locked:boardLocked(),ro:readOnly(),editBtns:[...document.querySelectorAll('.card-edit-btn')].filter(x=>x.offsetParent&&!x.hidden).length+document.querySelectorAll('[data-edit^="e:"],[data-edit^="i:"]').length,canLogin:!!document.querySelector('[data-set-login]'),
-      evDom:document.querySelectorAll('#events .ev').length,title:state.title,
+      evDom:document.querySelectorAll('#events .cp').length,title:state.title,
       data:JSON.stringify({ev:state.events.map(e=>[e.id,e.name,e.desc,e.doneAt||null,e.issueId||null,(e.times||[]).map(x=>[x.id,x.start,x.end,x.place]),e.staff,e.labels,e.report]),
         is:state.issues.map(i=>[i.id,i.title,i.start,i.end,(i.markers||[]).length]),wk:state.weeks.map(w=>[w.id,w.date,w.text]).sort(),mem:state.members.map(m=>[m.id,m.name]),lb:state.labels})}));
     p.ctx=ctx;return p};

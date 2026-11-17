@@ -4,14 +4,20 @@
 
 /* ===== 狀態 =====
    lvOpen／dnOpen＝打開的即時回報／完成紀錄（一次只開一張；兩個不會同時有值）。
-   版面：寬螢幕（LV_WIDE，視窗 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
+   版面：寬螢幕（lvWide：即時回報容器可用寬度 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
    編輯中：lvPane＝卡片內容換成哪一頁（staff 人／time 時間／place 地點；null＝逐行內容），lvPop＝母議題選單開著，lvSeg＝時間頁選到的那一段 {tid,k,buf}。
    kp＝{id,before}：正在原位編輯的那張與開始前的內容（render.js 的 startEdit 設定）；kpSt＝儲存回饋 {id,st:"saving"|"ok"|"fail"|"bad",msg,before,after}。 */
-const LV_WIDE=matchMedia("(min-width:980px)");
-const lvWide=()=>LV_WIDE.matches;
 let lvOpen=null,dnOpen=null,lvPane=null,lvPop=false,lvSeg=null;
 let kp=null,kpSt=null;
-LV_WIDE.addEventListener("change",()=>{if(lvOpen||dnOpen){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()});
+/* 寬螢幕的判斷（DESIGN-next 第七節「卡片寬不到 980」）：量即時回報／完成紀錄容器（#liveMD、#doneMD）的可用寬度，不看視窗寬。
+   ResizeObserver 只記看得到的那一個（藏起來的分頁量到 0，不算）；寬窄真的變了才在下一格重畫——分不分欄只改容器的高度、不改寬度，不會形成迴圈 */
+const LV_MIN=980;
+let lvWideV=(()=>{const w=$("#liveMD")?.clientWidth;return w?w>=LV_MIN:innerWidth>=LV_MIN})(),lvWideDone=lvWideV;   /* lvWideDone＝畫面已經照著畫的那個值 */
+const lvWide=()=>lvWideV;
+{const ro=new ResizeObserver(es=>{const w=Math.max(0,...es.map(x=>x.contentRect.width));if(!w||(w>=LV_MIN)===lvWideV)return;
+    lvWideV=w>=LV_MIN;requestAnimationFrame(()=>{if(lvWideV===lvWideDone)return;lvWideDone=lvWideV;
+      if(lvOpen||dnOpen){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()})});
+  ["#liveMD","#doneMD"].forEach(k=>{const el=$(k);if(el)ro.observe(el)})}
 const kpType=b=>b.timeId?"time":b.check===null?"text":"check";
 /* 沒有連到任何一行的時間標記（03 以前的舊資料）：列在逐行內容下面（時間頁也列出來，可以改） */
 const evFreeTimes=ev=>{const on=new Set((ev.blocks||[]).map(b=>b.timeId).filter(Boolean));return evTimesSorted(ev).filter(t=>!on.has(t.id))};
@@ -103,7 +109,7 @@ function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id
    編輯中被撤權（存檔會失敗）時照樣畫成編輯中：草稿留在畫面上，失敗訊息在卡片上 */
 function lcLiveHTML(ev,o){
   const done=o.k==="done",ro=done||!canEdit()&&!cardEd("e",ev.id),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
-  const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(ev.name)}</b>`;
+  const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(done?evName(ev):ev.name)}</b>`;   /* 完成紀錄：跟膠囊一樣帶段次（evName） */
   const rep=done?"":ro?(ev.report?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${!!ev.report}">報告</button>`;
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
   const body=o.body!=null?o.body:view==="staff"?lcStaffHTML(ev):view==="time"?lcTimeHTML(ev):view==="place"?lcPlaceHTML(ev):lcLinesHTML(ev,ed,ro);
@@ -129,9 +135,9 @@ function lcFullSync(){
   let host=$("#lcFull");
   const ev=!lvWide()&&lvOpen&&state.events.find(e=>e.id===lvOpen&&!e.doneAt);
   const html=ev?lcLiveHTML(ev,{k:"live",ids:liveOrder().map(e=>e.id),full:true}):!lvWide()&&dnOpen&&typeof doneCardHTML==="function"?doneCardHTML(dnOpen,true):"";
-  if(!html){if(host&&!host.hidden){host.textContent="";host.hidden=true}document.body.classList.remove("lc-full-on");return}
+  if(!html){if(host&&!host.hidden){host.textContent="";host.hidden=true}return}
   if(!host){document.body.insertAdjacentHTML("beforeend",'<div id="lcFull" class="lc-host" role="dialog" aria-modal="true" aria-label="即時回報卡片" hidden></div>');host=$("#lcFull")}
-  morphTo(host,html);host.hidden=false;document.body.classList.add("lc-full-on");
+  morphTo(host,html);host.hidden=false;
 }
 
 /* ===== 打開、收回、上一張／下一張（容器轉化：DESIGN-next 第五節） ===== */
@@ -403,7 +409,7 @@ async function kpCommit(){
   if(!kpReady(ev))return false;
   const core=x=>JSON.stringify({...x,report:0,touched:0,touchedAt:0});
   const before=kp.before,was=before&&JSON.parse(before);
-  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.length&&!ev.times.length&&!(ev.links||[]).length){   /* 新增後什麼都沒填：不留 */
+  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.length&&!ev.times.length&&!(ev.links||[]).length&&!ev.issueId&&!(ev.staff||[]).length&&!ev.report){   /* 新增後什麼都沒填（名稱、內容、時間、連結、母議題、負責人、報告都沒動）：不留 */
     const cur=lcCur(),g=cur&&!reduceMotion()?lcGhost(lcCard(cur[0])):null;
     morph(()=>{state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;kp=null;lvOpen=null;render()});
     if(g)g.animate([{opacity:1},{opacity:0,transform:"translateY(20px)"}],{duration:MO.base,easing:MO.in,fill:"forwards"}).onfinish=()=>g.remove();
@@ -418,7 +424,7 @@ const dirtyOthers=()=>{const a=JSON.parse(snapshot);a.events=a.events.filter(e=>
 /* 離開編輯並儲存；失敗時回到編輯（卡片打開）、保留草稿 */
 async function kpSave(){
   const id=kp.id,key=cardEdit,snap=snapshot,draft=kp,undoable=!!kp.before&&!kp.noUndo&&!dirtyOthers();
-  if(!fsMode()&&!(await prepareSave())){kpSay("fail",KP_MSG.fail);return false}
+  if(!fsMode()&&!(await prepareSave())){kpSay("fail",`${KP_MSG.fail}：這台裝置沒有連上雲端`);return false}
   kpSaving=true;
   morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;kpSt={id,st:"saving"};state.savedAt=nowStr();if(meName())state.savedBy=meName();render()});
   let ok=false;
@@ -430,7 +436,7 @@ async function kpSave(){
   if(!state.events.some(e=>e.id===id))state=normalize(JSON.parse(snap));
   editing=true;cardEdit=key;snapshot=snap;dirty=true;kp=draft;
   if(lvOpen!==id){const was=lcCur();lcSet("live",id);if(!lvWide()&&!was)Back.opened("card",lcBack)}
-  kpSt={id,st:"fail",msg:fsMode()&&fsLastErr?`${KP_MSG.fail}：${fsLastErr}`:KP_MSG.fail};render();
+  {const why=fsMode()?fsLastErr:persistErr;kpSt={id,st:"fail",msg:why?`${KP_MSG.fail}：${why}`:KP_MSG.fail}}render();   /* 兩種模式都接原因（firestore：store.js 的 fsLastErr；GitHub：save.js 的 persistErr） */
   return false;
 }
 /* 復原：卡片換回修改前的內容，當成一次編輯儲存（是新的一版、不再提供復原）；這張在那之後被改過（重新讀到別人的修改）就不復原 */
