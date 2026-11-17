@@ -4,6 +4,8 @@ const ICONS={"prev": "<path class=\"i-chev\" d=\"M14.5 6 8.5 12l6 6\"/>", "next"
 ICONS.tag='<path d="M3.8 12.6V4.6a.8.8 0 0 1 .8-.8h8l7.6 7.6a1.2 1.2 0 0 1 0 1.7l-6.7 6.7a1.2 1.2 0 0 1-1.7 0z"/><circle class="i-dot" cx="8.3" cy="8.3" r="1.3"/>';
 /* 2026-11-17 新介面：首頁鍵是簡單的五邊形房子（沒有門），整顆是 .i-roof，按下整顆往上跳 1.8px 再落回（board.css「線條 icon」的 icoRoof）；
    眼睛＝標題列的唯讀檢視鈕（沒有動作） */
+/* 加號＝新增即時回報的浮動圓鈕（nav.js 的 fabSync），按下轉一下 */
+ICONS.plus='<path class="i-plus" d="M12 5.5v13M5.5 12h13"/>';
 ICONS.eye='<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>';
 ICONS.bell='<g class="i-bell"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10.2 20.4a2 2 0 0 0 3.6 0"/></g>';
 const ico=(n,mod="")=>`<svg class="ico ${mod}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]||""}</svg>`;

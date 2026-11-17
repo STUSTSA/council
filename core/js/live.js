@@ -126,14 +126,13 @@ function renderEvents(){
   if(!editing){evFld=null;kp=null;kpTp=null;if(kpSt&&kpSt.st!=="saving"&&(md?selEv!==kpSt.id:!openEv.has(kpSt.id)))kpSt=null}   /* 收合（或右側換成別張）＝儲存回饋與「復原這次修改」消失 */
   const o={md,sel:selEv,next:md?(live[live.findIndex(e=>e.id===selEv)+1]||{}).id:null};   /* next：畫面順序裡的下一顆，加「下一個」記號 */
   const cap=ev=>evCapHTML(ev,o);
-  const addBtn=`<button type="button" class="ghost auth-only add-row" id="addEvent">+ 新增即時回報</button>`;   /* 新增鈕在清單最後自己一行（不佔一顆膠囊的格子；登入、沒有卡片在編輯時顯示） */
   const empty=`<p class="empty">目前沒有即時回報。</p>`;   /* 不放教學說明文字（03 暫定決策 f） */
   /* 2026-11-06 使用者從預覽選 D：報告區不寫區名（每顆膠囊右邊自己標「報告」），其他回報上面一條細線、中間小字區名 */
   const zone=(k,h,list,tail)=>`<div class="ev-zone" data-zone="${k}">${h?`<div class="ev-zone-h"><span>${h}</span></div>`:""}<div class="events">${list.length?list.map(cap).join(""):h?"":empty}${tail}</div></div>`;
   /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著 */
-  morphTo($("#events"),rep.length?zone("rep","",rep,"")+"\n      "+zone("rest","其他回報",rest,addBtn):zone("rest","",live,addBtn));
+  morphTo($("#events"),rep.length?zone("rep","",rep,"")+"\n      "+zone("rest","其他回報",rest,""):zone("rest","",live,""));   /* 新增鈕是右下角的浮動圓鈕（nav.js 的 fabSync） */
   if(md){morphTo(pane,evDetailHTML(live.find(e=>e.id===selEv)));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
-  Anim.syncPings();
+  Anim.syncPings();fabSync();
 }
 
 /* ===== 操作 ===== */

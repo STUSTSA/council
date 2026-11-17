@@ -15,8 +15,10 @@
 :root[data-theme="dark"]{--pop-sh:0 16px 36px rgba(0,0,0,.5);--stack-sh:rgba(0,0,0,.62)}
 *,*::before,*::after{box-sizing:border-box}
 /* 工具列讓出的空間：手機在下方（--bar-in），桌面 900px 以上改成左側細欄（--rail-in）；細欄本身在「底部工具列」段 */
-:root{--bar-in:88px;--rail-in:0px}
+:root{--bar-in:88px;--rail-in:0px;--fab-in:0px}
 @media (min-width:900px){:root{--bar-in:0px;--rail-in:78px}}
+/* 新增即時回報的浮動圓鈕出現時（body.fab-on，nav.js 的 fabSync），內容最下面多讓出它的高度，最後一顆膠囊不會被蓋住 */
+body.fab-on{--fab-in:76px}
 html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
@@ -107,7 +109,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .pager{display:flex;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
 .page{flex:none;height:100%;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}
 .page-main{width:100vw}
-.wrap{max-width:1500px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
+.wrap{max-width:1500px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
 .pager::-webkit-scrollbar{display:none}
 @media (max-width:640px){
   .wrap{padding-top:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
@@ -1183,6 +1185,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .ico-on .i-l1{animation:icoTrace 1.6s ease-in-out infinite}
   .ico-on .i-l2{animation:icoTrace 1.6s .15s ease-in-out infinite}
   .ico-on .i-phone{animation:icoShake .9s ease-in-out infinite}
+  .ico-on .i-plus{animation:icoPlus .9s cubic-bezier(.3,1.45,.45,1) infinite}
   .ico-on.ico-once .ico *{animation-iteration-count:1}
 }
 @media (prefers-reduced-motion:no-preference){@keyframes icoPen{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-1.2px,1px) rotate(-6deg)}50%{transform:translate(.8px,-.6px) rotate(3deg)}75%{transform:translate(-.6px,.8px) rotate(-3deg)}}}
@@ -1202,6 +1205,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @media (prefers-reduced-motion:no-preference){@keyframes icoFlag{0%,100%{transform:skewY(0)}50%{transform:skewY(-7deg)}}}
 @media (prefers-reduced-motion:no-preference){@keyframes icoDown{0%,100%{transform:translateY(0)}50%{transform:translateY(2px)}}}
 @media (prefers-reduced-motion:no-preference){@keyframes icoShake{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}}
+@media (prefers-reduced-motion:no-preference){@keyframes icoPlus{0%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}}
 @media (prefers-reduced-motion:no-preference){@keyframes icoX{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg) scale(.85)}}}
 
 /* ===== 平面色塊（.glass） ===== */
@@ -1269,6 +1273,17 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .tab-ind{width:auto;height:auto;font-size:20px;color:var(--tb-muted)}
   .tabbar .tab-l{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .tb-lens{left:6px;top:0;width:50px;height:44px}
+}
+
+/* ===== 新增即時回報的浮動圓鈕（nav.js 的 fabSync；DESIGN-next 第六節「部門內」） =====
+   右下角 60 的圓鈕：主要動作色（--pri／--pri-ink）、加號、浮在內容上面所以帶柔和陰影；手機在工具列上方。
+   z-index 在設定、通知疊層（37、38）下面：疊層打開時被蓋住；出現、消失的動畫是 anim.js 的 Anim.toggle（pop） */
+.fab{position:fixed;right:calc(max(16px,env(safe-area-inset-right)) + clamp(0px,3vw,40px));bottom:calc(32px + env(safe-area-inset-bottom));z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
+.fab[hidden]{display:none}
+.fab .ico{width:24px;height:24px;stroke-width:2}
+.fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (max-width:899px){
+  .fab{right:max(18px,env(safe-area-inset-right));bottom:calc(106px + env(safe-area-inset-bottom))}
 }
 
 /* ===== 設定頁 ===== */
