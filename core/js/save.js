@@ -47,8 +47,12 @@ async function exportBackup(){
   const s=JSON.parse(JSON.stringify(state));s.locked=false;if(!s.savedAt)s.savedAt=nowStr();
   if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
-  const kind={mime:"application/json",ext:".json",desc:"JSON"},doc=JSON.stringify(s,null,1);
-  const name=`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,label="備份";
+  const doc=JSON.stringify(s,null,1);
+  await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
+}
+/* 存一個 JSON 檔：看板「匯出備份」與會長室管理「匯出全部資料」（02D D-c）共用 */
+async function saveJsonFile(name,doc,label){
+  const kind={mime:"application/json",ext:".json",desc:"JSON"};
   if(HOSTED){
     const dl=await window.claude.use("downloads");
     if(dl){try{await dl.save({filename:name,data:new Blob([doc],{type:kind.mime})});toast(`已下載${label}`)}catch(e){if(e&&e.code!=="declined")toast("下載失敗："+(e&&e.code||""))}return}

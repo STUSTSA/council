@@ -1226,6 +1226,18 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .acct-log-b small{color:var(--muted);font-size:12.5px}
 .acct-chain{font-size:13px;color:var(--ok)}
 .acct-chain.bad{color:var(--red)}
+/* 匯入（02D D-a）：筆數報告表（項目、資料檔、Firestore、結果），外框同 .acct-log；不同的列與「不通過」用紅字。數字欄等寬靠右 */
+.imp-tbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:24px;overflow:hidden;font-size:13.5px}
+.imp-tbl th,.imp-tbl td{padding:10px 14px;text-align:left;font-weight:400}
+.imp-tbl th{color:var(--muted);font-size:12.5px}
+.imp-tbl tbody td{border-top:1px solid var(--hair)}
+.imp-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.imp-tbl tr.bad td,.imp-res.bad{color:var(--red)}
+.imp-res{color:var(--ok)}
+.imp-hash{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.imp-sum{padding-inline:0}
+.imp-step{padding:6px 0}
+@media (max-width:520px){.imp-tbl th,.imp-tbl td{padding:9px 10px}}
 
 /* ===== 通知層（notify.js）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05，交接說明四十二） =====
    版面沿用設定頁的 .set-ov；內容寬度上限 920px 置中。顏色：本部門＝即時回報狀態色、全會＝部門色（--c，由 JS 給） */
