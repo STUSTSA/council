@@ -46,6 +46,7 @@ const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcanc
    秘書處會議編輯寫別的部門（還在 GitHub），firestore 模式不開放 */
 const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
+  if(roView)return false;   /* 唯讀檢視中不開始編輯（圓鈕、編輯鈕正在消失的途中也一樣） */
   if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;
   morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;kpTp=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
     /* 即時回報卡（進行中、不是秘書處的會議卡）：原位編輯器，記下開始前的內容（新增的卡片＝null） */

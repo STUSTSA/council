@@ -36,10 +36,10 @@ document.addEventListener("click",async e=>{
   if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的週報？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除週報");return}
 
   /* small events（即時回報） */
-  /* 新增即時回報：左右兩欄時直接開始編輯一筆空白的（選到它、在右側填名稱，取消就不留）；其他時候填一個小表單，按確定直接儲存 */
-  if(t.closest("#addEvent")&&!editing&&mdOn("live")){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
+  /* 新增即時回報（右下角圓鈕，只有 canEdit 時算數：唯讀檢視中圓鈕正在消失時點到也不算）：左右兩欄時直接開始編輯一筆空白的（選到它、在右側填名稱，取消就不留）；其他時候填一個小表單，按確定直接儲存 */
+  if(t.closest("#addEvent")&&!editing&&canEdit()&&mdOn("live")){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);selEv=ev.id;dirty=true})){mdPaneIn($("#evDetail"));kpFocus("title",true)}return}
-  if(t.closest("#addEvent")&&!editing){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱"},{name:"desc",label:"說明",type:"textarea"},...staffField([])],{validate:o=>descTooBig(o.desc)});
+  if(t.closest("#addEvent")&&!editing&&canEdit()){if(!(await ensureLogin()))return;const v=await ask("新增即時回報",[{name:"name",label:"名稱"},{name:"desc",label:"說明",type:"textarea"},...staffField([])],{validate:o=>descTooBig(o.desc)});
     if(v&&v.name)await settingSave(()=>{const ev={id:uid("e"),name:v.name,createdAt:today(),staff:v.staff||[],links:[],times:[],round:1,touched:[]};evSetDesc(ev,v.desc||"");evTouch(ev);state.events.push(ev)},"已新增即時回報");return}
   /* 新增議題：開始編輯一個空白議題、換到它的詳情並打開名稱欄（取消就不留） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};

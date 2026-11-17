@@ -88,10 +88,11 @@ const Anim=(()=>{
   /* 顯示／隱藏（hidden 屬性）也有過渡 */
   async function show(el,kind="rise"){if(!el)return;el.hidden=false;return enter(el,kind)}
   async function hide(el,kind="fade"){if(!el||el.hidden)return;await leave(el,kind);el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}
-  /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播 */
+  /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播。
+     一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉 */
   function toggle(el,on){
     if(!el)return;on=!!on;if(el._tgl===on)return;const first=el._tgl===undefined;el._tgl=on;
-    el.getAnimations().forEach(a=>a.cancel());
+    el.getAnimations().forEach(a=>a.cancel());el.inert=!on;
     if(on){el.hidden=false;if(!first)enter(el,"pop");return}
     if(first||el.hidden||reduced()){el.hidden=true;return}
     leave(el,"pop").then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
