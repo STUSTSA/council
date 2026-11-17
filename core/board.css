@@ -142,7 +142,11 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
    標題列跟著頁面捲動；換分頁不重建。深色只靠變數 */
 .dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 18px;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none}
+.dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;transition:transform .22s var(--ease),background-color .2s,color .2s}
+/* 被指到放大、按下縮回：首頁鍵是 <a>，一般按鈕（button）的規則套不到，這裡三顆統一寫（只有能 hover 的裝置才放大） */
+@media (hover:hover){.dh-btn:hover{transform:scale(1.05)}}
+.dh-btn:active{transform:scale(.96)}
+@media (prefers-reduced-motion:reduce){.dh-btn:hover{transform:none}}
 .dh-btn .ico{width:22px;height:22px;stroke-width:1.8}
 .dh-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .dh-btn[hidden]{display:none}
