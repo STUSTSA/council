@@ -32,18 +32,7 @@ const PWA_IOS_STEPS=["點「分享」","選「加入主畫面」","按「新增�
 const devForget=()=>!(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON));
 const devShow=()=>pwaCanInstall()||pwaIosSteps();
 
-/* Service Worker：只在正式網址（https / localhost）且頁面有 manifest 時註冊 */
-if("serviceWorker" in navigator&&document.querySelector('link[rel="manifest"]')&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>{
-      const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
-      const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
-        ...[...document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="manifest"]')].map(l=>l.href)]
-        .filter(same).map(u=>u.split("#")[0].split("?")[0]);
-      reg.active&&reg.active.postMessage({type:"precache",urls:[...new Set(urls)]});
-    }).catch(()=>{});
-  });
-}
+swReg();   /* Service Worker 與離線備份（util.js，主頁也用同一個） */
 
 /* ---------- 分享預覽文字：改 index.html 的 meta（透過 GitHub API，用這台裝置的權杖） ---------- */
 const metaGet=k=>document.querySelector(`meta[property="${k}"],meta[name="${k}"]`)?.getAttribute("content")||"";

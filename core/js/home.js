@@ -259,6 +259,7 @@
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
+  swReg(D.map(d=>deptLogo(d.id)));   /* 安裝成 App、離線打開：主頁也註冊 Service Worker，並把主頁用到的檔案與九個部門標誌收進離線備份（util.js） */
   if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */
 })();

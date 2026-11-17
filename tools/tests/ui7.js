@@ -217,4 +217,16 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const cv=await p.waitForFunction(()=>{const c=document.querySelector('.pfx-cover'),w=c&&c.querySelector('svg .dg-w');return w&&{w:getComputedStyle(w).fill,bg:getComputedStyle(c).backgroundColor,k:c.dataset.k}},null,{timeout:1500}).then(h=>h.jsonValue()).catch(()=>null);
     ok(rf[2]==='index.html?d=secretariat'&&rf[3]===rf[4]&&fb.w===fb.bg&&!!cv&&cv.k==='flip'&&cv.w===fb.bg&&cv.bg===fb.bg,`手機深色：卡片（${rf[3]}／${rf[4]}）、翻面底板（${fb.w}／${fb.bg}）、看板翻面底板（${cv&&cv.w}／${cv&&cv.bg}）的白色零件都＝底色`);
     await p.ctx.close()}
+  /* 8e 離線：第一次打開主頁（Service Worker 剛裝好）就把主頁要用的檔案收進離線備份（home.js、部門標誌、主題） */
+  {const ctx=await b.newContext({viewport:{width:1300,height:860}});await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
+    const p=await ctx.newPage();await p.goto(U+'home.html');
+    const want=['core/js/home.js','core/theme.css','core/js/theme.js','core/js/pagefx.js','dept/icons/dept-secretariat.svg','dept/icons/dept-works.svg'];
+    /* waitForFunction 不等 Promise，自己輪詢：Service Worker 裝好、接手、收完 precache 訊息 */
+    const miss=()=>p.evaluate(async w=>{if(!(await navigator.serviceWorker.getRegistration()))return w;const c=await caches.open('board-cache-v1'),o=[];
+      for(const u of w)if(!(await c.match(new URL(u,location.href).href,{ignoreSearch:true})))o.push(u);return o},want).catch(e=>['?'+e.message]);
+    let m=want;for(let i=0;i<30&&m.length;i++){await p.waitForTimeout(300);m=await miss()}
+    const got=!m.length;
+    ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
+    await ctx.close()}
+
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();

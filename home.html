@@ -43,7 +43,6 @@ try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesB
   <div class="hm-dock" id="hmDock"><button type="button" class="hm-pub" id="hmPub" aria-label="全會行事曆"></button></div>
 </main>
 <script src="core/js/pagefx.js"></script>
-<script>/* 安裝成 App：總覽頁也要註冊 Service Worker（跟看板同一個 sw.js），才能從這一頁安裝、離線打開 */if("serviceWorker" in navigator&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 <script src="dept/config.js"></script>
 <script src="core/js/config.js"></script>
 <script src="core/js/util.js"></script>
