@@ -11,6 +11,7 @@
    9. 設定清單、外觀合併頁、通知頁重畫：沒變的節點留著、外觀的分段切換不重建
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
    11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
+   12. 審查 P2-2：編輯中游標在 .kp-tx，點專員、標籤的勾選膠囊（label）後 activeElement 仍是那一欄（桌面、手機觸控 412）
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
