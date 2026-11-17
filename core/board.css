@@ -1477,6 +1477,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .dk-btn.pri{background:var(--pri);color:var(--pri-ink)}
 .dk-btn .ico{width:20px;height:20px}
 .dk-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
+.dk-undo{justify-content:center}   /* 延後後的「已延後到明天＋復原」（字樣沿用即時回報卡的 .lc-save／.kp-st／.lc-undo） */
 @media (prefers-reduced-motion:reduce){.dk-card{transition:none}}
 @media (max-width:640px){
   .dk-stack{height:174px}

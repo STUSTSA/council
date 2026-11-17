@@ -242,20 +242,36 @@ function dkCardHTML(x,i){
   </div>`;
 }
 function lateHTML(){
-  const xs=notiLateItems(),ed=canEdit();if(!xs.length)return "";
+  const xs=notiLateItems(),ed=canEdit(),u=dkUndoHTML();if(!xs.length&&!u)return "";
   return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="nt-h" id="ntLateH"><span class="nt-en">OVERDUE</span>逾期</h3>
-    <div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
-    <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div></section>`;
+    ${xs.length?`<div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
+    <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div>`:""}
+    ${u}</section>`;
 }
-/* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著） */
-function notiPostpone(evId,tid){
+/* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著）。
+   存好後卡片堆下面一行「已延後到明天＋復原」（ui-06 審查 P1-2；樣式沿用即時回報卡的「已儲存＋復原」：.lc-save、.kp-st、.lc-undo）。
+   復原＝寫回延後前的開始／結束（一樣要能編輯、一樣經 settingSave 存檔）；那個時間在那之後被改過就不復原。關掉這一頁、再延後別張時「復原」消失 */
+let dkUndo=null;   /* {evId, tid, b（延後前 {start,end}）, a（延後後）} */
+const tmOf=(evId,tid)=>{const ev=state.events.find(e=>e.id===evId);return {ev,t:ev&&(ev.times||[]).find(y=>y.id===tid)}};
+const dkUndoOn=()=>!!(dkUndo&&canEdit()&&tmOf(dkUndo.evId,dkUndo.tid).t);
+const dkUndoHTML=()=>dkUndoOn()?`<div class="lc-save dk-undo"><span class="kp-st" role="status" data-st="ok">已延後到明天</span><button type="button" class="lc-undo" data-dkundo>復原</button></div>`:"";
+async function notiPostpone(evId,tid){
   if(!canEdit())return false;
-  const tm=addDays(today(),1);
-  return settingSave(()=>{const ev=state.events.find(e=>e.id===evId),t=ev&&(ev.times||[]).find(y=>y.id===tid);if(!t)return false;
+  const tm=addDays(today(),1),{t:t0}=tmOf(evId,tid),b=t0&&{start:t0.start,end:t0.end};let a=null;
+  const ok=await settingSave(()=>{const {ev,t}=tmOf(evId,tid);if(!t)return false;
     const sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
     if(ed&&ed>sd)t.end=tm+t.end.slice(10);
     else{t.start=tm+t.start.slice(10);if(t.end)t.end=tm+t.end.slice(10)}
-    evTouch(ev);syncLink(ev)},"已延後到明天");
+    a={start:t.start,end:t.end};evTouch(ev);syncLink(ev)},"已延後到明天");
+  dkUndo=ok&&b&&a?{evId,tid,b,a}:null;renderNoti();return ok;
+}
+async function notiUndo(){
+  const u=dkUndo;if(!u||!canEdit())return false;dkUndo=null;
+  const {t}=tmOf(u.evId,u.tid);
+  if(!t||t.start!==u.a.start||t.end!==u.a.end){toast("這個時間已有新的修改，無法復原");renderNoti();return false}
+  const ok=await settingSave(()=>{const {ev,t}=tmOf(u.evId,u.tid);if(!t||t.start!==u.a.start||t.end!==u.a.end)return false;
+    t.start=u.b.start;if(u.b.end===undefined)delete t.end;else t.end=u.b.end;evTouch(ev);syncLink(ev)},"已復原");
+  renderNoti();return ok;
 }
 /* 改成具體時間：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
 async function notiRetime(evId,tid){
@@ -300,7 +316,8 @@ function dkBind(){
   const end=e=>{
     if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
     const nx=st.querySelector('.dk-card[data-i="1"]');
-    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>24){if(nx){nx.style.transform="";nx.style.transition=""}dkFly(c,(x||v)>0?"r":"l",{x,y});return}
+    /* 甩出去：拖過卡片寬的 30%，或快甩（速度超過 0.6px/ms）而且至少拖了卡片寬的 15%（ui-06 審查 P1-2：原本 24px 就算，太容易誤觸） */
+    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>W*.15){if(nx){nx.style.transform="";nx.style.transition=""}dkFly(c,(x||v)>0?"r":"l",{x,y});return}
     const from=c.style.transform;c.style.transform="";c.style.transition="";c.style.setProperty("--r",0);c.style.setProperty("--l",0);
     if(nx){nx.style.transform="";nx.style.transition=""}
     if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
@@ -398,7 +415,7 @@ async function openNoti(){
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
   if(!notiOpen)return;
-  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;dkUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
@@ -422,6 +439,7 @@ document.addEventListener("click",e=>{
   if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
   const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
+  if(t.closest("[data-dkundo]")){notiUndo();return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!todayOpen&&!$("#dlg").open&&!setOpen&&!(typeof rptOpen!=="undefined"&&rptOpen)){e.preventDefault();closeNoti()}});
