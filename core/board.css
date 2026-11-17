@@ -231,9 +231,6 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .panel:not(#livePanel):not(#donePanel){contain:layout paint}
 /* 即時回報、完成紀錄：不要大外框，膠囊直接放在頁面上（標題列照舊；完成紀錄 2026-11-06 起比照即時回報） */
 #livePanel,#donePanel{border:0;background:none;box-shadow:none;padding:4px 0 8px;border-radius:0}
-@media (max-width:900px){
-  .layout{grid-template-columns:minmax(0,1fr)}
-}
 @media (max-width:640px){
   .panel{padding:14px 14px;border-radius:var(--r-lg)}
   #livePanel,#donePanel{padding:2px 0 6px}
@@ -908,7 +905,7 @@ a.link:active{transform:scale(.96)}
 @keyframes pulse{50%{transform:scaleY(1.3)}}   /* 待確認的註記：燈條上下伸縮（沒有光暈） */
 
 /* ===== 完成紀錄 ===== */
-#donePanel{max-height:min(620px,72vh);display:flex;flex-direction:column;--done:var(--ok)}   /* 2026-11-06 使用者：不要黑色反白的大外框，比照即時回報（外框、底色見「版面與區塊外框」段的 #livePanel,#donePanel），只有燈號是綠色 */
+#donePanel{display:flex;flex-direction:column;--done:var(--ok)}   /* 2026-11-06 使用者：不要黑色反白的大外框，比照即時回報（外框、底色見「版面與區塊外框」段的 #livePanel,#donePanel），只有燈號是綠色 */
 /* 膠囊清單（跟即時回報同一套 .events .ev，見「即時回報」段的「完成紀錄膠囊」）；區塊太長時清單自己捲 */
 #donePanel .scroll{overflow-y:auto;flex:1;margin:-24px -28px 0;padding:28px 28px 16px;scrollbar-gutter:stable}   /* 捲動區四周多留空間（膠囊滑過去放大不會被切），再用負邊距拉回原位，膠囊位置不變 */
 #donePanel .panel-head{position:relative;z-index:1}   /* 捲動區往上多留的那一段疊在標題列上：標題列放上面，按鈕才點得到 */
@@ -920,15 +917,11 @@ a.link:active{transform:scale(.96)}
 .done-body p{-webkit-user-select:text;user-select:text}
 .done-body .edit-only{flex-wrap:wrap;gap:6px!important}
 .done-body .edit-only button{font-size:12px;padding:3px 10px;min-height:28px}
-.sgroup.cur #donePanel{max-height:none}
 /* 左右兩欄（桌面 1000px 以上、「完成紀錄」被選到放大時）：版面與詳情卡跟即時回報同一套（「即時回報」段的左右兩欄） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split{display:grid}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
 #doneDetail .done-body{margin-top:14px;font-size:14px}
-@media (max-width:640px){
-  #donePanel{max-height:none}
-}
 @media (prefers-reduced-motion:reduce){
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}
@@ -1002,15 +995,8 @@ a.link:active{transform:scale(.96)}
 @keyframes slideIn{from{opacity:0;transform:translateX(26px)}}
 @keyframes weekNew{0%{opacity:0;transform:translateY(-12px) scale(.97)}35%{opacity:1;transform:none;box-shadow:0 0 0 2px var(--ink)}100%{box-shadow:none}}
 
-/* ===== 區塊切換（底部工具列的三個分頁） ===== */
+/* ===== 區塊切換（工具列的分頁：即時回報、進度、完成紀錄、部門自己的分頁） ===== */
 .sgroup{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;min-width:0}
-.sgroup.cur{grid-column:1/-1;order:-1}
-/* 焦點：桌面全部區塊都顯示時，沒被選到的區塊變暗、略縮（開會投影時一眼看出現在在講哪一區）；滑鼠移上去或在裡面操作時恢復。
-   縮放用獨立的 scale 屬性，跟 render.js 切換時的 FLIP（transform）疊在一起不打架 */
-.sgroup{transition:opacity .4s var(--ease),scale .4s var(--ease);transform-origin:50% 0}
-.sgroup:not(.cur){opacity:.5;scale:.985}
-.sgroup:not(.cur):is(:hover,:focus-within){opacity:1;scale:1}
-@media (prefers-reduced-motion:reduce){.sgroup:not(.cur){scale:none}}
 /* 一次只顯示一區（手機、桌面都一樣；DESIGN-next 第一節）。換分頁時舊的那一區留成一層（.sg-out，render.js 的 setSection）：
    原地絕對定位（top／left／width 由程式寫）、不能點，退出去之後拿掉 */
 .sgroup:not(.cur){display:none}
@@ -1926,7 +1912,6 @@ body.intro :is(.card,.ev,.g-row)[data-intro]{animation:rise .5s var(--ease) both
 
 /* ===== 設定檔：關閉的區塊 ===== */
 body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec="progress"],body.no-done .sgroup[data-sec="done"],body.no-weekly [data-hub=week],body.no-weekly #weekBtn{display:none!important}
-body.no-done .layout{grid-template-columns:minmax(0,1fr)}
 
 /* ===== 列印 ===== */
 @media print{

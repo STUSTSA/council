@@ -47,8 +47,8 @@ document.addEventListener("click",e=>{
   const d=sm.parentElement;if(!d||!d.matches(".ev,.week,.log"))return;
   if(e.target.closest("input,button,a")){if(e.target.closest("summary button,summary input"))e.preventDefault();return}
   e.preventDefault();
-  /* 桌面、區塊被選到時：點即時回報或完成紀錄的一筆＝在右側打開，再點一次＝收起（不就地展開）。
-     例外：在別的區塊被選到時就地展開過、切過來還開著的那一筆，點了先就地收起（不然會收不起來、直接跳去分欄） */
+  /* 桌面 1000px 以上、在那一區時：點即時回報或完成紀錄的一筆＝在右側打開，再點一次＝收起（不就地展開）。
+     例外：窄畫面時就地展開過、變寬後還開著的那一筆，點了先就地收起（不然會收不起來、直接跳去分欄） */
   if(!d.open&&d.matches(".ev:not([data-done]):not(.mt-ev)")&&mdOn("live")){mdSelect("live",d.dataset.ev);return}   /* 秘書處的會議膠囊（.mt-ev）是別的部門的，一律就地展開 */
   if(!d.open&&d.matches("[data-done]")&&mdOn("done")){mdSelect("done",d.dataset.issue||d.dataset.ev);return}
   /* 手機：即時回報、完成紀錄一次只開一張（打開這張時，同一區開著的其他張一起收起） */

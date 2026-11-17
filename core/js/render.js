@@ -106,15 +106,15 @@ function render(){
   Anim.play(flip);Anim.syncPings();
 }
 
-/* ---------- 區塊切換：底部工具列的三個分頁 ----------
-   手機：一次只顯示一區（預設即時回報）；桌面：全部顯示，選到的區塊放大移到最上面，其他區塊排在下面 */
+/* ---------- 區塊切換：工具列的分頁 ----------
+   手機、桌面都一次只顯示一區（預設第一個分頁）；換分頁的動畫見下面的 setSection */
 const SECS=["live","progress","done","ext"].filter(secTab);
 let curSec=(SECS.includes(appStartSec)&&appStartSec)||SECS[0]||"live",secTok=0;   /* appStartSec：app.js 留下的初始區塊（現在都是空的，從第一個區塊開始） */
 const isPhone=()=>matchMedia("(max-width:640px)").matches;
 function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec));
   /* 切換區塊時，個別進度／完成紀錄要不要改成左右兩欄跟著變 */
   if(mdOn("live")!==mdLast.live)renderEvents();if(mdOn("done")!==mdLast.done)renderDone()}
-/* 桌面（1000px 以上）、區塊被選到放大成全寬時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
+/* 桌面（1000px 以上）、在那一區時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
 const MD_MQ=matchMedia("(min-width:1000px)");
 const mdOn=sec=>MD_MQ.matches&&curSec===sec;
 let progOpen=null,selDone=null,selEv=null;const mdLast={};

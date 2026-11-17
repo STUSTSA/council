@@ -278,7 +278,7 @@ function evFieldsHTML(ev){
 function mdStepHTML(k,ids,id){const i=ids.indexOf(id);
   return `<span class="md-step"><button type="button" class="icon" data-mdstep="${k}" data-dir="-1" ${i<=0?"disabled":""} aria-label="上一個">${ico("prev")}上一個</button><button type="button" class="icon" data-mdstep="${k}" data-dir="1" ${i<0||i>=ids.length-1?"disabled":""} aria-label="下一個">下一個${ico("next")}</button></span>`}
 
-/* 完成紀錄：一般是可展開的清單；桌面放大成全寬時（mdOn）改成左側清單、右側詳情 */
+/* 完成紀錄：一般是可展開的清單；桌面 1000px 以上（mdOn）改成左側清單、右側詳情 */
 function renderDone(){
   const ds=doneIssues();
   const de=state.events.filter(ev=>ev.doneAt);
