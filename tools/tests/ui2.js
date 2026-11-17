@@ -4,6 +4,7 @@
    - 沒選過深淺色時跟系統（Playwright 的 colorScheme 換了就跟著換）；選過就不跟
    - 設定 → 外觀：點主題 data-pal 改變、存起來、重新整理仍保留；點深色／淺色；音效開關；每顆主題按鈕顯示自己那一組的顏色
    - 換主題時整頁淡過去（View Transitions）；關掉動態時不淡；淡的途中點別的主題，那一下照樣算數
+   - 搜尋欄聚焦框九組主題都看得到
    - 頁面上沒有 backdrop-filter、沒有 title 屬性；總覽 home.html 讀同一個設定
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');const fs=require('fs'),path=require('path');
@@ -133,6 +134,14 @@ const sameColor=(a,b)=>hex(a)===hex(b);
     ok(s.pal==='sage'&&s.theme==='dark'&&s.body==='rgb(13, 16, 14)',`home.html 讀同一個設定：${s.pal} ${s.theme} ${s.body}`);
     ok(card[0]==='rgb(23, 27, 24)'&&card[1]==='none'&&card[2]==='18px',`home.html 卡片是平面色塊（--blk、沒有漸層、圓角 18）：${card}`);
     ok(!p.errs.length,'home.html 沒有錯誤 '+p.errs);
+    await p.context().close()}
+
+  /* 7. 搜尋欄聚焦框：九組主題（淺深色）都看得到（outline 或 box-shadow 不是 none；以前跟 --blk-sh 串在一起，--blk-sh 是 none 時整條失效） */
+  {const p=await mk({init:null});
+    for(const mode of ['light','dark'])for(const k of PALS){
+      const v=await p.evaluate(([k,mode])=>{const r=document.documentElement;r.dataset.pal=k;r.dataset.theme=mode;const q=document.querySelector('#boardQ');q.focus();
+        const hs=q.closest('.hero-search'),cs=getComputedStyle(hs);const o=cs.outlineStyle!=='none'&&parseFloat(cs.outlineWidth)>0;const r2=[o,cs.outlineStyle,cs.outlineWidth,cs.boxShadow];q.blur();return r2},[k,mode]);
+      ok(v[0]||v[3]!=='none',`${k} ${mode} #boardQ 聚焦時看得到聚焦框：outline ${v[1]} ${v[2]}、box-shadow ${v[3].slice(0,40)}`)}
     await p.context().close()}
 
   await b.close();

@@ -141,7 +141,7 @@ a.logo-box:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .hero-search{display:flex;align-items:center;gap:9px;height:44px;padding:0 6px 0 16px;border-radius:999px;cursor:text;transition:transform var(--mo-slow) var(--mo-spring),box-shadow var(--mo-base) var(--mo-out)}
 /* 點下去的動畫（2026-11-06 使用者：搜尋欄點了要有動畫，不然很死）：按下微縮、聚焦時彈開略放大、放大鏡轉一下放大、提示字往右淡開；只動 transform／opacity */
 .hero-search:active{transform:scale(.97);transition-duration:var(--mo-fast)}
-.hero-search:focus-within{transform:scale(1.02)}
+.hero-search:focus-within{transform:scale(1.02);outline:1.5px solid var(--ink);outline-offset:-1.5px}   /* 聚焦框用 outline（不跟 --blk-sh 串在一起，--blk-sh 是 none 時才不會整條失效；柔光主題的色塊陰影照舊）*/
 .hero-search .hs-ico{transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
 .hero-search:focus-within .hs-ico{transform:rotate(-14deg) scale(1.15);opacity:.9}
 .hero-search input::placeholder{transition:opacity var(--mo-base) var(--mo-out)}
@@ -150,7 +150,6 @@ a.logo-box:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .hero-search input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:13.5px;letter-spacing:.06em;outline:none;-webkit-appearance:none;appearance:none}
 .hero-search input::placeholder{color:var(--muted);opacity:.75}
 .hero-search input:focus,.hero-search input:focus-visible{outline:none}
-.hero-search:focus-within{box-shadow:var(--blk-sh),inset 0 0 0 1.5px var(--ink)}
 .hq-clear{flex:none;width:32px;height:32px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;opacity:0;pointer-events:none;transform:scale(.6);transition:opacity var(--mo-fast) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .hero-search.has-q .hq-clear{opacity:.7;pointer-events:auto;transform:none}
 .hq-clear .ico{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
@@ -1353,7 +1352,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .noti-search{display:flex;align-items:center;gap:10px;height:46px;padding:0 6px 0 16px;border-radius:999px;cursor:text;transition:transform var(--mo-slow) var(--mo-spring),box-shadow var(--mo-base) var(--mo-out)}
 /* 點下去的動畫：跟頁首搜尋欄同一套（按下微縮、聚焦彈開、放大鏡轉一下、提示字淡開） */
 .noti-search:active{transform:scale(.97);transition-duration:var(--mo-fast)}
-.noti-search:focus-within{transform:scale(1.02)}
+.noti-search:focus-within{transform:scale(1.02);outline:1.5px solid var(--ink);outline-offset:-1.5px}   /* 聚焦框同搜尋欄：outline，不跟 --blk-sh 串 */
 .noti-search .ns-ico{transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
 .noti-search:focus-within .ns-ico{transform:rotate(-14deg) scale(1.15);opacity:.9}
 .noti-search input::placeholder{transition:opacity var(--mo-base) var(--mo-out)}
@@ -1362,7 +1361,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .noti-search input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
 .noti-search input::placeholder{color:var(--muted);opacity:1}
 .noti-search input:focus,.noti-search input:focus-visible{outline:none}
-.noti-search:focus-within{box-shadow:var(--blk-sh),inset 0 0 0 1.5px var(--ink)}
 .nq-clear{flex:none;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;opacity:0;pointer-events:none;transform:scale(.6);transition:opacity var(--mo-fast) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .noti-search.has-q .nq-clear{opacity:.75;pointer-events:auto;transform:none}
 .nq-clear .ico{width:16px;height:16px}
