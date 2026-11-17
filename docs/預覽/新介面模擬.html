@@ -46,7 +46,7 @@
 [data-pal]{--on-bg:var(--ink)}
 [data-pal="b5"]:not([data-theme="dark"]){--on-bg:#fff}
 /* E 的底色是深藍：原本用底色當內層色塊的地方改用次色塊，底色上的逾期數字改用黃 */
-[data-pal="b5"]:not([data-theme="dark"]) :is(.day:not(.on),.rq,.mo-r,.ppl .av){background:var(--blk2)}
+[data-pal="b5"]:not([data-theme="dark"]) :is(.day:not(.on),.rq,.ppl .av){background:var(--blk2)}
 [data-pal="b5"]:not([data-theme="dark"]) .hm-name .lt{color:var(--acc2)}
 [data-pal="b5"]:not([data-theme="dark"]) .rail:has(.on) .tile:not(.on){opacity:1}
 *,*::before,*::after{box-sizing:border-box}
@@ -65,24 +65,21 @@ svg.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;str
 @keyframes up{from{opacity:0;transform:translateY(12px)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* 預覽外殼（不是產品） */
-#pv{flex:none;display:flex;gap:4px;align-items:center;padding:7px 10px;background:#26272c;overflow-x:auto;font-size:13px;color:#c9c9d2;white-space:nowrap}
-#pv button{padding:5px 12px;border-radius:999px;color:#b5b5c0}
-#pv button[aria-pressed="true"]{background:#f1f1f4;color:#111114}
-#pv i{width:1px;height:18px;background:#4a4b52;margin:0 6px;flex:none}
-#pv .sp{flex:1}
 #stage{flex:1;min-height:0;display:flex;justify-content:center}
 #app{position:relative;width:100%;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;transition:max-width .46s var(--out),background-color var(--slow) var(--out)}
-#app.phone{max-width:412px}
+/* 換主題（themeSwap）：整頁一次淡過去；淡的期間元件自己的過渡全部停掉，只留分段鈕的滑塊照常滑 */
+#app.swap,#app.swap *:not(.lens),#app.swap *::before,#app.swap *::after{transition:none}
+::view-transition{pointer-events:none}
+::view-transition-group(root),::view-transition-old(root),::view-transition-new(root){animation-duration:140ms;animation-timing-function:linear}
 /* 只有正在輸入的欄位可以選字；其餘文字、圖示、連結長按都不會反白、不會跳出系統選單 */
 #app{touch-action:manipulation}
-#app,#pv{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #app :is(input,textarea,[contenteditable="true"]){user-select:text;-webkit-user-select:text}
 #app :is(a,svg,img){-webkit-user-drag:none}
 #view{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;padding:26px clamp(16px,4vw,56px) 120px}
 
 .blk{background:var(--blk);border-radius:18px;box-shadow:var(--blk-sh,none);transition:background-color var(--slow) var(--out)}
 h2{color:var(--on-bg);margin:0;font-size:clamp(22px,2.6vw,30px);font-weight:700;line-height:1.1;letter-spacing:.06em}
-.cap{font-size:12px;letter-spacing:.14em;color:var(--muted)}
 .seg{display:inline-flex;padding:5px;border-radius:999px;background:var(--blk2);position:relative}
 .seg button{position:relative;z-index:1;min-height:36px;padding:0 20px;white-space:nowrap;border-radius:999px;font-size:14px;color:var(--muted);transition:color var(--base) var(--out)}
 .seg button[aria-selected="true"]{color:var(--pri-ink)}
@@ -320,19 +317,6 @@ h2{color:var(--on-bg);margin:0;font-size:clamp(22px,2.6vw,30px);font-weight:700;
 .role.top{background:var(--ink);color:var(--blk)}
 .ppx{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:2px 4px 14px 54px}.ppx .sp{flex:1}
 .qrt{display:flex;gap:8px}
-/* ===== 語彙 ===== */
-div.lg{display:grid;gap:18px;max-width:1080px;margin:0 auto;container-type:inline-size}   /* 語彙頁的容器；加 div 是為了不套到同名的標誌 svg.lg */
-.lg-g{display:grid;gap:18px}.lg-g>*{min-width:0;overflow:hidden}
-@container (min-width:760px){.lg-g{grid-template-columns:1fr 1fr}}
-.sw{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.sw div{aspect-ratio:1.3;border-radius:14px;display:flex;align-items:flex-end;padding:10px 12px;font-size:12px;box-shadow:inset 0 0 0 1px var(--hair)}
-.mo{display:grid;gap:10px}
-.mo-r{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;background:var(--bg)}
-.mo-r .sp{flex:1}
-.mo-r small{color:var(--muted);font-size:12.5px}
-.demo{width:46px;height:46px;border-radius:16px;background:var(--acc)}
-.ty b{display:block;font-weight:300;font-size:56px;line-height:1}
-.ty p{margin:6px 0 0}
 /* ===== 完整模擬：共用 ===== */
 #view :is(.card,.mgi,.te,.stg .s,.evc,.det,.others,.it-b,.dset,.lg2){animation:none}
 #view:not(.in) :is(.bar2 .act,.today){animation:none}
@@ -686,7 +670,7 @@ input.dash{width:9em;font-size:13.5px;text-align:center;background:transparent;o
 .who2{display:flex;align-items:center;gap:16px}.who2 .sp{flex:1}.who2 b{display:block;font-size:17px;font-weight:700;letter-spacing:.06em}.who2 small{font-size:12.5px;color:var(--muted)}
 /* 主題選擇：每一顆按鈕自己帶 data-pal／data-theme，所以按鈕裡的顏色變數就是那一組主題的顏色（底、色塊、主要動作、選中） */
 .thm{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
-.thb{display:grid;justify-items:center;gap:9px;padding:14px 6px 12px;border-radius:14px;background:var(--bg);color:var(--ink);font-size:13px;box-shadow:inset 0 0 0 1px var(--hair);transition:box-shadow var(--base) var(--out)}
+.thb{display:grid;justify-items:center;gap:9px;padding:14px 6px 12px;border-radius:14px;background:var(--bg);color:var(--ink);font-size:13px;box-shadow:inset 0 0 0 1px var(--hair);transition:box-shadow var(--fast) var(--out)}
 .thb[aria-checked="true"]{box-shadow:inset 0 0 0 2px var(--ink);font-weight:700}
 .thb .sw{display:flex;padding-left:7px}.thb .sw i{width:24px;height:24px;margin-left:-7px;border-radius:50%;box-shadow:0 0 0 2px var(--bg)}.thb .sw i:nth-child(1){background:var(--blk);box-shadow:0 0 0 2px var(--bg),inset 0 0 0 1px var(--hair)}.thb .sw i:nth-child(2){background:var(--pri)}.thb .sw i:nth-child(3){background:var(--acc)}
 .avx{display:grid;place-items:center;width:56px;height:56px;border-radius:12px;background:var(--acc);color:var(--acc-ink);font-size:20px;font-weight:700}
@@ -702,10 +686,8 @@ input.dash{width:9em;font-size:13.5px;text-align:center;background:transparent;o
 .wkr-h b{flex:1;font-weight:500}.wkr-h span{font-size:13px;color:var(--muted)}
 .wkr-b{padding:0 20px 12px}
 
-/* ===== 柔霧材質（2026-11-16 參考圖）：色塊換成靜態的柔和漸層＋細線圖形；不用背景模糊，所以不拖慢動畫 ===== */
+/* 色塊上的細線圖形（.art）停用：材質只有平面 */
 .tile,.wc{overflow:hidden}
-.art{position:absolute;right:-6%;bottom:-4%;width:78%;height:auto;stroke:currentColor;stroke-width:.7;fill:none;opacity:.55;pointer-events:none}
-.art .d{fill:var(--acc);stroke:none;opacity:1}
 .art{display:none}
 .tile .top,.wc .top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 /* 英文小標：很小、很疏，跟下面很粗的中文名拉開對比（沿用舊版首頁的做法） */
@@ -795,12 +777,6 @@ input.dash{width:9em;font-size:13.5px;text-align:center;background:transparent;o
 </style>
 </head>
 <body>
-<div id="pv">
-  <button data-s="login">登入</button><button data-s="home">首頁</button><button data-s="live">看板</button><button data-s="cal">行事曆</button><button data-s="meet">秘書處會議</button><button data-s="pres">會長室</button><button data-s="lang">語彙</button>
-  <span class="sp"></span>
-  
-  <button data-snd aria-pressed="true">音效</button><i></i><button data-t>深／淺</button><i></i><button data-w="phone">手機</button><button data-w="full">桌面</button>
-</div>
 <div id="stage"><div id="app" data-pal="fin" data-theme="light"><div id="view"></div><div id="float"></div><div class="zone del" id="zDel"></div><div class="zone ok" id="zOk"></div></div></div>
 <script>
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1103,23 +1079,6 @@ function presHTML(){const q=S.qr;
    <h3 style="margin-top:8px">人員</h3><div>${PPL.map((p,i)=>`<div class="ppl"><span class="av">${p.n[0]}</span><span>${esc(p.n)}</span><span class="sp"></span><button class="role tap${p.top?" top":""}"${p.top?"":` data-pp="${i}" aria-expanded="${S.pp===i}"`}>${esc(p.r==="唯讀"?"唯讀":p.d+p.r)}</button></div>${S.pp===i&&!p.top?`<div class="ppx">${seg("role",[["管理員","管理員"],["編輯者","編輯者"],["唯讀","唯讀"]],p.r)}<span class="sp"></span><button class="pillb ghost sm tap" data-revoke="${i}">撤銷</button></div>`:""}`).join("")}</div></div>
   ${q.open?`<div class="blk box qr${q.dead?" dead":""}" id="qr"><h3 style="justify-self:start">QR 邀請</h3><div class="qr-img" id="qrImg">${qrCells(q.seed)}</div><div class="qrt"><button class="chip tap" data-qrd aria-label="邀請加入的單位">${esc(q.d)}</button><button class="chip tap" data-qrr aria-label="邀請的角色">${q.r}</button></div><div class="cd num" id="qrCd">${q.dead?"00:00":mmss(q.t)}</div><div class="rw"><button class="pillb tap" data-qrnew>重新產生</button><button class="pillb ghost tap" data-qrkill>${q.dead?"關閉":"撤銷"}</button></div></div>`
    :`<div class="blk box qr0"><h3>QR 邀請</h3><div class="qrt"><button class="chip tap" data-qrd aria-label="邀請加入的單位">${esc(q.d)}</button><button class="chip tap" data-qrr aria-label="邀請的角色">${q.r}</button></div><button class="pillb wi tap" data-qrnew style="justify-self:start">${ic("plus")}產生 QR</button></div>`}</div></div>`)}
-/* ===== 語彙 ===== */
-function langHTML(){
-  const sw=(v,l,ink)=>`<div style="background:var(${v});color:${ink||"var(--ink)"}">${l}</div>`;
-  return `<div class="lg"><div class="pg-h"><h2><i class="en">DESIGN LANGUAGE</i>設計語彙</h2></div><div class="lg-g">
-  <div class="blk box"><h3>色調</h3><div class="sw">${sw("--bg","底")}${sw("--blk","色塊")}${sw("--blk2","次色塊")}${sw("--ink","文字","var(--blk)")}${sw("--acc","選中","var(--acc-ink)")}${sw("--acc2","焦點","var(--acc2-ink)")}${sw("--ok","完成","#fff")}${sw("--late","逾期","#fff")}</div></div>
-  <div class="blk box"><h3>材質</h3><div class="sw" style="grid-template-columns:repeat(3,1fr)"><div style="background:var(--bg)">平面色塊</div><div style="background:repeating-linear-gradient(-45deg,var(--blk2) 0 7px,transparent 7px 14px)">斜紋＝不可用</div><div style="background:transparent;box-shadow:inset 0 0 0 1.500px var(--ink)">外框＝次要動作</div></div><span class="cap">沒有模糊、沒有光暈、沒有陰影；層次只靠色塊深淺。相鄰的元件一定留縫，不做相連又各自圓角；長條用圓角矩形、不用橢圓</span></div>
-  <div class="blk box ty"><h3>字</h3><b class="num">11/16</b><p style="font-size:26px">各部門工作看板</p><p>內文 15　Noto Sans TC 400</p><p class="cap">字重分層：大數字 200　頁面標題 400　區塊與卡片標題 500–700　內文 400　次要資訊用次要色不加粗。標籤一律單行、行高 1、上下置中</p></div>
-  <div class="blk box"><h3>動態</h3><div class="mo">
-   <div class="mo-r"><span>回饋</span><small>指到放大 1.05、按下 .95　彈簧 240ms</small><span class="sp"></span><button class="demo tap" aria-label="試試看"></button></div>
-   <div class="mo-r"><span>依序浮現</span><small>開頁、換區　每一塊由下浮上來帶回彈，一塊接一塊（38ms）　單塊 560ms</small><span class="sp"></span><button class="demo" data-demo="rise" aria-label="播放"></button></div>
-   <div class="mo-r"><span>展開／收回</span><small>主頁進出部門　被點的色塊鋪滿畫面；回主頁時整個畫面收回那一張</small><span class="sp"></span><button class="demo" data-demo="exp" aria-label="播放"></button></div>
-   <div class="mo-r"><span>方向換頁</span><small>部門內分頁、部門／專案　舊的往一邊退、新的從另一邊進，方向跟著工具列</small><span class="sp"></span><button class="demo" data-demo="sweep" aria-label="播放"></button></div>
-   <div class="mo-r"><span>卡片換頁</span><small>卡片內切換功能　舊的原地淡出、新的一列一列浮上來，卡片高度滑到新的高度</small><span class="sp"></span><button class="demo" data-demo="up" aria-label="播放"></button></div>
-   <div class="mo-r"><span>位置移動</span><small>鏡片、焦點、排序　彈簧 460ms</small><span class="sp"></span>${seg("demo",[["a","一"],["b","二"],["c","三"]],"a")}</div>
-   <div class="mo-r"><span>離開</span><small>淡出並往旁邊退　加速 280ms，其餘補位 460ms</small><span class="sp"></span><button class="demo" data-demo="go" aria-label="播放"></button></div></div></div>
-  <div class="blk box"><h3>音效</h3><div style="display:grid;gap:8px">${[["move","移動焦點","首頁切換色塊、卡片堆"],["enter","進入","從首頁進部門"],["back","返回","回首頁、登出"],["tab","換頁","分頁、分段切換、工具列"],["open","展開","打開卡片、議程"],["check","勾選","核取、標籤、點名"],["ok","確認","併入、核准、定版"],["no","否定","拒絕、刪除、取消"],["roll","滾動","調整時間"],["tap","一般按鈕",""]].map(([k,n,d])=>`<div class="mo-r"><span>${n}</span><small>${d}</small><span class="sp"></span><button class="demo" data-sfx="${k}" aria-label="播放 ${n}"></button></div>`).join("")}</div></div>
-  </div></div>`}
 /* ===== 完整模擬：資料 ===== */
 const pad=n=>String(n).padStart(2,"0"),TODAY="2026-11-16",NOWHM="22:20",ME="林昱辰";
 const dt=(m,d)=>`2026-${pad(m)}-${pad(d)}`;
@@ -1366,6 +1325,17 @@ function meetHTML(){
 /* ===== 設定、每週概述 ===== */
 const SETN={meet:"會議資料與紀錄",rep:"工作報告",acct:"帳號",tags:"標籤",hist:"編輯紀錄",bak:"備份"};
 /* 主題（配色）：使用者自己在設定裡選；每一組都有淺色與深色 */
+/* 換主題、換深淺色時，整個畫面的顏色要馬上跟上：這一下把顏色過渡的時間（--slow、--base）暫時縮到 120ms，換完再放回來。
+   平常這些過渡是 280–460ms，整頁每個色塊一起慢慢變色會覺得按了沒反應 */
+/* 換主題／深淺色：整個畫面當成一張圖，一次淡過去（140ms，::view-transition）。
+   換的那一刻關掉元件各自的過渡（#app.swap），不然文字立刻變、色塊慢慢變、工具列更慢，看起來是分開的。瀏覽器不支援或使用者關掉動態時，整頁同時直接換 */
+let VT=null,vtTap=null;
+function themeSwap(fn){const go=()=>{app.classList.add("swap");fn();void app.offsetWidth;requestAnimationFrame(()=>requestAnimationFrame(()=>app.classList.remove("swap")))};
+  if(!document.startViewTransition||matchMedia("(prefers-reduced-motion:reduce)").matches)return go();
+  const v=VT=document.startViewTransition(go);v.finished.catch(()=>{}).then(()=>{if(VT===v)VT=null})}
+/* 淡的途中畫面是一張圖，手指碰不到底下的元件：一碰就結束淡出，並把這一下交給手指底下的元件，連著點才不會漏 */
+addEventListener("pointerdown",e=>{if(!VT)return;const v=VT;vtTap={x:e.clientX,y:e.clientY,done:v.finished.catch(()=>{})};v.skipTransition()},true);
+addEventListener("click",e=>{const t=vtTap;vtTap=null;if(!t||e.target!==document.documentElement)return;e.stopPropagation();t.done.then(()=>{const el=document.elementFromPoint(t.x,t.y);if(el&&el!==document.documentElement)el.click()})},true);
 const PALS=[["fin","米黃"],["b3","白藍"],["ink","黑白黃"],["sage","灰綠"],["mist","霧藍"],["fire","爐火"],["pastel","粉彩"],["neu","柔光"],["sun","暖陽"]];
 const SETP={
  /* 秘書處：行政會議的兩份文件。會議資料＝照報告順序列出各單位標了「報告」的事項名稱；
@@ -1385,7 +1355,8 @@ const SETP={
  acct:()=>`<div class="blk box"><div class="who2"><span class="avx">林</span><div><b>林昱辰</b><small class="num">yuchen.lin@example.edu.tw</small></div></div>
    <div><div class="ppl"><span>權益部</span><span class="sp"></span><span class="tagx">管理員</span></div></div></div>
   <div class="blk box"><h3>外觀</h3><div>${seg("theme",[["light","淺色"],["dark","深色"]],app.dataset.theme==="dark"?"dark":"light")}</div>
-   <div class="thm" role="radiogroup" aria-label="主題">${PALS.map(([k,n])=>`<button class="thb tap" role="radio" data-palset="${k}" data-pal="${k}" data-theme="${app.dataset.theme==="dark"?"dark":"light"}" aria-checked="${app.dataset.pal===k}"><span class="sw" aria-hidden="true"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div></div>
+   <div class="thm" role="radiogroup" aria-label="主題">${PALS.map(([k,n])=>`<button class="thb tap" role="radio" data-palset="${k}" data-pal="${k}" data-theme="${app.dataset.theme==="dark"?"dark":"light"}" aria-checked="${app.dataset.pal===k}"><span class="sw" aria-hidden="true"><i></i><i></i><i></i></span>${n}</button>`).join("")}</div>
+   <div><div class="ppl"><span>音效</span><span class="sp"></span><button class="tg" role="switch" data-sndsw aria-checked="${SFX.on}" aria-label="音效"><i></i></button></div></div></div>
   <button class="pillb ghost tap" data-logout style="justify-self:start">登出</button>`,
  tags:()=>Object.keys(TAGS).map(g=>`<div class="blk box"><h3>${g}<span class="num">${TAGS[g].length}</span></h3><div class="chips">${TAGS[g].map((t,i)=>`<span class="chip">${esc(t)}<button data-tagdel="${g}|${i}" aria-label="刪除 ${esc(t)}">×</button></span>`).join("")}${S.addTag===g?`<input class="dash" id="tagIn" maxlength="12" aria-label="新的${g}標籤">`:`<button class="dash tap" data-tagadd="${g}" aria-label="新增${g}標籤">+</button>`}</div></div>`).join(""),
  hist:()=>{const xs=CARDS.flatMap(c=>c.log.map(g=>({...g,c:c.name}))).sort((a,b)=>b.at.localeCompare(a.at));return `<div class="blk box"><div>${xs.map((g,i)=>`<div class="lg2" style="--i:${i}"><span class="n num">${xs.length-i}</span><div>${esc(g.who)}　${esc(g.f)}<small class="num">${esc(g.at)}　${esc(g.c)}${g.from?`　<em>${esc(g.from)}</em>`:""}</small></div></div>`).join("")}</div></div>`},
@@ -1422,7 +1393,8 @@ function ext_click(e){const t=e.target,q=s=>t.closest(s);
   if(q("[data-lkadd]")){S.lkEdit=true;render();const x=$("#lkU");if(x)x.focus();return true}
   if(q("[data-lkdel]")){LINKS.splice(+q("[data-lkdel]").dataset.lkdel,1);render();return true}
   if(q("[data-lkok]")){let u=$("#lkU").value.trim();if(!u){pop($("#lkU"));return true}if(!/^https?:\/\//i.test(u))u="https://"+u.replace(/^[a-z]+:/i,"");try{new URL(u)}catch(e){pop($("#lkU"));return true}LINKS.push({u});S.lkEdit=false;render();const a=$$(".lkw").pop();if(a)a.animate([{opacity:0,transform:"scale(.6)"},{opacity:1,transform:"none"}],{duration:320,easing:FX.spring});return true}
-  if(q("[data-palset]")){app.dataset.pal=q("[data-palset]").dataset.palset;render();return true}
+  if(q("[data-sndsw]")){SFX.on=!SFX.on;if(SFX.on)sfx("ok");render();return true}
+  if(q("[data-palset]")){const k=q("[data-palset]").dataset.palset;themeSwap(()=>{app.dataset.pal=k;render()});return true}
   if(q("[data-setp]")){S.setp=q("[data-setp]").dataset.setp;S.pdf=false;S.mexp="";render(true);return true}
   if(q("[data-mfok]")){let u=$("#mfIn").value.trim();if(u&&!/^https?:\/\//i.test(u))u="https://"+u;try{if(!u)throw 0;new URL(u)}catch(_){pop($("#mfIn"));return true}S.mfolder=u;S.mfEdit=false;S.mexp="";render();return true}
   if(q("[data-mfedit]")){S.mfEdit=true;render();const x=$("#mfIn");if(x){x.focus();x.select()}return true}
@@ -1706,8 +1678,7 @@ function sfx(k){if(!SFX.on)return;try{if(!sfxInit())return;if(SFX.ctx.state==="s
       [1047,1319,1568].forEach(f=>tone(f,f,.9,.07,"sine",.62));tone(2093,2093,.5,.04,"sine",1.1)},
     start(){tone(523,523,.12,.12);tone(659,659,.12,.12,"sine",.08);tone(784,784,.22,.13,"sine",.16)}
   })[k]?.()}catch(e){}}
-document.addEventListener("click",e=>{const t=e.target,q=x=>t.closest&&t.closest(x);if(q("#pv [data-snd]")){SFX.on=!SFX.on;q("[data-snd]").setAttribute("aria-pressed",SFX.on);if(SFX.on)sfx("ok");return}
-  if(q("[data-sfx]")){sfx(q("[data-sfx]").dataset.sfx);return}
+document.addEventListener("click",e=>{const t=e.target,q=x=>t.closest&&t.closest(x);
   if(q("[data-foc],.wc"))return;
   sfx(q("[data-login]")?"start":q('[data-go="home"],[data-logout]')?"back":q("[data-tab],[data-setp],.seg button,[data-tool],[data-log],[data-day],[data-iss],#pv button")?"tab":q("[data-cp],[data-it],[data-wk],[data-book],[data-acct],[data-go]")?"open":
       q("[data-merge],[data-mergeall],[data-rqok],[data-bkok],[data-freeze],[data-minutes],[data-bookok],[data-pdf],[data-bak],[data-a='1']")?"ok":q("[data-rqno],[data-bkno],[data-tagdel],[data-qrkill],[data-stgdel],[data-reldel],[data-a='0']")?"no":
@@ -1720,19 +1691,20 @@ document.addEventListener("click",e=>{const t=e.target,q=x=>t.closest&&t.closest
 /* 時間與曲線照舊版看板的 MO：fast 160（退場、小東西）｜base 280（淡入）｜slow 460（位置移動、浮現）｜layout 560（展開、高度）；spring＝帶回彈 */
 const FX={spring:"cubic-bezier(.3,1.45,.45,1)",soft:"cubic-bezier(.25,1.12,.4,1)",out:"cubic-bezier(.2,.9,.25,1)",inn:"cubic-bezier(.4,0,1,1)"},MO={fast:160,base:280,slow:460,layout:560};
 function fxBlocks(){const seen=new Set(),out=[];
-  $$(":scope>*,.wrap>*,.pg>*,.cal>*,.pr>*,.pr-g>*,div.lg>*,.lg-g>*,.live>*,.cps>*,.rail>*,.mh>*,.setl>*,.wk>*,.hm-mid>*,.dock>*,.wal>*",view).forEach(el=>{
-    if(el.matches(".wrap,.pg,.cal,.pr,.pr-g,.lg,.lg-g,.live,.cps,.rail,.mh,.setl,.wk,.hm-mid,.dock,.wal,.fring")||el.closest(".dock")||((S.topKept||!S.navNew)&&el.matches(".bd-top"))||seen.has(el))return;seen.add(el);out.push(el)});
+  $$(":scope>*,.wrap>*,.pg>*,.cal>*,.pr>*,.pr-g>*,.live>*,.cps>*,.rail>*,.mh>*,.setl>*,.wk>*,.hm-mid>*,.dock>*,.wal>*",view).forEach(el=>{
+    if(el.matches(".wrap,.pg,.cal,.pr,.pr-g,.lg,.live,.cps,.rail,.mh,.setl,.wk,.hm-mid,.dock,.wal,.fring")||el.closest(".dock")||((S.topKept||!S.navNew)&&el.matches(".bd-top"))||seen.has(el))return;seen.add(el);out.push(el)});
   return out.concat(S.navNew?$$("#float>*"):[]).slice(0,22)}
-/* 進場：每一塊由某個方向滑進來並淡入，一塊接一塊（24ms）。預設由下往上；換分頁時方向跟著工具列走 */
+/* 進場：每一塊由某個方向滑進來並淡入，一塊接一塊（30ms）。預設由下往上；換分頁時方向跟著工具列走。
+   淡入只寫起點（0），終點是元件自己的透明度：本來就半透明的（完成紀錄的膠囊、沒選到的色塊）直接淡到半透明，不會先變實再跳回去 */
 function fxIn(dir){if(S.screen==="login"||matchMedia("(prefers-reduced-motion:reduce)").matches)return;
   /* 下排是主頁上固定的東西：部門／專案互換時不動；剛進主頁時永遠用同一個延遲、同一條軌跡從下面浮上來（不跟著上面有幾張卡而變） */
-  {const dk=$(".dock",view);if(dk&&!S.dockKept){const cs=getComputedStyle(dk).transform,b=cs&&cs!=="none"?cs+" ":"";dk.animate([{opacity:0,transform:b+"translateY(34px)"},{opacity:1,transform:b+"none"}],{duration:MO.layout,delay:240,easing:FX.spring,fill:"backwards"})}}const rnd=!!(dir&&dir.rnd),dx=dir&&!rnd?dir.dx:0,dy=dir&&!rnd?dir.dy:24;
+  {const dk=$(".dock",view);if(dk&&!S.dockKept){const cs=getComputedStyle(dk).transform,b=cs&&cs!=="none"?cs+" ":"";dk.animate([{opacity:0,transform:b+"translateY(34px)"},{transform:b+"none"}],{duration:MO.layout,delay:240,easing:FX.spring,fill:"backwards"})}}const rnd=!!(dir&&dir.rnd),dx=dir&&!rnd?dir.dx:0,dy=dir&&!rnd?dir.dy:24;
   /* rnd＝不規則浮現（手機從主頁翻進部門之後）：每一塊各自的延遲、方向、距離與大小，不照順序 */
   if(rnd){fxBlocks().slice(0,16).forEach(el=>{const cs=getComputedStyle(el).transform,base=cs&&cs!=="none"?cs+" ":"",dl=Math.random()*320,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
-    el.animate([{opacity:0},{opacity:1}],{duration:220,delay:dl,easing:"ease-out",fill:"backwards"});
+    el.animate([{opacity:0},{}],{duration:220,delay:dl,easing:"ease-out",fill:"backwards"});
     el.animate([{transform:base+`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})`},{transform:base+"none"}],{duration:MO.layout+Math.random()*160,delay:dl,easing:FX.spring,fill:"backwards"})});return}
   fxBlocks().slice(0,16).forEach((el,i)=>{const cs=getComputedStyle(el).transform,base=cs&&cs!=="none"?cs+" ":"",dl=i*30;
-    el.animate([{opacity:0},{opacity:1}],{duration:180,delay:dl,easing:"ease-out",fill:"backwards"});
+    el.animate([{opacity:0},{}],{duration:180,delay:dl,easing:"ease-out",fill:"backwards"});
     el.animate([{transform:base+`translate(${dx}px,${dy}px)`},{transform:base+"none"}],{duration:MO.layout,delay:dl,easing:FX.soft,fill:"backwards"})})}
 /* 退場：把舊畫面的內容留成一層，往反方向退出去（跟新畫面的進場方向相接） */
 function ghostOut(dx,dy,keepTop){if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const g=document.createElement("div"),inn=document.createElement("div"),cs=getComputedStyle(view);
@@ -1780,7 +1752,7 @@ function flPlay(){const f=FLP;FLP=null;if(!f||f.screen!==S.screen||f.dept!==S.de
         if(card){if(!boxOpen(el,alt))el.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:MO.slow,easing:FX.soft});return}
         const g=alt.el.cloneNode(true),ap=app.getBoundingClientRect();g.removeAttribute("data-card");g.removeAttribute("data-donecard");g.querySelectorAll("[data-view],[id]").forEach(x=>{x.removeAttribute("data-view");x.removeAttribute("id")});g.setAttribute("aria-hidden","true");
         g.style.cssText+=`;position:absolute;left:${r.left-ap.left}px;top:${r.top-ap.top}px;width:${r.width}px;height:${r.height}px;margin:0;z-index:5;pointer-events:none;animation:none`;app.appendChild(g);boxClose(g,el,alt);return}
-      if(/^(cp|dn):/.test(k)&&n<10)el.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:MO.slow,delay:n++*30,easing:FX.soft,fill:"backwards"});return}
+      if(/^(cp|dn):/.test(k)&&n<10)el.animate([{opacity:0,transform:"translateY(14px)"},{transform:"none"}],{duration:MO.slow,delay:n++*30,easing:FX.soft,fill:"backwards"});return}
     const dx=o.r.left-b.left,dy=o.r.top-b.top,pp=el.parentElement&&el.parentElement.closest("[data-fl]");
     /* 外層已經在滑的，裡面只補上相對外層的差距，不重複位移 */
     const px=pp?pp._fd:[0,0],mx=dx-px[0],my=dy-px[1];el.dataset.fl="1";el._fd=[dx,dy];
@@ -1833,11 +1805,10 @@ function fabSync(){let fb=$("#fab");const want=S.screen==="live"&&!S.q&&!RO()&&!
 function render(anim){
   if(tdOpen&&S.screen!=="cal")closeToday(true);
   ext_before();useUnit(M.dragUnit||(S.screen==="meet"&&M.cardUnit&&L.open?M.cardUnit:S.dept));
-  paint({login:loginHTML,home:homeHTML,live:liveHTML,prog:progHTML,done:doneHTML,meet:meetHTML,set:setHTML,week:weekHTML,cal:calHTML,pres:presHTML,lang:langHTML}[S.screen]());ext_after(anim);fabSync();
+  paint({login:loginHTML,home:homeHTML,live:liveHTML,prog:progHTML,done:doneHTML,meet:meetHTML,set:setHTML,week:weekHTML,cal:calHTML,pres:presHTML}[S.screen]());ext_after(anim);fabSync();
   if($(".wal")){WAL.f=Math.max(0,Math.min($$(".wc").length-1,Math.round(WAL.f)));walLay(false)}
   ringTo(false);if(anim&&$("#fring")&&$(".tile.on"))$("#fring").animate([{opacity:0},{opacity:0,offset:.55},{opacity:1}],{duration:560,easing:"linear"});
   if(anim){view.classList.remove("in");void view.offsetWidth;view.classList.add("in");view.scrollTop=0;fxIn(typeof anim==="object"?anim:null)}else view.classList.remove("in");
-  $$("#pv [data-s]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===S.screen));
 
   lens();const on=$(".tile.on");if(on){on.scrollIntoView({inline:"center",block:"nearest",behavior:anim?"auto":"smooth"});ringTo(false)}
   const i=$("#stgIn")||$("#tagIn")||$("#bkIn");if(i)i.focus();
@@ -1850,10 +1821,6 @@ document.addEventListener("keydown",e=>{if(e.target.id==="bkIn"&&e.key==="Enter"
   if(e.target.id!=="tagIn"||!(e.key==="Enter"||e.key==="Escape"))return;const g=S.addTag,v=e.target.value.trim();if(!g)return;S.addTag=null;if(e.key==="Enter"&&v)TAGS[g].push(v);render()});
 document.addEventListener("focusout",e=>{if(e.target.id==="tagIn"&&S.addTag){const g=S.addTag,v=e.target.value.trim();S.addTag=null;if(v)TAGS[g].push(v);setTimeout(render,0)}});
 document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);
-  const pv=q("#pv button");
-  if(pv){commit();if(pv.dataset.s){S.screen=pv.dataset.s;S.tabbed=false;if(S.screen==="meet")S.dept="秘書處";if(S.screen==="live")S.dept="權益部";return render(true)}
-    if("t" in pv.dataset){app.dataset.theme=app.dataset.theme==="dark"?"light":"dark";return}
-    if(pv.dataset.w){app.classList.toggle("phone",pv.dataset.w==="phone");$$("#pv [data-w]").forEach(b=>b.setAttribute("aria-pressed",b===pv));return setTimeout(()=>render(true),470)}}
   if(ext_click(e))return;
   if(q("[data-go]")){commit();const go=q("[data-go]").dataset.go,was=S.screen;S.pub=was==="home"&&go==="cal";if(was==="home")S.dept="權益部";S.screen=go;S.tabbed=false;
     if(go==="home"&&was!=="cal"&&was!=="login"){const pi=PROJ.findIndex(p=>p[0]===S.dept),di=DEPTS.findIndex(d=>d[0]===S.dept);if(pi>=0){S.home="proj";S.foc=WAL.f=pi}else if(di>=0){S.home="dept";S.foc=WAL.f=di}render(true);fxCollapse();return}
@@ -1861,7 +1828,7 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);
   const sg=q(".seg button");
   if(sg){const n=sg.parentElement.dataset.seg;$$("button",sg.parentElement).forEach(b=>b.setAttribute("aria-selected",b===sg));lens(true);
     if(n==="home"){const d=sg.dataset.k==="proj"?1:-1;S.home=sg.dataset.k;S.foc=0;WAL.f=0;return setTimeout(()=>render({dx:d*64,dy:0}),200)}
-    if(n==="theme"){app.dataset.theme=sg.dataset.k;return setTimeout(()=>render(),220)}
+    if(n==="theme"){themeSwap(()=>{app.dataset.theme=sg.dataset.k});return setTimeout(()=>render(),220)}
     if(n==="mtab"){M.tab=sg.dataset.k;return setTimeout(()=>render(),220)}
     if(n==="mdoc"){S.mdoc=sg.dataset.k;S.mexp="";return setTimeout(()=>render(),220)}
     if(n==="fmode"){S.fm=sg.dataset.k;return setTimeout(()=>render(),220)}
@@ -1889,7 +1856,6 @@ document.addEventListener("click",e=>{const t=e.target,q=s=>t.closest(s);
   if(q("[data-rqok]")||q("[data-rqno]")){const r=q(".rq"),okq=!!q("[data-rqok]");r.style.height=r.offsetHeight+"px";r.classList.add("go");setTimeout(()=>{r.style.height="0";r.style.padding="0 14px";r.style.marginBottom="-10px"},240);setTimeout(()=>{const x=REQ.splice(+r.dataset.rq,1)[0];if(okq&&x)PPL.push({n:x.n,d:x.m.split("・")[0],r:x.m.includes("管理員")?"管理員":"編輯者"});render()},700);return}
   if(q("[data-qrnew]")){Object.assign(S.qr,{t:600,dead:false,open:true,seed:S.qr.seed+13});render();$("#qrImg").animate([{transform:"scale(.8) rotate(-4deg)",opacity:0},{transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.3,1.35,.5,1)"});return}
   if(q("[data-qrkill]")){S.qr.open=false;S.qr.dead=false;return render()}
-  const dm=q("[data-demo]");if(dm){const k=dm.dataset.demo;if(k==="sweep"){dm.animate([{opacity:0,transform:"translateX(44px)"},{opacity:1,transform:"none"}],{duration:300,easing:FX.out});return}if(k==="exp"){fxExpand(dm,()=>{});return}if(k==="rise"){fxIn();return}if(k==="up"){dm.animate([{opacity:0,transform:"translateX(46px) scale(.96)"},{opacity:1,transform:"translateX(-3px) scale(1.01)",offset:.6},{opacity:1,transform:"none"}],{duration:240,easing:FX.out});return}dm.animate(k==="rise"?[{opacity:0,transform:"translate(-22px,30px) scale(.985)"},{opacity:1,transform:"none"}]:k==="up"?[{opacity:0,transform:"translateY(12px)"},{opacity:1,transform:"none"}]:[{opacity:1,transform:"none"},{opacity:0,transform:"translateX(40px) scale(.96)"},{opacity:0,transform:"translateX(40px) scale(.96)"},{opacity:1,transform:"none"}],{duration:k==="rise"?460:k==="up"?280:900,easing:"cubic-bezier(.2,.9,.25,1)"})}
 });
 document.addEventListener("keydown",e=>{
   if(ext_key(e))return;
@@ -1902,7 +1868,7 @@ document.addEventListener("focusout",e=>{if(e.target.id==="stgIn"&&S.addStg){S.a
 setInterval(()=>{const q=S.qr;if(q.dead||!q.open)return;q.t--;if(q.t<=0){q.dead=true;if(S.screen==="pres")render();return}const c=$("#qrCd");if(c)c.textContent=mmss(q.t)},1000);
 new ResizeObserver(()=>{const wd=app.clientWidth>=980;if(app.classList.contains("narrow")!==phone()||wd!==S.wide){S.wide=wd;render()}else{lens();ringTo(false);navSync(false);if($(".wal"))walLay(false)}}).observe(app);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{lens();ringTo(false);navSync(false)});
-$('#pv [data-w="full"]').setAttribute("aria-pressed","true");
+
 render(true);document.fonts&&document.fonts.ready.then(lens);
 </script>
 </body>
