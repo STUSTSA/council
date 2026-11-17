@@ -204,7 +204,7 @@ const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name
   return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?"":String(id).slice(0,8))};
 const staffNames=ids=>(ids||[]).map(staffName).filter(Boolean);
 /* 即時回報「專員」欄的選項：github 模式＝本看板的身分；firestore 模式（staffPplLoad 讀）：
-   總管理員＝這個部門有角色的帳號；其他人＝已標的＋自己＋這個部門版本歷史裡出現過的編輯者 */
+   總管理員＝這個部門有角色的帳號（roles）；部門的編輯者、管理員＝已標的＋自己＋這個部門的專員名單（03 F3，deptMembers：同部門有角色的人，只有 uid，名字從 profiles） */
 const staffPpl={key:"",roles:null,editors:null,mail:{}};
 /* 讀到的名單只給同一個帳號、同一個角色、同一個部門用（登出、換帳號、撤權後不沿用，信箱只有總管理員看得到） */
 const staffKey=()=>`${CFG.deptId}|${typeof acct!=="undefined"&&acct.user?acct.user.uid:""}|${fsRole()}`;
@@ -220,7 +220,7 @@ async function staffPplLoad(){
   try{
     if(fsRole()==="super"){const A=await acctLoad(),[rs,us]=await Promise.all([A.rolesList(),A.usersList()]);
       staffPpl.roles=rs.filter(r=>(r.depts||{})[CFG.deptId]).map(r=>r.uid);us.forEach(u=>{if(u.email)staffPpl.mail[u.uid]=u.email})}
-    else{const F=await storeFsGet(),v=await F.versionsSince(CFG.firebase,CFG.deptId,0);staffPpl.editors=[...new Set(v.filter(x=>!x.imported&&x.by).map(x=>x.by))]}
+    else{const A=await acctLoad();staffPpl.editors=await A.roster(CFG.deptId)}
   }catch(_){staffPpl.key=""}   /* 讀不到：只有已標的與自己，下次開始編輯再試 */
   if(editing&&kp&&!document.querySelector(".csel.open"))render();   /* 原位編輯器的專員選項 */
 }
@@ -358,9 +358,10 @@ async function loadLog(){
 /* 02D：firestore 模式的編輯紀錄＝這個部門的版本歷史（卡片每存一版一筆，遷移產生的第 1 版是「匯入」）＋總管理員才讀得到的稽核紀錄
    （部門設定的修改、卡片刪除）。同一個人相隔 10 秒內的寫入併成一筆（一次儲存可能分成好幾批）。版本歷史只有總管理員與這個部門的編輯者讀得到 */
 const fsLog={vers:[],cur:null,audits:[]};
+const FS_DEL_T={issues:"議題",weeks:"週報",labels:"標籤"};   /* 02D D-d 刪除紀錄 */
 const FS_FIELD={title:"看板名稱",range:"時間軸",reportBase:"週報基準",docs:"文件",follows:"追蹤"};
 const fsLogLine=x=>x.kind==="ver"?`${x.imported?"遷移｜匯入":x.version===1?"即時回報｜新增":"即時回報｜修改"}｜${x.title}`
-  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
+  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:FS_DEL_T[x.col]?`${FS_DEL_T[x.col]}｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
 function fsLogItems(rows){
   const out=[];
   rows.slice().sort((a,b)=>b.t-a.t).forEach(x=>{const g=out[out.length-1];

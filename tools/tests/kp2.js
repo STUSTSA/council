@@ -144,8 +144,11 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await p.fill(`${S} [data-kptitle]`,'  ');
     await p.click(`${S} [data-evdone]`);await p.waitForTimeout(400);
     ok(await p.evaluate(i=>editing&&!state.events.find(e=>e.id===i).doneAt,id)&&await st()==='請填名稱',`P2-6 名稱空白按結案：不結案、停在編輯、提示「${await st()}」`);
+    /* 03 F2（改規格）：名稱被清空的卡片可以直接刪除，不用先填回名稱。按刪除 → 確認（標題「刪除這張卡片？」）；這裡先取消，卡片還在、仍在編輯 */
     await p.click(`${S} [data-evdel]`);await p.waitForTimeout(400);
-    ok(await p.evaluate(i=>editing&&state.events.some(e=>e.id===i)&&!document.querySelector('#dlg[open]'),id)&&await st()==='請填名稱','P2-6 名稱空白按刪除：不跳確認、不刪除、提示「請填名稱」');
+    ok(await p.evaluate(()=>{const d=document.querySelector('#dlg[open] #dlgForm b');return d&&d.textContent})==='刪除這張卡片？','F2 名稱空白按刪除：直接跳刪除確認（「刪除這張卡片？」），不要求先填名稱');
+    await p.click('#dlg[open] [data-act=cancel]');await p.waitForTimeout(400);
+    ok(await p.evaluate(i=>editing&&state.events.some(e=>e.id===i),id),'F2 刪除確認按取消：卡片還在、仍在編輯');
     await p.fill(`${S} [data-kptitle]`,name0);
     await p.click(`${S} [data-kplkadd]`);await p.waitForTimeout(300);await p.fill(`${S} .kp-lk:last-of-type [data-e=url]`,'https://example.com/noname');
     await p.click(`${S} [data-evdone]`);await p.waitForTimeout(400);
@@ -156,6 +159,15 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     const e=remote().events.find(x=>x.id===id);
     ok(e&&e.doneAt&&e.blocks.find(b=>b.id==='a1').check===true&&e.blocks.find(b=>b.id==='a1').text===e.blocks.find(b=>b.id==='a1').text.trim()&&e.blocks.some(b=>b.timeId==='tq')&&e.desc===e.blocks.map(b=>(typeof b.check==='boolean'?(b.check?'☑ ':'☐ '):'')+b.text).join('\n')&&e.links.some(l=>l.name==='有名稱了'),
       `P2-6 填好後結案：存回資料檔、核取行與時間行不變、行尾空白去掉、desc 跟 blocks 同步（${JSON.stringify(e&&e.blocks.map(b=>[b.id,b.text,b.check,b.timeId]))}）`);
+    /* F2：另一張卡片清空名稱後真的刪掉（有時間標記的照舊再確認一次）→ 存回資料檔裡沒有它 */
+    {const id2=await p.evaluate(i=>{const e=state.events.find(x=>!x.doneAt&&x.id!==i);return e&&e.id},id);
+      if(id2){const S2=`.ev[data-ev="${id2}"]`;await p.evaluate(i=>{setSection('live',{instant:true});openEv.add(i);render()},id2);await p.waitForTimeout(400);
+        await p.click(`${S2} [data-kpgo]`);await p.waitForTimeout(400);await p.fill(`${S2} [data-kptitle]`,'');
+        await p.click(`${S2} [data-evdel]`);await p.waitForTimeout(400);await p.click('#dlg[open] [data-act=delete]');await p.waitForTimeout(400);
+        if(await p.$('#dlg[open]'))await p.click('#dlg[open] [data-act=delete]');
+        await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
+        ok(await p.evaluate(i=>!editing&&!state.events.some(e=>e.id===i),id2)&&!remote().events.some(x=>x.id===id2),'F2 名稱清空的卡片按刪除＋確認：刪掉並存回（資料檔裡沒有它）');}
+      else ok(false,'F2：找不到第二張進行中的卡片');}
     /* 移回即時回報，供後面的步驟使用（完成紀錄的編輯、移回、儲存） */
     await p.evaluate(i=>{setSection('done',{instant:true});openDone.add(i);render()},id);await p.waitForTimeout(400);
     await p.click(`.done-ev[data-done="${id}"] [data-edit]`);await p.waitForTimeout(400);await p.click(`.done-ev[data-done="${id}"] [data-evundo]`);await p.waitForTimeout(2500);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});
