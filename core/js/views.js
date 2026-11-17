@@ -7,8 +7,6 @@ function renderHeader(){
   /* 2026-11-06：頁首的「編輯／取消／儲存」拿掉，改成每張卡片自己的「編輯」與「取消｜儲存」（render.js 的單卡編輯） */
 }
 
-function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
-function termWeek(d){const ts=termCfg().termStart;if(!ts)return 0;const diff=Math.floor((pd(ymd(d))-pd(ts))/864e5);return diff<0?0:Math.floor(diff/7)+1}
 /* 標題列（shell.js 的 .dhead）：只改有變的地方，節點一直留著。
    唯讀標籤＝沒有編輯權限的單位或唯讀檢視中；眼睛鈕＝可編輯的單位才有（render.js 的 deptCan、roView）；通知鈕＝沒有權限、唯讀檢視時不出現（DESIGN-next 第十四節） */
 function renderHero(){

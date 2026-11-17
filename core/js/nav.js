@@ -237,7 +237,7 @@ document.addEventListener("click",e=>{
   const p=e.target.closest("[data-look-pal]");if(p){UI.set({pal:p.dataset.lookPal});return}
   if(e.target.closest("[data-look-snd]"))UI.set({sound:!UI.get().sound});
 });
-/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
+/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（深淺色規則見 board.css「學生會 logo」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
 function settingsHTML(){
   return `<div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>
