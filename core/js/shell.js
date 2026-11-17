@@ -115,12 +115,6 @@ const SHELL_HTML=`<div class="pager" id="pager">
 <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 `;
-/* 部門英文名（DESIGN-next 第四節）：標題列名稱上面的英文小標。用部門代號（dept/config.js 的 id）對照，不改設定檔；
-   表上沒有的部門（例如測試用的水果部）不放英文小標 */
-const DEPT_EN={president:"PRESIDENT",secretariat:"SECRETARIAT",rights:"STUDENT RIGHTS",marketing:"MARKETING",finance:"FINANCE",events:"EVENTS",affairs:"CLUB AFFAIRS",pr:"PUBLIC RELATIONS",works:"FACILITIES"};
-/* 部門標誌（DESIGN-next 第五節「部門標誌」）：九個部門各一個 SVG（dept/icons/dept-代號.svg；藍 #0a5baa、黃 #f0bc23 寫在檔案裡，不跟主題變）。
-   標題列用 <img>；主頁的色塊把同一個檔案放進頁面裡（core/js/home.js），零件才能各自動。表上沒有的部門（測試用的水果部）用學生會的 favicon */
-const deptLogo=id=>DEPT_EN[id]?`dept/icons/dept-${id}.svg`:"dept/icons/favicon.svg";
 /* 學生會 logo（設定頁標題列）：同一份 SU_LOGO 路徑。淺色模式用原檔的彩色（2026-11-06 使用者）；深色模式是單色（跟著文字色，board.css「學生會 logo」段）。
    深色的標誌用使用者提供的單色線稿（2026-11-11 使用者：所有黑白模式的 logo 都換成線稿；splash.js 的 SU_LINE，跟開場動畫同一份：左邊小人線框、右邊小人實心），
    線稿用 SU_LINE.t 疊在彩色標誌的同一個位置，兩組只顯示一組（.logo-color／.logo-line）；字照舊填文字色。

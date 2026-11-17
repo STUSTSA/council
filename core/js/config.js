@@ -23,3 +23,9 @@ const secOn=k=>k==="progress"?(CFG.sections.timeline||CFG.sections.cards):k==="e
 /* 底部工具列的分頁（區塊）：完成紀錄併進即時回報的部門（mergeDone）不另外算一區；secOf＝某一區實際在哪個分頁裡 */
 const secTab=k=>secOn(k)&&!(k==="done"&&CFG.mergeDone);
 const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
+/* 部門英文名（DESIGN-next 第四節）：標題列名稱上面、主頁色塊上的英文小標（ui-07 從 shell.js 搬來，主頁也用）。用部門代號（dept/config.js 的 id）對照，不改設定檔；
+   表上沒有的部門（例如測試用的水果部）不放英文小標 */
+const DEPT_EN={president:"PRESIDENT",secretariat:"SECRETARIAT",rights:"STUDENT RIGHTS",marketing:"MARKETING",finance:"FINANCE",events:"EVENTS",affairs:"CLUB AFFAIRS",pr:"PUBLIC RELATIONS",works:"FACILITIES"};
+/* 部門標誌（DESIGN-next 第五節「部門標誌」）：九個部門各一個 SVG（dept/icons/dept-代號.svg；藍 #0a5baa、黃 #f0bc23 寫在檔案裡，不跟主題變）。
+   部門標題列（shell.js）用 <img>；主頁的色塊把同一個檔案放進頁面裡（core/js/home.js），零件才能各自動。表上沒有的部門（測試用的水果部）用學生會的 favicon */
+const deptLogo=id=>DEPT_EN[id]?`dept/icons/dept-${id}.svg`:"dept/icons/favicon.svg";

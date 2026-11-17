@@ -25,3 +25,10 @@
 }
 :root[data-theme="dark"] .sp-line{display:inline}
 :root[data-theme="dark"] :is(.sp-y,.sp-b){display:none}
+/* ===== 學生會標誌（splash.js 的 suLogoH：主頁左上；開場也用同一組 class） =====
+   淺色：黃、藍兩個小人與藍字照原檔顏色（標誌的藍黃不跟主題變），深藍字＝文字色；深色：左邊小人只留線稿、右邊小人與字都是文字色 */
+.su-y{fill:#f0bc23}
+.su-b,.su-t{fill:#0a5baa}
+.su-k{fill:var(--ink)}
+:root[data-theme="dark"] :is(.su-b,.su-t){fill:var(--ink)}
+:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.8px}
