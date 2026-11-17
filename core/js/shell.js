@@ -61,7 +61,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="sgroup" data-sec="live">
           <section class="panel" id="livePanel" aria-labelledby="evH">
             <div class="panel-head"><h2 id="evH">即時回報<span class="en">LIVE</span></h2></div>
-            <div class="md" id="liveMD"><div class="ev-zones" id="events" data-flip></div><div class="md-pane" id="evDetail" hidden></div></div>
+            <div class="md" id="liveMD"><div class="ev-list" id="events" data-flip></div><div class="lc-pane" id="evDetail" hidden></div></div>
           </section>
         </div>
 

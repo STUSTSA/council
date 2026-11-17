@@ -47,7 +47,7 @@ const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcanc
 const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
   if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;
-  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;kpTp=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
+  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
     /* 即時回報卡（進行中、不是秘書處的會議卡）：原位編輯器，記下開始前的內容（新增的卡片＝null） */
     const ev=key[0]==="e"&&state.events.find(e=>e.id===key.slice(2)),was=ev&&JSON.parse(snapshot).events.find(e=>e.id===ev.id);
     kp=ev&&!ev.doneAt?{id:ev.id,before:was?JSON.stringify(was):null}:null;render()});

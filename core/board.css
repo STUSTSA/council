@@ -254,12 +254,191 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    各小節的手機、列印、減少動態規則寫在該小節最後。原位編輯器借用的 .evf-row、.evf-btns、.evd-add 在下一段「逐欄編輯」；
    跟其他元件寫在同一條的規則（共用段的按鈕內距、.sec-anim 淡入、開頁進場、單卡編輯的 .card-edbar）留在原段 */
 /* --- 狀態色 --- */
-.ev,.kid-ev,.evd{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
-.ev[data-st="ok"],.kid-ev[data-st="ok"],.evd[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
-.ev[data-st="go"],.kid-ev[data-st="go"],.evd[data-st="go"]{--st:var(--st-go);--st-ink:var(--st-go-ink)}
-.ev[data-st="done"],.evd[data-st="done"]{--st:var(--done);--st-ink:#fff}   /* 完成紀錄 */
-:is(.ev,.kid-ev,.evd) .live-dot,:is(.ev,.kid-ev,.evd) .live-dot::after{background:var(--st)}
-:is(.ev,.kid-ev,.evd):not([data-st="stall"]) .live-dot::after{animation:none;opacity:0}
+.ev,.kid-ev,.evd,.cp,.lc{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
+.ev[data-st="ok"],.kid-ev[data-st="ok"],.evd[data-st="ok"],.cp[data-st="ok"],.lc[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
+.ev[data-st="go"],.kid-ev[data-st="go"],.evd[data-st="go"],.cp[data-st="go"],.lc[data-st="go"]{--st:var(--st-go);--st-ink:var(--st-go-ink)}
+.ev[data-st="done"],.evd[data-st="done"],.cp[data-st="done"],.lc[data-st="done"]{--st:var(--done);--st-ink:#fff}   /* 完成紀錄 */
+:is(.ev,.kid-ev,.evd,.cp,.lc) .live-dot,:is(.ev,.kid-ev,.evd,.cp,.lc) .live-dot::after{background:var(--st)}
+:is(.ev,.kid-ev,.evd,.cp,.lc):not([data-st="stall"]) .live-dot::after{animation:none;opacity:0}
+/* --- 膠囊清單（live.js 的 cpHTML；完成紀錄的膠囊同一套，views.js 的 renderDone；DESIGN-next 第七節「清單」） ---
+   一筆一顆（高 54）：燈號、名稱、右邊紅字「報告」（完成紀錄：右邊完成日，整顆半透明）；標了報告的排在上面，一條細線隔開（.sepr）。
+   寬螢幕沒打開卡片時排成格；打開時左邊一欄膠囊、右邊卡片（.split）。全螢幕卡片從哪一顆長出去，那一顆留著位置但看不到（.away） */
+.ev-list .cps{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.cps .sepr{grid-column:1/-1;height:1px;margin:8px 0;background:color-mix(in srgb,var(--ink) 22%,transparent)}
+.cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:0 20px;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
+@media (hover:hover){.cp:hover{transform:scale(1.025)}}
+.cp:active{transform:scale(.97)}
+.cp b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-rp{flex:none;font-size:12.5px;color:var(--late);letter-spacing:.1em}
+.cp-d{flex:none;font-size:12.5px;color:var(--muted)}
+.cp.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.cp.away{visibility:hidden}
+.cp.done{opacity:.5}
+.cp.done.sel{opacity:1}
+.cp.done.new{animation:doneIn .9s var(--ease) both}
+:is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}
+@media (prefers-reduced-motion:reduce){.cp:hover,.cp:active{transform:none}}
+/* --- 卡片外框（live.js 的 lcFrame；即時回報、完成紀錄共用） ---
+   第一排：（全螢幕時）返回鍵、燈號、名稱、編輯次數的小膠囊；第二排：上一張／下一張（實心三角的外框膠囊）、報告；第三排：狀態、負責人、時間；
+   內容、儲存回饋、底部工具列（編輯權限才有）。寬螢幕在右邊（.lc-pane，黏在上面、內容自己捲動）；其他全螢幕（.lc.full，在 #lcFull）。
+   卡片裡的排法看卡片自己的寬度（@container lc） */
+.lc-pane{position:sticky;top:12px;min-width:0}
+.lc{--pad:24px;position:relative;display:flex;flex-direction:column;min-height:340px;padding:22px var(--pad) 0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);container:lc/inline-size}
+.lc.ro{min-height:0;padding-bottom:16px}
+.lc-pane .lc{max-height:calc(100dvh - 150px)}
+.lc-in{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.lc-head{display:flex;align-items:center;gap:10px;min-height:40px}
+.lc-head .live-dot{width:10px;height:10px}
+.lc-title{flex:0 1 auto;min-width:0;font-size:19px;font-weight:700;line-height:1.35;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:8px}
+b.lc-title[data-kpgo]{cursor:text}
+b.lc-title[data-kpgo]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+input.lc-title{flex:1;width:auto;margin:0 -8px;padding:2px 8px;border:0;background:color-mix(in srgb,var(--ink) 6%,transparent)}
+input.lc-title:focus{outline:none}
+.lc-cnt{flex:none;min-width:32px;height:22px;min-height:22px;padding:0 9px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:11.5px;line-height:1}
+.lc-back{flex:none;display:grid;place-items:center;width:42px;height:42px;min-height:42px;margin-left:-8px;padding:0;border:0;border-radius:50%}
+.lc-back .ico{width:22px;height:22px;margin:0}
+.lc-nav{display:flex;align-items:center;gap:10px;margin-top:8px}
+.lc-sp{flex:1}
+.lc-tri{flex:none;display:grid;place-items:center;width:54px;height:30px;min-height:30px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.lc-tri .ico{width:11px;height:11px;margin:0}
+.lc-tri[data-lcstep="1"] .ico{transform:scaleX(-1)}
+.lc-tri:disabled{opacity:.3;pointer-events:none}
+.lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
+.lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:#fff}
+.lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
+.lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
+.lc-meta .ev-st,.lc-tag{height:26px;padding:0 12px;border-radius:999px;line-height:1}
+.lc-tag{display:inline-flex;align-items:center;background:var(--blk2);color:var(--ink)}
+.lc-meta .lbl-row{margin:0}
+.lc-body{flex:1;min-height:0;display:grid;align-content:start;gap:4px;padding:0 8px 10px;margin:0 -8px}
+:is(.lc-pane,.lc.full) .lc-body{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.lc-save{display:flex;align-items:center;gap:12px;min-height:30px;font-size:12.5px;color:var(--muted)}
+.lc-save .kp-st{transition:color var(--mo-fast) var(--mo-out)}
+.lc-save .kp-st:is([data-st="fail"],[data-st="bad"]){color:var(--late)}
+.lc-save .kp-st[data-st="ok"]{color:var(--ink)}
+.lc-undo{min-height:0;padding:0;border:0;font-size:12.5px;text-decoration:underline;text-underline-offset:4px}
+.lc-ops{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:10px}
+.lc .ev-edrow{margin-top:6px}
+.lc .dn-note{margin:0;white-space:pre-wrap;word-break:break-word}
+.lc .dn-mk{margin:4px 0 0;padding-left:1.2em;font-size:13.5px}
+/* 全螢幕（手機與中等寬度）：蓋住整頁與工具列，內容自己捲動、底部工具列固定；左上返回鍵 */
+.lc-host{position:fixed;inset:0;z-index:46}
+.lc-host[hidden]{display:none}
+.lc.full{--pad:clamp(18px,5vw,56px);position:absolute;inset:0;min-height:0;padding:calc(14px + env(safe-area-inset-top)) var(--pad) 0;border-radius:0;box-shadow:none}
+.lc.full.ro{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+/* 寬螢幕編輯中：整頁不捲（卡片內容自己捲） */
+body.lc-lock #pageMain{overflow:hidden}
+@container lc (max-width:560px){
+  .lc-pa{max-width:100%}
+  .lc-tl{flex-basis:100%}
+  .lc-tl button{width:36px;height:36px;min-height:36px}
+}
+@media print{
+  .lc-nav,.lc-save,.lc-tools,.lc-back{display:none}
+}
+/* --- 逐行內容（live.js 的 lnHTML）：文字、核取（方形 .fld-check，勾了變淡加刪除線）、時間（時間線）；超連結膠囊 ---
+   有權限的人點一行＝原位編輯（滑過去淡底）；唯讀不能點、不能勾、不放大。編輯中文字變成底線輸入框、右邊刪除（指到或聚焦才出現） */
+.lns{display:grid;gap:2px}
+.ln{position:relative;display:flex;align-items:center;gap:10px;min-height:38px;padding:0 8px;margin:0 -8px;border-radius:var(--r-sm);font-size:14.5px;transition:background-color var(--mo-fast) var(--mo-out)}
+.lc:not(.ro):not(.lc-ed) .ln{cursor:text}
+@media (hover:hover){.lc:not(.ro):not(.lc-ed) .ln:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}}
+.ln .tx{flex:1;min-width:0;word-break:break-word;transition:color var(--mo-base) var(--mo-out)}
+.ln span.tx{padding:7px 0;line-height:1.6}
+.ln span.tx:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
+.ln input.tx{width:auto;padding:6px 0;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font-size:14.5px;transition:border-color var(--mo-fast) var(--mo-out)}
+.ln input.tx:focus{outline:none;border-bottom-color:var(--ink)}
+.ln.done span.tx{color:var(--muted);text-decoration:line-through}
+.ln .pl{flex:none;margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.ln-ck{flex:none}
+.ln-ck input:disabled{cursor:default;opacity:.75;pointer-events:none}
+.ln-x{flex:none;display:grid;place-items:center;width:28px;height:28px;min-height:28px;padding:0;border:0;border-radius:50%;color:var(--muted);opacity:0;transition:opacity var(--mo-fast) var(--mo-out),transform .24s var(--mo-spring)}
+.ln-x .ico{margin:0}
+.ln:hover .ln-x,.ln:focus-within .ln-x,.lk:focus-within .ln-x,.lk:hover .ln-x{opacity:1}
+@media (pointer:coarse){.ln-x{opacity:1}}
+.ln-empty{display:block;width:100%;min-height:0;margin:0;padding:8px 0;border:0;border-radius:0;background:transparent;color:var(--muted);text-align:left;font-size:14px}
+button.ln-empty{cursor:text}
+@media (hover:hover){button.ln-empty:hover{transform:none}}
+/* 時間行＝時間線：左邊一顆 11px 圓點（就是核取：空心＝還沒、實心＝完成；點圓點切換），相鄰的時間行用 1.5px 細線串起來；
+   時間是純文字（逾期紅字），後面接名稱，地點靠右次要色；圓點固定在左側，文字折行不會跑到圓點下面。編輯中時間變成可點的淡底膠囊（點了進時間頁） */
+.ln.tm{flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:8px 8px 8px 42px}
+.ln-dot{position:absolute;left:8px;top:8px;display:grid;place-items:center;width:22px;height:22px;min-height:22px;padding:0;border:0;border-radius:50%;background:none}
+.ln-dot::before{content:"";width:11px;height:11px;border-radius:50%;box-shadow:inset 0 0 0 1.6px var(--ink);transition:background-color var(--mo-fast) var(--mo-out),transform .28s var(--mo-spring)}
+.ln-dot[aria-checked="true"]::before{background:var(--ink);transform:scale(1.12)}
+.ln-dot:disabled,span.ln-dot{pointer-events:none}
+.ln.free span.ln-dot::before{box-shadow:inset 0 0 0 1.6px var(--muted)}
+.ln.tm:has(+ .ln.tm)::after{content:"";position:absolute;left:18.25px;top:26px;bottom:-15px;width:1.5px;border-radius:1px;background:var(--hair);pointer-events:none}
+.ln.tm .tx{flex:1 1 9em}
+.ln.tm span.tx{padding:0}
+.tmc{flex:none;font-size:13px;line-height:1.5;color:var(--muted);white-space:nowrap}
+.tmc.late{color:var(--late)}
+button.tmc{display:inline-flex;align-items:center;height:26px;min-height:26px;padding:0 11px;border:0;border-radius:999px;background:var(--bg);color:var(--ink)}
+button.tmc.late{color:var(--late)}
+/* 超連結：檢視是膠囊（.lnks）；編輯中一組兩欄（按鈕名稱、網址）＋刪除 */
+.lnks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:999px;background:color-mix(in srgb,var(--acc2) 14%,var(--blk));color:var(--acc2);font-size:13px;line-height:1;text-decoration:none;transition:transform .24s var(--mo-spring)}
+@media (hover:hover){a.lnk:hover{transform:scale(1.05)}}
+.lk{display:flex;align-items:center;gap:8px;min-height:40px}
+.lk input{flex:1;min-width:0;height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--bg)}
+.lk input:focus{outline:none;box-shadow:inset 0 0 0 1.5px var(--ink)}
+@container lc (max-width:560px){
+  .lk{flex-wrap:wrap}
+  .lk input{flex:1 1 40%}
+}
+/* --- 底部工具列（編輯權限才有，常駐）：左邊母議題膠囊（點開自製選單 .lc-pop），右邊文字、人、時間、地點、核取、超連結；
+   人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
+.lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
+.lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:0 16px 0 20px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
+.lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
+.lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lc-tl{flex:1 1 220px;display:flex;justify-content:space-around;align-items:center}
+.lc-tl button{display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border:0;border-radius:50%;transition:transform .28s var(--mo-spring),color var(--mo-fast) var(--mo-out)}
+.lc-tl .ico{width:23px;height:23px;margin:0}
+@media (hover:hover){.lc-tl button:hover{transform:scale(1.14)}}
+.lc-tl.paned button{color:color-mix(in srgb,var(--ink) 28%,transparent)}
+.lc-tl.paned button.on{color:var(--ink);transform:scale(1.42)}
+.lc-pop{position:absolute;left:var(--pad);bottom:78px;z-index:8;display:grid;gap:4px;min-width:200px;max-width:calc(100% - 2*var(--pad));max-height:50vh;overflow:auto;padding:8px;border-radius:var(--r-md);background:var(--pop);box-shadow:var(--pop-sh);animation:fadeSlide var(--mo-base) var(--mo-out) both}
+.lc.full .lc-pop{bottom:calc(78px + env(safe-area-inset-bottom))}
+.lc-pop button{min-height:40px;padding:0 16px;border:0;border-radius:var(--r-md);text-align:left;font-size:14px;transition:background-color var(--mo-fast) var(--mo-out),transform .24s var(--mo-spring)}
+.lc-pop button[aria-selected="true"]{background:var(--blk2);font-weight:700}
+/* --- 人、時間、地點頁（卡片內容換成那一頁）：人＝負責人勾選膠囊；時間＝每個時間行一組（日期、時：分、結束、可加結束日期；選到的那一段實心）；
+   地點＝地點欄＋「地」標籤快速選項 --- */
+.pg-ppl{display:grid;align-content:start;gap:12px;min-height:150px}
+.pg-ppl h4{margin:0;font-size:14px;font-weight:700;letter-spacing:.1em}
+.lc .chips{display:flex;flex-wrap:wrap;gap:8px}
+.te{display:grid;justify-items:start;gap:10px;padding:6px 0 16px;border-bottom:1px solid var(--hair)}
+.te-nm{width:min(20em,100%);padding:2px 0;border:0;border-bottom:1px solid transparent;border-radius:0;background:transparent;font-size:15.5px}
+.te-nm:focus{outline:none;border-bottom-color:var(--ink)}
+.te-rw{display:flex;flex-wrap:wrap;gap:8px}
+.te-pl{position:relative;display:inline-flex;align-items:center;height:36px;min-height:36px;padding:0 14px;border:0;border-radius:999px;background:color-mix(in srgb,var(--acc2) 15%,var(--blk));color:var(--acc2);font-size:14px;line-height:1}
+button.te-pl.dsh{background:transparent;border:1.5px dashed var(--acc2);color:color-mix(in srgb,var(--acc2) 60%,transparent)}
+button.te-pl.plus{min-width:70px;justify-content:center;font-size:18px}
+.sg{min-height:0;padding:3px 4px;border:0;border-radius:7px;color:inherit;font-size:14px;line-height:1;touch-action:none;transition:background-color var(--mo-fast) var(--mo-out),color var(--mo-fast) var(--mo-out)}
+.sg.on{background:var(--acc2);color:var(--acc2-ink)}
+.te-cx{position:absolute;top:-6px;right:-5px;display:grid;place-items:center;width:17px;height:17px;min-height:17px;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff;box-shadow:0 0 0 2px var(--blk);opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
+.te-cx .ico{width:10px;height:10px;margin:0;stroke-width:2.4}
+.te-pl:hover .te-cx,.te-pl:focus-within .te-cx{opacity:1}
+@media (pointer:coarse){.te-cx{opacity:1}}
+.te-plc{width:min(20em,100%);height:36px;padding:0 16px;border:1.5px dashed var(--acc2);border-radius:999px;background:transparent}
+.te-plc:focus{outline:none;border-style:solid}
+.te-chip{height:36px;min-height:36px;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px}
+.te-chip[aria-pressed="true"]{background:var(--ink);color:var(--blk)}
+.te-add{min-width:84px;height:36px;min-height:36px;margin-top:14px;padding:0 16px;border:1.5px dashed var(--ink);font-size:17px;line-height:1}
+.te-iss{font-size:13px}
+/* --- 拖到角落（live.js 的「拖到角落」）：拖著的膠囊跟著指標、越靠近哪一角就往那角歪、染上那角的顏色（左上刪除 --late、右上完成 --ok）；
+   碰到角落時角落放大；拖到另一顆上＝那一顆縮一點、細框（換位置）。完成時的光暈與彩帶（.fete）是規格明寫的慶祝，例外允許 --- */
+.cp.drag{z-index:30;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.28);transition:background-color .22s var(--mo-out)}
+.cp.over{transform:scale(.96);box-shadow:inset 0 0 0 2px var(--acc2)}
+.lz{position:fixed;top:0;z-index:20;display:grid;width:min(200px,38vw);aspect-ratio:1;color:#fff;pointer-events:none;opacity:0;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
+.lz.show{opacity:calc(.14 + var(--k,0)*.86)}
+.lz.del{left:0;place-items:start;padding:26px 0 0 26px;border-radius:0 0 100% 0;background:var(--late);transform-origin:0 0}
+.lz.ok{right:0;place-items:start end;padding:26px 26px 0 0;border-radius:0 0 0 100%;background:var(--ok);transform-origin:100% 0}
+.lz.hot{transform:scale(1.2)}
+.lz .ico{width:30px;height:30px;margin:0;stroke-width:2.2}
+.fete{position:fixed;inset:0;z-index:48;overflow:hidden;pointer-events:none}
+.fete i{position:absolute;will-change:transform}
+.fete .fete-wash{width:min(1100px,190vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,var(--ok) 0,color-mix(in srgb,var(--acc) 70%,transparent) 42%,transparent 70%)}
 /* --- 膠囊格（手機一欄） --- */
 .events{display:grid;gap:10px;align-items:start;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr))}
 .events .empty{grid-column:1/-1}
@@ -300,7 +479,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 /* 完成紀錄膠囊：跟即時回報完全同一套（2026-11-06 起；以前收合時是空心綠框綠字），只有燈號是綠色（data-st="done"） */
 .events .done-ev.new{animation:doneIn .9s var(--ease) both}
 /* 展開的膠囊與右側詳情卡（左右兩欄）：跟收合同一個平面色塊（--blk），顏色跟著主題 */
-.ev[open],#evDetail,#doneDetail{background:var(--surface);color:var(--ink)}
+.ev[open]{background:var(--surface);color:var(--ink)}
 /* 手機焦點：有一張展開時，其他還收著的膠囊變暗（展開那一下的「拿起來」動畫在 motion.js 的 animateDetails） */
 @media (max-width:640px){
   /* 亮度過渡跟展開收合（0.38–0.56 秒）同步，不要瞬間變暗變亮；被收起的那張在開始收合時就一起變暗，不會收完才再暗一下 */
@@ -447,13 +626,12 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 /* 左右兩欄（桌面 1000px 以上、即時回報被選到時）：左半邊膠囊照樣排成格（通常兩欄），被點的那一顆長成右半邊的詳情卡（motion.js 的 mdGrow）；
    詳情卡固定在右邊，外觀跟展開的膠囊同一套（淺灰底黑字、大圓角），編輯中所有功能都在右側直接改 */
 /* 完成紀錄（#doneMD）共用這一套 */
-:is(#liveMD,#doneMD).split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+:is(#liveMD,#doneMD).split{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:18px;align-items:start}
 #liveMD.split .events,#doneMD.split .events{grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr))}
 #liveMD.split .ev-chev,#doneMD.split .ev-chev{display:none}
 /* 被選到的那一顆「飛到」右邊：原位留一個虛線空位（其他膠囊不動，位置好記），收起時縮回這個空位、膠囊再出現 */
 .events .ev.sel{border-style:dashed;border-color:color-mix(in srgb,var(--ink) 35%,transparent);background:transparent;box-shadow:none;pointer-events:none}
 .events .ev.sel>*{visibility:hidden}
-#evDetail,#doneDetail{position:sticky;top:12px;max-height:calc(100dvh - 150px);overflow:auto;overscroll-behavior:contain;min-width:0;border:0;border-radius:var(--r-lg);padding:18px 26px 24px 24px}
 .evd-head{display:flex;align-items:center;gap:10px;font-size:20px;line-height:1.4}
 .md-close{margin-left:auto;flex:none;font-size:12.5px;font-weight:400}   /* 即時回報、完成紀錄右側的「收起」 */
 /* 詳情卡標題列的「上一個／下一個」：放在收起前面；到頭或到尾時那一顆變淡不能按 */

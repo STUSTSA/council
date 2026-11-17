@@ -58,7 +58,7 @@ document.addEventListener("click",e=>{
 
 /* open link buttons robustly: new tab first, fall back to same tab when a viewer blocks pop-ups */
 document.addEventListener("click",e=>{
-  const a=e.target.closest("a.link[href]");if(!a||a.closest(".sec-edit"))return;
+  const a=e.target.closest("a.link[href],a.lnk[href]");if(!a||a.closest(".sec-edit"))return;
   const url=a.getAttribute("href");if(!url||url==="#")return;
   e.preventDefault();e.stopPropagation();
   let w=null;try{w=window.open(url,"_blank")}catch(_){}
@@ -150,7 +150,7 @@ const flowRO=typeof ResizeObserver==="function"?new ResizeObserver(es=>{
     const el=e.target;if(el._flow)continue;
     const bs=e.borderBoxSize&&e.borderBoxSize[0],w=bs?bs.inlineSize:el.offsetWidth,h=bs?bs.blockSize:el.offsetHeight,last=flowLast.get(el);
     flowLast.set(el,{w,h});
-    if(!last||!last.h||!h||Math.abs(last.w-w)>1||Math.abs(last.h-h)<3||_busy||reduceMotion()||document.hidden||document.body.matches(".intro"))continue;   /* _busy：膠囊自己在展開收合，區塊本來就跟著平滑變高 */
+    if(!last||!last.h||!h||Math.abs(last.w-w)>1||Math.abs(last.h-h)<3||_busy||reduceMotion()||isPhone()||document.hidden||document.body.matches(".intro"))continue;   /* 手機不做高度動畫（DESIGN-next 第五節） */   /* _busy：膠囊自己在展開收合，區塊本來就跟著平滑變高 */
     el.style.overflow="clip";
     const a=el.animate([{height:last.h+"px"},{height:h+"px"}],{duration:Math.min(560,260+Math.abs(h-last.h)*.35),easing:"cubic-bezier(.2,.9,.25,1)"});
     el._flow=a;
