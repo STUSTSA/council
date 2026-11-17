@@ -14,7 +14,9 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
 const XSS='<img src=x onerror="window.__xss=1">';
 /* 攔 Element.animate：記下每一組 keyframes 用到的屬性（主頁的程式動畫只能動 transform／opacity） */
 const HOOK=()=>{window.__kp=new Set();const o=Element.prototype.animate;Element.prototype.animate=function(k,t){try{(Array.isArray(k)?k:[k]).forEach(f=>Object.keys(f||{}).forEach(x=>window.__kp.add(x)))}catch(_){}return o.call(this,k,t)};
-  window.__rs=0;const a=window.addEventListener;window.addEventListener=function(t,...r){if(t==='resize')window.__rs++;return a.call(this,t,...r)}};
+  /* 視窗 resize 監聽的淨數（加的減掉拆的）：行事曆那一層關掉時 calUnmount 拆掉 LiquidSeg、下次重建，只數加的會一直變多 */
+  window.__rs=0;const a=window.addEventListener,d=window.removeEventListener;window.addEventListener=function(t,...r){if(t==='resize')window.__rs++;return a.call(this,t,...r)};
+  window.removeEventListener=function(t,...r){if(t==='resize')window.__rs--;return d.call(this,t,...r)}};
 const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
 (async()=>{const b=await chromium.launch();
   const mk=async(w,h,o={})=>{const touch=w<700;const ctx=await b.newContext({viewport:{width:w,height:h},colorScheme:o.scheme||'light',hasTouch:touch,isMobile:touch,serviceWorkers:'block',reducedMotion:o.rm?'reduce':'no-preference'});

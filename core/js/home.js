@@ -220,8 +220,8 @@
 
   /* ---------- 疊層：全會行事曆（下排圓鈕）、外觀（設定鈕） ----------
      在主頁上蓋一層畫面；打開推一筆瀏覽紀錄，關閉鈕、Esc、系統返回鍵都關掉（關閉鈕與 Esc 走 history.back，由 popstate 真的關）。
-     全會行事曆＝notify.js 的公共版 calMount（全部／活動／會議，沒有今日／明日與逾期），關掉時 calUnmount 拆掉（解除分段切換的監聽）；
-     還沒有 calUnmount 時整層留著下次再用，不會重複建分段切換。外觀＝theme.js 的 lookHTML（主題、深淺色、音效），整層留著下次再用 */
+     全會行事曆＝notify.js 的公共版 calMount(host)（全部／活動／會議，沒有今日／明日與逾期），關掉時 calUnmount(host) 拆掉
+     （從 CALS 移除、拆掉分段切換的 LiquidSeg 與它的 resize 監聽、清空 host），整層也拿掉，下次打開重建。外觀＝theme.js 的 lookHTML（主題、深淺色、音效），整層留著下次再用 */
   const LYS={},LBL={cal:"全會行事曆",look:"外觀"};let LY=null;
   function hmLayerOpen(){return !!LY}
   function layerOpen(kind,opener){
@@ -246,7 +246,7 @@
     if(!LY)return;
     if(!fromPop&&history.state&&history.state.hmLayer){history.back();return}
     const L=LY;LY=null;$id("hm").inert=false;
-    const done=()=>{L.el.hidden=true;if(L.kind==="cal"&&typeof calUnmount==="function"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
+    const done=()=>{L.el.hidden=true;if(L.kind==="cal"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
     if(reduceMotion())done();
     else{L.el.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(a=>{done();},()=>done()).then(()=>L.el.getAnimations().forEach(a=>a.cancel()));
       L.el.firstElementChild.animate([{transform:"none"},{transform:"translateY(16px)"}],{duration:MO.fast,easing:MO.in})}
