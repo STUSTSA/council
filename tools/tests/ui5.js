@@ -14,6 +14,8 @@
    12. 完成紀錄：同一套卡片、唯讀、狀態「完成」、完成日
    13. 跳脫：名稱、一行、地點含 <img onerror> 不執行
    14. 手機 412：卡片全螢幕（從膠囊長出來）、返回鍵存檔並縮回、系統返回先關卡片
+   15. 審查修正：新卡片名稱整段選取時按「人」再點負責人膠囊會勾上；只選了負責人／母議題／報告的新卡片點外面要留下；
+       GitHub 模式儲存失敗顯示「儲存失敗：原因」；分不分欄看容器寬（視窗 1300 但容器不到 980、視窗 1000 都不分欄）；完成紀錄卡片標題跟膠囊一樣帶段次
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -255,6 +257,74 @@ const seed=(p,id)=>p.evaluate(id=>{const ev=state.events.find(e=>e.id===id);
     ok(!g.open&&/index\.html$/.test(g.url),`412：系統返回先關卡片、不離開網站`);
     ok(!q.errs.length,`412 沒有錯誤（${q.errs.slice(0,3).join(' | ')}）`);
     await q.close();}
+  await b.close();
+  /* 15. 審查修正 */
+  ({b,mk,login,remote}=await c.setup());
+  {const q=await mk(1300,900,'light',false);await login(q);await q.waitForTimeout(400);
+    const out2=async()=>{await q.mouse.click(60,860);await q.waitForTimeout(900)};
+    const kept=id=>q.evaluate(id=>!!state.events.find(e=>e.id===id),id);
+    /* P2-1：新卡片的名稱整段選取（kpFocus 的 select）→ 按「人」→ 點負責人膠囊 */
+    await q.click('#addEvent');await q.waitForTimeout(900);
+    const s0=await q.evaluate(()=>{const a=document.activeElement;return !!a&&a.dataset.kptitle!==undefined&&a.selectionStart===0&&a.selectionEnd===a.value.length});
+    await q.click('#evDetail [data-lctool="staff"]');await q.waitForTimeout(500);
+    await q.click('#evDetail .pg-ppl .chip >> nth=0');await q.waitForTimeout(300);
+    const s1=await q.evaluate(()=>({id:kp.id,staff:kpEv().staff.length,ck:document.querySelector('#evDetail [name=kpStaff]').checked}));
+    ok(s0&&s1.staff===1&&s1.ck,`P2-1 名稱整段選取時按「人」再點負責人膠囊＝勾上（${s1.staff}）`);
+    await q.click('#evDetail .pg-ppl .chip >> nth=0');await q.waitForTimeout(300);
+    const s2=await q.evaluate(()=>kpEv().staff.length);await q.click('#evDetail .pg-ppl .chip >> nth=0');await q.waitForTimeout(300);
+    ok(s2===0&&(await q.evaluate(()=>kpEv().staff.length))===1,`P2-1 再點一次取消、再點又勾上`);
+    /* P2-2：新卡片只選了負責人／母議題／報告，點外面要留下（存到遠端） */
+    await out2();
+    ok(await kept(s1.id)&&remote().events.some(e=>e.id===s1.id),`P2-2 只選了負責人的新卡片點外面＝留下並存檔`);
+    await out2();
+    await q.click('#addEvent');await q.waitForTimeout(900);
+    const i2=await q.evaluate(()=>kp.id);await q.click('#evDetail [data-lcpa]');await q.waitForTimeout(400);
+    const iss=await q.evaluate(()=>document.querySelectorAll('#evDetail .lc-pop [role=option]')[1].dataset.lcpar);
+    await q.click(`#evDetail .lc-pop [data-lcpar="${iss}"]`);await q.waitForTimeout(300);await out2();
+    ok(await kept(i2)&&(remote().events.find(e=>e.id===i2)||{}).issueId===iss,`P2-2 只選了母議題的新卡片點外面＝留下並存檔`);
+    await out2();
+    await q.click('#addEvent');await q.waitForTimeout(900);
+    const i3=await q.evaluate(()=>kp.id);await q.click('#evDetail [data-evrep]');await q.waitForTimeout(300);await out2();
+    ok(await kept(i3)&&(remote().events.find(e=>e.id===i3)||{}).report===true,`P2-2 只按了報告的新卡片點外面＝留下並存檔`);
+    await out2();
+    await q.click('#addEvent');await q.waitForTimeout(900);const i4=await q.evaluate(()=>kp.id);await out2();
+    ok(!(await kept(i4)),`P2-2 什麼都沒動的新卡片點外面照樣不留`);
+    /* P2-3：GitHub 模式寫入失敗（500）→「儲存失敗：」接原因 */
+    await q.route('https://api.github.com/**',r=>r.request().method()==='PUT'?r.fulfill({status:500,contentType:'application/json',body:'{"message":"Server Error"}'}):r.fallback());
+    const ids3=await live(q);await q.click(`#events .cp[data-cp="${ids3[0]}"]`);await q.waitForTimeout(800);
+    await q.click('#evDetail .lc-title');await q.waitForTimeout(300);await q.keyboard.press('End');await q.keyboard.type('Q');await out2();
+    const f=await q.evaluate(()=>({ed:editing,msg:$('#evDetail .lc-save [role=status]')?.textContent||''}));
+    ok(f.ed&&/^儲存失敗：.*500/.test(f.msg),`P2-3 GitHub 模式寫入 500：卡片留在編輯、顯示「${f.msg}」`);
+    ok(!/\bT\b|Bearer|token/i.test(f.msg),`P2-3 失敗原因沒有權杖`);
+    await q.unroute('https://api.github.com/**');await out2();
+    const f2=await q.evaluate(()=>({ed:editing,msg:$('#evDetail .lc-save [role=status]')?.textContent||''}));
+    ok(!f2.ed&&f2.msg==='已儲存',`P2-3 恢復後再點外面重試＝已儲存`);
+    await out2();
+    /* P2-4：視窗 1300、容器縮到 900 → 打開卡片＝全螢幕、不分欄；容器放回 → 分欄 */
+    await q.evaluate(()=>{$('#liveMD').style.maxWidth='900px'});await q.waitForTimeout(400);
+    await q.click(`#events .cp[data-cp="${ids3[1]}"]`);await q.waitForTimeout(900);
+    const w1=await q.evaluate(()=>({split:$('#liveMD').classList.contains('split'),full:!!document.querySelector('#lcFull:not([hidden]) .lc.full'),wide:lvWide()}));
+    ok(!w1.split&&w1.full&&!w1.wide,`P2-4 視窗 1300、容器 900：不分欄、卡片全螢幕`);
+    await q.evaluate(()=>{$('#liveMD').style.maxWidth=''});await q.waitForTimeout(600);
+    const w2=await q.evaluate(()=>({split:$('#liveMD').classList.contains('split'),full:!!document.querySelector('#lcFull:not([hidden]) .lc'),open:lvOpen}));
+    ok(w2.split&&!w2.full&&w2.open===ids3[1],`P2-4 容器放回 1180：同一張改成右邊分欄`);
+    await q.keyboard.press('Escape');await q.waitForTimeout(700);
+    /* P2-6：完成紀錄卡片標題跟膠囊一樣帶段次 */
+    const did=await q.evaluate(()=>{const e=state.events.find(e=>e.doneAt);e.round=3;render();return e.id});
+    await q.click('#tabbar .tab[data-tab="done"]');await q.waitForTimeout(800);
+    await q.click(`#doneList .cp[data-cp="${did}"]`);await q.waitForTimeout(900);
+    const t=await q.evaluate(id=>({cp:document.querySelector(`#doneList .cp[data-cp="${id}"] b`).textContent,card:$('#doneDetail .lc-title')?.textContent}),did);
+    ok(t.card===t.cp&&/第 3 段/.test(t.card||''),`P2-6 完成紀錄卡片標題＝膠囊名稱（${t.card}）`);
+    await q.keyboard.press('Escape');await q.waitForTimeout(500);
+    {const er=q.errs.filter(x=>!/status of 500/.test(x));ok(!er.length,`審查修正 1300 沒有錯誤（模擬的 500 除外；${er.slice(0,3).join(' | ')}）`)}
+    await q.close();
+    /* P2-4：視窗 1000（980 以上）但容器 880 → 不分欄 */
+    const r=await mk(1000,860,'light',false);const rid=(await live(r))[0];
+    await r.click(`#events .cp[data-cp="${rid}"]`);await r.waitForTimeout(900);
+    const w3=await r.evaluate(()=>({cw:$('#liveMD').clientWidth,split:$('#liveMD').classList.contains('split'),full:!!document.querySelector('#lcFull:not([hidden]) .lc.full')}));
+    ok(w3.cw<980&&!w3.split&&w3.full,`P2-4 視窗 1000、容器 ${w3.cw}：不分欄、卡片全螢幕`);
+    ok(!r.errs.length,`1000 沒有錯誤（${r.errs.slice(0,3).join(' | ')}）`);
+    await r.close();}
   await b.close();
   console.log(`\n${passes} 項通過，${fails} 項失敗`);process.exit(fails?1:0);
 })().catch(e=>{console.error('FAIL 例外',e);process.exit(1)});
