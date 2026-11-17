@@ -40,7 +40,7 @@ function storeDeptData(id){
 /* ui-06：行事曆的「活動」「會議」（scope 是 all-activity／all-meeting 的時間事件）。只有新資料庫有 scope：
    有部門已切到 firestore 時才讀（要登入）；都還在 github／frozen 時讀不到這一類（storeScopeOn 為假，畫面顯示空的） */
 const storeScopeOn=()=>!!(CFG.firebase&&CFG.firebase.projectId)&&BOARD_DEPTS.some(d=>d.source==="firestore");
-function storeScopeEvents(scope,from,to){return storeFsGet().then(fs=>fs.eventsByScope(CFG.firebase,scope,from,to))}
+function storeScopeEvents(scope,from,to,o){return storeFsGet().then(fs=>fs.eventsByScope(CFG.firebase,scope,from,to,o))}   /* o.pub＝公共版（沒登入時只查公開事件） */
 const STORE_XERR=e=>e&&e.code==="permission-denied"?"這個部門已搬到新資料庫，登入後才看得到":"讀不到這個部門的資料";
 /* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除、議題／週報／標籤的刪除（D-d）＝被刪文件的部門；其他（角色、邀請、遷移）不算 */
 const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId

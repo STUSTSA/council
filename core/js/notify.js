@@ -117,12 +117,13 @@ const calPopHTML=c=>`<div class="cal-pop" role="listbox" aria-label="月份">${c
 /* ---------- 五類模式（DESIGN-next 第九節）：本部門、會長室、活動、會議、其他（自由勾選部門）；公共版：全部、活動、會議 ----------
    本部門＝這個看板（state）；會長室、其他勾的部門＝讀那個單位的看板（follow.js 的 fwLoad：github 部門讀資料檔、firestore 部門讀新資料庫，只讀）；
    活動、會議＝scope 是 all-activity／all-meeting 的時間事件（store.js 的 storeScopeEvents，只有新資料庫有；都還在 github 時這兩類是空的）。
-   讀取量：選到那一類（勾了那個部門）才讀，讀過的留在記憶體（CAL_DATA；重新打開這一頁時超過 5 分鐘、或讀失敗的重讀）；活動、會議只讀那個月前後的範圍 */
+   讀取量：選到那一類（勾了那個部門）才讀，讀過的留在記憶體（CAL_DATA；重新打開這一頁時超過 5 分鐘、或讀失敗的重讀）；活動、會議只讀那個月前後的範圍。
+   公共版的活動、會議另外一組 key（pub:）：沒登入 Google 的人只讀得到公開事件，查詢改成 visibility=='public'（store-firestore.js 的 eventsByScope；ui-06 審查 P2-5） */
 const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["meet","會議"],["other","其他"]],CAL_PMODES=[["all","全部"],["act","活動"],["meet","會議"]];
-const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
+const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM、公共版 pub:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
 const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");
 function calKeys(c){
-  const sc=s=>storeScopeOn()?[`scope:${s}:${c.month}`]:[];
+  const sc=s=>storeScopeOn()?[`${c.pub?"pub":"scope"}:${s}:${c.month}`]:[];
   if(c.pub)return c.mode==="act"?sc("all-activity"):c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting")];
   if(c.mode==="pres")return CFG.deptId==="president"?[]:["dept:president"];
   if(c.mode==="act")return sc("all-activity");
@@ -145,8 +146,8 @@ function calLoad(c){
   calKeys(c).forEach(k=>{if(CAL_DATA.has(k))return;CAL_DATA.set(k,{loading:true});
     let p;
     if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
-    else{const [,s,m]=k.split(":"),a=StoreMap.parseTaipei(addDays(m+"-01",-31)),b=StoreMap.parseTaipei(ym(new Date(+m.slice(0,4),+m.slice(5,7),1))+"-01");
-      p=storeScopeEvents(s,a.ms,b.ms).then(docs=>({items:scopeItems(docs,s==="all-meeting"?"meet":"act")}))}
+    else{const [kind,s,m]=k.split(":"),a=StoreMap.parseTaipei(addDays(m+"-01",-31)),b=StoreMap.parseTaipei(ym(new Date(+m.slice(0,4),+m.slice(5,7),1))+"-01");
+      p=storeScopeEvents(s,a.ms,b.ms,{pub:kind==="pub"}).then(docs=>({items:scopeItems(docs,s==="all-meeting"?"meet":"act")}))}
     p.catch(e=>({items:[],err:STORE_XERR(e)})).then(v=>{CAL_DATA.set(k,{...v,at:Date.now()});CALS.forEach(x=>{if(calKeys(x).includes(k)&&(x!==NOTI||notiOpen))calPaint(x)})});
   });
 }
