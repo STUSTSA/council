@@ -3,7 +3,8 @@
    手機 412（秘書處）：學年與開學日（合併頁，在子頁裡）→ 學年 → 表單在子頁裡 → 按＋兩次、−一次 → 確定 → 回到合併頁、學年＋1 →「返回」回設定清單；
    桌面 1300（秘書處）：學年仍在右側面板。
    2026-11-11 改寫：學年從 2026-11-06 起只在秘書處（state.js 的 termCfg，nav.js 的 SET_HUBS.term）；秘書處用下面這份測試資料（沒有身分、共用密碼 0000），
-   因為網站上真的 data-secretariat.json 有全會密碼（sync.tokenAll），登入流程不一樣 */
+   因為網站上真的 data-secretariat.json 有全會密碼（sync.tokenAll），登入流程不一樣
+   2026-11-17（ui-05 審查 P1-1）：完成紀錄的膠囊從 details（#doneList .ev）改成 .cp（views.js 的 renderDone），量的元素跟著換 */
 const C=require('./common.js');
 const SEC={schemaVersion:10,id:'secretariat',savedAt:'2099-01-01 00:00',title:'秘書處',yearLabel:'115學年',termStart:'2026-09-07',semester:'',issues:[],events:[],weeks:[],members:[]};
 /* 秘書處的資料檔（網站上的、GitHub 上的）都換成 SEC；先清掉 mk() 第一次開頁時存下的本機資料再重新整理 */
@@ -29,7 +30,7 @@ await p.goBack();await p.waitForTimeout(1200);
 ok(await p.evaluate(()=>!setOpen),'再按一次返回關掉設定');
 /* 長標題不撐出畫面 */
 await p.evaluate(()=>{const e=state.events.find(x=>x.doneAt);e.name='上傳NAS與常會資料以及提案單追蹤以及其他非常長的名稱';render();setSection('done',{instant:true})});await p.waitForTimeout(700);
-const r=await p.evaluate(()=>({panel:$('#donePanel').getBoundingClientRect().right,cap:Math.max(...[...document.querySelectorAll('#doneList .ev')].map(e=>e.getBoundingClientRect().right))}));
+const r=await p.evaluate(()=>({panel:$('#donePanel').getBoundingClientRect().right,cap:Math.max(...[...document.querySelectorAll('#doneList .cp')].map(e=>e.getBoundingClientRect().right))}));
 ok(r.cap>0&&r.cap<=r.panel,'完成紀錄膠囊不超出區塊 '+JSON.stringify(r));
 ok(!p.errs.length,'手機（權益部）沒有錯誤 '+p.errs.join('|'));
 /* 秘書處 手機：學年在「學年與開學日」合併頁裡 */
