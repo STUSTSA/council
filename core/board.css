@@ -1426,7 +1426,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .nr mark{background:color-mix(in srgb,var(--su-yellow) 55%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .nr-none{margin:0;padding:12px;color:var(--muted);font-size:13.5px}
 
-/* --- 今日／明日：左右兩張卡片（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk） --- */
+/* ===== 今日／明日卡片（notify.js 的 dayCardHTML；通知頁最上面） =====
+   左右兩張（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk）。大日期 Jost 300；沒有事＝下方一條短細線。
+   按壓回饋由 notify.js 的 ndPress（只動 transform） */
 .noti-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .nd-card{--nd-bg:var(--blk);--nd-ink:var(--ink);--nd-mut:var(--muted);--nd-rule:color-mix(in srgb,var(--ink) 12%,transparent);
   display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:196px;padding:18px 18px 16px;border:0;border-radius:var(--r-lg);background:var(--nd-bg);color:var(--nd-ink);text-align:left;white-space:normal;font-weight:400;touch-action:manipulation;-webkit-user-select:none;user-select:none}
@@ -1435,16 +1437,14 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .nd-card:hover,.nd-card:active{transform:none;box-shadow:none}
 @media (hover:hover){.nd-card:hover{background:color-mix(in srgb,var(--nd-ink) 4%,var(--nd-bg))}}
 .nd-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--nd-rule)}
-.nd-num{font-family:"Jost",sans-serif;font-weight:200;font-size:54px;line-height:.8;letter-spacing:-.02em}
+.nd-num{font-family:"Jost",sans-serif;font-weight:300;font-size:52px;line-height:.8;letter-spacing:-.02em}
 .nd-lab{display:grid;justify-items:end;gap:3px;text-align:right}
 .nd-lab b{font-size:14px;font-weight:700;letter-spacing:.12em;white-space:nowrap}
 .nd-lab b i{font-style:normal;font-weight:400;color:var(--nd-mut)}
 .nd-lab small{font-size:12px;color:var(--nd-mut);letter-spacing:.06em}
 .nd-list{display:grid;gap:11px}
 .nd-row{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:8px;align-items:baseline}
-.nd-t{position:relative;padding-left:11px;font-size:12.5px;color:var(--nd-mut);font-variant-numeric:tabular-nums;white-space:nowrap}
-.nd-t::before{content:"";position:absolute;left:0;top:.48em;width:5px;height:5px;border-radius:50%;background:var(--c)}
-.nd-card.today .nd-t::before{box-shadow:0 0 0 1.5px var(--nd-bg)}
+.nd-t{font-size:12.5px;color:var(--nd-mut);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nd-x{display:grid;gap:1px;min-width:0}
 .nd-x b{font-size:14px;font-weight:500;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .nd-x small{font-size:11.5px;line-height:1.4;color:var(--nd-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1455,9 +1455,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .nd-pick>small{font-size:11.5px;letter-spacing:.08em;color:var(--nd-mut)}
 .nd-pick>b{font-size:20px;font-weight:300;line-height:1}
 @keyframes ndRise{from{opacity:0;transform:translateY(8px)}}
-/* 沒有事件：一條短細線＋淡字，放在卡片下方 */
-.nd-empty{margin-top:auto;display:grid;gap:10px;font-size:13px;color:var(--nd-mut);letter-spacing:.1em}
-.nd-empty i{display:block;width:28px;height:1px;background:currentColor;opacity:.6}
+/* 沒有事件：卡片下方一條短細線 */
+.nd-empty{margin-top:auto}
+.nd-empty i{display:block;width:28px;height:1px;background:var(--nd-mut)}
 @media (max-width:640px){
   .noti-days{gap:10px}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
@@ -1465,39 +1465,40 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .nd-lab b{font-size:13px;letter-spacing:.06em}
   .nd-row{grid-template-columns:minmax(0,1fr);gap:1px}
   .nd-x b{font-size:13.5px}
-  .nd-more{padding-left:11px}
+  .nd-more{padding-left:0}
 }
 
-/* --- 今日（獨立一層，notify.js 的 openToday） ---
-   點今日卡片：整層用 clip-path 從卡片的位置與圓角揭開成全螢幕、內容從卡片位置彈到定位（彈簧，略帶回彈）；各列逐一由下往上；關閉時彈回卡片 */
-.td-ov{position:fixed;inset:0;z-index:39;color:var(--bg)}
+/* ===== 今日層（notify.js 的 openToday；DESIGN-next 第五節「彈簧與回彈」、第九節） =====
+   點今日卡片：整層用 clip-path 從卡片的位置與圓角揭開成全螢幕（彈簧 .62／190）、內容從卡片位置彈到定位；各列逐一由下往上；
+   收回用 .55／90，卡片接著播縮過頭再彈回（notify.js 的 todayMorph／tdCardLand）。跟今日卡片同色（--pri 底、--pri-ink 字）。只有「本來就要做」一區 */
+.td-ov{position:fixed;inset:0;z-index:39;color:var(--pri-ink)}
 .td-ov[hidden]{display:none}
-.td-bg{position:absolute;inset:0;background:var(--ink)}
+.td-bg{position:absolute;inset:0;background:var(--pri)}
 .td-scroll{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(40px + var(--bar-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(18px,env(safe-area-inset-left)))}   /* 讓出底部工具列／左側細欄 */
 .td-in{max-width:720px;margin:0 auto;display:grid;gap:28px}   /* 展開／收合的位移、縮放、透明度由 notify.js 的 todayMorph 依彈簧曲線做 */
-.td-top{display:flex;align-items:flex-end;gap:14px;padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,var(--bg) 18%,transparent)}
-.td-num{font-family:"Jost",sans-serif;font-weight:200;font-size:88px;line-height:.78;letter-spacing:-.03em}
+.td-top{display:flex;align-items:flex-end;gap:14px;padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.td-num{font-family:"Jost",sans-serif;font-weight:300;font-size:88px;line-height:.78;letter-spacing:-.03em}
 .td-lab{display:grid;gap:4px}
 .td-lab b{font-size:20px;font-weight:700;letter-spacing:.14em}
 .td-lab small{font-size:13px;opacity:.65;letter-spacing:.08em}
-.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;border-color:color-mix(in srgb,var(--bg) 40%,transparent);background:transparent;color:var(--bg)}
+.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 18px 0 14px;border-color:color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit}
 .td-x-btn .ico{width:15px;height:15px}
 .td-sec h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;font-weight:700;letter-spacing:.14em}
 .td-sec h3 small{font-size:11.5px;font-weight:400;opacity:.6;letter-spacing:.06em}
-.td-sec h3 .num{margin-left:auto;font-size:13px;font-weight:400;padding:0 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);line-height:20px}
+.td-sec h3 .num{margin-left:auto;font-size:13px;font-weight:400;padding:0 9px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);line-height:20px}
 .td-sec.is-pick h3{color:var(--ok)}
 .td-sec.is-pick h3 .num{border-color:var(--ok)}
 .td-list{list-style:none;margin:0;padding:0;display:grid}
-.td-row{display:grid;grid-template-columns:6.4em minmax(0,1fr);gap:12px;align-items:baseline;padding:13px 0;border-top:1px solid color-mix(in srgb,var(--bg) 12%,transparent);opacity:0;transform:translateY(10px)}
+.td-row{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:12px;align-items:baseline;padding:13px 0;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);opacity:0;transform:translateY(10px)}
 .td-ov.on .td-row{opacity:1;transform:none;transition:opacity .35s,transform .5s var(--mo-out);transition-delay:calc(.26s + var(--s,0) * .1s + var(--i) * .04s)}
 .td-sec{--s:0}.td-sec.is-pick{--s:1}
-.td-t{position:relative;padding-left:13px;font-size:13px;opacity:.75;white-space:nowrap}
-.td-t::before{content:"";position:absolute;left:0;top:.45em;width:7px;height:7px;border-radius:50%;background:var(--c)}
+.td-t{font-size:13px;opacity:.75;white-space:nowrap}
 .td-x{display:grid;gap:2px;min-width:0}
 .td-x b{font-size:16px;font-weight:500;line-height:1.45}
 .td-x small{font-size:12.5px;opacity:.62}
-.td-none{margin:0;padding:12px 0;font-size:13.5px;opacity:.6;border-top:1px solid color-mix(in srgb,var(--bg) 12%,transparent)}
+.td-none{margin:0;padding:12px 0;font-size:13.5px;opacity:.6;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
 @media (max-width:640px){.td-num{font-size:72px}}
+@media (prefers-reduced-motion:reduce){.td-ov.on .td-row{transition:none}}
 
 /* --- 整理：交友軟體式左滑右滑（notify.js 的 deckHTML／dkBind） ---
    卡片堆最多露出三張（後面的往下 10px、縮 5%）；最上面那張跟手指走並傾斜，右滑浮出綠色「今天處理」、左滑浮出「還不要」；

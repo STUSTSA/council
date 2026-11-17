@@ -59,15 +59,15 @@ function dayWhen(x,d){
   const k=Math.round((pd(d)-pd(x.date))/864e5)+1,n=Math.round((pd(x.end)-pd(x.date))/864e5)+1;
   return k===1&&x.time?x.time:`${k}／${n} 天`;
 }
+/* 一張卡片：大日期、今日／明日・星期、件數；下面最多四列（時刻、名稱、地點・所屬即時回報），多的寫 +N；沒有事＝一條短細線。
+   今日＝主要動作色（--pri）底；點今日＝放大成全螢幕的「今日」層（openToday），點明日＝行事曆選到那一天（notiOpenDay） */
+const daySub=x=>[x.place,x.ev].filter(Boolean).join("・");
 function dayCardHTML(d,lab,cls,list){
   const xs=list.filter(x=>covers(x,d)),MAX=4;
-  /* 今日卡片：在「整理」裡右滑（今天處理）的事件不在卡片上列，只寫件數；點今日卡片＝卡片放大成全螢幕的「今日」層（openToday）才列出來 */
-  const pk=cls==="today"?triPicked(list):[];
-  return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件事，${cls==="today"?"打開今日":"打開這一天"}">
-    <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}<i>・</i>週${WD[pd(d).getDay()]}</b><small class="num">${xs.length?`${xs.length} 件`:nmd(d)}</small></span></span>
-    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row" style="--c:${itemColor(x)}"><span class="nd-t num">${dayWhen(x,d)}</span><span class="nd-x"><b>${esc(x.title)}</b>${notiSub(x)?`<small>${esc(notiSub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more">還有 ${xs.length-MAX} 件</span>`:""}</span>`
-      :(pk.length?"":`<span class="nd-empty"><i aria-hidden="true"></i>沒有安排</span>`)}
-    ${pk.length?`<span class="nd-pick"><i aria-hidden="true"></i><small>今天處理</small><b class="num">${pk.length}</b><small>件</small></span>`:""}
+  return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件">
+    <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}<i>・</i>週${WD[pd(d).getDay()]}</b><small class="num">${xs.length?`${xs.length} 件`:""}</small></span></span>
+    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row"><span class="nd-t num">${dayWhen(x,d)}</span><span class="nd-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
+      :`<span class="nd-empty" aria-hidden="true"><i></i></span>`}
   </button>`;
 }
 
@@ -192,17 +192,14 @@ function dkBind(){
   };
   st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
-/* ---------- 今日（獨立一層，2026-11-06 使用者） ----------
-   點「今日」卡片：卡片從原位放大成全螢幕的一層（跟今日卡片同色：文字色底、底色字），單獨看今天「本來就要做」的事與「整理」裡右滑的「今天處理」。
-   動畫：底板從卡片的位置與大小放大到全螢幕（transform，略帶回彈），內容淡入、逐列由下往上；關閉時反過來縮回卡片。
-   返回鍵／手勢、Esc、右上「關閉」都會關。資料只讀；右滑結果照舊只存這台裝置 */
+/* ---------- 今日層（DESIGN-next 第九節） ----------
+   點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
+   返回鍵／手勢、Esc、「關閉」都會關。資料只讀 */
 let todayOpen=false;
-function todayRows(xs,d){return xs.map((x,i)=>`<li class="td-row" style="--c:${itemColor(x)};--i:${i}"><span class="td-t num">${d?dayWhen(x,d):x.end?`${nmd(x.date)}–${nmd(x.end)}`:`${nmd(x.date)}${x.time?" "+x.time:""}`}</span><span class="td-x"><b>${esc(x.title)}</b>${notiSub(x)?`<small>${esc(notiSub(x))}</small>`:""}</span></li>`).join("")}
 function todayHTML(){
-  const list=notiList(),t=today(),pk=triPicked(list),pkSet=new Set(pk.map(x=>x.key)),own=list.filter(x=>covers(x,t)&&!pkSet.has(x.key));
+  const t=today(),own=notiMine().filter(x=>covers(x,t));
   return `<div class="td-in"><div class="td-top"><span class="td-num num">${+t.slice(8)}</span><span class="td-lab"><b>今日</b><small class="num">${+t.slice(5,7)} 月・週${WD[pd(t).getDay()]}</small></span><button type="button" class="td-x-btn" data-tdclose aria-label="關閉今日">${ico("close")}關閉</button></div>
-    <section class="td-sec" style="--s:0"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${todayRows(own,t)}</ol>`:`<p class="td-none">今天沒有排定的事</p>`}</section>
-    <section class="td-sec is-pick" style="--s:1"><h3>今天處理<small>在「整理」右滑的</small><span class="num">${pk.length}</span></h3>${pk.length?`<ol class="td-list">${todayRows(pk)}</ol>`:`<p class="td-none">還沒有右滑的事。到「整理」把今天要處理的往右滑。</p>`}</section></div>`;
+    <section class="td-sec"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${own.map((x,i)=>`<li class="td-row" style="--i:${i}"><span class="td-t num">${dayWhen(x,t)}</span><span class="td-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></li>`).join("")}</ol>`:`<p class="td-none">今天沒有排定的事</p>`}</section></div>`;
 }
 /* 彈簧曲線取樣（質量 1、阻尼比 z、勁度 k）：回傳 0→1 的進度（會超過 1 再回來＝Q 彈）與總時間，拿來產生 Web Animations 的關鍵影格 */
 function springCurve(z,k,tol=.0015){
@@ -228,8 +225,8 @@ function todayMorph(ov,card,reverse){
     let k=1;while(k<A.length-1&&A[k]>0)k++;
     P=A.slice(0,k+1);P[k]=0;dur=Math.round(k/120*1000);tail=A.slice(k);   /* springCurve 每 1/120 秒取一點 */
   }
-  const n=P.length,o={duration:dur,fill:"both"};
-  const clip=p=>{const q=Math.max(0,p);return `inset(${(r.top*(1-q)).toFixed(1)}px ${((W-r.right)*(1-q)).toFixed(1)}px ${((H-r.bottom)*(1-q)).toFixed(1)}px ${(r.left*(1-q)).toFixed(1)}px round ${(26*(1-Math.min(1,q))).toFixed(1)}px)`};
+  const n=P.length,o={duration:dur,fill:"both"},rad=parseFloat(getComputedStyle(card).borderTopLeftRadius)||18;   /* 從卡片自己的圓角揭開 */
+  const clip=p=>{const q=Math.max(0,p);return `inset(${(r.top*(1-q)).toFixed(1)}px ${((W-r.right)*(1-q)).toFixed(1)}px ${((H-r.bottom)*(1-q)).toFixed(1)}px ${(r.left*(1-q)).toFixed(1)}px round ${(rad*(1-Math.min(1,q))).toFixed(1)}px)`};
   const kf=[],ki=[];
   P.forEach((p,i)=>{const off=i/(n-1);kf.push({offset:off,clipPath:clip(p)});ki.push({offset:off,transform:`translate(${(dx*(1-p)).toFixed(1)}px,${(dy*(1-p)).toFixed(1)}px) scale(${(.92+.08*p).toFixed(4)})`,opacity:Math.max(0,Math.min(1,p*1.5-.1))})});
   inner.style.transformOrigin="0 0";
@@ -332,10 +329,10 @@ function notiFocus(d,e){
     cells.forEach(c=>{c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash")});setTimeout(()=>cells.forEach(c=>c.classList.remove("flash")),1500)};
   if(d.slice(0,7)!==NOTI.month)notiMonth(d.slice(0,7)).then(go);else go();
 }
-/* 打開某一天（今日／明日卡片）：月曆換到那個月、清單只留那天、捲到那天（跟點日期一樣） */
+/* 明日卡片：行事曆選到那一天（換到那個月），捲到行事曆 */
 function notiOpenDay(d){
   NOTI.day=d;NOTI.month=d.slice(0,7);renderNoti();
-  const v=$("#notiDay");if(v){Anim.enter(v,"down");v.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"})}
+  const c=$("#notiPage .noti-cal");if(c)c.scrollIntoView({block:"start",behavior:reduceMotion()?"auto":"smooth"});
 }
 /* 今日／明日卡片的按壓回饋：按下微縮到 .97、放開略帶回彈地彈回（只動 transform） */
 function ndPress(el,down){
