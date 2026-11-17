@@ -10,6 +10,7 @@
    8. 同一頁重畫時位置變了的滑到新位置（FLIP，同一個節點）、新的由下浮現、不見的留分身淡出
    9. 設定清單、外觀合併頁、通知頁重畫：沒變的節點留著、外觀的分段切換不重建
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
+   11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -175,6 +176,37 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     const r=await q.evaluate(()=>({an:window.__an.length,run:document.getAnimations().filter(a=>a.playState==='running'&&!(a instanceof CSSAnimation)&&!(a instanceof CSSTransition)).length}));
     ok(r.an===0&&r.run===0,`關掉動態：沒有 animate() 動畫（${r.an}）、沒有在跑的程式動畫（${r.run}）`);
     await ctx.close()}
+
+  /* 11. 審查 P2-1：外觀的深淺色分段切換重畫（合併頁 draw 的同一段 HTML）兩次後仍是平面色塊（.glass 寫在 HTML 裡，不靠執行時加）；
+     卡片堆飛出去時加的 go-yes／go-no 是執行時的 class，重畫不拿掉 */
+  {await p.click('#setBtn');await p.waitForTimeout(1100);await p.click('#setOv [data-set="look"]');await p.waitForTimeout(1000);
+    const r=await p.evaluate(()=>{const box=document.querySelector('#setOv .set-pane .set-hub'),sg=box.querySelector('.look-mode'),g0=sg.classList.contains('glass');
+      for(let i=0;i<2;i++){morphTo(box,'<b class="set-hub-t">外觀</b>'+lookHTML(false));lookMount(box)}
+      const sg2=box.querySelector('.look-mode');
+      const d=document.createElement('div');document.body.append(d);morphTo(d,'<div class="dk-card" data-dk="x">a</div>');d.firstChild.classList.add('go-yes');morphTo(d,'<div class="dk-card" data-dk="x">b</div>');const gy=d.firstChild.classList.contains('go-yes');d.remove();
+      return {g0,same:sg2===sg,glass:sg2.classList.contains('glass'),gy}});
+    ok(r.g0&&r.same&&r.glass,`外觀的分段切換重畫兩次後仍有 glass（重畫前 ${r.g0}、同一個節點 ${r.same}、重畫後 ${r.glass}）`);
+    ok(r.gy,'卡片堆飛出去時的 go-yes 重畫後還在');
+    await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(400);}
+  /* 12. 審查 P2-2：編輯中游標在一行的文字欄，點專員、標籤的勾選膠囊（label 包核取框）：勾起來，焦點留在原本那一欄（桌面滑鼠、手機觸控） */
+  for(const [w,h,touch] of [[1300,900,false],[412,800,true]]){
+    const s2=await c.setup(),q=await s2.mk(w,h,'light',touch);await s2.login(q);   /* 各自一份測試資料（第一頁登入時已經建了身分，同一份再登入一次的流程不同） */
+    await q.evaluate(()=>{if(!state.labels.length)state.labels.push({id:'ui3lb',kind:LABEL_KINDS[0],name:'膠囊測試'});setSection('live',{instant:true});render()});await q.waitForTimeout(600);
+    const eid=await q.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt&&e.blocks&&e.blocks.length);openEv.add(ev.id);render();return ev.id});await q.waitForTimeout(700);
+    const go=`.ev[data-ev="${eid}"] [data-kpgo]`;if(touch)await q.tap(go);else await q.click(go);await q.waitForTimeout(600);
+    const tag=touch?'手機觸控':'桌面';
+    for(const [f,nm] of [['staff','專員'],['labels','標籤']]){
+      const sel=`.ev[data-ev="${eid}"] [data-kpf="${f}"] label.chip`;
+      const pre=await q.evaluate(([e])=>{const a=document.activeElement;a.__k=1;return {tx:a.matches('.kp-tx'),n:document.querySelectorAll(`.ev[data-ev="${e}"] .kp [data-kpf] label.chip`).length}},[eid]);
+      if(!(await q.$(sel))){ok(false,`${tag}：找不到${nm}膠囊`);continue}
+      const b0=await q.evaluate(s=>document.querySelector(s+' input').checked,sel);
+      if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
+      const r=await q.evaluate(s=>{const a=document.activeElement;return {same:a.__k===1&&a.matches('.kp-tx'),on:document.querySelector(s+' input').checked,act:a.tagName+'.'+a.className}},sel);
+      ok(pre.tx&&r.same&&r.on!==b0,`${tag}：游標在 .kp-tx 點${nm}膠囊後勾選變了（${r.on}）、activeElement 仍是同一個 .kp-tx（${r.act}）`);
+    }
+    ok(!q.errs.length,`${tag}：沒有錯誤`+(q.errs.length?'：'+q.errs.slice(0,3).join(' | '):''));
+    await s2.b.close();
+  }
 
   ok(!p.errs.length,'沒有錯誤'+(p.errs.length?'：'+p.errs.slice(0,3).join(' | '):''));
   await b.close();

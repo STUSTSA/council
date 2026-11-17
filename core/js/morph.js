@@ -4,13 +4,14 @@
    - 配對：有 id 或 MORPH_KEYS 裡的 data 屬性的，用「標籤＋那個值」配對同一筆（換順序時搬動，不重建）；沒有的照順序配對同標籤、同第一個 class 的。
    - 正在輸入的欄位（document.activeElement）不覆寫 value 與選取範圍；正在編輯的 contenteditable 整塊不動。
      搬動節點時不搬含有焦點的那一個（改搬它前面的兄弟），焦點與手機鍵盤不會掉。
-   - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中…）不會被拿掉；
+   - 程式在執行時自己加的 class（MORPH_RT：圖示動作 ico-on、展開收合 opening／closing／animating、拖曳中、卡片堆飛出去 go-yes／go-no…）不會被拿掉；
+     只能放「程式加、HTML 從來不寫」的暫時狀態；一直都要有的外觀（例如 LiquidSeg 的 .glass）寫在 HTML 裡，不放這裡。
      新的 HTML 沒寫 style 時保留節點上程式寫的 style（動畫、拖曳、FLIP 的暫時位移）。
    - <details> 展開收合時 motion.js 會把內容包進 .dwrap：比對時把新 HTML 的內容當成在 .dwrap 裡，不會因為多一層而整塊重建。
    - SVG（圖示、標誌）內部不逐一比對：整段一樣就不動，不一樣才換掉。
    第一次畫（容器是空的）或換成完全不同的內容時，結果跟 innerHTML 一樣是新建的節點。不依賴其他檔案。 */
 const MORPH_KEYS=["key","ev","done","issue","blk","lk","tp","dk","week","fw","fk","set","hub","zone","kpf"];
-const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov"];
+const MORPH_RT=["ico-on","ico-once","opening","closing","animating","ev-dragging","sec-anim","peek","peeking","flash","lit","hov","go-yes","go-no"];
 const morphCls=n=>{for(const c of n.classList)if(!MORPH_RT.includes(c))return c;return ""};   /* 第一個 class（不算程式執行時加的） */
 const morphKey=n=>{if(n.nodeType!==1)return "";if(n.id)return "#"+n.id;const d=n.dataset;if(!d)return "";for(const k of MORPH_KEYS){const v=d[k];if(v!=null&&v!=="")return k+":"+v}return ""};
 /* 把 node 放到 ref 的位置。node 含有焦點時不搬它（搬了會失焦），改把 ref 到 node 之間的兄弟搬到 node 後面 */
