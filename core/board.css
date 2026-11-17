@@ -1030,6 +1030,11 @@ a.link:active{transform:scale(.96)}
 /* ===== 換頁動畫（core/js/pagefx.js） ===== */
 /* 舊頁往後退（縮小、遠離）並模糊、新頁模糊著從後面浮上來；縮放、透明度、模糊都由 pagefx.js 每格設定，這裡只有「站內換頁過來時 body 先透明」 */
 .pfx-arrive body{opacity:0}
+/* 從主頁點部門進來時，開頁第一格蓋著主頁過場的終點（pagefx.js 的 cover）：桌面＝鋪滿的色塊（--blk）、手機＝翻過來的部門底板（--bg），中間是部門標誌
+   （大小跟主頁過場的終點一樣：畫面寬的 46%、最大 300），看板穩定了才淡掉 */
+.pfx-cover{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:var(--bg);pointer-events:none}
+.pfx-cover[data-k="tile"]{background:var(--blk)}
+.pfx-cover img{display:block;width:min(46vw,300px);aspect-ratio:1}
 
 /* ===== 對話框與下拉選單 ===== */
 .danger-btn{color:var(--warn)}
@@ -1306,13 +1311,23 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .hm-dock{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0;max-width:calc(100% - 32px);transform:translateX(-50%);box-shadow:0 -14px 30px -6px var(--wal-sh)}
 }
 
+/* 進部門、回主頁的過場（home.js 的 tileExpand／walFlip／hmCollapse；DESIGN-next 第五節「整頁過場」）：都是蓋在畫面上的分身，只動 transform／opacity。
+   .hm-fx＝鋪滿（或收回）的色塊底板、.hm-fxl＝跟著移到畫面中間的標誌（桌面）；.hm-flw＝手機翻面的舞台（透視），.hm-ff 卡片分身（前半）、.hm-fb 畫面大小的部門底板（後半） */
+.hm-fx{position:fixed;z-index:70;background:var(--blk);transform-origin:0 0;pointer-events:none;will-change:transform}
+.hm-fxl{position:fixed;z-index:71;transform-origin:0 0;pointer-events:none}
+.hm-fxl svg{display:block;width:100%;height:100%;overflow:visible}
+.hm-flw{position:fixed;inset:0;z-index:70;overflow:hidden;perspective:1500px;pointer-events:none}
+.hm-ff{will-change:transform}
+.hm-fb{position:absolute;inset:0;background:var(--bg);will-change:transform}
+.hm-fbl{position:absolute;display:block;overflow:visible}
+
 /* ===== 部門標誌（dept/icons/dept-代號.svg；主頁色塊、卡片堆的 .hm-lg 裡；DESIGN-next 第五節「部門標誌」） =====
    藍 #0a5baa、黃 #f0bc23（與行銷部的橘）寫在檔案裡，不跟主題變；只有秘書處的白色零件（.dg-w）在主頁跟著色塊底色。
    被選到時（.on：桌面焦點那張 .hm-tile、手機焦點卡 .hm-wc）小人做一次動作。零件之間的白縫是畫在鄰居身上的缺口，所以零件只往「離開鄰居」的方向動，
    或原地縮小再回來，不壓進鄰居；要一起動的零件在檔案裡包成 .dg-ga／.dg-gb，整個小人是 .dg-all。只動 transform。
    class 一律 dg- 開頭，不跟版面的 class 共用（進場動畫只挑版面上的區塊，不會挑到零件） */
 .hm-lg .dg{display:block;width:100%;height:100%;overflow:visible}
-.hm-lg .dg-w{fill:var(--blk)}
+:is(.hm-lg,.hm-fxl,.hm-fb) .dg-w{fill:var(--blk)}
 .dg :is(path,rect,g){transform-box:fill-box;transform-origin:50% 100%}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-all{animation:dg-hop .6s both}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-ga{animation:dg-crown .8s .05s both}

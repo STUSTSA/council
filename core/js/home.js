@@ -14,6 +14,8 @@
   const stage=$id("hmStage");
   /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（hmFrom） */
   const H={i:Math.max(0,D.findIndex(d=>d.id==="rights")),cnt:{},svg:{},mode:""};
+  const hmFrom=()=>{try{const r=document.referrer&&new URL(document.referrer);if(!r||r.origin!==location.origin||!/\/(index\.html)?$/.test(r.pathname))return -1;const id=r.searchParams.get("d")||"rights";return D.findIndex(d=>d.id===id)}catch(_){return -1}};
+  {const f=hmFrom();if(f>=0)H.i=f}
   const tileIn=(d,i)=>`<span class="hm-tt"><i class="hm-en">${esc(EN(d.id))}</i><b class="hm-nm">${esc(d.name)}</b></span><span class="hm-lg" data-lg="${esc(d.id)}" aria-hidden="true"></span><span class="hm-n num" data-n="${esc(d.id)}" hidden></span>`;
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
@@ -64,9 +66,9 @@
   /* 拉過頭：內容沿拉動方向被拉開一點並微微拉伸，放開用彈簧彈回（只動 transform） */
   function bump(dir){
     const n=$id("hmRail");if(!n||reduceMotion()||n._bump)return;
-    const org=dir<0?"0 50%":"100% 50%";
-    n._bump=n.animate([{transform:"none",transformOrigin:org},{transform:`translateX(${-dir*26}px) scaleX(1.02)`,transformOrigin:org,offset:.22},{transform:"none",transformOrigin:org}],{duration:620,easing:"cubic-bezier(.16,1.35,.4,1)"});
-    n._bump.finished.catch(()=>{}).then(()=>{n._bump=null});
+    n.style.transformOrigin=dir<0?"0 50%":"100% 50%";
+    n._bump=n.animate([{transform:"none"},{transform:`translateX(${-dir*26}px) scaleX(1.02)`,offset:.22},{transform:"none"}],{duration:620,easing:"cubic-bezier(.16,1.35,.4,1)"});
+    n._bump.finished.catch(()=>{}).then(()=>{n._bump=null;n.style.transformOrigin=""});
   }
   function railBind(){
     const rail=$id("hmRail");
@@ -144,8 +146,74 @@
     if(k){e.preventDefault();setFoc((H.mode==="wal"?WAL.f:H.i)+k,"key")}
   });
 
-  /* ---------- 進部門 ---------- */
-  function hmEnter(i){const d=D[i];if(d)location.href=href(d)}
+  /* ---------- 進部門、回主頁（DESIGN-next 第五節「整頁過場」）。只動 transform／opacity，不用模糊 ----------
+     跨頁：播完主頁這一半才換頁，交接 sessionStorage「pfx-burst」＝{d,k}（只給下一頁讀一次，index.html 開頭讀完就刪），
+     看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
+     減少動態時直接換頁、不交接 */
+  function hmEnter(i){
+    const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";
+    if(reduceMotion()){location.href=u;return}
+    H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
+    if(k==="flip")walFlip(WAL.els[i],go);else tileExpand(stage.querySelector(`.hm-tile[data-i="${i}"]`),go);
+  }
+  /* 鋪滿畫面的那一張：從色塊的位置與圓角放大到蓋住整個畫面（往外多放一圈，放大後的圓角落在畫面外，不用動圓角） */
+  function cover(r,rad){
+    const W=innerWidth,Hh=innerHeight;let m=0,sx=1,sy=1;
+    for(let k=0;k<5;k++){sx=(W+2*m)/r.width;sy=(Hh+2*m)/r.height;m=.3*rad*Math.max(sx,sy)+2}
+    return `translate(${(-m-r.left).toFixed(1)}px,${(-m-r.top).toFixed(1)}px) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
+  }
+  const lgEnd=()=>{const s=Math.min(innerWidth*.46,300);return {left:(innerWidth-s)/2,top:(innerHeight-s)/2,width:s,height:s}};
+  const fxEl=(cls,r,rad)=>{const o=document.createElement("div");o.className=cls;o.setAttribute("aria-hidden","true");o.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px${rad!=null?`;border-radius:${rad}px`:""}`;return o};
+  const lgTf=(a,b)=>`translate(${(b.left-a.left).toFixed(1)}px,${(b.top-a.top).toFixed(1)}px) scale(${(b.width/a.width).toFixed(4)})`;
+  /* 桌面：被點的色塊連同標誌鋪滿畫面 */
+  function tileExpand(t,then){
+    if(!t){then();return}
+    const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*r.width/t.offsetWidth||18,o=fxEl("hm-fx",r,rad);
+    const lg=t.querySelector(".hm-lg svg"),lr=lg&&lg.getBoundingClientRect(),E={duration:MO.slow,easing:MO.out,fill:"forwards"};
+    document.body.append(o);
+    let l=null;if(lg&&lr.width){l=fxEl("hm-fxl",lr);l.append(lg.cloneNode(true));document.body.append(l);l.animate([{transform:"none"},{transform:lgTf(lr,lgEnd())}],E)}
+    o.animate([{transform:"none"},{transform:cover(r,rad)}],E).finished.then(then,then);
+  }
+  /* 手機：其他卡片先縮一下再各自帶偏移與旋轉往上下彈開（460ms），主頁其餘東西淡出 → 被點的卡片整張翻面、邊翻邊鋪滿
+     （前半 230ms 卡片分身轉到側面，後半 430ms 畫面大小的底板帶部門標誌從側面轉正；延遲 200ms 起跑；側面那一瞬間換手，看不出來）。
+     底板一開始就是最終大小（縮小來放），標誌不會糊、也不用非等比縮放 */
+  function walFlip(el,then){
+    if(!el){then();return}
+    WAL.lock=true;cancelAnimationFrame(WAL.raf);WAL.raf=0;
+    const W=innerWidth,Hh=innerHeight,r=el.getBoundingClientRect(),R=x=>(Math.random()*2-1)*x;
+    WAL.els.forEach(o=>{if(o===el)return;const b=o.getBoundingClientRect(),up=b.top<r.top,base=o.style.transform||"none",op=getComputedStyle(o).opacity;
+      o.animate([{transform:base,opacity:op},{offset:.22,transform:`translate(0,${up?10:-10}px) `+base,opacity:op},{transform:`translate(${R(110).toFixed(0)}px,${((up?-1:1)*(Hh*.6+Math.random()*140)).toFixed(0)}px) rotate(${R(16).toFixed(1)}deg) `+base,opacity:0}],
+        {duration:460,delay:Math.min(90,Math.abs(b.top-r.top)*.18),easing:"cubic-bezier(.4,0,.75,.5)",fill:"forwards"})});
+    document.querySelectorAll(".hm-top,.hm-dock").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
+      x.animate([{opacity:1,transform:"translate(0,0)"+B},{opacity:0,transform:`translate(${R(26).toFixed(0)}px,${(-14+R(16)).toFixed(0)}px) scale(.94)`+B}],{duration:300,delay:Math.random()*90,easing:MO.in,fill:"forwards"})});
+    const w=document.createElement("div"),ff=el.cloneNode(true),fb=document.createElement("div"),lg=el.querySelector(".hm-lg svg");
+    w.className="hm-flw";w.setAttribute("aria-hidden","true");fb.className="hm-fb";ff.className="hm-wc hm-ff";ff.removeAttribute("aria-current");ff.removeAttribute("href");
+    ff.style.cssText=`left:${r.left}px;top:${r.top}px;right:auto;width:${r.width}px;height:${r.height}px;transform:none;opacity:1;z-index:auto`;
+    if(lg){const c=lg.cloneNode(true),e=lgEnd();c.setAttribute("class","dg hm-fbl");c.style.cssText=`left:${e.left}px;top:${e.top}px;width:${e.width}px;height:${e.height}px`;fb.append(c)}
+    w.append(ff,fb);document.body.append(w);el.style.visibility="hidden";
+    const dx=r.left+r.width/2-W/2,dy=r.top+r.height/2-Hh/2,sm=1.22,s0=r.width*sm/W,T0=200,T1=230,T2=430;
+    ff.animate([{transform:"rotateY(0deg) scale(1)"},{transform:`translate(${(-dx*.3).toFixed(1)}px,${(-dy*.3).toFixed(1)}px) rotateY(90deg) scale(${sm})`}],{duration:T1,delay:T0,easing:"cubic-bezier(.5,0,.9,.55)",fill:"forwards"});
+    fb.animate([{transform:`translate(${(dx*.7).toFixed(1)}px,${(dy*.7).toFixed(1)}px) rotateY(-90deg) scale(${s0.toFixed(3)})`},{transform:"none"}],{duration:T2,delay:T0+T1,easing:"cubic-bezier(.16,.84,.3,1.05)",fill:"both"})
+      .finished.then(then,then);
+  }
+  /* 回主頁：整個畫面收回原本那一張（桌面焦點色塊、手機焦點卡；跟進去時的鋪滿倒著做），收到最後兩成淡掉。
+     底板開頁第一格就蓋好（回來的那一刻不閃出主頁），跟著主頁浮上來（PageFx.onArrive）才開始收 */
+  function hmCollapse(){
+    if(reduceMotion())return;
+    const t=H.mode==="wal"?WAL.els[H.i]:stage.querySelector(".hm-tile.on");if(!t)return;
+    const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*(r.width/t.offsetWidth)||18,o=fxEl("hm-fx",r,rad),c=cover(r,rad);
+    o.style.transform=c;document.documentElement.append(o);
+    PageFx.onArrive(()=>{const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
+      o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:640,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
+  }
+  /* 從看板按返回回到快取的這一頁（bfcache）：把進部門時留下的狀態清掉（分身、飛走的卡片、淡掉的東西），再收回那一張 */
+  addEventListener("pageshow",e=>{
+    if(!e.persisted)return;H.busy=false;WAL.lock=false;
+    document.querySelectorAll(".hm-fx,.hm-fxl,.hm-flw").forEach(x=>x.remove());
+    document.querySelectorAll("#hm,#hm *").forEach(x=>{x.getAnimations&&x.getAnimations().forEach(a=>{if(a instanceof CSSAnimation||a instanceof CSSTransition)return;a.cancel()});if(x.classList.contains("hm-wc"))x.style.visibility=""});
+    if(H.mode==="wal")walDraw();
+    if(document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
+  });
 
   /* ---------- 疊層：全會行事曆（下排圓鈕）、外觀（設定鈕） ----------
      在主頁上蓋一層畫面；打開推一筆瀏覽紀錄，關閉鈕、Esc、系統返回鍵都關掉（關閉鈕與 Esc 走 history.back，由 popstate 真的關）。
@@ -188,5 +256,6 @@
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
+  if(hmFrom()>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */
 })();

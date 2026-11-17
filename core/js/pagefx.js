@@ -38,7 +38,7 @@ const PageFx=(()=>{
     walk(el,0);return out;
   }
   /* 一段動畫：dir＝"out"（離開）或 "in"（進來）；back＝返回；fadeIn＝新頁在前幾成變成不透明；lag＝整段晚多久開始（期間區塊停在起始狀態） */
-  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false){
+  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false,rnd=false){
     if(!el)return Promise.resolve();
     save(el);el.style.pointerEvents="none";(anims.get(el)||[]).forEach(a=>a.cancel());
     const o=dir==="out",H=innerHeight||1,list=[];
@@ -50,7 +50,12 @@ const PageFx=(()=>{
     }else{
       const ps=pieces(el,all),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
       ps.forEach(({el:p,r,base})=>{
-        const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread),B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
+        const B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
+        /* rnd＝不規則浮現（手機從主頁翻進部門之後，DESIGN-next 第五節）：每一塊各自的延遲（0–320ms）、方向、距離與大小，不照順序 */
+        if(rnd){const dl=lag+Math.random()*320,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
+          list.push(p.animate([{opacity:0},{opacity:1}],{duration:220,delay:dl,easing:"ease-out",fill:"both"}));
+          list.push(p.animate([{transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})${B}`},{transform:`translate(0,0)${B}`}],{duration:560+Math.random()*160,delay:dl,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"both"}));return}
+        const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread);
         list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:1,offset:.4},{transform:`translateY(0)${B}`,opacity:1}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
       });
       if(fadeIn>0)list.push(el.animate([{opacity:0},{opacity:1,offset:Math.max(.02,fadeIn*dur/total)},{opacity:1}],{duration:total,easing:"linear",fill:"both"}));
@@ -96,16 +101,27 @@ const PageFx=(()=>{
   }
   /* 到達：等整頁載入完、再等兩格（看板第一次畫完、字型就位）才開始浮上來，動畫期間主執行緒比較閒，不會一頓一頓；
      區塊由下往上滑入（2026-11-06 第四版） */
+  /* 從主頁點部門進來（index.html 開頭的小程式設了 html[data-pfx]）：開頁第一格就蓋著主頁過場的終點——
+     桌面（tile）＝色塊鋪滿的底板（--blk）加部門標誌；手機（flip）＝翻過來的部門底板（--bg）加部門標誌。蓋在 <html> 下（body 還是透明的時候也看得到） */
+  let cover=null;const arriveFns=[];
+  {const h=document.documentElement,k=h.dataset.pfx,d=h.dataset.pfxD;
+    if(k&&d&&h.classList.contains("pfx-arrive")&&!RM()){cover=document.createElement("div");cover.className="pfx-cover";cover.dataset.k=k;cover.setAttribute("aria-hidden","true");
+      const im=document.createElement("img");im.alt="";im.src=`dept/icons/dept-${d}.svg`;im.onerror=()=>im.remove();cover.append(im);h.append(cover)}
+    delete h.dataset.pfx;delete h.dataset.pfxD}
   function arrive(){
-    const h=document.documentElement;if(!h.classList.contains("pfx-arrive"))return;
-    if(RM()){h.classList.remove("pfx-arrive");return}
+    const h=document.documentElement;if(!h.classList.contains("pfx-arrive")){arriveFns.splice(0).forEach(f=>f());return}
+    if(RM()){h.classList.remove("pfx-arrive");if(cover){cover.remove();cover=null}arriveFns.splice(0).forEach(f=>f());return}
     /* 2026-11-06 使用者：進部門後整個介面卡一下。看板剛載入時要畫第一次畫面、讀雲端、套秘書處的學年（又重畫一次），
        翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 5 格都在 22ms 內畫完才開始，最多等 1.6 秒；
        等的這段時間整頁還是透明（底色），看不到半成品 */
     const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=5||now-t0>1600)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
     const start=()=>calm(()=>{
-      const my=++tok;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
-      run(document.body,"in",my,FADE_IN,false,0,true).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
+      const my=++tok,c=cover,flip=c&&c.dataset.k==="flip";cover=null;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
+      /* 主頁過場的底板：桌面＝淡出並略放大，區塊照常浮上來；手機＝標誌淡出，區塊不規則浮現 */
+      if(c){const a=flip?c.animate([{opacity:1},{opacity:0}],{duration:320,easing:EASE_OUT,fill:"forwards"}):c.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(1.04)"}],{duration:360,delay:60,easing:EASE_OUT,fill:"forwards"});
+        a.finished.catch(()=>{}).then(()=>c.remove())}
+      arriveFns.splice(0).forEach(f=>f());
+      run(document.body,"in",my,FADE_IN,false,0,true,flip).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
     });
     let go=false;const once=()=>{if(!go){go=true;start()}};
     if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 最多等 0.9 秒（字型、圖片很慢時不要一直空白） */
@@ -119,5 +135,7 @@ const PageFx=(()=>{
   });
   addEventListener("pageshow",e=>{if(e.persisted){reset(document.body);document.documentElement.classList.add("pfx-arrive");arrive()}});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",arrive);else arrive();
-  return {swap,settle,leave,hold,reset};
+  /* 跨頁到達開始浮上來的那一刻呼叫 f（沒有要浮上來就馬上呼叫）：主頁從部門回來時，收回色塊的動畫跟著這一刻開始 */
+  function onArrive(f){if(document.documentElement.classList.contains("pfx-arrive"))arriveFns.push(f);else f()}
+  return {swap,settle,leave,hold,reset,onArrive};
 })();
