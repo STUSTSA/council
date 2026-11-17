@@ -61,3 +61,27 @@ const UI=(()=>{
     meta,
   };
 })();
+/* ---------- 設定頁：外觀（主題、深淺色、音效；設定存取在上面的 UI）。ui-07 從 nav.js 搬來：主頁 home.html 的設定鈕也打開同一份 ----------
+   淺色／深色的分段切換（anim.js 的 LiquidSeg；平面色塊 .glass 直接寫在 HTML 裡，不靠 LiquidSeg 執行時加：合併頁重畫走原位更新，執行時加的 class 會被拿掉）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
+   每顆主題按鈕帶自己的 data-pal，按鈕裡的顏色變數就是那一組主題的顏色（深淺跟著目前的 data-theme，見 core/theme.css）。
+   畫在合併頁（hubRun）下面：firestore 模式登入後在「帳號」（account.js 的 acctHub），其他情況在設定清單的「外觀」（nav.js 的 SET_HUBS.look）；主頁是設定鈕打開的一層（home.js）。
+   這幾個函式在開頁前就定義好，用到 LiquidSeg（anim.js）的 lookMount 等畫面出來才呼叫 */
+function lookHTML(head){
+  const u=UI.get();
+  return `<section class="look">${head?'<b class="look-t">外觀</b>':""}
+    <div class="lseg look-mode glass" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
+    <div class="look-pals" role="radiogroup" aria-label="主題">${UI_PALS.map(([k,t])=>`<button type="button" class="look-pal" role="radio" data-look-pal="${k}" data-pal="${k}" aria-checked="${u.pal===k}"><span class="look-sw" aria-hidden="true"><i></i><i></i><i></i></span>${t}</button>`).join("")}</div>
+    <div class="look-row"><span id="lookSndL">音效</span><button type="button" class="sw${u.sound?" on":""}" data-look-snd role="switch" aria-checked="${u.sound}" aria-labelledby="lookSndL"><i aria-hidden="true"></i></button></div></section>`;
+}
+function lookMount(box){const sg=box.querySelector(".look-mode");if(sg&&!sg._seg)sg._seg=new LiquidSeg(sg,{onPick:k=>UI.set({mode:k})})}
+/* 設定一變（這裡點的、系統深淺色換了、別的分頁改的）：畫面上的外觀區原地更新，不重畫（分段切換的鏡片才滑得過去） */
+function lookSync(){const u=UI.get();document.querySelectorAll(".look").forEach(el=>{
+  const sg=el.querySelector(".look-mode");if(sg&&sg._seg)sg._seg.set(u.mode);
+  el.querySelectorAll("[data-look-pal]").forEach(b=>b.setAttribute("aria-checked",b.dataset.lookPal===u.pal));
+  const sw=el.querySelector("[data-look-snd]");if(sw){sw.classList.toggle("on",u.sound);sw.setAttribute("aria-checked",u.sound)}})}
+document.addEventListener("uichange",lookSync);
+document.addEventListener("click",e=>{
+  if(!e.target.closest)return;
+  const p=e.target.closest("[data-look-pal]");if(p){UI.set({pal:p.dataset.lookPal});return}
+  if(e.target.closest("[data-look-snd]"))UI.set({sound:!UI.get().sound});
+});

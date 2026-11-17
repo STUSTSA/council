@@ -103,13 +103,18 @@ const Anim=(()=>{
   return {capture,play,enter,leave,swap,show,hide,toggle,lift,drop,syncPings};
 })();
 
+/* 彈簧（跟 Compose 的 spring(dampingRatio, stiffness) 一樣，質量 1）：LiquidSeg 與工具列（nav.js）共用；ui-07 從 nav.js 搬來，主頁不載入 nav.js 也能用分段切換 */
+const spring=(x,z,k)=>({x,v:0,t:x,z,k});
+function sprStep(s,dt){const c=2*s.z*Math.sqrt(s.k),n=4,h=dt/n;for(let i=0;i<n;i++){s.v+=(-s.k*(s.x-s.t)-c*s.v)*h;s.x+=s.v*h}}
+const sprDone=(s,e)=>Math.abs(s.x-s.t)<e&&Math.abs(s.v)<e*20;
+const sprSnap=(s,x)=>{s.x=s.t=x;s.v=0};
 /* ---------- 液態分段切換 LiquidSeg（2026-11-05） ----------
    跟底部工具列（nav.js）同一套：毛玻璃底（.glass）、實心鏡片、鏡片底下那一格反白（.lit，跟著鏡片走不是跟著選取）。
    物理參數照工具列（Convx）：按下鏡片放大 78/56（主軸 .6／250、側軸 .7／250）、移動時依速度沿主軸拉伸、
    整列按下時放大、拖曳時整列跟著偏最多 4px、白光（--hp／--hx）；只有按在鏡片那一格才能拖，放開吸到最近的一格；
    點別格＝按下 → 移過去 → 接近目標或 400ms 後放開。
    用法：new LiquidSeg(box,{onPick:k=>…})；box 裡放 <span class="lseg-lens"> 和一排 button[data-k]（role="tab"）；
-   程式改選取用 seg.set(k)（instant＝不播動畫）。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在 nav.js。 */
+   程式改選取用 seg.set(k)（instant＝不播動畫）。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在本檔上面。 */
 class LiquidSeg{
   constructor(box,{onPick}={}){
     this.box=box;this.onPick=onPick;this.lensEl=box.querySelector(".lseg-lens");

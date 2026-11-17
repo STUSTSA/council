@@ -10,7 +10,6 @@ function morph(fn){
 }
 /* ---------- expand / collapse motion (app-launch style) ---------- */
 const EXPAND={duration:560,easing:"cubic-bezier(.2,.9,.25,1)"};
-const reduceMotion=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 function detailsBody(d){
   let kids=[...d.children].filter(k=>k.tagName!=="SUMMARY");
   if(kids.length===1&&kids[0].classList.contains("dwrap"))return kids[0];

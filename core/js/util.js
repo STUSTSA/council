@@ -19,10 +19,13 @@ const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const pd=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
 const today=()=>ymd(new Date());
+const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const nowStr=()=>{const d=new Date();return `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
 const fmt=s=>s?String(s).slice(0,10).replaceAll("-","/"):"";
 const safeUrl=u=>!u?"#":/^https?:\/\//i.test(u)?u:"https://"+u;
 const clamp=(v,a=0,b=100)=>Math.min(b,Math.max(a,v));
+/* 關掉動態（prefers-reduced-motion）時直接跳到結果 */
+const reduceMotion=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2000)};
 const hasDates=i=>!!(i.start&&i.end);
 /* 時程：議題設定的期間（開始日～結束日）到某天為止已經過了幾 %；沒有日期＝null（未排程） */
