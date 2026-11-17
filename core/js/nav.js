@@ -157,6 +157,7 @@ function setupTabbar(tb){
     const i=Math.round(clampV(lens.val.x,0,d.n-1)),k=tabEls()[i]&&tabEls()[i].dataset.tab;
     lens.vel.t=lens.vel.x;lens.off.t=0;lens.hl.t=0;lens.val.t=i;lensRelease();tbKick();
     if(d.moved&&k&&k!==tbActive())setTimeout(()=>tabGo(k),60);
+    else if(!d.moved&&k&&notiOpen)setTimeout(()=>tabGo(k),60);   /* 通知與行事曆那一頁：按鏡片那一格（指標被整列接走，click 不會落在分頁上）＝回到原分頁 */
   }
   main.addEventListener("pointerup",dragEnd);main.addEventListener("pointercancel",dragEnd);
   /* 觸控時瀏覽器會先把指標鎖在按下的那顆按鈕；改鎖到整列時，那顆按鈕送出的 lostpointercapture 會冒泡上來，不能當成放開 */
