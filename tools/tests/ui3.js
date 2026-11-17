@@ -138,7 +138,14 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
       const box=document.querySelector('#setOv .set-pane .set-hub');document.querySelector('#setOv .set-pane [data-look-pal="sage"]').click();
       renderSettings();const sg2=document.querySelector('#setOv .set-pane .look-mode');return {same:sg2===sg&&!!sg._seg&&document.querySelector('#setOv .set-pane .look-pal').__m===1,pal:document.documentElement.dataset.pal}});
     ok(r.same,'外觀合併頁：換主題、重畫後分段切換與主題按鈕是同一個節點');
-    await p.evaluate(()=>{UI.set({pal:'fin'});closeSettings(true)});await p.waitForTimeout(300);
+    await p.evaluate(()=>{UI.set({pal:'fin'})});await p.click('#setOv [data-set="labels"]');await p.waitForTimeout(1100);
+    /* 標籤（對話框表單 #dlgForm 原位更新）：按 Enter 新增後輸入欄清空、游標留著，已有的列是同一個節點 */
+    r=await p.evaluate(()=>{const f=document.getElementById('dlgForm'),inp=f.querySelector('[data-newlbl]');if(!inp)return null;f.querySelectorAll('[data-lblname]').forEach(el=>el.__m=1);inp.__m=1;inp.focus();return state.labels.length});
+    if(r!==null){await p.keyboard.type('ui3標籤');await p.keyboard.press('Enter');await p.waitForTimeout(300);
+      const s=await p.evaluate(()=>{const f=document.getElementById('dlgForm'),a=document.activeElement;return {n:state.labels.length,has:state.labels.some(l=>l.name==='ui3標籤'),v:a.value,same:a.__m===1,rows:[...f.querySelectorAll('[data-lblname]')].filter(el=>el.__m===1).length}});
+      ok(s.n===r+1&&s.has&&s.v===''&&s.same&&s.rows>=r,`標籤按 Enter 新增：多一個（${s.n}）、輸入欄清空且游標留著、原本的列是同一個節點（${s.rows}）`)}
+    else ok(false,'標籤設定打不開');
+    await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(300);
     await p.click('#notiBtn');await p.waitForTimeout(1300);
     r=await p.evaluate(()=>{const els=[...document.querySelectorAll('#notiOv .noti-days,#notiOv .nd-card,#notiOv #notiCal,#notiOv .noti-cal')];els.forEach(el=>el.__m=1);const before=new Set(document.getAnimations());window.__an=[];
       renderNoti();render();return {same:els.length>2&&els.every(el=>el.isConnected&&el.__m===1),fresh:document.getAnimations().filter(a=>!before.has(a)&&a.playState==='running'&&!(a instanceof CSSTransition)).length,an:window.__an.length}});
