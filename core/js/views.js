@@ -302,6 +302,7 @@ function renderDone(){
   .sort((a,b)=>b.d.localeCompare(a.d));
   /* 跟即時回報同一套膠囊與左右兩欄（class ev＋done-ev、data-st="done"）：外觀跟即時回報一樣，只有燈號是綠色；data-done＝這一筆的 id */
   if(!items.some(x=>x.id===selDone))selDone=null;
+  openDone.forEach(id=>{if(!items.some(x=>x.id===id))openDone.delete(id)});   /* 移回即時回報、刪掉的不再算打開（新增圓鈕看 openDone，nav.js 的 liveCardOpen） */
   const md=mdOn("done")&&!!selDone,pane=$("#doneDetail");mdLast.done=mdOn("done");
   $("#doneMD").classList.toggle("split",md);
   $("#doneCount").textContent=items.length;
