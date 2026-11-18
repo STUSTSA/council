@@ -7,6 +7,7 @@
    5. 開場：小人先滑入、標誌再上移、字由左到右揭開（各動畫的延遲順序），播完收掉（現有流程沒有開場登入鈕）；關掉動態直接是結果
    6. 進部門過場（桌面鋪滿、手機翻面）與看板到達的底板：Element.animate 的 keyframes 只有 transform／opacity；交接 pfx-burst 用完就刪；回主頁焦點是那個部門
    7. 進行中的張數（資料檔讀一次）；跳脫（部門名含 <img onerror>）；頁面沒有 title 屬性；412 沒有橫捲；深色左邊小人只留線稿
+   9. sw.js：快取版本 v3、NO_CACHE 也排除 data-部門.json、安裝清單含新介面新增的檔；只開看板時主頁的檔已在離線備份、資料檔不存
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
@@ -232,6 +233,27 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     let m=want;for(let i=0;i<30&&m.length;i++){await p.waitForTimeout(300);m=await miss()}
     const got=!m.length;
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
+    await ctx.close()}
+
+  /* 9 sw.js（ui-07）：快取版本 v3；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+     實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
+  {const fs=require('fs'),path=require('path'),vm=require('vm');
+    const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
+    ok(sw.CACHE==='board-cache-v3','sw.js 快取版本 v3：'+sw.CACHE);
+    const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
+    ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
+    const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];
+    const need=['./','index.html','home.html','core/theme.css','core/js/theme.js','core/js/live.js','core/js/morph.js','core/js/sfx.js','core/js/home.js',...DEPTS.map(d=>`dept/icons/dept-${d}.svg`)];
+    const lack=need.filter(u=>!sw.SHELL.includes(u)),gone=sw.SHELL.filter(u=>u!=='./'&&!fs.existsSync(path.join(__dirname,'../..',u)));
+    ok(!lack.length&&!gone.length,'安裝清單含網頁與新介面新增的檔、每個都存在：'+(lack.length?'缺 '+lack.join():'')+(gone.length?'不存在 '+gone.join():'')+(lack.length||gone.length?'':sw.SHELL.length+' 個'));
+    const ctx=await b.newContext({viewport:{width:1300,height:860}});await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
+    const p=await ctx.newPage();await p.goto(U+'index.html');
+    const want=['core/js/home.js','dept/icons/dept-works.svg','dept/icons/dept-rights.svg','core/js/live.js','core/theme.css'];
+    const look=()=>p.evaluate(async([w,cn])=>{if(!(await navigator.serviceWorker.getRegistration()))return null;const c=await caches.open(cn),has=async u=>!!(await c.match(new URL(u,location.href).href,{ignoreSearch:true}));
+      const o={miss:[],data:[]};for(const u of w)if(!(await has(u)))o.miss.push(u);for(const u of ['data.json','data-finance.json'])if(await has(u))o.data.push(u);return o},[want,SW_CACHE]).catch(e=>({miss:['?'+e.message],data:[]}));
+    let r=null;for(let i=0;i<30;i++){await p.waitForTimeout(300);r=await look();if(r&&!r.miss.length)break}
+    await p.evaluate(()=>Promise.all(['data.json','data-finance.json'].map(u=>fetch(u,{cache:'no-cache'}).catch(()=>{}))));await p.waitForTimeout(600);r=await look()||r;
+    ok(r&&!r.miss.length&&!r.data.length,'只打開看板：主頁的 home.js、部門標誌已在離線備份，data.json、data-finance.json 不存：'+JSON.stringify(r));
     await ctx.close()}
 
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();
