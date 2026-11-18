@@ -10,7 +10,7 @@
    7. 03 審查 P0-1：檢視時切換勾選、行首尾空白、時間行切換勾選後點外面，種類、行 ID、timeId、時間標記不變（存回的資料檔與重新讀回來）
    9. 03 審查 P1-3：右側詳情的「完成這一段」預填按下當下的內容；超過行數、字數上限不寫入
    10. 03 審查 P2-2：完成紀錄的說明欄超過行數、字數上限時給明確訊息、不寫入
-   11. 03 審查 P2-3：設定列的小字（週報日期、看板名稱）原樣顯示、不會多出元素
+   11. 03 審查 P2-3（ui-08 改寫）：設定列沒有小字，週報日期、看板名稱不會注入元素
    12. 03 審查 P2-6：原位編輯中按結案、刪除先檢查名稱與超連結的按鈕名稱；填好後結案，核取行、時間行不變、desc 同步
    8. 03 審查 P1-2：原位編輯打字中關分頁會跳 beforeunload，只點進編輯沒改不擋
    6. 跳脫攻擊（03 T8；寬 900 的膠囊、1300 的右側詳情，檢視與編輯兩種狀態）：資料檔裡的卡片 ID、標題、每行文字、時間標記名稱、地點與 ID、
@@ -107,14 +107,14 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await p.click(`${D} [data-iffx="cancel"]`);await p.waitForTimeout(200);await p.click(`${D} [data-edcancel]`);await p.waitForTimeout(400);
     await p.evaluate(()=>{lcShow('done',null);setSection('live',{instant:true});render()});await p.waitForTimeout(300);
   }
-  /* 11. 03 審查 P2-3：設定列的小字（週報日期、看板名稱）一律在 setRow 裡跳脫 */
+  /* 11. 03 審查 P2-3（ui-08 改寫）：設定列下不再放小字（DESIGN-next 第十二節、DievE 11/16）；週報日期、看板名稱含 HTML 字元時，設定清單沒有被注入的元素、列上也不出現這些值 */
   {
     const XS='<img src=x onerror=window.__x=1>';
     const r=await p.evaluate(XS=>{const keep={t:state.title,w:state.weeks.slice()};state.title=XS;state.weeks.push({id:'wx',date:'9<i>x</i>',text:'x'});
-      const ok=()=>{const el=document.querySelector('#setOv');return {x:window.__x,extra:el.querySelectorAll('.set-row img,.set-row i').length,
-        week:(el.querySelector('[data-set="report"] small,[data-set="week"] small')||{}).textContent,title:(el.querySelector('[data-set="title"] small')||{}).textContent}};
+      const ok=()=>{const el=document.querySelector('#setOv'),rows=[...el.querySelectorAll('.set-row')];return {x:window.__x,rows:rows.length,extra:el.querySelectorAll('.set-row img,.set-row i').length,
+        small:el.querySelectorAll('.set-row small').length,leak:rows.some(r=>r.textContent.includes('9<i>x</i>')||r.textContent.includes(XS))}};
       return openSettings().then(()=>new Promise(r=>setTimeout(r,600))).then(()=>{const v=ok();state.title=keep.t;state.weeks=keep.w;closeSettings(true);render();return v})},XS);
-    ok(r.x===undefined&&r.extra===0&&r.week==='最新一份 9<i>x</i>'&&r.title===XS,`P2-3 設定列：週報日期、看板名稱原樣顯示、沒有多出元素（${JSON.stringify(r)}）`);
+    ok(r.x===undefined&&r.rows>0&&r.extra===0&&r.small===0&&!r.leak,`P2-3 設定列：沒有小字、週報日期與看板名稱不出現在列上、沒有多出元素（${JSON.stringify(r)}）`);
   }
   /* 12. 03 審查 P2-6（ui-05 改寫）：點外面存檔前的檢查（名稱、超連結的按鈕名稱）與 blocks 同步；完成＝拖到右上角、刪除＝拖到左上角（編輯中不能拖） */
   {
