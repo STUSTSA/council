@@ -343,7 +343,7 @@ function lvCheck(ev,ck){
   const ln=ck.closest(".ln");if(ln){ln.classList.toggle("done",b.check);const tc=ln.querySelector(".tmc");if(tc)tc.classList.toggle("late",!b.check&&tmLate(ev.times.find(x=>x.id===b.timeId)))}
   if(!reduceMotion())ck.animate([{transform:"scale(.7)"},{transform:"scale(1.16)",offset:.55},{transform:"none"}],{duration:280,easing:MO.out});
   ln&&ln.querySelector("input.tx")?.focus({preventScroll:true});   /* 游標到那一行（ui-03：按核取框那一下不失焦，放開後到那一行） */
-  if(typeof Sfx!=="undefined")Sfx.play("check");
+  Sfx.play("check");
 }
 /* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行；時間頁選到一段時上下鍵、數字調整；Esc＝收起母議題選單或存檔並離開編輯 */
 function kpKey(e){
@@ -534,7 +534,7 @@ const lvZone=()=>{let z=$("#lzDel");if(!z){document.body.insertAdjacentHTML("bef
     const side=z.k.ok>=z.k.del?"ok":"del",k=Math.max(z.k.ok,z.k.del),tilt=(side==="ok"?1:-1)*(k*k*7+(d.hot?9:0)),mix=Math.round(k*k*30+(d.hot?26:0));d.tilt=tilt;
     el.style.transform=`translate(${dx}px,${dy}px) rotate(${tilt.toFixed(2)}deg) scale(${d.hot?1.08:1.04})`;
     el.style.backgroundColor=mix>2?`color-mix(in srgb,var(--${side==="ok"?"ok":"late"}) ${mix}%,var(--blk))`:"";
-    if(d.hot&&d.hot!==was&&typeof Sfx!=="undefined")Sfx.play(d.hot==="ok"?"check":"no");
+    if(d.hot&&d.hot!==was)Sfx.play(d.hot==="ok"?"check":"no");
     const me=state.events.find(e=>e.id===d.id),ov=d.hot?null:document.elementsFromPoint(x,y).map(n=>n.closest&&n.closest("#events .cp")).find(n=>n&&n!==el);
     const oe=ov&&state.events.find(e=>e.id===ov.dataset.cp),ok=oe&&me&&!!oe.report===!!me.report?ov:null;
     if(d.over!==ok){d.over&&d.over.classList.remove("over");ok&&ok.classList.add("over");d.over=ok}
@@ -598,7 +598,7 @@ function lvComplete(ev,el,s){
 }
 /* 完成的慶祝（約兩秒、不擋操作）：右上角漫開一圈光暈（規格明寫的例外）、彩帶從那一角噴出再落下、一段上行的音（設定的音效開關）。減少動態時只有聲音 */
 function lvCelebrate(){
-  if(typeof Sfx!=="undefined")Sfx.play("fete");
+  Sfx.play("fete");
   if(reduceMotion())return;
   const L=document.createElement("div");L.className="fete";L.setAttribute("aria-hidden","true");document.body.append(L);
   const W=innerWidth,H=innerHeight,ox=W-70,oy=70,cols=["var(--acc)","var(--acc2)","var(--ok)","var(--ink)","var(--pri)"],rn=(a,b)=>a+Math.random()*(b-a);
