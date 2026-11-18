@@ -98,7 +98,7 @@ function logHTML(it){
    已過的一段、直立把手、還沒到的一段，三者之間留縫（外觀在 board.css「議題詳情的時程條」）。把手中心＝時程百分比（schedPct，跟「時程 N%」同一個數），
    期間＝開始日到結束日（整條）；未排程沒有把手、整條是還沒到的那段。
    條上放名稱與百分比、負責人（每人一格，名字第一個字）；位置由 slFit 依實際寬度決定，動畫在 slAnim */
-const SL_HW=5,SL_GAP=5,SL_OV=7,SL_PAD=14,SL_END=22,SL_CW=24,SL_CG=4,SL_MW=30;   /* 跟 board.css 同一組：把手寬、縫、把手高出條、文字內距、右端小點、負責人一格的寬與間距、「+N」的寬 */
+const SL_HW=5,SL_GAP=5,SL_OV=7,SL_PAD=14,SL_END=22,SL_CW=24,SL_CG=4;   /* 跟 board.css 同一組：把手寬、縫、把手高出條、文字內距、右端小點、負責人一格的寬與間距（「+N」的寬照實際量，slFit） */
 function sliderHTML(it){
   const p=schedPct(it),names=staffNames(it.staff);
   return `<div class="c-bar sl${p==null?" none":""}" style="--p:${cssNum(p,0)}%" data-p="${p==null?"":cssNum(p,0)}" aria-hidden="true">
@@ -115,13 +115,14 @@ function slFit(bar){
   const a=none?0:x-SL_HW/2-SL_GAP,b=none?W:W-x-SL_HW/2-SL_GAP;
   const lb=bar.querySelector(".sl-lb"),lw=lb.offsetWidth,box=bar.querySelector(".sl-avs");
   const chips=box&&getComputedStyle(box).display!=="none"?[...box.querySelectorAll(".sl-av:not(.sl-more)")]:[],more=box&&box.querySelector(".sl-more");
-  const avMin=chips.length?SL_MW+8:0;   /* 名稱跟負責人擠在還沒到那段時，至少留一格「+N」 */
+  let mw=0;if(chips.length){more.textContent="+"+chips.length;more.hidden=false;mw=more.offsetWidth}   /* 「+N」的寬照實際量（N 最多是全部人數，兩位數也放得下） */
+  const avMin=chips.length?mw+8:0;   /* 名稱跟負責人擠在還沒到那段時，至少留一格「+N」 */
   let at="up";
   for(const k of !none&&x>=W/2?["a","b"]:["b","a"])if(lw<=(k==="a"?a-2*SL_PAD:b-SL_PAD-SL_END-avMin)){at=k;break}
   ["a","b","up"].forEach(k=>bar.classList.toggle("lb-"+k,k===at));
   if(chips.length){
     const room=b-SL_END-SL_PAD-(at==="b"?lw+8:0),n=chips.length;
-    let k=n*(SL_CW+SL_CG)-SL_CG<=room?n:Math.floor((room-SL_MW)/(SL_CW+SL_CG));
+    let k=n*(SL_CW+SL_CG)-SL_CG<=room?n:Math.floor((room-mw)/(SL_CW+SL_CG));
     const fit=k>=0;k=Math.max(0,k);
     chips.forEach((c,i)=>{c.hidden=!fit||i>=k});
     more.hidden=!fit||k>=n;more.textContent=fit&&k<n?`+${n-k}`:"";

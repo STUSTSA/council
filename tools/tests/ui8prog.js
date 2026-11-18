@@ -71,6 +71,17 @@ const ymdOff=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.getFullYea
         return {n:all.length,k:shown.length,more:more&&!more.hidden?more.textContent:'',boxes:shown.map(R).concat(more&&!more.hidden?[R(more)]:[]),lb:R(document.querySelector('#cardDetail .sl-lb')),b:R(document.querySelector('#cardDetail .sl-b'))}});
       ok(av.n===16&&av.more===`+${av.n-av.k}`&&av.k<av.n,tag+`負責人放不下：放 ${av.k} 格，其餘收成「${av.more}」`);
       ok(av.boxes.every(x=>!hit(x,av.lb)&&x.l>=av.b.l&&x.r<=av.b.r),tag+'負責人與「+N」不跟名稱重疊、不超出還沒到那段');
+      /* 「+N」兩位數（+10 以上，比一位數寬）：名稱長度一個字一個字掃過（窄字 i，剩下的空間每種餘數都碰得到），
+         名稱跟第一格之間都要留滿 slFit 預留的 8px（「+N」的寬照實際量；預留不夠時會吃掉這段縫），也不超出還沒到那段 */
+      {const bad=[];let two=0,gap=1e9;
+        await p.evaluate(id=>{const it=state.issues.find(i=>i.id===id);for(let k=0;k<24;k++){state.members.push({id:'x'+k,name:'加'+k});it.staff.push('x'+k)}},iid2);   /* 40 人：放不下的人數到兩位數 */
+        for(let L=1;L<=120;L++){
+          const r=await p.evaluate(([id,L])=>{state.issues.find(i=>i.id===id).title='i'.repeat(L);render();const bar=document.querySelector('#cardDetail .sl');
+            const R=e=>{const r=e.getBoundingClientRect();return {l:r.left,r:r.right}};const more=bar.querySelector('.sl-more'),lb=R(bar.querySelector('.sl-lb')),sb=R(bar.querySelector('.sl-b'));
+            const boxes=[...bar.querySelectorAll('.sl-av')].filter(e=>!e.hidden&&e.getBoundingClientRect().width>0).map(R);
+            return {m:more&&!more.hidden?more.textContent:'',gap:bar.classList.contains('lb-b')&&boxes.length?Math.min(...boxes.map(x=>x.l))-lb.r:null,out:boxes.some(x=>x.l<sb.l-.5||x.r>sb.r+.5)}},[iid2,L]);
+          if(!/^\+\d\d$/.test(r.m))continue;two++;if(r.gap!=null)gap=Math.min(gap,r.gap);if(r.out||r.gap!=null&&r.gap<7)bad.push(L+':'+r.m+(r.gap!=null?'/'+r.gap.toFixed(1):''))}
+        ok(two>0&&!bad.length,tag+`「+N」兩位數時（${two} 種名稱長度，名稱到第一格最小 ${gap.toFixed(1)}px）不碰名稱、不吃掉預留的縫、不超出那段${bad.length?'：'+bad.slice(0,6).join('、'):''}`);}
       await open(iid);const one=await p.evaluate(()=>[...document.querySelectorAll('#cardDetail .sl-av')].filter(e=>!e.hidden&&e.getBoundingClientRect().width>0).map(e=>e.textContent).join(''));
       ok(one==='林陳',tag+`放得下時每人一格（名字第一個字）：${one}`);
     }else{
