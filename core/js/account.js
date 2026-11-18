@@ -32,11 +32,6 @@ function acctLoad(){
 }
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
 const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
-function acctRoleSub(){
-  const r=Object.entries(acctDepts()).map(([d,v])=>`${deptNameOf(d)}${ROLE_T[v]||v}`);
-  if(acctSuper())r.unshift("總管理員");
-  return r.length?r.join("、"):"唯讀";
-}
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
 let acctCanW="";
 function acctChanged(){

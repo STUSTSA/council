@@ -127,19 +127,6 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 /* ===== 共用：只給螢幕報讀的文字 ===== */
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-/* ===== 學生會 logo（shell.js 的 suLogoMono：設定頁標題列） =====
-   淺色用原檔彩色（.logo-color 與字的 fill）；深色是單色：標誌換成單色線稿（.logo-line，左邊小人線框、右邊小人實心，2026-11-11 使用者），字填文字色。
-   線稿的線在小尺寸只有約 0.4px，另外描一圈不隨縮放變粗的細線（.75px），才看得清楚 */
-.logo{display:block;height:46px;width:auto;color:var(--ink)}
-.logo .logo-line{display:none}
-.logo .logo-line path{stroke:currentColor;stroke-width:.75px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-:root[data-theme="dark"] .logo path{fill:currentColor}
-:root[data-theme="dark"] .logo .logo-color{display:none}
-:root[data-theme="dark"] .logo .logo-line{display:inline}
-@media (max-width:760px){
-  .logo{height:38px}
-}
-
 /* ===== 部門標題列（shell.js 的 .dhead；DESIGN-next 第六節「部門內」、第十四節） =====
    首頁鍵、部門標誌（dept/icons 的學生會標誌，藍黃不跟主題）、英文小標（Jost 10.5px、字距 .22em）與部門名（700 加字距）、
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
@@ -1379,12 +1366,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
    面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題 20px 700，不畫分隔線；面板裡的清單也是一列一塊、留縫 */
 .set-ov{position:fixed;inset:0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
 .set-ov[hidden]{display:none}
-.set-ov .anim-top{padding-bottom:18px}
-/* 標題列（2026-11-06）：不寫「SETTINGS 設定」，左邊放學生會 logo（.logo，深淺色規則在「學生會 logo」段），右邊關閉／返回 */
-.set-top{flex-wrap:nowrap}
-.set-logo{display:flex;align-items:center;height:44px;min-width:0}
-.set-logo .logo{height:36px}
-.set-sub .set-logo .logo{height:32px}
 /* 清單（.set-scroll）與右側面板（.set-pane）：平常清單佔滿、內容置中；
    桌面版選了有下一層的項目時加 .split，清單縮成左欄（寬度變化由 nav.js 用 Web Animations 做），面板從右邊滑入 */
 .set-body{flex:1;min-height:0;display:flex;gap:clamp(20px,3vw,48px)}
@@ -1412,7 +1393,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 /* 登入前：整頁只有鎖頭（鎖扣循環開合，nav.js 的 gateAnim） */
 .set-gate{display:grid;justify-items:center;gap:10px;text-align:center;padding:12vh 0 0}
 .set-gate>b{font-size:18px;font-weight:700;letter-spacing:.08em}
-.set-gate .sub{margin:0}
 .set-gate .primary{margin-top:10px;padding-left:28px;padding-right:28px}
 .set-gate-ico{display:grid;place-items:center;width:168px;height:168px;padding:0;border-radius:50%;border:0;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);margin-bottom:8px}
 .set-gate-ico svg{overflow:visible}
@@ -1428,7 +1408,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .set-row[aria-disabled="true"]:hover,.set-row[aria-disabled="true"]:active{background:var(--blk)}
 .sr-ico{font-size:22px;line-height:1;display:grid}
 .sr-t{flex:1;min-width:0;font-weight:500;letter-spacing:.06em}
-.sr-t small{color:var(--muted);font-size:12.5px}
 .sr-chev{color:var(--muted);display:grid}
 .set-p{margin:0;color:var(--muted);font-size:14px;line-height:1.85;padding:0}
 
@@ -1740,7 +1719,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tm-tools input{flex:1;min-width:140px}
-.tm-note{margin:0}
 
 /* ===== 編輯紀錄頁 ===== */
 .log-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left));gap:10px}
