@@ -154,9 +154,7 @@ function teamHTML(){
     <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${esc(m.id)}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${esc(m.id)}">刪除</button>`:""}</span></li>`).join("");
   return `<b>身分與專員</b>
   <section class="tm-sec"><div class="att-h">編輯身分${me?`（目前：${esc(me.name)}）`:""}</div><ul class="tm-list">${rows||'<li class="sub">還沒有身分</li>'}</ul>
-    <p class="sub tm-note">即時回報與議題上的「專員」就是從這些身分挑選；沒有身分的人不能被標。新成員：在設定頁按「登入」→「＋ 新增身分」，輸入部門共用密碼後自己設定個人密碼。${adm?"":"刪除身分、指定管理員需要管理員。"}</p>
     ${adm?'<div class="tm-tools"><button type="button" class="ghost" data-x="sharedpw">更改部門共用密碼</button></div>':""}</section>
-  <p class="sub tm-note">${editing?"變更會在按編輯中那張卡片的「儲存」後生效。":"按「完成」後會直接儲存並同步。"}</p>
   <div class="dlg-actions"><button type="button" class="primary" data-x="done">完成</button></div>`;
 }
 async function teamSettings(){
@@ -385,7 +383,7 @@ let logDone=null;
 function openLog(host){
   let ov=$("#logOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="log-ov" id="logOv" role="dialog" aria-modal="true" aria-label="編輯紀錄" hidden>
-    <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b><span class="sub">每次「儲存並同步」都會留下一筆</span></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
+    <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
     <div class="log-scroll"><div class="log-inner"><ol class="log-list" id="logList"></ol><p class="sub log-msg" id="logMsg"></p><button type="button" class="ghost log-more" id="logMore">載入更早的紀錄</button></div></div></div>`);
     ov=$("#logOv");$("#logClose").onclick=closeLog;elastic(ov.querySelector(".log-scroll"),ov.querySelector(".log-inner"));$("#logMore").onclick=loadLog;}
   Object.assign(logState,{page:0,done:false,busy:false,items:[]});Object.assign(fsLog,{vers:[],cur:null,audits:[]});

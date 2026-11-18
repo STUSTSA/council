@@ -32,13 +32,11 @@ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest
 function labelSetHTML(){
   const adm=fsMode()?fsWriter():isAdmin(),del=fsMode()?fsDelOk():adm,use=labelUse();   /* firestore 模式：編輯者以上能新增、改名，部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   const grp=k=>{const ls=labelsOf(k,use);
-    return `<section class="tm-sec"><div class="att-h">${k}<span class="sub">　${{人:"例如：學務處、某位老師",事:"例如：宿舍、交通安全",時:"例如：期中考週、校慶",地:"例如：六宿、圖書館",物:"例如：飲水機、機車"}[k]}</span></div>
+    return `<section class="tm-sec"><div class="att-h">${k}</div>
       <ul class="tm-list">${ls.map(l=>`<li class="tm-row">${adm?`<input data-lblname="${esc(l.id)}" value="${esc(l.name)}" aria-label="標籤名稱">`:`<span class="tm-name">${esc(l.name)}</span>`}<span class="sub">用了 ${use.get(l.id)||0} 次</span>${del?`<button type="button" class="icon danger" data-x="del" data-id="${esc(l.id)}">刪除</button>`:""}</li>`).join("")||'<li class="sub">還沒有</li>'}</ul>
       ${adm?`<div class="tm-tools"><input data-newlbl="${k}" placeholder="新增「${k}」標籤" aria-label="新增${k}標籤"><button type="button" data-x="add" data-k="${k}">＋ 新增</button></div>`:""}</section>`};
-  return `<b>標籤（人事時地物）</b>
-  <p class="sub tm-note">標在即時回報與議題上；挑選時常用的排前面。${adm?"":"新增、刪除標籤需要管理員。"}時間標記的地點可以直接點「地」標籤填入。</p>
+  return `<b>標籤</b>
   ${LABEL_KINDS.map(grp).join("")}
-  <p class="sub tm-note">${editing?"變更會在按編輯中那張卡片的「儲存」後生效。":"按「完成」後會直接儲存並同步。"}</p>
   <div class="dlg-actions"><button type="button" class="primary" data-x="done">完成</button></div>`;
 }
 async function labelSettings(){
