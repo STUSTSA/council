@@ -36,9 +36,9 @@ function cpHTML(ev,o={}){const st=evStatus(ev);
 /* 卡片外框（即時回報、完成紀錄共用）：第一排（全螢幕時返回鍵）燈號、名稱、編輯次數；第二排上一張／下一張、報告；第三排狀態、負責人、時間；
    內容；儲存回饋（role=status）；底部工具列（母議題選單在工具列裡、往上長）。o＝{k,id,key,st,ids,full,ro,ed,sec,attr,title,cnt,rep,meta,body,view,tail,save,tools} */
 function lcFrame(o){
-  const ix=o.ids.indexOf(o.id),tri=d=>`<button type="button" class="lc-tri" data-lcstep="${d}" aria-label="${d<0?"上一張":"下一張"}"${(d<0?ix<=0:ix<0||ix>=o.ids.length-1)?" disabled":""}>${ico("tri")}</button>`;
+  const ix=o.ids.indexOf(o.id),tri=d=>`<button type="button" class="lc-tri" data-lcstep="${d}" aria-label="${d<0?"上一張":"下一張"}"${(d<0?ix<=0:ix<0||ix>=o.ids.length-1)?" disabled":""}>${ico("tri","solo")}</button>`;
   return `<article class="lc${o.ro?" ro":""}${o.ed?" lc-ed sec-edit":o.sec?" sec-edit":""}${o.full?" full":""}" data-lc="${o.k}" data-edbox="${esc(o.key)}" data-st="${o.st}" ${o.attr}>
-    <div class="lc-in"><div class="lc-head">${o.full?`<button type="button" class="lc-back" data-lcback aria-label="返回">${ico("back")}</button>`:""}<span class="live-dot" aria-hidden="true"></span>${o.title}${o.cnt||""}</div>
+    <div class="lc-in"><div class="lc-head">${o.full?`<button type="button" class="lc-back" data-lcback aria-label="返回">${ico("back","solo")}</button>`:""}<span class="live-dot" aria-hidden="true"></span>${o.title}${o.cnt||""}</div>
       <div class="lc-nav">${tri(-1)}${tri(1)}<span class="lc-sp"></span>${o.rep||""}</div>
       <div class="lc-meta">${o.meta}</div>
       <div class="lc-body" data-view="${o.view||"main"}">${o.body}</div>${o.tail||""}
@@ -100,7 +100,7 @@ function lcSaveHTML(ev){const s=kpSt&&kpSt.id===ev.id&&(!editing||["bad","fail"]
   return `<span class="kp-st" role="status"${s?` data-st="${s.st}"`:""}>${s?esc(s.msg||KP_MSG[s.st]||""):""}</span>${s&&!editing&&s.st==="ok"&&s.before?`<button type="button" class="lc-undo" data-kpundo>復原</button>`:""}`}
 /* 底部工具列：左邊母議題膠囊（點開自製選單），右邊文字、人、時間、地點、核取、超連結；人、時間、地點那一頁打開時那顆放大、其他變淡 */
 function lcToolsHTML(ev,ed){const par=parentOf(ev),pane=ed&&lvPane;
-  const tb=(k,i,l)=>`<button type="button"${pane===k?' class="on"':""} data-lctool="${k}" aria-label="${l}"${["staff","time","place"].includes(k)?` aria-pressed="${pane===k}"`:""}>${ico(i)}</button>`;
+  const tb=(k,i,l)=>`<button type="button"${pane===k?' class="on"':""} data-lctool="${k}" aria-label="${l}"${["staff","time","place"].includes(k)?` aria-pressed="${pane===k}"`:""}>${ico(i,"solo")}</button>`;
   return `<div class="lc-tools"><button type="button" class="lc-pa" data-lcpa aria-haspopup="listbox" aria-expanded="${ed&&lvPop}" aria-label="母議題"><span>${esc(par?par.title:"母議題")}</span><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 2l4 6H1z"/></svg></button>
     <div class="lc-tl${pane?" paned":""}">${tb("text","text","文字")}${tb("staff","user","人")}${tb("time","clock","時間")}${tb("place","pin","地點")}${tb("check","box","核取")}${tb("link","link","超連結")}</div>${ed&&lvPop?lcPopHTML(ev):""}</div>`}
 function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];

@@ -24,7 +24,7 @@
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
   $id("hmMe").innerHTML=suLogoH("hm-su");
-  $id("hmSet").innerHTML=ico("sliders");
+  $id("hmSet").innerHTML=ico("sliders","solo");
   const clock=$id("hmClock");let clockT=0;
   function tick(){const d=new Date();clock.textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`;clearTimeout(clockT);if(!document.hidden)clockT=setTimeout(tick,60050-d.getSeconds()*1000-d.getMilliseconds())}
   document.addEventListener("visibilitychange",tick);tick();
@@ -262,8 +262,8 @@
     if(x)n=lkNode(x);
     else{n=document.createElement(k==="dv"?"i":k==="form"?"span":"button");n.dataset.k=k;
       if(k==="dv"){n.className="hm-dv";n.setAttribute("aria-hidden","true")}
-      else if(k==="add"){n.type="button";n.className="hm-lkadd";n.setAttribute("aria-label","編輯常用連結");n.innerHTML=ico("plus")}
-      else if(k==="back"){n.type="button";n.className="hm-lkb";n.setAttribute("aria-label","結束編輯");n.innerHTML=ico("back")}
+      else if(k==="add"){n.type="button";n.className="hm-lkadd";n.setAttribute("aria-label","編輯常用連結");n.innerHTML=ico("plus","solo")}
+      else if(k==="back"){n.type="button";n.className="hm-lkb";n.setAttribute("aria-label","結束編輯");n.innerHTML=ico("back","solo")}
       else{n.className="hm-lkf";n.innerHTML=`<input class="hm-lku" id="hmLkU" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="https://" aria-label="網址"><input class="hm-lkn" id="hmLkN" type="text" autocomplete="off" maxlength="${LK_NAME}" enterkeyhint="done" placeholder="名稱" aria-label="名稱"><button type="button" class="primary hm-lkok">加入</button>`}}
     DKN.set(k,n);return n;
   }
@@ -276,7 +276,7 @@
     gone.forEach(c=>{c.remove();if(c.classList.contains("hm-lk"))DKN.delete(c.dataset.k)});
     let at=dkIn.firstElementChild;keys.forEach(k=>{const n=dkNode(k);if(n===at)at=at.nextElementSibling;else dkIn.insertBefore(n,at)});   /* 只插入新的，沒動的節點不搬（焦點、動畫都留著） */
     LK.list.forEach(x=>{const n=DKN.get(x.k),b=n.querySelector(".hm-lkx");
-      if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}
+      if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close","solo")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}
       else if(!LK.ed&&b)b.remove()});
     dk.classList.toggle("ed",LK.ed);
     dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc");
@@ -356,7 +356,7 @@
     if(!L){
       const el=document.createElement("div");el.className="hm-ly";el.id=kind==="cal"?"hmCal":"hmLook";el.hidden=true;
       el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label",LBL[kind]);
-      el.innerHTML=`<div class="hm-ly-in"><div class="hm-ly-bar"><button type="button" class="hm-round hm-ly-x" aria-label="關閉">${ico("close")}</button></div><div class="hm-ly-body"></div></div>`;
+      el.innerHTML=`<div class="hm-ly-in"><div class="hm-ly-bar"><button type="button" class="hm-round hm-ly-x" aria-label="關閉">${ico("close","solo")}</button></div><div class="hm-ly-body"></div></div>`;
       document.body.append(el);L=LYS[kind]={el,host:el.querySelector(".hm-ly-body")};
       el.querySelector(".hm-ly-x").addEventListener("click",()=>layerClose());
       el.hidden=false;
@@ -380,7 +380,7 @@
   }
   addEventListener("popstate",()=>{if(LY)layerClose(true)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
-  $id("hmPub").innerHTML=ico("calendar");
+  $id("hmPub").innerHTML=ico("calendar","solo");
   $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 

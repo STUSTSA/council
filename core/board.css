@@ -291,7 +291,7 @@ input.lc-title:focus{outline:none}
 .lc-nav{display:flex;align-items:center;gap:10px;margin-top:8px}
 .lc-sp{flex:1}
 .lc-tri{flex:none;display:grid;place-items:center;width:54px;height:30px;min-height:30px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink)}
-.lc-tri .ico{width:11px;height:11px;margin:0}
+.lc-tri .ico{width:12px;height:12px;margin:0}
 .lc-tri[data-lcstep="1"] .ico{transform:scaleX(-1)}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
@@ -379,13 +379,13 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
    人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
 .lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
 .lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:0 16px 0 20px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
+.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:0 17px 0 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
 .lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
 .lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
 .lc-tl{flex:1 1 220px;display:flex;justify-content:space-around;align-items:center}
 .lc-tl button{display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border:0;border-radius:50%;transition:transform .28s var(--mo-spring),color var(--mo-fast) var(--mo-out)}
-.lc-tl .ico{width:23px;height:23px;margin:0}
+.lc-tl .ico{width:22px;height:22px;margin:0}
 @media (hover:hover){.lc-tl button:hover{transform:scale(1.14)}}
 .lc-tl.paned button{color:color-mix(in srgb,var(--ink) 28%,transparent)}
 .lc-tl.paned button.on{color:var(--ink);transform:scale(1.42)}
@@ -1070,7 +1070,8 @@ dialog#dlg[open]::backdrop{background:rgba(0,0,0,.3);animation:fade .3s ease}
 .fld{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 /* 數字的上下按鈕（dialog.js 的 type:"stepper"，例如學年）：不用打字、不跳鍵盤；數字換的時候往按的方向滾一下 */
 .stepper{display:flex;align-items:center;gap:14px;color:var(--ink)}
-.stepper [data-step]{width:48px;height:48px;min-height:0;padding:0;border-radius:50%;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.stepper [data-step]{width:48px;height:48px;min-height:0;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.stepper [data-step] .ico{width:20px;height:20px}
 .stepper-v{display:inline-flex;align-items:baseline;gap:4px;min-width:5.5em;justify-content:center;overflow:hidden}
 .stepper-n{font-family:"Jost",sans-serif;font-size:34px;font-weight:300;line-height:1.1;display:inline-block}
 .stepper-s{font-size:15px}
@@ -1112,13 +1113,16 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .toast{position:fixed;left:50%;bottom:20px;background:var(--ink);color:var(--bg);padding:8px 14px;font-size:13.5px;opacity:0;pointer-events:none;z-index:30;border-radius:999px;transform:translate(-50%,12px);transition:opacity .25s,transform .25s var(--ease)}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
-/* ===== 線條 icon ===== */
+/* ===== 線條 icon =====
+   視覺置中（ui-08 D，前後端交接-next 第九節）：圖示的幾何外框都置中在 24×24 的正中間（icons.js）；跟字並排時靠 margin-right 留空，
+   只有圖示的按鈕一律用 ico(名稱,"solo")（不留右邊空）；圓鈕裡的圖示大小跟按鈕同奇偶（例如 52／22、62／24），圖示才會落在整數像素。
+   測試 tools/tests/ui8center.js */
 .ico{width:1.15em;height:1.15em;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.2em;margin-right:.38em;overflow:visible}
 .ico.solo{margin:0}
 .ico.sm{width:.95em;height:.95em;margin:0 0 0 .3em;vertical-align:-.12em}
 .ico *{transform-box:fill-box;transform-origin:center}
 .ico .i-hand{transform-box:view-box;transform-origin:12px 12px}
-.ico .i-bell{transform-box:view-box;transform-origin:12px 4px}
+.ico .i-bell{transform-box:view-box;transform-origin:12px 2.65px}
 .ico .i-dot,.ico .i-day{fill:currentColor}
 .ico .i-b1,.ico .i-b2,.ico .i-b3,.ico .i-flag{transform-origin:left center}
 @media (prefers-reduced-motion:no-preference){
@@ -1198,6 +1202,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 #tabbar .tb-lens.off{opacity:0}
 #tabbar .tab.lit .tab-ind{color:var(--pri-ink)}
 .tb-gear{width:62px;height:62px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;min-height:0;color:var(--tb-ink);font-size:21px;-webkit-tap-highlight-color:transparent;transition:color .35s,background-color .35s}
+.tb-gear .ico{width:24px;height:24px}   /* 62 的圓鈕配 24 的圖示（同奇偶，落在整數像素） */
 #tabbar .tb-gear[hidden]{display:none}   /* 唯讀檢視時不出現（nav.js 的 renderTabbar） */
 /* 本週週報還沒產出（週五起，weekly.js 的 weekDotSync）：設定鍵右上角一顆紅點（以前在頁首「每週概述」鈕上） */
 .tb-due{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg);opacity:0;transform:scale(0);pointer-events:none;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-slow) var(--mo-spring)}
@@ -1216,7 +1221,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 #tabbar .tab:focus-visible .tab-l{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:4px}
 #tabbar .tb-gear:focus-visible .ico{transform:scale(1.15)}
 #tabbar .tab:focus-visible .tab-ind .ico{transform:scale(1.15)}
-.tab-ind .ico{transition:transform .3s cubic-bezier(.2,1.4,.4,1)}
+.tab-ind .ico{width:22px;height:22px;transition:transform .3s cubic-bezier(.2,1.4,.4,1)}   /* 圖示 22（偶數，跟 56×30、50×48 的格子同奇偶），落在整數像素才會視覺置中 */
 /* 底部（900px 以下）：畫面底部置中、離底 14px（加安全區），寬＝畫面寬減 24、最寬 480；分頁平分，設定鍵 62×62 */
 @media (max-width:899px){
   .tabbar{width:calc(100% - 24px);max-width:480px}
@@ -1317,11 +1322,11 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-lk.ico .hm-lki{position:static;opacity:1}
 .hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */
 .hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff}
-.hm-lkx .ico{width:11px;height:11px}
+.hm-lkx .ico{width:10px;height:10px}
 .hm-lkadd{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
 .hm-lkadd .ico{width:18px;height:18px}
 .hm-lkb{display:grid;place-items:center;width:40px;height:40px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--bg);color:var(--ink)}
-.hm-lkb .ico{width:17px;height:17px}
+.hm-lkb .ico{width:18px;height:18px}
 .hm-lkf{display:flex;align-items:center;gap:8px}
 .hm-lkf input{width:110px;height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--bg);font-size:14px}
 .hm-lkf .hm-lku{width:190px}
@@ -1430,6 +1435,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
    左上「返回」回到設定清單。進出用換頁動畫（pagefx.js） */
 .set-sub{z-index:39}
 .set-sub-top{display:flex;align-items:center;min-height:44px}   /* 手機子頁上方只有「返回」 */
+#subBack{gap:6px;padding-left:12px;padding-right:16px}   /* 左邊的箭頭自己帶留白，左內距少 4px，箭頭＋「返回」整組才視覺置中 */
 .set-sub-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:10px 2px calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
 /* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（20px 700、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
@@ -1595,8 +1601,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .td-lab{display:grid;gap:4px}
 .td-lab b{font-size:20px;font-weight:700;letter-spacing:.14em}
 .td-lab small{font-size:13px;opacity:.65;letter-spacing:.08em}
-.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 18px 0 14px;border-color:color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit}
-.td-x-btn .ico{width:15px;height:15px}
+.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 18px 0 15px;border-color:color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit}
+.td-x-btn .ico{width:16px;height:16px}
 .td-sec h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;font-weight:700;letter-spacing:.14em}
 .td-sec h3 .num{margin-left:auto;font-size:13px;font-weight:400;padding:0 9px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);line-height:20px}
 .td-list{list-style:none;margin:0;padding:0;display:grid}
@@ -1657,7 +1663,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
 .cal-h .nt-h{margin-right:auto}
 .cal-mp{position:relative;flex:none}
-.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
 .cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
 .cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
 /* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
@@ -1684,7 +1690,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
 @media (max-width:640px){
   .cal-top{padding:18px 16px}
-  .cal-mon{height:46px;padding:0 14px 0 18px}
+  .cal-mon{height:46px;padding:0 14px 0 17px}
 }
 /* ===== 行事曆的模式切換（notify.js 的 calModesHTML；DESIGN-next 第九節「五類模式」） =====
    分段切換（LiquidSeg，在「液態分段切換」段）：本部門、會長室、活動、會議、其他；公共版：全部、活動、會議。放不下時這一列自己左右捲。

@@ -263,7 +263,7 @@ function setPaneHost(){if(weekPaneEnd)return null;   /* 每週概述開著：生
 let subOpen=false;
 function subEl(){
   let s=$("#setSub");if(s)return s;
-  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="set-sub-top" data-fx-keep><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev")}返回</button></div><div class="set-sub-body"></div></div>`);
+  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="set-sub-top" data-fx-keep><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev","solo")}返回</button></div><div class="set-sub-body"></div></div>`);
   $("#subBack").onclick=()=>paneDismiss();return $("#setSub");
 }
 async function subRun(fn){
