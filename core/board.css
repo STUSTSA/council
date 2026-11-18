@@ -833,7 +833,7 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
    整條＝這個議題的期間。已過的一段（選中色 --acc）、直立把手（--ink）、還沒到的一段，三者之間留縫；圓角矩形（外側 14、靠把手 5）。
    把手中心＝--p（時程百分比）。名稱與百分比：.lb-a 放已過那段、.lb-b 放還沒到那段、.lb-up 條的上方（slFit 依寬度決定）；
    負責人靠還沒到那段的右端，放不下收成「+N」，手機不放（看下面議題區塊的專員列）。數字跟 views.js 的 SL_* 同一組 */
-.c-bar{position:absolute;left:0;right:0;top:34px;height:16px}
+.c-bar{position:absolute;left:0;right:0;top:34px}   /* 位置由 layoutTrack 設 */
 .sl{--sl-hw:5px;--sl-gap:5px;--sl-ov:7px;height:40px}
 .sl>span{position:absolute}
 .sl-a{left:0;top:0;bottom:0;width:max(0px,calc(var(--p) - var(--sl-hw)/2 - var(--sl-gap)));border-radius:14px 5px 5px 14px;background:var(--acc);transform-origin:0 50%}
