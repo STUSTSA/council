@@ -48,7 +48,9 @@ function renderGantt(){
   if(!ganttSeg&&$("#gTerm"))ganttSeg=new LiquidSeg($("#gTerm"),{onPick:k=>{Anim.swap($("#gantt"),()=>{ganttTerm=k;renderGantt();layoutAll()},"fade")}});
   if(ganttSeg&&!ganttTerm&&ganttSeg.cur!==["all","up","down"].indexOf(gTermNow()))ganttSeg.set(gTermNow(),true);   /* 還沒臨時切過：跟著設定的學期 */
   const ms=months(),tp=pos(today()),[s0,e0]=rangeMs(),inRange=Date.now()>s0&&Date.now()<e0;
-  const all=activeIssues(),list=all.filter(hasDates),undated=all.filter(i=>!hasDates(i));
+  /* 上學期／下學期只列期間碰到那段的議題；「全部」與還沒填期間的照舊全列 */
+  const act=activeIssues(),inView=i=>gTermNow()==="all"||!hasDates(i)||(([a,b])=>pd(a).getTime()<e0&&pd(b).getTime()>=s0)(issueSpan(i));
+  const all=act.filter(inView),list=all.filter(hasDates),undated=all.filter(i=>!hasDates(i));
   const narrow=innerWidth<640,nameW=narrow?104:170;
   /* 手機看單一學期（6 個月）時，時間軸剛好塞進畫面寬，不用左右滑（2026-11-06）；看「全部」照舊依月份數加寬、可以左右滑 */
   const fit=narrow&&gTermNow()!=="all",avail=Math.max(220,($("#gantt").clientWidth||360)-nameW-14);   /* 14：列的左右內距，不然會多出一點點要滑 */
@@ -68,7 +70,8 @@ function renderGantt(){
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
-  if(!all.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 新增議題」開始。"}</p>`;
+  if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
+  else if(!all.length)h+=`<p class="empty">這段期間沒有議題。</p>`;
   morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、刻度、註記都是同一個節點 */
 }
 
@@ -172,10 +175,10 @@ document.fonts?.ready.then(layoutAll);
 
 /* 議題詳情（#cardDetail）的那一張議題卡片；只畫在詳情裡，一律展開 */
 function cardHTML(it){
-  const ed=cardEd("i",it.id);
+  const nm=!!inm&&inm.id===it.id&&cardEd("i",it.id),ed=cardEd("i",it.id)&&!nm;   /* nm：只在改名稱（原位編輯，events.js 的 inmCommit）；ed：整張卡片編輯中 */
   return `<article class="card open ${it.doneAt?"closed":""} ${ed?"sec-edit":""}" data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}">
     <div class="card-top">
-      <button type="button" class="card-toggle"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></button>
+      <div class="card-head">${nm?`<input class="card-title" data-iname value="${esc(it.title)}" maxlength="500" aria-label="議題名稱" autocomplete="off" enterkeyhint="done">`:`<b class="card-title"${canEdit()&&!editing?` data-iname-go tabindex="0" role="button"`:""}>${esc(it.title)}</b>`}${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></div>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
     ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${fmt(it.start)} – ${fmt(it.end)}`:"未排入甘特圖"}</span></div>
@@ -199,6 +202,8 @@ function cardHTML(it){
    k＝title／stage／note／dates／staff／labels／l:連結 id（l:+＝新增）／done（完成日期）／name／desc／issue（母議題）。
    存回在 events.js 的「進度、完成紀錄的逐欄編輯」段 */
 let ifFld=null;
+/* 議題名稱的原位編輯（events.js 的 inmStart／inmCommit）：inm＝{id,isNew}，只開名稱這一欄（用同一套單卡編輯開始，沒有「取消｜儲存」） */
+let inm=null;
 const ifOpen=(t,id,k)=>!!ifFld&&ifFld.t===t&&ifFld.id===id&&ifFld.k===k;
 function ifFieldHTML(t,id,k,label,view,editor){return fldRowHTML({open:ifOpen(t,id,k),k,label,view,editor,del:/^l:(?!\+)/.test(k),key:"iffk",pen:"ifpen",fx:"iffx",attr:`data-ift="${esc(t)}" data-ifid="${esc(id)}"`})}
 /* 欄位沒有內容時的灰字：不用全形括號（2026-11-06 使用者：文字要視覺上對齊——全形「（」左邊自帶半格空白，整欄看起來往右縮） */
@@ -234,7 +239,7 @@ function doneFieldsHTML(o,isEv){
 }
 /* 進度卡片的詳情頁：progOpen＝正在看的議題 id（null＝看甘特圖）。議題不見了（刪除、結案後儲存）就自動回甘特圖 */
 function renderCards(){
-  if(!editing)ifFld=null;
+  if(!editing){ifFld=null;inm=null}
   const it=progOpen&&activeIssues().find(i=>i.id===progOpen);
   if(progOpen&&!it)progOpen=null;
   $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
@@ -246,12 +251,14 @@ function renderCards(){
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */
 let pvTok=0;
+const pvIn=el=>{if(!reduceMotion())el.animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:340,easing:"cubic-bezier(.2,.9,.25,1)"})};   /* 換上來的那一頁往上淡入 */
 function progShow(id,then){   /* then：換好畫面後要做的事（例如新增議題後把游標放進名稱欄） */
+  if(id===progOpen&&!then&&!$(id?"#pvDetail":"#pvGantt").hidden)return;   /* 已經在那一頁（例如新增的議題沒有命名、點返回時已經回到甘特圖） */
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
   const swap=()=>{if(tok!==pvTok)return;progOpen=id;renderCards();layoutAll();
     const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
-    if(!reduceMotion())$(id?"#pvDetail":"#pvGantt").animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:340,easing:"cubic-bezier(.2,.9,.25,1)"});
+    pvIn($(id?"#pvDetail":"#pvGantt"));
     if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */
     if(then)then()};
   if(reduceMotion()||out.hidden){swap();return}
