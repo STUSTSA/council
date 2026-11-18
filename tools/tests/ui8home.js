@@ -4,6 +4,7 @@
       關掉動態：沒有程式動畫、字直接是完成的樣子
    E. 主頁左上學生會標誌：沒有膠囊底（沒有底色、陰影、內距）；九組主題 × 深淺色：字與右邊小人跟頁面底的對比 ≥ 3、
       淺色左邊小人是黃色實心，深色只留線稿（線寬照畫面像素至少 1px）
+   I. 下排以整個畫面寬置中：412、811、1300 寬，下排膠囊中心與 innerWidth/2 的差在 0.5px 以內（0、3、12 個連結）；左右安全區不一樣時也一樣
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
@@ -63,6 +64,20 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
       const yok=mode==='light'?r.yf==='rgb(240, 188, 35)':r.yf==='none'&&r.ys!=='none'&&con(r.ys,r.bg)>=3&&r.yw>=1&&r.ve==='non-scaling-stroke';
       if(c<3||!yok)bad.push(`${pal}/${mode} 對比 ${c.toFixed(2)} 左小人 ${r.yf}/${r.ys}/${r.yw}`)}
     ok(!bad.length,'九組主題 × 深淺色：字與右邊小人對比 ≥ 3；淺色左小人黃色實心、深色只留線稿且線寬 ≥ 1px（照畫面像素） '+bad.join('；'));
+    await p.ctx.close()}
+
+  /* ---------- I. 下排以整個畫面寬置中 ---------- */
+  for(const n of (global.LK_COUNTS||[0]))for(const [w,h] of [[412,860],[811,612],[1300,800]]){
+    const p=await mk(w,h,{rm:1});
+    if(n)await p.ctx.addInitScript(n=>{try{localStorage.setItem('stustsa-links',JSON.stringify(Array.from({length:n},(_,i)=>({u:`https://s${i}.example/`,n:''}))))}catch(_){}},n);
+    await p.goto(U+'home.html');await p.waitForTimeout(700);
+    const r=await p.evaluate(()=>{const d=document.getElementById('hmDk').getBoundingClientRect();return {c:d.left+d.width/2,iw:innerWidth,links:document.querySelectorAll('#hmDk .hm-lk').length,sw:document.documentElement.scrollWidth}});
+    ok(Math.abs(r.c-r.iw/2)<=.5&&r.links===n&&r.sw<=r.iw,`${w} 寬、${n} 個連結：下排中心 ${r.c.toFixed(2)}，畫面中心 ${r.iw/2}（差 ${Math.abs(r.c-r.iw/2).toFixed(2)}）；沒有橫捲`);
+    await p.ctx.close()}
+  {/* 左右安全區不一樣（橫拿的 iPhone）：用 .hm 的內距變數模擬 */
+    const p=await mk(1300,800,{rm:1});await p.goto(U+'home.html');await p.waitForTimeout(600);
+    const r=await p.evaluate(()=>{const h=document.getElementById('hm');h.style.setProperty('--hm-pl','90px');h.style.setProperty('--hm-pr','20px');const d=document.getElementById('hmDk').getBoundingClientRect();return {c:d.left+d.width/2,iw:innerWidth}});
+    ok(Math.abs(r.c-r.iw/2)<=.5,`左右內距不一樣（90／20）時下排仍在畫面正中間（${r.c.toFixed(2)}）`);
     await p.ctx.close()}
 
   await b.close();
