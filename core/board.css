@@ -287,11 +287,11 @@ input.lc-title{flex:1;width:auto;margin:0 -8px;padding:2px 8px;border:0;backgrou
 input.lc-title:focus{outline:none}
 .lc-cnt{flex:none;min-width:32px;height:22px;min-height:22px;padding:0 9px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:11.5px;line-height:1}
 .lc-back{flex:none;display:grid;place-items:center;width:42px;height:42px;min-height:42px;margin-left:-8px;padding:0;border:0;border-radius:50%}
-.lc-back .ico{width:22px;height:22px;margin:0}
+.lc-back .ico{width:22px;height:22px}
 .lc-nav{display:flex;align-items:center;gap:10px;margin-top:8px}
 .lc-sp{flex:1}
 .lc-tri{flex:none;display:grid;place-items:center;width:54px;height:30px;min-height:30px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink)}
-.lc-tri .ico{width:12px;height:12px;margin:0}
+.lc-tri .ico{width:12px;height:12px}
 .lc-tri[data-lcstep="1"] .ico{transform:scaleX(-1)}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
@@ -343,7 +343,6 @@ body.lc-lock #pageMain{overflow:hidden}
 .ln-ck{flex:none}
 .ln-ck input:disabled{cursor:default;opacity:.75;pointer-events:none}
 .ln-x{flex:none;display:grid;place-items:center;width:28px;height:28px;min-height:28px;padding:0;border:0;border-radius:50%;color:var(--muted);opacity:0;transition:opacity var(--mo-fast) var(--mo-out),transform .24s var(--mo-spring)}
-.ln-x .ico{margin:0}
 .ln:hover .ln-x,.ln:focus-within .ln-x,.lk:focus-within .ln-x,.lk:hover .ln-x{opacity:1}
 @media (pointer:coarse){.ln-x{opacity:1}}
 .ln-empty{display:block;width:100%;min-height:0;margin:0;padding:8px 0;border:0;border-radius:0;background:transparent;color:var(--muted);text-align:left;font-size:14px}
@@ -385,7 +384,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
 .lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
 .lc-tl{flex:1 1 220px;display:flex;justify-content:space-around;align-items:center}
 .lc-tl button{display:grid;place-items:center;width:42px;height:42px;min-height:42px;padding:0;border:0;border-radius:50%;transition:transform .28s var(--mo-spring),color var(--mo-fast) var(--mo-out)}
-.lc-tl .ico{width:22px;height:22px;margin:0}
+.lc-tl .ico{width:22px;height:22px}
 @media (hover:hover){.lc-tl button:hover{transform:scale(1.14)}}
 .lc-tl.paned button{color:color-mix(in srgb,var(--ink) 28%,transparent)}
 .lc-tl.paned button.on{color:var(--ink);transform:scale(1.42)}
@@ -407,7 +406,7 @@ button.te-pl.plus{min-width:70px;justify-content:center;font-size:18px}
 .sg{min-height:0;padding:3px 4px;border:0;border-radius:7px;color:inherit;font-size:14px;line-height:1;touch-action:none;transition:background-color var(--mo-fast) var(--mo-out),color var(--mo-fast) var(--mo-out)}
 .sg.on{background:var(--acc2);color:var(--acc2-ink)}
 .te-cx{position:absolute;top:-6px;right:-5px;display:grid;place-items:center;width:17px;height:17px;min-height:17px;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff;box-shadow:0 0 0 2px var(--blk);opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
-.te-cx .ico{width:10px;height:10px;margin:0;stroke-width:2.4}
+.te-cx .ico{width:10px;height:10px;stroke-width:2.4}
 .te-pl:hover .te-cx,.te-pl:focus-within .te-cx{opacity:1}
 @media (pointer:coarse){.te-cx{opacity:1}}
 .te-plc{width:min(20em,100%);height:36px;padding:0 16px;border:1.5px dashed var(--acc2);border-radius:999px;background:transparent}
@@ -424,7 +423,7 @@ html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;curs
 .lz.del{left:0;place-items:start;padding:26px 0 0 26px;border-radius:0 0 100% 0;background:var(--late);transform-origin:0 0}
 .lz.ok{right:0;place-items:start end;padding:26px 26px 0 0;border-radius:0 0 0 100%;background:var(--ok);transform-origin:100% 0}
 .lz.hot{transform:scale(1.2)}
-.lz .ico{width:30px;height:30px;margin:0;stroke-width:2.2}
+.lz .ico{width:30px;height:30px;stroke-width:2.2}
 .fete{position:fixed;inset:0;z-index:48;overflow:hidden;pointer-events:none}
 .fete i{position:absolute;will-change:transform}
 .fete .fete-wash{width:min(1100px,190vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,var(--ok) 0,color-mix(in srgb,var(--acc) 70%,transparent) 42%,transparent 70%)}
@@ -1192,7 +1191,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .tabbar .tab.lit{scale:var(--ts,1)}   /* 按下時鏡片那一格的內容放大到 1.2（nav.js 寫 --ts）；換到別格時平順地縮回 */
 #tabbar .tab:hover,#tabbar .tab:active{transform:none;box-shadow:none}   /* 取消一般按鈕的 hover 浮起；不用 !important，按下的形變（inline）才不會被擋掉 */
 #tabbar .tb-gear:hover,#tabbar .tb-gear:active{transform:none}   /* 設定鍵：同上（陰影照舊） */
-.tab-ind{display:grid;place-items:center;width:56px;height:30px;border-radius:999px;font-size:19px;color:var(--tb-ink);transition:color .25s}
+.tab-ind{display:grid;place-items:center;width:56px;height:30px;border-radius:999px;color:var(--tb-ink);transition:color .25s}
 .tab .tab-l{transition:color .2s}
 .tab.on .tab-l,.tab.hov .tab-l{color:var(--tb-ink);font-weight:500}
 .tab .ico{stroke-width:1.7}
@@ -1201,7 +1200,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .tb-lens{position:absolute;left:0;top:6px;z-index:0;width:56px;height:30px;border-radius:999px;background:var(--pri);pointer-events:none;will-change:transform;transition:opacity .25s,background-color .35s}
 #tabbar .tb-lens.off{opacity:0}
 #tabbar .tab.lit .tab-ind{color:var(--pri-ink)}
-.tb-gear{width:62px;height:62px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;min-height:0;color:var(--tb-ink);font-size:21px;-webkit-tap-highlight-color:transparent;transition:color .35s,background-color .35s}
+.tb-gear{width:62px;height:62px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;min-height:0;color:var(--tb-ink);-webkit-tap-highlight-color:transparent;transition:color .35s,background-color .35s}
 .tb-gear .ico{width:24px;height:24px}   /* 62 的圓鈕配 24 的圖示（同奇偶，落在整數像素） */
 #tabbar .tb-gear[hidden]{display:none}   /* 唯讀檢視時不出現（nav.js 的 renderTabbar） */
 /* 本週週報還沒產出（週五起，weekly.js 的 weekDotSync）：設定鍵右上角一顆紅點（以前在頁首「每週概述」鈕上） */
@@ -1238,7 +1237,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .tb-main{flex-direction:column}
   .tb-tabs{flex-direction:column;gap:0}
   .tabbar .tab{width:50px;height:48px;padding:0;border-radius:999px;color:var(--tb-muted)}
-  .tab-ind{width:auto;height:auto;font-size:20px;color:var(--tb-muted)}
+  .tab-ind{width:auto;height:auto;color:var(--tb-muted)}
   .tabbar .tab-l{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .tb-lens{left:6px;top:0;width:50px;height:44px}
 }
