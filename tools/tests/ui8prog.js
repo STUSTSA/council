@@ -122,6 +122,25 @@ const ymdOff=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.getFullYea
       ok(r.ed&&r.bad&&r.focus,tag+'名稱清空按 Enter：留在原地、標紅（請填名稱）');
       await p.click('#cardDetail .meta');await p.waitForTimeout(900);
       ok(st.commits.length===c1&&await p.evaluate(()=>!editing&&document.querySelector('#cardDetail .card-title').textContent)==='改名三'+w,tag+'名稱清空後點外面：不改、不寫 commit');}
+    /* 存檔被取消（prepareSave 回 null：沒權杖、取消登入）：輸入框留著；再按 Esc 不會被當成沒改而默默還原（跟開始改名時的原名比） */
+    {const c1=st.commits.length,inp='#cardDetail input[data-iname]';
+      await p.evaluate(()=>{window.__ps=prepareSave;prepareSave=async()=>null});
+      await p.click('#cardDetail .card-title');await p.waitForTimeout(400);await p.keyboard.press('ControlOrMeta+a');await p.keyboard.type('改名四'+w);
+      await p.click('#cardDetail .meta');await p.waitForTimeout(700);
+      let r=await p.evaluate(s=>({ed:editing,v:(document.querySelector(s)||{}).value}),inp);
+      ok(r.ed&&r.v==='改名四'+w&&st.commits.length===c1,tag+`點外面但存檔被取消：留在原地、輸入框是剛打的名稱（${JSON.stringify(r)}）`);
+      await p.focus(inp);await p.keyboard.press('Escape');await p.waitForTimeout(700);
+      r=await p.evaluate(s=>({ed:editing,v:(document.querySelector(s)||{}).value}),inp);
+      ok(r.ed&&r.v==='改名四'+w&&st.commits.length===c1,tag+`存檔被取消後再按 Esc：沒有默默還原（還在原地、名稱是剛打的）（${JSON.stringify(r)}）`);
+      await p.evaluate(()=>{prepareSave=window.__ps});await p.focus(inp);await p.keyboard.press('Enter');await p.waitForTimeout(1300);
+      ok((remote().issues||[]).some(i=>i.title==='改名四'+w)&&!(await p.evaluate(()=>editing)),tag+'能存檔之後按 Enter：剛打的名稱存進去');}
+    /* 注音選字中按 Esc（isComposing）：交給輸入法，不存檔、不離開 */
+    {const c1=st.commits.length,inp='#cardDetail input[data-iname]';
+      await p.click('#cardDetail .card-title');await p.waitForTimeout(400);await p.keyboard.press('ControlOrMeta+a');await p.keyboard.type('改名五'+w);
+      await p.evaluate(s=>document.querySelector(s).dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',isComposing:true,bubbles:true,cancelable:true})),inp);await p.waitForTimeout(700);
+      ok(await p.evaluate(()=>editing)&&st.commits.length===c1,tag+'選字中按 Esc：不存檔、不離開');
+      await p.keyboard.press('Escape');await p.waitForTimeout(1300);
+      ok((remote().issues||[]).some(i=>i.title==='改名五'+w)&&!(await p.evaluate(()=>editing)),tag+'選完字再按 Esc：照常存檔並離開');}
     {const n1=await p.evaluate(()=>state.issues.length),c1=st.commits.length;await open(null);await p.click('#addIssue');await p.waitForTimeout(900);await p.keyboard.press('Escape');await p.waitForTimeout(900);
       const r=await p.evaluate(()=>({n:state.issues.length,ed:editing,g:!$('#pvGantt').hidden,d:$('#pvDetail').hidden}));
       ok(r.n===n1&&!r.ed&&r.g&&r.d&&st.commits.length===c1,tag+'新增後沒命名就 Esc：不留、回甘特圖、不寫 commit');}

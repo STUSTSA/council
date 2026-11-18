@@ -118,7 +118,9 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     ok(d.links.every(l=>l.x),'編輯中每個連結右上角有 ×');
     ok(await p.evaluate(()=>getComputedStyle(document.querySelector('.hm-lkc')).pointerEvents==='none'),'編輯中點連結不會打開');
     ok(await p.evaluate(()=>{const x=getComputedStyle(document.querySelector('.hm-lkx'));return x.backgroundColor===getComputedStyle(document.documentElement).getPropertyValue('--late').trim()||x.backgroundColor!=='rgba(0, 0, 0, 0)'}),'× 是紅色圓鈕');
-    /* 結束編輯：Esc、點下排以外、返回鍵 */
+    /* 結束編輯：Esc、點下排以外、返回鍵（注音選字中的 Esc 交給輸入法，不結束） */
+    await p.focus('#hmLkU');await p.evaluate(()=>document.getElementById('hmLkU').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',isComposing:true,bubbles:true,cancelable:true})));await p.waitForTimeout(150);d=await dock(p);
+    ok(d.ed&&d.form,'選字中按 Esc：不結束編輯');
     await p.keyboard.press('Escape');await p.waitForTimeout(150);d=await dock(p);
     ok(!d.ed&&d.add&&!d.form&&d.links.every(l=>!l.x),'Esc＝結束編輯（「+」回來、× 收掉）');
     await p.click('.hm-dk-in>.hm-lkadd');await p.waitForTimeout(100);await p.mouse.click(650,40);await p.waitForTimeout(150);d=await dock(p);
