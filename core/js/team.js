@@ -392,7 +392,7 @@ function openLog(host){
   ov.hidden=false;if(!host){document.body.classList.add("log-open");Back.layers.log()}
   if(!host)PageFx.swap(from,ov);   /* 獨立一層（手機）：換頁動畫 */
   else if(!reduceMotion())ov.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:320,easing:"cubic-bezier(.2,.9,.25,1)"});   /* 設定頁右側面板裡：淡入 */
-  renderLog();loadLog();$("#logClose").focus();
+  renderLog();loadLog();if(!host)$("#logClose").focus();   /* 設定頁的面板／子頁裡沒有「關閉」（board.css 編輯紀錄頁段） */
   return new Promise(r=>logDone=r);
 }
 function closeLog(instant){const ov=$("#logOv");if(!ov||ov.hidden)return;if(!ov.classList.contains("in-pane"))Back.closed("log");const done=()=>{ov.hidden=true;document.body.classList.remove("log-open");if(logDone){logDone();logDone=null}};

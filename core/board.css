@@ -1748,6 +1748,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .log-ov.in-pane .log-scroll{overflow:visible;padding:8px 0 0}
 .log-ov.in-pane{max-width:720px}
 .log-ov.in-pane .anim-k{display:none}
+.log-ov.in-pane .anim-ctl{display:none}   /* 設定頁裡沒有「關閉」（DESIGN-next 第十二節）：桌面再點一次那一列、手機子頁的「返回」、Esc、系統返回 */
 .log-ov.in-pane .anim-top{border-bottom:0}   /* 跟合併頁標題同一種（設定頁段）：20px 700、不畫分隔線 */
 .log-ov.in-pane .anim-title b{font-size:20px;font-weight:700;letter-spacing:.08em}
 .log-scroll{flex:1;overflow:auto;scrollbar-gutter:stable;padding:8px max(0px,calc((100% - 880px)/2)) 48px}
