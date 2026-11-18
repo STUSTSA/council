@@ -379,11 +379,12 @@
     if(!reduceMotion()){L.el.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});L.el.firstElementChild.animate([{transform:"translateY(28px)"},{transform:"none"}],{duration:MO.layout,easing:"cubic-bezier(.25,1.12,.4,1)"})}
     L.el.querySelector(".hm-ly-x").focus({preventScroll:true});
   }
-  /* 關閉：fromPop＝瀏覽紀錄已經退了（popstate）；其他（關閉鈕、Esc）先退一筆，等 popstate 再關 */
+  /* 關閉：fromPop＝瀏覽紀錄已經退了（popstate）；其他（關閉鈕、Esc）先退一筆，等 popstate 再關。
+     返回音在使用者操作的當下響一次（關閉鈕的點擊預設音也是返回，同一個工作裡併成一次）；等到的 popstate 不再響（不管隔多久），系統返回鍵才在 popstate 響 */
   function layerClose(fromPop){
     if(!LY)return;
-    if(!fromPop&&history.state&&history.state.hmLayer){history.back();return}
-    const L=LY;LY=null;$id("hm").inert=false;Sfx.play("back");
+    if(!fromPop&&history.state&&history.state.hmLayer){if(LY.bk)return;LY.bk=true;Sfx.play("back");history.back();return}   /* 已經在退了：連按不再多退一筆 */
+    const L=LY;LY=null;$id("hm").inert=false;if(!L.bk)Sfx.play("back");
     const done=()=>{L.el.hidden=true;if(L.kind==="cal"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
     if(reduceMotion())done();
     else{L.el.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(a=>{done();},()=>done()).then(()=>L.el.getAnimations().forEach(a=>a.cancel()));

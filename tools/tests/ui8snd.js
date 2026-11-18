@@ -70,6 +70,15 @@ const ESC=async(p,ms=360)=>{await p.keyboard.press('Escape');return take(p,ms)};
     await p.click('#hmLook .hm-ly-x');is(await take(p,500),[],'音效關閉：關層不響');
     await p.click('#hmSet');await p.waitForTimeout(500);await p.click('#hmLook [data-look-snd]');is(await take(p),['check'],'打開音效：開關的勾選音');
     await p.click('#hmLook .hm-ly-x');is(await take(p,500),['back'],'關閉鈕關層＝返回（只一種）');
+    /* 點關閉鈕→history.back→popstate 才真的關：popstate 晚到（超過 40ms 節流）也只響一次；連按兩下不多退一筆 */
+    await p.evaluate(()=>{const ob=history.back.bind(history);window.__hb=0;history.back=()=>{window.__hb++;setTimeout(ob,150)}});
+    await p.click('#hmPub');await take(p,500);
+    await p.click('#hmCal .hm-ly-x');is(await take(p,700),['back'],'點關閉鈕、popstate 晚 150ms 才到：返回只響一次');
+    await p.click('#hmPub');await p.waitForTimeout(500);await p.click('#hmCal .hm-ly-x');await p.click('#hmCal .hm-ly-x',{timeout:300}).catch(()=>{});await take(p,700);
+    ok(await p.evaluate(()=>window.__hb===2&&!document.getElementById('hmCal')&&!(history.state&&history.state.hmLayer)),'popstate 還沒到時連按兩下關閉鈕：只退一筆瀏覽紀錄、那一層關掉');
+    await p.click('#hmSet');await take(p,500);
+    is(await ESC(p,700),['back'],'Esc 關層、popstate 晚 150ms 才到：返回只響一次');
+    await p.evaluate(()=>{delete history.back});
     const on=await p.$('.hm-tile.on');await on.click();is(await take(p,150),['enter'],'點焦點那張＝進入');
     ok(await made(p)===1,`整段只建立一個 AudioContext（${await made(p)}）`);
     ok(!p.errs.length,`主頁桌面沒有錯誤（${p.errs.slice(0,2).join(' | ')}）`);await p.ctx.close()}
