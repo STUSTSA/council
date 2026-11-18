@@ -7,17 +7,18 @@
 :root{--r-lg:18px;--r-md:14px;--r-sm:12px}
 :root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-layout:560ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-in:cubic-bezier(.4,0,1,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
 /* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
-   下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）；部門標誌的藍黃（--su-blue／--su-yellow）不跟主題變 */
-:root{--surface:var(--blk);--pop:var(--blk);--stack-sh:color-mix(in srgb,var(--ink) 38%,transparent);--line:var(--ink);--grid:var(--blk2);--neon:var(--ok);--ok-dot:var(--ok);--teal:var(--pri);--teal-soft:var(--bg);--lime:var(--late);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--today:var(--ink);--st-ok:var(--ok);--st-ok-ink:var(--deep);--st-go:var(--su-yellow);--st-go-ink:var(--deep);--st-stall:var(--red);--st-stall-ink:var(--lite);--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
+   下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）。
+   寫死的顏色只剩三種例外：部門（學生會）標誌的藍黃、工作報告的白紙、陰影用的半透明黑，每一處旁邊都註明「例外」（測試 tools/tests/ui8color.js） */
+:root{--surface:var(--blk);--pop:var(--blk);--stack-sh:color-mix(in srgb,var(--ink) 38%,transparent);--line:var(--ink);--ok-dot:var(--ok);--teal:var(--pri);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--st-ok:var(--ok);--st-ok-ink:var(--deep);--st-go:var(--su-yellow);--st-go-ink:var(--deep);--st-stall:var(--red);--st-stall-ink:var(--lite);--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
 /* 材質只有平面（DESIGN-next 第三節）：沒有漸層、毛玻璃、光暈。陰影只給浮在內容上面的東西：--pop-sh 彈出層（對話框、下拉選單、搜尋結果），
    --stack-sh 浮在內容上的色塊（工具列，加一圈 1px --hair）；平鋪的色塊只帶 --blk-sh（只有柔光主題有值） */
 /* 實心色塊上的字（ui-08 G：顏色一律從主題變數來，不寫死）：--lite 永遠是淺色（淺色模式＝--blk、深色模式＝--ink），放在紅、綠實心（--late、--ok）上與 QR 碼的底；
    --deep 永遠是深色（淺色模式＝--ink、深色模式＝--bg），放在學生會黃、亮綠（--su-yellow、--ok）上 */
 :root{--lite:var(--blk);--deep:var(--ink)}
-/* 例外：部門標誌的藍黃（不跟主題） */
-:root{--su-yellow:#f0bc23;--su-blue:#0a5baa}
+/* 例外：部門標誌的黃（不跟主題；狀態燈「持續進行」用） */
+:root{--su-yellow:#f0bc23}
 /* 例外：工作報告白紙上的紅（白紙不跟主題；dept/config.js 的 accentLight 由 shell.js 寫進來） */
-:root{--accent-light:#e0342a;--accent-dark:#ff5a4e}
+:root{--accent-light:#e0342a}
 /* 例外：陰影用的半透明黑 */
 :root{--pop-sh:0 14px 32px rgba(0,0,0,.16)}
 /* 深色：只放跟主題無關、只看深淺的值 */
@@ -1829,7 +1830,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
 /* 例外：工作報告的白紙（紙上的顏色只在這一條定義，下面的紙張元件一律引用這些變數） */
-.rpt-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light);--today:var(--ink)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
+.rpt-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
 .rpt-paper{--pad:6.667%;width:210mm;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;color:var(--ink);font-size:14px;line-height:1.75}
 .rpt-page{position:relative;aspect-ratio:210/297;padding:var(--pad) var(--pad) calc(var(--pad) + 8px);border-radius:4px;background:var(--blk);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑 */}
 .rpt-paper .num{font-family:"Jost",sans-serif}
