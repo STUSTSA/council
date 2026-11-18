@@ -229,7 +229,7 @@ function rptDock(ov){
 /* ---------- 預覽視窗 ---------- */
 async function reportDialog(){
   const t=today(),pick=[termCfg().termStart,CFG.term.start].find(x=>x&&x<=t)||addDays(t,-90);
-  const v=await ask("匯出工作報告",[{name:"from",label:"期間開始（預設是本學期開學日）",type:"date",value:pick},{name:"to",label:"期間結束",type:"date",value:t}]);
+  const v=await ask("匯出工作報告",[{name:"from",label:"期間開始",type:"date",value:pick},{name:"to",label:"期間結束",type:"date",value:t}]);
   if(!v)return;let a=v.from||pick,b=v.to||t;if(a>b)[a,b]=[b,a];
   openReport(a,b);
 }

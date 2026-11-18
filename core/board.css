@@ -127,19 +127,6 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 /* ===== 共用：只給螢幕報讀的文字 ===== */
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-/* ===== 學生會 logo（shell.js 的 suLogoMono：設定頁標題列） =====
-   淺色用原檔彩色（.logo-color 與字的 fill）；深色是單色：標誌換成單色線稿（.logo-line，左邊小人線框、右邊小人實心，2026-11-11 使用者），字填文字色。
-   線稿的線在小尺寸只有約 0.4px，另外描一圈不隨縮放變粗的細線（.75px），才看得清楚 */
-.logo{display:block;height:46px;width:auto;color:var(--ink)}
-.logo .logo-line{display:none}
-.logo .logo-line path{stroke:currentColor;stroke-width:.75px;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-:root[data-theme="dark"] .logo path{fill:currentColor}
-:root[data-theme="dark"] .logo .logo-color{display:none}
-:root[data-theme="dark"] .logo .logo-line{display:inline}
-@media (max-width:760px){
-  .logo{height:38px}
-}
-
 /* ===== 部門標題列（shell.js 的 .dhead；DESIGN-next 第六節「部門內」、第十四節） =====
    首頁鍵、部門標誌（dept/icons 的學生會標誌，藍黃不跟主題）、英文小標（Jost 10.5px、字距 .22em）與部門名（700 加字距）、
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
@@ -964,13 +951,13 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 每週概述 ===== */
 /* 2026-11-06 起是設定裡的一頁（weekly.js 的 weekPane）：畫在設定的右側面板／手機子頁，平常藏著。
-   標題列跟合併頁同一種（20px 標題＋細分隔線），捲動時黏在面板上方；「返回」只在桌面出現（手機用子頁上方的「返回」） */
+   標題列跟合併頁同一種（20px 700、不畫分隔線，ui-08），捲動時黏在面板上方；「返回」只在桌面出現（手機用子頁上方的「返回」） */
 .week-wrap{max-width:640px}
 .week-wrap[hidden]{display:none}
-.week-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-14px;background:var(--bg);z-index:5;padding:14px 0 12px;margin:-14px 0 16px;border-bottom:1px solid var(--hair)}   /* 黏住時往上多蓋 14px：面板／子頁上方有留白（.set-pane 14px、.set-sub-body 10px），不蓋住的話捲動時內容會從那段露出來（2026-11-06 使用者回報跑版） */
-/* 捲動時週報卡片從標題列底下滑過：分隔線下面接一段底色往下淡掉（剛好是標題列與第一張卡片之間的 16px），卡片是慢慢淡入標題列底下，
-   不會被分隔線一刀切掉圓角（2026-11-16，03） */
-.week-top::after{content:"";position:absolute;left:0;right:0;top:calc(100% + 1px);height:16px;background:linear-gradient(var(--bg) 25%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
+.week-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-14px;background:var(--bg);z-index:5;padding:14px 0 12px;margin:-14px 0 16px}   /* 黏住時往上多蓋 14px：面板／子頁上方有留白（.set-pane 14px、.set-sub-body 10px），不蓋住的話捲動時內容會從那段露出來（2026-11-06 使用者回報跑版） */
+/* 捲動時週報卡片從標題列底下滑過：標題列下面接一段底色往下淡掉（剛好是標題列與第一張卡片之間的 16px），卡片是慢慢淡入標題列底下，
+   不會被一刀切掉圓角（2026-11-16，03） */
+.week-top::after{content:"";position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(var(--bg) 25%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
 .week-top h2{flex:1;min-width:0;font-size:20px;letter-spacing:.08em}
 .week-top h2::after{content:none}
 /* 「秘書處調閱 →」：秘書處的看板有「各部門週報」可以調閱每個部門的週報（秘書處自己不顯示） */
@@ -1113,7 +1100,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg.glass>form>:nth-child(n+4){animation-delay:120ms}
 @keyframes paneFormIn{from{opacity:0;transform:translateX(22px)}}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form{gap:14px}
-:is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form>b:first-child{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;margin-bottom:4px;border-bottom:1px solid var(--hair)}
+:is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form>b:first-child{font-size:20px;font-weight:700;letter-spacing:.08em}   /* 跟合併頁標題同一種（設定頁段），不畫分隔線 */
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg .dlg-actions{margin-top:6px}
 @media (max-width:640px){
   dialog{padding:16px}
@@ -1426,15 +1413,12 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @keyframes dg-tilt{30%{transform:rotate(-5deg)}66%{transform:rotate(1.5deg)}}
 @keyframes dg-idea{22%{transform:scale(.82) rotate(-7deg)}46%{transform:none}66%{transform:scale(.9) rotate(5deg)}}
 
-/* ===== 設定頁 ===== */
+/* ===== 設定頁（nav.js；DESIGN-next 第三、十二節） =====
+   沒有標題列（沒有 logo 與「關閉」）：進出都用工具列的設定鍵（工具列 z-index 45，蓋在設定上面；設定開著時設定鍵是選中的實心）。
+   列：一列一塊平面色塊（--blk、圓角 14），列與列之間留 10px 縫，不做相連又各自圓角；列上只有圖示、名稱、右側箭頭，下面不放小字。
+   面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題 20px 700，不畫分隔線；面板裡的清單也是一列一塊、留縫 */
 .set-ov{position:fixed;inset:0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
 .set-ov[hidden]{display:none}
-.set-ov .anim-top{padding-bottom:18px}
-/* 標題列（2026-11-06）：不寫「SETTINGS 設定」，左邊放學生會 logo（.logo，深淺色規則在「學生會 logo」段），右邊關閉／返回 */
-.set-top{flex-wrap:nowrap}
-.set-logo{display:flex;align-items:center;height:44px;min-width:0}
-.set-logo .logo{height:36px}
-.set-sub .set-logo .logo{height:32px}
 /* 清單（.set-scroll）與右側面板（.set-pane）：平常清單佔滿、內容置中；
    桌面版選了有下一層的項目時加 .split，清單縮成左欄（寬度變化由 nav.js 用 Web Animations 做），面板從右邊滑入 */
 .set-body{flex:1;min-height:0;display:flex;gap:clamp(20px,3vw,48px)}
@@ -1445,43 +1429,38 @@ dialog#dlg:has(.csel.open){overflow:visible}
 /* 手機版的下一層（nav.js 的 subRun）：設定清單點了有下一層的項目，進到這個全畫面子頁，表單畫在 .set-sub-body 裡（樣式跟桌面右側面板同一套）；
    左上「返回」回到設定清單。進出用換頁動畫（pagefx.js） */
 .set-sub{z-index:39}
-.set-sub .anim-top{padding-bottom:8px}
+.set-sub-top{display:flex;align-items:center;min-height:44px}   /* 手機子頁上方只有「返回」 */
 .set-sub-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:10px 2px calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
-.set-row[aria-current="true"]{background:color-mix(in srgb,var(--ink) 10%,transparent)}
-.set-row[aria-current="true"] .sr-chev{color:var(--ink)}
-/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單同一種（20px＋細分隔線），下面一個圓角框一列一個功能；
+/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（20px 700、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
-.set-hub-t{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;border-bottom:1px solid var(--hair)}
-/* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。色塊同 .set-list，一步一列、前面等寬步驟號 */
-.dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;border-radius:var(--r-lg);overflow:hidden;background:var(--blk);box-shadow:var(--blk-sh)}
-.dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:13px 20px;font-size:15px}
-.dev-steps li+li{border-top:1px solid var(--hair)}
+.set-hub-t{font-size:20px;font-weight:700;letter-spacing:.08em}
+/* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。一步一塊、留縫，前面等寬步驟號 */
+.dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;display:grid;gap:10px}
+.dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:16px 20px;font-size:15px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .dev-steps li::before{content:counter(dev);flex:0 0 auto;color:var(--muted);font-family:"Jost",sans-serif;font-variant-numeric:tabular-nums}
 /* 「報告」那一列、合併頁裡「每週概述」那一列（登入前是清單上的「每週概述」）：本週週報還沒產出時，圖示右上角紅點 */
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]) .sr-ico{position:relative}
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]).due .sr-ico::after{content:"";position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
 /* 登入前：整頁只有鎖頭（鎖扣循環開合，nav.js 的 gateAnim） */
 .set-gate{display:grid;justify-items:center;gap:10px;text-align:center;padding:12vh 0 0}
-.set-gate>b{font-size:18px;font-weight:500;letter-spacing:.08em}
-.set-gate .sub{margin:0}
+.set-gate>b{font-size:18px;font-weight:700;letter-spacing:.08em}
 .set-gate .primary{margin-top:10px;padding-left:28px;padding-right:28px}
 .set-gate-ico{display:grid;place-items:center;width:168px;height:168px;padding:0;border-radius:50%;border:0;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);margin-bottom:8px}
 .set-gate-ico svg{overflow:visible}
 .set-gate-ico:hover{transform:none}
 .set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:14px 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:20px}   /* 沒有小標題，塊與塊之間只靠間距分開 */
-.set-row:hover{transform:none;box-shadow:none;background:color-mix(in srgb,var(--ink) 6%,transparent)}
-.set-row:active{transform:none;background:color-mix(in srgb,var(--ink) 11%,transparent)}
-.set-list{display:grid;border-radius:var(--r-lg);overflow:hidden;background:var(--blk);box-shadow:var(--blk-sh)}   /* 平面色塊，列與列之間細線 */
-.set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;padding:15px 20px;border-radius:0;border:0;text-align:left;background:transparent;color:var(--ink);min-height:0;transition:background-color .2s;white-space:normal}  /* 按鈕預設不換行；這裡要讓長說明換行，否則整頁被撐寬 */
-.set-row+.set-row{border-top:1px solid var(--hair)}
+/* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
+.set-list{display:grid;gap:10px}
+.set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
+.set-row:hover{transform:none;box-shadow:var(--blk-sh);background:color-mix(in srgb,var(--ink) 6%,var(--blk))}
+.set-row:active,.set-row[aria-current="true"]{transform:none;background:color-mix(in srgb,var(--ink) 11%,var(--blk))}
+.set-row[aria-current="true"] .sr-chev{color:var(--ink)}
 .set-row[aria-disabled="true"]{cursor:default;opacity:.5}
-.set-row[aria-disabled="true"]:hover,.set-row[aria-disabled="true"]:active{background:transparent}
+.set-row[aria-disabled="true"]:hover,.set-row[aria-disabled="true"]:active{background:var(--blk)}
 .sr-ico{font-size:22px;line-height:1;display:grid}
-.sr-t{flex:1;min-width:0;display:grid;gap:2px}
-.sr-t b{font-weight:500;letter-spacing:.06em}
-.sr-t small{color:var(--muted);font-size:12.5px}
+.sr-t{flex:1;min-width:0;font-weight:500;letter-spacing:.06em}
 .sr-chev{color:var(--muted);display:grid}
 .set-p{margin:0;color:var(--muted);font-size:14px;line-height:1.85;padding:0}
 
@@ -1494,11 +1473,17 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .acct-chip{font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
 .acct-chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .acct-person{display:grid;gap:2px}
+/* 帳號頁最上面：名稱、信箱、角色膠囊（一塊平面色塊；設定清單的「帳號」列只寫「帳號」） */
+.acct-me{display:grid;gap:10px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.acct-me .acct-chips{margin-top:0}
+/* 人員、匯入的部門清單（.set-row.acct-row）：名稱下面的信箱與角色是名單資料，不是說明 */
+.acct-row .sr-t{display:grid;gap:2px}
+.acct-row .sr-t b{font-weight:500}
+.acct-row .sr-t small{color:var(--muted);font-size:12.5px;font-weight:400;letter-spacing:0}
 .acct-person b{font-size:17px;font-weight:500;letter-spacing:.06em}
 .acct-person small,.acct-line small{color:var(--muted);font-size:12.5px}
-/* 面板裡的一列（不是按鈕）：左邊文字、右邊小按鈕 */
-.acct-line{display:flex;align-items:center;gap:10px;padding:13px 20px;min-width:0}
-.acct-line+.acct-line{border-top:1px solid var(--hair)}
+/* 面板裡的一列（不是按鈕）：左邊文字、右邊小按鈕；一列一塊、留縫（.set-list） */
+.acct-line{display:flex;align-items:center;gap:10px;min-height:62px;padding:12px 20px;min-width:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-line>span{flex:1;min-width:0;display:grid;gap:2px}
 .acct-line>span b{font-weight:500;letter-spacing:.04em}
 .acct-line button.icon{flex:0 0 auto}
@@ -1516,10 +1501,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .acct-filter .fld{margin:0}
 .acct-filter .fld-l{display:none}
 /* 紀錄：時間欄等寬、內容兩行（動作＋對象；差異；操作者・第幾號） */
-.acct-log{list-style:none;margin:0;padding:0;display:grid;border-radius:var(--r-lg);overflow:hidden;background:var(--blk);box-shadow:var(--blk-sh)}
+.acct-log{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .acct-log:empty{display:none}
-.acct-log li{display:flex;gap:14px;padding:12px 20px;min-width:0}
-.acct-log li+li{border-top:1px solid var(--hair)}
+.acct-log li{display:flex;gap:14px;padding:14px 20px;min-width:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-log-t{flex:0 0 auto;color:var(--muted);font-size:12.5px;padding-top:2px;font-variant-numeric:tabular-nums}
 .acct-log-b{flex:1;min-width:0;display:grid;gap:2px;overflow-wrap:anywhere}
 .acct-log-b b{font-weight:500}
@@ -1535,7 +1519,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .imp-tbl tr.bad td,.imp-res.bad{color:var(--red)}
 .imp-res{color:var(--ok)}
 .imp-hash{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
-.imp-sum{padding-inline:0}
 .imp-step{padding:6px 0}
 .imp-big .acct-log-b small{color:var(--red)}
 @media (max-width:520px){.imp-tbl th,.imp-tbl td{padding:9px 10px}}
@@ -1544,6 +1527,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
    淺色／深色＝液態分段切換（.lseg，樣式在「液態分段切換」段）；主題按鈕一格一格，每顆帶自己的 data-pal，
    所以按鈕裡的 --bg、--blk、--pri、--acc、--ink、--hair 是那一組主題的顏色（三顆圓＝色塊、主要動作、選中）；選到的加粗框；最下面音效開關（.sw，樣式在「秘書處會議編輯的授權」段） */
 .look{display:grid;gap:16px}
+/* 設定頁的面板裡（帳號、外觀）：整組外觀是一塊平面色塊（DESIGN-next 第三節，模擬頁帳號頁的外觀框）；主題按鈕底色是各自主題的 --bg，跟色塊分得開 */
+.set-hub>.look{padding:18px 20px 14px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .set-hub>.set-list+.look{margin-top:12px}
 .look-t{font-size:16px;font-weight:700;letter-spacing:.08em}
 .look-mode{justify-self:start}
@@ -1787,7 +1772,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tm-tools input{flex:1;min-width:140px}
-.tm-note{margin:0}
 
 /* ===== 編輯紀錄頁 ===== */
 .log-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left));gap:10px}
@@ -1797,8 +1781,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .log-ov.in-pane .log-scroll{overflow:visible;padding:8px 0 0}
 .log-ov.in-pane{max-width:720px}
 .log-ov.in-pane .anim-k{display:none}
-.log-ov.in-pane .anim-top{border-bottom:1px solid var(--hair)}
-.log-ov.in-pane .anim-title b{font-size:20px;font-weight:500;letter-spacing:.08em}
+.log-ov.in-pane .anim-ctl{display:none}   /* 設定頁裡沒有「關閉」（DESIGN-next 第十二節）：桌面再點一次那一列、手機子頁的「返回」、Esc、系統返回 */
+.log-ov.in-pane .anim-top{border-bottom:0}   /* 跟合併頁標題同一種（設定頁段）：20px 700、不畫分隔線 */
+.log-ov.in-pane .anim-title b{font-size:20px;font-weight:700;letter-spacing:.08em}
 .log-scroll{flex:1;overflow:auto;scrollbar-gutter:stable;padding:8px max(0px,calc((100% - 880px)/2)) 48px}
 .log-list{list-style:none;margin:0;padding:0;display:grid;gap:22px}
 .lg-day>ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}

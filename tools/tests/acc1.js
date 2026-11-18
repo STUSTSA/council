@@ -1,7 +1,7 @@
 /* 02B Google 登入、角色、QR 邀請、撤權、稽核紀錄（core/js/account.js、fb-account.js）：
    用 Auth 模擬器＋Firestore 模擬器，從畫面操作走完整流程（規則用正式的 backend/firestore.rules）。
    1. 未登入：設定頁只有「用 Google 登入」；看板讀不到。App 內建瀏覽器：改成「用瀏覽器開啟」＋「複製網址」
-   2. 一般登入者：第一次登入建 users／profiles；讀得到看板；帳號列「唯讀」；沒有會長室管理
+   2. 一般登入者：第一次登入建 users／profiles；讀得到看板；帳號頁「唯讀」（ui-08 起信箱與角色在帳號頁最上面，不在列下）；沒有會長室管理
    3. 總管理員：角色即時出現「會長室管理」；產生 QR（內容＝本站網址＋#join=權杖、文件 ID＝SHA-256）、10 分鐘倒數、重新產生（舊的撤銷）、撤銷
    4. 掃 QR：權杖一讀到就從網址列拿掉；先登入再加入；加入後角色、邀請、稽核鏈正確；重放、過期、綁定信箱、已有角色都擋下
    5. 申請 → 核准；撤權（對方畫面即時變唯讀）；紀錄（含卡片刪除紀錄、權限歷史與檢查連號）；登出
@@ -75,6 +75,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const openSet=async p=>{if(!await p.evaluate(()=>setOpen))await p.click('#setBtn');await p.waitForTimeout(700)};
   const setText=p=>p.evaluate(()=>document.querySelector('#setOv .set-inner').innerText);
   const paneText=p=>p.evaluate(()=>{const e=document.querySelector('#setOv .set-pane');return e?e.innerText:''});
+  /* ui-08：設定清單的列只寫「帳號」，信箱與角色畫在帳號頁最上面（.acct-me）；沒打開就先打開帳號頁 */
+  const meText=async p=>{if(await p.evaluate(()=>paneKey!=='acct'&&!!document.querySelector('#setOv [data-set="acct"]'))){await p.click('#setOv [data-set="acct"]');await p.waitForTimeout(800)}
+    return p.evaluate(()=>{const e=document.querySelector('#setOv .set-pane .acct-me');return e?e.innerText:''})};
   const dlg=p=>p.waitForSelector('#dlg[open]',{timeout:8000}).then(()=>p.evaluate(()=>document.querySelector('#dlgForm b').textContent));
   const dlgSet=(p,o)=>p.evaluate(o=>{for(const [k,v] of Object.entries(o)){const i=document.querySelector(`#dlgForm [name="${k}"]`);i.value=v}},o);
   const dlgAct=async(p,a)=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(600)};
@@ -108,7 +111,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>(await board(gen)).includes('測試卡片甲')),'一般登入者：登入後重新讀到看板內容');
   ok(await until(async()=>{const u=await read(`users/${genUid}`),pf=await read(`profiles/${genUid}`);return u&&u.email==='gen@example.test'&&pf&&pf.displayName==='gen 同學'}),'第一次登入：建立 users（信箱＝登入信箱）與 profiles（Google 名稱）');
   await openSet(gen);
-  ok(await until(async()=>{const x=await setText(gen);return x.includes('gen@example.test')&&x.includes('唯讀')&&!x.includes('會長室管理')}),'一般登入者：帳號列顯示「唯讀」、沒有會長室管理');
+  ok(await until(async()=>{const x=await meText(gen);return x.includes('gen@example.test')&&x.includes('唯讀')&&!(await setText(gen)).includes('會長室管理')}),'一般登入者：帳號頁顯示信箱與「唯讀」、沒有會長室管理');
 
   /* ---------- 3. 總管理員與 QR ---------- */
   const boss=await open(`${BASE}/index.html?d=fruit`);
@@ -194,14 +197,14 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await toastHas(u2,'已送出申請'),'申請：送出');
   ok(await until(async()=>(await paneText(u2)).includes('公關部・編輯者')),'申請：帳號頁列出待審的申請');
   const u1b=await open(`${BASE}/index.html?d=fruit`);await signIn(u1b,'u1');await uidOf(u1b);await openSet(u1b);
-  ok(await until(async()=>(await setText(u1b)).includes('活動部編輯者')),'u1：帳號列顯示活動部編輯者');
+  ok(await until(async()=>(await meText(u1b)).includes('活動部・編輯者')),'u1：帳號頁顯示活動部・編輯者');
   /* 總管理員：核准 */
   await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);   /* 收起 */
   await hub(boss,'requests');
   ok(await until(async()=>(await paneText(boss)).includes('公關部編輯者')&&(await paneText(boss)).includes('公關部新幹部')),'核准：待審清單顯示申請人、部門、角色、備註');
   await boss.click('[data-ok]');
   ok(await until(async()=>{const r=await read(`roles/${u2Uid}`);return r&&r.depts.pr==='editor'&&r.lastVia==='request'}),'核准：同一批寫入角色');
-  ok(await until(async()=>(await setText(u2)).includes('公關部編輯者')),'核准：申請人的畫面即時顯示新角色');
+  ok(await until(async()=>(await meText(u2)).includes('公關部・編輯者')),'核准：申請人的帳號頁即時顯示新角色');
   /* 撤權 */
   await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);
   await hub(boss,'people');
@@ -210,7 +213,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await boss.click('[data-rm="events"]');ok((await dlg(boss)).includes('撤銷 u1 同學 的活動部編輯權限'),'撤權：確認對話框寫出對象與部門');
   await dlgAct(boss,'delete');
   ok(await until(async()=>{const r=await read(`roles/${u1Uid}`);return r&&!r.depts.events&&r.lastVia==='revoke'&&r.rev===2}),'撤權：roles 拿掉那個部門（rev 2、lastVia revoke）');
-  ok(await until(async()=>(await setText(u1b)).includes('唯讀')),'撤權：被撤的人畫面即時變回唯讀');
+  ok(await until(async()=>(await meText(u1b)).includes('唯讀')),'撤權：被撤的人帳號頁即時變回唯讀');
   ok((await board(u1b)).includes('測試卡片甲'),'撤權：仍然看得到看板（登入就能讀）');
   /* 自己不能取消自己的總管理員：畫面上沒有按鈕 */
   await boss.click('[data-back]');await boss.waitForTimeout(300);await boss.click(`[data-who="${bossUid}"]`);await boss.waitForTimeout(300);
@@ -233,7 +236,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(pt2.includes('核准申請')&&pt2.includes('撤權')&&pt2.includes('重新產生 QR')&&pt2.includes('撤銷 QR'),'紀錄：核准、撤權、重新產生、撤銷都有');
   ok(!boss.errs.length&&!gen.errs.length&&!u2.errs.length,`沒有頁面錯誤 ${[...boss.errs,...gen.errs,...u2.errs].join(' | ')}`);
   /* 登出 */
-  await gen.click('[data-set="acct"]');await gen.waitForTimeout(800);await gen.click('[data-hub="out"]');
+  await meText(gen);await gen.click('[data-hub="out"]');   /* 帳號頁在第 2 段已經打開（meText），再點那一列會收起 */
   ok(await until(async()=>(await setText(gen)).includes('用 Google 登入')),'登出：設定頁回到「用 Google 登入」');
   ok(await until(async()=>(await board(gen)).length===0),'登出：看板內容清掉');
 

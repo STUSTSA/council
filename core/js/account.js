@@ -32,15 +32,11 @@ function acctLoad(){
 }
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
 const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
-function acctRoleSub(){
-  const r=Object.entries(acctDepts()).map(([d,v])=>`${deptNameOf(d)}${ROLE_T[v]||v}`);
-  if(acctSuper())r.unshift("總管理員");
-  return r.length?r.join("、"):"唯讀";
-}
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
 let acctCanW="";
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
+  if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
   const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
     if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
 }
@@ -94,22 +90,22 @@ function acctCopyUrl(){
 
 /* ---------- 設定頁（firestore 模式；nav.js 的 settingsInner 交給這裡） ---------- */
 function acctGateHTML(){
-  const fz=storeSource()==="frozen",t=fz?`<b>暫停編輯</b><p class="sub">${STORE_NOTE.frozen}</p>`:"";   /* 凍結中：原本的「暫停編輯」＋登入鈕 */
+  const t=storeSource()==="frozen"?`<b>暫停編輯</b>`:"";   /* 凍結中：「暫停編輯」＋登入鈕；標題下不放說明句（ui-08） */
   if(inAppBrowser())return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span>${t||"<b>用瀏覽器開啟</b>"}<button type="button" class="primary" data-fb-copy>複製網址</button></div>`;
   return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button>${t||"<b>未登入</b>"}<button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
 }
 function acctSettingsInner(){
-  const wk=setRow("week","doc","每週概述",weekSub());
+  const wk=setRow("week","doc","每週概述");
   if(!FB_ON)return setSec(wk)+lookSec();
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
   if(!acct.user)return setSec(wk)+acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
-  const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
-  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
-      +setRow("labels","tag","標籤",state.labels.length?`${state.labels.length} 個`:"還沒有建立")
+  const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱"):"")
+      +setRow("labels","tag","標籤")
       +setRow("backup","download","備份")):"";
-  return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
-    +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
+  /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
+  return setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
+    +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
@@ -151,18 +147,21 @@ function acctPanel(title,draw){
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
-/* ---------- 帳號（自己）：名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
+/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
 async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
+  const head=()=>{const u=acct.user;if(!u)return "";
+    return `<div class="acct-me"><div class="acct-person"><b>${esc(acct.names[u.uid]||u.name||u.email||"")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>`};
   return hubRun("帳號",()=>[
-    {k:"name",ic:"edit",t:"名稱",sub:acct.names[acct.user.uid]||acct.user.name||"",flow:acctRename},
-    {k:"req",ic:"doc",t:"申請編輯權限",sub:"",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
-    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
+    {k:"name",ic:"edit",t:"名稱",flow:acctRename},
+    {k:"req",ic:"doc",t:"申請編輯權限",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
+    /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}（待審）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
-    {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}],()=>lookHTML(true),lookMount);
+    {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
 }
 async function acctRename(){
   const A=await acctLoad(),cur=acct.names[acct.user.uid]||acct.user.name||"";
@@ -188,15 +187,14 @@ async function acctRequest(){
 
 /* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄 ---------- */
 async function councilHub(){
-  const A=await acctLoad();
-  let pending=[];try{pending=await A.requestsPending()}catch(_){}
+  await acctLoad();
   return hubRun("會長室管理",()=>[
-    {k:"people",ic:"people",t:"人員",sub:"",flow:()=>peoplePanel()},
-    {k:"invite",ic:"share",t:"QR 邀請",sub:"",flow:()=>invitePanel()},
-    {k:"requests",ic:"doc",t:"申請",sub:pending.length?`${pending.length} 筆待審`:"沒有待審",flow:async()=>{await requestsPanel();pending=await A.requestsPending().catch(()=>pending)}},
-    {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()},
-    {k:"import",ic:"cloud",t:"匯入",sub:"",flow:()=>importPanel()},
-    {k:"export",ic:"download",t:"匯出全部資料",sub:"",act:exportAllData}]);
+    {k:"people",ic:"people",t:"人員",flow:()=>peoplePanel()},
+    {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},
+    {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
+    {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
+    {k:"import",ic:"cloud",t:"匯入",flow:()=>importPanel()},
+    {k:"export",ic:"download",t:"匯出全部資料",act:exportAllData}]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
