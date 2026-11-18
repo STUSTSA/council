@@ -62,8 +62,8 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(lg.n==='3','進行中的張數：資料檔的未結案即時回報（財務部 3） '+lg.n);
     ok(!p.errs.length,'桌面沒有錯誤 '+p.errs.join(' | '));
     /* 下排與全會行事曆 */
-    /* ui-08：下排＝跟畫面一樣寬的一條（#hmDock）裡置中的膠囊（#hmDk），陰影在膠囊上；個人常用連結的「+」與連結在 ui8home.js 測 */
-    const dk=await p.evaluate(()=>{const d=document.getElementById('hmDk'),r=d.getBoundingClientRect();return {c:r.left+r.width/2,btn:d.querySelectorAll('button:not(.hm-lkadd),a').length,pub:!!d.querySelector('.hm-pub[aria-label="全會行事曆"]'),sh:getComputedStyle(d).boxShadow,
+    /* ui-08：下排＝跟畫面一樣寬的一條（#hmDock）裡置中的膠囊（#hmDk），底色與陰影在膠囊左右兩半的底板（.hm-dk-bg）上；個人常用連結的「+」與連結在 ui8home.js 測 */
+    const dk=await p.evaluate(()=>{const d=document.getElementById('hmDk'),r=d.getBoundingClientRect();return {c:r.left+r.width/2,btn:d.querySelectorAll('button:not(.hm-lkadd),a').length,pub:!!d.querySelector('.hm-pub[aria-label="全會行事曆"]'),sh:getComputedStyle(d.querySelector('.hm-dk-bg>span')).boxShadow,
       bg:getComputedStyle(d.querySelector('.hm-pub')).backgroundColor,pri:getComputedStyle(document.documentElement).getPropertyValue('--pri').trim()}});
     ok(Math.abs(dk.c-650)<2&&dk.btn===1&&dk.pub&&dk.sh!=='none',`下排置中、全會行事曆圓鈕（主要動作色）、帶陰影（${dk.c} ${dk.btn}；個人常用連結與「+」在 ui8home.js）`);
     const hl=await p.evaluate(()=>history.length);
