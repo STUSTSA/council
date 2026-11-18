@@ -4,8 +4,8 @@
    任何元素加上 data-pal 屬性，裡面的變數就換成那一組主題的顏色（深淺跟著外層的 data-theme）：設定 → 帳號 → 外觀的主題按鈕用這個顯示各自的顏色。
    色碼照規格表一字不差；改色碼要先改規格。 */
 [data-pal]{--blk-sh:none}   /* 色塊與膠囊的陰影：只有柔光主題有值 */
-/* 浮在內容上面的東西的陰影（主頁手機卡片堆、主頁下排；board.css「主頁」段）：不跟主題變，只分深淺 */
-:root{color-scheme:light;--wal-sh:rgba(10,42,77,.13)}
+/* 浮在內容上面的東西的陰影（主頁手機卡片堆、主頁下排；board.css「主頁」段）：淺色＝文字色 13%（米黃就是原本的 rgba(10,42,77,.13)），深色＝半透明黑 */
+:root{color-scheme:light;--wal-sh:color-mix(in srgb,var(--ink) 13%,transparent)}
 :root[data-theme="dark"]{color-scheme:dark;--wal-sh:rgba(0,0,0,.62)}
 /* 米黃（fin）：預設 */
 :root:not([data-pal]),[data-pal="fin"]{--bg:#f5f0e1;--blk:#fffdf6;--blk2:#ebe2c8;--ink:#0a2a4d;--muted:#6d6a5c;--hair:#e2d9bf;--acc:#f0bc23;--acc-ink:#0a2a4d;--acc2:#0a5baa;--acc2-ink:#fff;--pri:#0a2a4d;--pri-ink:#fffdf6;--ok:#2f9d62;--late:#d8412f}

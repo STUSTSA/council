@@ -8,10 +8,21 @@
 :root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-layout:560ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-in:cubic-bezier(.4,0,1,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
 /* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
    下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）；部門標誌的藍黃（--su-blue／--su-yellow）不跟主題變 */
-:root{--surface:var(--blk);--pop:var(--blk);--pop-sh:0 14px 32px rgba(0,0,0,.16);--stack-sh:rgba(10,42,77,.38);--line:var(--ink);--grid:var(--blk2);--accent-light:#e0342a;--accent-dark:#ff5a4e;--neon:var(--ok);--ok-dot:var(--ok);--teal:var(--pri);--teal-soft:var(--bg);--lime:var(--late);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--today:var(--ink);--st-ok:var(--ok);--st-ok-ink:#0b1f12;--su-yellow:#f0bc23;--su-blue:#0a5baa;--st-go:var(--su-yellow);--st-go-ink:#111114;--st-stall:var(--red);--st-stall-ink:#fff;--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
+:root{--surface:var(--blk);--pop:var(--blk);--stack-sh:color-mix(in srgb,var(--ink) 38%,transparent);--line:var(--ink);--grid:var(--blk2);--neon:var(--ok);--ok-dot:var(--ok);--teal:var(--pri);--teal-soft:var(--bg);--lime:var(--late);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--today:var(--ink);--st-ok:var(--ok);--st-ok-ink:var(--deep);--st-go:var(--su-yellow);--st-go-ink:var(--deep);--st-stall:var(--red);--st-stall-ink:var(--lite);--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
 /* 材質只有平面（DESIGN-next 第三節）：沒有漸層、毛玻璃、光暈。陰影只給浮在內容上面的東西：--pop-sh 彈出層（對話框、下拉選單、搜尋結果），
    --stack-sh 浮在內容上的色塊（工具列，加一圈 1px --hair）；平鋪的色塊只帶 --blk-sh（只有柔光主題有值） */
+/* 實心色塊上的字（ui-08 G：顏色一律從主題變數來，不寫死）：--lite 永遠是淺色（淺色模式＝--blk、深色模式＝--ink），放在紅、綠實心（--late、--ok）上與 QR 碼的底；
+   --deep 永遠是深色（淺色模式＝--ink、深色模式＝--bg），放在學生會黃、亮綠（--su-yellow、--ok）上 */
+:root{--lite:var(--blk);--deep:var(--ink)}
+/* 例外：部門標誌的藍黃（不跟主題） */
+:root{--su-yellow:#f0bc23;--su-blue:#0a5baa}
+/* 例外：工作報告白紙上的紅（白紙不跟主題；dept/config.js 的 accentLight 由 shell.js 寫進來） */
+:root{--accent-light:#e0342a;--accent-dark:#ff5a4e}
+/* 例外：陰影用的半透明黑 */
+:root{--pop-sh:0 14px 32px rgba(0,0,0,.16)}
 /* 深色：只放跟主題無關、只看深淺的值 */
+:root[data-theme="dark"]{--lite:var(--ink);--deep:var(--bg)}
+/* 例外：陰影用的半透明黑 */
 :root[data-theme="dark"]{--pop-sh:0 16px 36px rgba(0,0,0,.5);--stack-sh:rgba(0,0,0,.62)}
 *,*::before,*::after{box-sizing:border-box}
 /* 工具列讓出的空間：手機在下方（--bar-in），桌面 900px 以上改成左側細欄（--rail-in）；細欄本身在「底部工具列」段 */
@@ -39,7 +50,7 @@ select{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid tra
 dialog form{display:grid;gap:10px}
 dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 .num{font-family:"Jost","Noto Sans TC",sans-serif;font-weight:400;letter-spacing:.02em}
-h2::after{content:"";flex:1;min-width:44px;height:26px;background:var(--ink);-webkit-mask:linear-gradient(#000,#000) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat;mask:linear-gradient(#000,#000) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat}
+h2::after{content:"";flex:1;min-width:44px;height:26px;background:var(--ink);-webkit-mask:linear-gradient(var(--ink),var(--ink)) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat;mask:linear-gradient(var(--ink),var(--ink)) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat}
 button.primary:hover{opacity:.85}
 .en{font-family:"Jost",sans-serif;font-size:11.5px;letter-spacing:.18em;color:var(--muted);font-weight:400;margin-left:-4px}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px}
@@ -65,7 +76,7 @@ button.ghost{border-color:var(--muted)}
   h1{font-size:24px;letter-spacing:.04em}
 }
 @supports not selector(::-webkit-scrollbar){
-  *{scrollbar-width:thin;scrollbar-color:rgba(140,140,150,.45) transparent}
+  *{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted) 45%,transparent) transparent}
 }
 
 /* ===== 單卡編輯（2026-11-06，render.js 的 cardEdit） =====
@@ -99,8 +110,8 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 /* ===== 捲軸 ===== */
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(140,140,150,.38);border-radius:999px;border:3px solid transparent;background-clip:padding-box}
-::-webkit-scrollbar-thumb:hover{background-color:rgba(160,160,170,.6)}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 38%,transparent);border-radius:999px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--muted) 60%,transparent)}
 /* 觸控裝置（手機、平板）全部捲動區都不顯示捲軸：手指捲動不需要捲軸。
    捲軸寬度變成 0，各區的 scrollbar-gutter:stable 也就不再預留空白，左右邊界保持對稱 */
 @media (pointer:coarse){
@@ -152,7 +163,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-st{display:contents}
 .dh-sp{flex:1;min-width:0}
 /* 通知鈕的紅色數字（彈出動畫由 anim.js 的 pop） */
-.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:#fff;font-size:11.5px;line-height:20px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
+.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:var(--lite);font-size:11.5px;line-height:20px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
 .noti-n[hidden]{display:none}
 /* 離線中（pwa.js 的 offlinePill，放在 #saveInfo 前面）：部門名旁邊一顆小膠囊 */
 .offline-pill{flex:none;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 12px 0 10px;border-radius:999px;background:var(--blk);color:var(--red);font-size:12px;letter-spacing:.14em;line-height:1;animation:rise .4s var(--ease) both}
@@ -246,7 +257,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .ev,.kid-ev,.cp,.lc{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
 .ev[data-st="ok"],.kid-ev[data-st="ok"],.cp[data-st="ok"],.lc[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
 .ev[data-st="go"],.kid-ev[data-st="go"],.cp[data-st="go"],.lc[data-st="go"]{--st:var(--st-go);--st-ink:var(--st-go-ink)}
-.ev[data-st="done"],.cp[data-st="done"],.lc[data-st="done"]{--st:var(--done);--st-ink:#fff}   /* 完成紀錄 */
+.ev[data-st="done"],.cp[data-st="done"],.lc[data-st="done"]{--st:var(--done);--st-ink:var(--lite)}   /* 完成紀錄 */
 :is(.ev,.kid-ev,.cp,.lc) .live-dot,:is(.ev,.kid-ev,.cp,.lc) .live-dot::after{background:var(--st)}
 :is(.ev,.kid-ev,.cp,.lc):not([data-st="stall"]) .live-dot::after{animation:none;opacity:0}
 /* --- 膠囊清單（live.js 的 cpHTML；完成紀錄的膠囊同一套，views.js 的 renderDone；DESIGN-next 第七節「清單」） ---
@@ -267,7 +278,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .cp.done.new{animation:doneIn .9s var(--ease) both}
 @media (prefers-reduced-motion:reduce){.cp:hover,.cp:active{transform:none}}
 /* 拖著的那顆（跟著指標，見「拖到角落」）、拖到另一顆上＝換位置的那一顆（縮一點、細框）；放在本小節最後：蓋過滑過的放大與 .sel 的框 */
-.cp.drag{z-index:30;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.28);transition:background-color .22s var(--mo-out)}
+.cp.drag{z-index:30;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.28)/* 例外：陰影黑 */;transition:background-color .22s var(--mo-out)}
 .cp.over{transform:scale(.96);box-shadow:inset 0 0 0 2px var(--acc2)}
 /* --- 卡片外框（live.js 的 lcFrame；即時回報、完成紀錄共用） ---
    第一排：（全螢幕時）返回鍵、燈號、名稱、編輯次數的小膠囊；第二排：上一張／下一張（實心三角的外框膠囊）、報告；第三排：狀態、負責人、時間；
@@ -295,7 +306,7 @@ input.lc-title:focus{outline:none}
 .lc-tri[data-lcstep="1"] .ico{transform:scaleX(-1)}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
-.lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:#fff}
+.lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
 .lc-meta .ev-st,.lc-tag{height:26px;padding:0 12px;border-radius:999px;line-height:1}
@@ -405,7 +416,7 @@ button.te-pl.dsh{background:transparent;border:1.5px dashed var(--acc2);color:co
 button.te-pl.plus{min-width:70px;justify-content:center;font-size:18px}
 .sg{min-height:0;padding:3px 4px;border:0;border-radius:7px;color:inherit;font-size:14px;line-height:1;touch-action:none;transition:background-color var(--mo-fast) var(--mo-out),color var(--mo-fast) var(--mo-out)}
 .sg.on{background:var(--acc2);color:var(--acc2-ink)}
-.te-cx{position:absolute;top:-6px;right:-5px;display:grid;place-items:center;width:17px;height:17px;min-height:17px;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff;box-shadow:0 0 0 2px var(--blk);opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
+.te-cx{position:absolute;top:-6px;right:-5px;display:grid;place-items:center;width:17px;height:17px;min-height:17px;padding:0;border:0;border-radius:50%;background:var(--late);color:var(--lite);box-shadow:0 0 0 2px var(--blk);opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
 .te-cx .ico{width:10px;height:10px;stroke-width:2.4}
 .te-pl:hover .te-cx,.te-pl:focus-within .te-cx{opacity:1}
 @media (pointer:coarse){.te-cx{opacity:1}}
@@ -418,7 +429,7 @@ button.te-pl.plus{min-width:70px;justify-content:center;font-size:18px}
 /* --- 拖到角落（live.js 的「拖到角落」）：拖著的膠囊跟著指標、越靠近哪一角就往那角歪、染上那角的顏色（左上刪除 --late、右上完成 --ok）；
    碰到角落時角落放大；拖到另一顆上＝那一顆縮一點、細框（換位置；膠囊本身的 .cp.drag／.cp.over 在「膠囊清單」小節）。完成時的光暈與彩帶（.fete）是規格明寫的慶祝，例外允許 --- */
 html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}
-.lz{position:fixed;top:0;z-index:20;display:grid;width:min(200px,38vw);aspect-ratio:1;color:#fff;pointer-events:none;opacity:0;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
+.lz{position:fixed;top:0;z-index:20;display:grid;width:min(200px,38vw);aspect-ratio:1;color:var(--lite);pointer-events:none;opacity:0;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .lz.show{opacity:calc(.14 + var(--k,0)*.86)}
 .lz.del{left:0;place-items:start;padding:26px 0 0 26px;border-radius:0 0 100% 0;background:var(--late);transform-origin:0 0}
 .lz.ok{right:0;place-items:start end;padding:26px 26px 0 0;border-radius:0 0 0 100%;background:var(--ok);transform-origin:100% 0}
@@ -538,7 +549,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .evf-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
 .evf-when input[type=date]{width:auto}
 .evf-when input:not([type]){width:72px}
-.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blk) 35%,transparent)}
 .evf-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .evf-place input{flex:1 1 180px}
 .place-quick{display:flex;flex-wrap:wrap;gap:4px}
@@ -619,7 +630,7 @@ a.doc-pill:active{scale:.96}
 .ac-cur circle{fill:var(--bg);stroke:var(--c);stroke-width:2;transition:opacity var(--mo-fast) var(--mo-out)}
 .ac-cur circle.dim{opacity:0}
 /* 小標籤：在圖的上方（padding-top 留的空間），左右跟著游標、不超出區塊 */
-.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:6px 12px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:6px 12px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
 .ac-tip[hidden]{display:none}
 .ac-tip b{font-weight:500;letter-spacing:.04em;margin-right:2px}
 .ac-tip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -747,12 +758,12 @@ a.doc-pill:active{scale:.96}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;flex:none}
 /* 圖例：三小段細刻度（跟甘特圖同一種） */
-.lg-tk{width:14px;height:14px;background:repeating-linear-gradient(90deg,var(--c) 0 2px,transparent 2px 4px);-webkit-mask:linear-gradient(transparent calc(100% - var(--h)),#000 0);mask:linear-gradient(transparent calc(100% - var(--h)),#000 0)}
+.lg-tk{width:14px;height:14px;background:repeating-linear-gradient(90deg,var(--c) 0 2px,transparent 2px 4px);-webkit-mask:linear-gradient(transparent calc(100% - var(--h)),var(--ink) 0);mask:linear-gradient(transparent calc(100% - var(--h)),var(--ink) 0)}
 .lg-tk.now{--c:var(--ok);--h:100%;width:3px;border-radius:1px}
 .lg-tk.on{--c:var(--ink);--h:72%}
 .lg-tk.in{--c:var(--muted);--h:45%;opacity:.7}
 /* 今天標籤：白色實心黑字（淺色模式加細框才看得出邊界），左上角一顆會閃的紅點（共用 .live-dot） */
-.g-axis .today-tag{top:19px;transform:translateX(-50%);color:#06210f;background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--deep);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -1038,7 +1049,7 @@ a.link:active{transform:scale(.96)}
 .danger-btn{color:var(--warn)}
 dialog{background:var(--pop);color:var(--ink);width:min(440px,94vw);padding:18px;border-radius:var(--r-lg);border:0;box-shadow:var(--pop-sh)}   /* 對話框＝彈出層：平面色塊＋柔和陰影 */
 dialog.wide{width:min(720px,94vw)}
-dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog::backdrop{background:color-mix(in srgb,var(--bg) 78%,transparent)}
 .swatches{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .swatches button{width:30px;height:30px;min-height:0;padding:0;border-radius:50%}
 .swatches button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
@@ -1050,7 +1061,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
 .dlg-err[hidden]{display:none}
 dialog[open]{animation:pop .24s var(--ease)}
 dialog[open]::backdrop{animation:fade .24s ease}
-.danger-solid{background:var(--red)!important;border-color:var(--red);color:#fff}
+.danger-solid{background:var(--red)!important;border-color:var(--red);color:var(--lite)}
 .dlg-actions .alt-btn{margin-right:auto}
 fieldset.multi{border:0;margin:0;padding:0;display:grid;gap:6px}
 fieldset.multi legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--muted)}
@@ -1064,8 +1075,8 @@ dialog#dlg{border:0;border-radius:var(--r-lg);color:var(--ink)}
 .dlg-ghost{border:0;border-radius:var(--r-lg);color:var(--ink);animation:none;pointer-events:none;display:block}
 dialog#dlg.glass{position:fixed;background:var(--pop);box-shadow:var(--pop-sh)}
 dialog#dlg[open]{animation:dlgIn .4s cubic-bezier(.2,.9,.25,1.12)}
-dialog#dlg[open]::backdrop{background:rgba(0,0,0,.3);animation:fade .3s ease}
-.dlg-ghost-bd{position:fixed;inset:0;z-index:2147482999;background:rgba(0,0,0,.3);pointer-events:none}
+dialog#dlg[open]::backdrop{background:color-mix(in srgb,var(--bg) 78%,transparent);animation:fade .3s ease}
+.dlg-ghost-bd{position:fixed;inset:0;z-index:2147482999;background:color-mix(in srgb,var(--bg) 78%,transparent);pointer-events:none}
 .fld{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 /* 數字的上下按鈕（dialog.js 的 type:"stepper"，例如學年）：不用打字、不跳鍵盤；數字換的時候往按的方向滾一下 */
 .stepper{display:flex;align-items:center;gap:14px;color:var(--ink)}
@@ -1089,7 +1100,7 @@ label.fld-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:
 .csel.up .csel-list{top:auto;bottom:calc(100% + 6px);transform-origin:bottom center}
 .csel-list[hidden]{display:none}
 .csel-opt{display:flex;justify-content:flex-start;width:100%;min-height:0;padding:9px 14px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink);text-align:left;font:inherit;box-shadow:none}
-.csel-opt:hover,.csel-opt:focus-visible{background:rgba(127,127,127,.18);transform:none;box-shadow:none;outline:none}
+.csel-opt:hover,.csel-opt:focus-visible{background:color-mix(in srgb,var(--muted) 18%,transparent);transform:none;box-shadow:none;outline:none}
 .csel-opt[aria-selected="true"]{background:var(--acc);color:var(--acc-ink)}
 dialog#dlg:has(.csel.open){overflow:visible}
 /* 放在設定頁右側面板裡（.in-pane，非強制回應）：不是浮起來的視窗，而是面板本身的內容 */
@@ -1320,7 +1331,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-lk.ico .hm-lkl{display:none}
 .hm-lk.ico .hm-lki{position:static;opacity:1}
 .hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */
-.hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff}
+.hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:var(--lite)}
 .hm-lkx .ico{width:10px;height:10px}
 .hm-lkadd{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
 .hm-lkadd .ico{width:18px;height:18px}
@@ -1497,7 +1508,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .acct-new{justify-self:start}
 /* QR 卡片：QR 一律白底黑點（深色模式也是，掃描比較穩），到期後變淡、只剩「重新產生」 */
 .acct-qr{display:grid;justify-items:center;gap:8px;padding:22px 20px;border-radius:var(--r-lg);text-align:center;background:var(--blk);box-shadow:var(--blk-sh)}
-.acct-qr-img{width:min(240px,70vw);aspect-ratio:1;padding:14px;border-radius:var(--r-md);background:#fff;transition:opacity var(--mo-slow) var(--mo-out),filter var(--mo-slow) var(--mo-out)}
+.acct-qr-img{width:min(240px,70vw);aspect-ratio:1;padding:14px;border-radius:var(--r-md);background:var(--lite);transition:opacity var(--mo-slow) var(--mo-out),filter var(--mo-slow) var(--mo-out)}
 .acct-qr-img svg{display:block;width:100%;height:100%}
 .acct-qr.off .acct-qr-img{opacity:.25;filter:grayscale(1)}
 .acct-qr>b{font-size:17px;font-weight:500;letter-spacing:.08em}
@@ -1817,9 +1828,10 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + env(safe-area-inset-bottom))}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
-.rpt-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light);--today:var(--ink)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
+/* 例外：工作報告的白紙（紙上的顏色只在這一條定義，下面的紙張元件一律引用這些變數） */
+.rpt-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light);--today:var(--ink)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
 .rpt-paper{--pad:6.667%;width:210mm;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;color:var(--ink);font-size:14px;line-height:1.75}
-.rpt-page{position:relative;aspect-ratio:210/297;padding:var(--pad) var(--pad) calc(var(--pad) + 8px);border-radius:4px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.rpt-page{position:relative;aspect-ratio:210/297;padding:var(--pad) var(--pad) calc(var(--pad) + 8px);border-radius:4px;background:var(--blk);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑 */}
 .rpt-paper .num{font-family:"Jost",sans-serif}
 /* 紙張就是 A4 寬（210mm），左右留白 6.667%＝14mm、內文 182mm，跟列印的 @page 一樣，預覽的換行就是 PDF 的換行（2026-11-06）。
    手機也照 A4 寬排，畫面比紙窄時整張等比例縮小（2026-11-16 R1，report.js 的 rptFit）：外框 .rpt-fit 是縮小後的寬高，
@@ -1833,9 +1845,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
    手機與桌面同一套，不畫分頁線（2026-11-16 R1）。這些列印與量測時都不出現 --- */
 @media screen{.rpt-page.is-paged{aspect-ratio:auto;min-height:var(--rpt-h)}}   /* aspect-ratio 要關掉：不然最小高度會照 A4 比例把寬度一起撐大 */
 .rpt-sp{display:block;pointer-events:none}
-.rpt-gap{position:absolute;left:-2px;right:-2px;height:28px;background:color-mix(in srgb,var(--ink) 12%,var(--bg));box-shadow:inset 0 9px 12px -10px rgba(0,0,0,.45),inset 0 -9px 12px -10px rgba(0,0,0,.45);pointer-events:none;z-index:2}
+.rpt-gap{position:absolute;left:-2px;right:-2px;height:28px;background:color-mix(in srgb,var(--ink) 12%,var(--bg));box-shadow:inset 0 9px 12px -10px rgba(0,0,0,.45),inset 0 -9px 12px -10px rgba(0,0,0,.45)/* 例外：陰影黑 */;pointer-events:none;z-index:2}
 .rpt-pg{position:absolute;left:calc(100% + 14px);padding:2px 10px;border-radius:999px;border:1px solid var(--hair);background:var(--bg);color:var(--muted);font-size:11px;letter-spacing:.06em;white-space:nowrap;pointer-events:none;animation:fadeIn .3s both}
-@media (max-width:999px){.rpt-pg{left:auto;right:10px;margin-top:8px;background:#fff;border-color:#dcdce2;color:#5d5d66}}   /* 紙張外面放不下：放在紙裡右上角 */
+@media (max-width:999px){.rpt-pg{left:auto;right:10px;margin-top:8px;background:var(--blk);border-color:var(--hair);color:var(--muted)}}   /* 紙張外面放不下：放在紙裡右上角 */
 .rpt-fit.is-fit .rpt-pg{left:10px;right:auto;scale:calc(1 / var(--rpt-k));transform-origin:0 0}   /* 整張縮小時：反向放大回原本大小，放紙張左上角（右上角有章節工具、封面日期） */
 /* --- 列印用的強制換頁與頁碼（rptPaginate(true)，只在列印前加上）：斷點那一塊 .rpt-brk 從新的一頁開始、上邊界歸零（#rptOv 讓它蓋過各元件自己的上邊界）；
    每頁內文最後 .rpt-fill 補到 267mm，接著 .rpt-foot 在內文底下的 10mm 畫「第 N 頁／共 M 頁」（@page 下邊界 6mm＋10mm＝原本的 16mm）。螢幕上不顯示 --- */
@@ -1843,7 +1855,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-fill,.rpt-foot{display:none}
 .rpt-measure .rpt-fill{display:block}
 .rpt-measure .rpt-foot{display:flex}
-.rpt-foot{height:calc(10mm - 1px);align-items:flex-end;justify-content:center;color:#666;font-size:9pt;font-weight:400;font-style:normal;line-height:1;letter-spacing:.02em;text-indent:0;white-space:nowrap}
+.rpt-foot{height:calc(10mm - 1px);align-items:flex-end;justify-content:center;color:var(--muted);font-size:9pt;font-weight:400;font-style:normal;line-height:1;letter-spacing:.02em;text-indent:0;white-space:nowrap}
 .rpt-pages{margin-left:10px;font-size:12px;color:var(--muted);letter-spacing:.06em}
 /* 量測用（同一個 JS 工作裡加上又拿掉，畫面不會出現）：版面照列印 */
 .rpt-paper.rpt-measure{display:block;width:182mm}
@@ -1852,9 +1864,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-measure .rpt-blocks{display:block}
 .rpt-measure .rpt-blocks>.rpt-blk+.rpt-blk{margin-top:18px}
 .rpt-paper [contenteditable="true"]{outline:none;border-radius:4px;transition:background-color .2s,box-shadow .2s}
-.rpt-paper [contenteditable="true"]:hover{background:rgba(0,0,0,.035)}
-.rpt-paper [contenteditable="true"]:focus{background:rgba(0,0,0,.05);box-shadow:0 0 0 2px rgba(0,0,0,.08)}
-.rpt-paper [data-ph]:empty::before{content:attr(data-ph);color:#9a9aa3}
+.rpt-paper [contenteditable="true"]:hover{background:color-mix(in srgb,var(--ink) 3.5%,transparent)}
+.rpt-paper [contenteditable="true"]:focus{background:color-mix(in srgb,var(--ink) 5%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--ink) 8%,transparent)}
+.rpt-paper [data-ph]:empty::before{content:attr(data-ph);color:color-mix(in srgb,var(--muted) 62%,var(--blk))}
 /* --- 封面：上（logo＋部門｜日期）、中（英文小字＋大標題＋期間）、下（製作人｜看板網址）三段撐滿一頁 --- */
 .rpt-cover{display:flex;flex-direction:column;justify-content:space-between;gap:40px}
 .cv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
@@ -1869,7 +1881,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .cv-foot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;font-size:11.5px;line-height:1.7;color:var(--muted)}
 .cv-col{display:grid;align-content:start}
 .cv-col>span:empty:not(:focus){min-height:1.7em}
-.rpt-live{color:#111114;text-decoration:none;word-break:break-all}   /* 回到線上看板的連結（PDF 裡仍可點；網址照印，紙本也能照打） */
+.rpt-live{color:var(--ink);text-decoration:none;word-break:break-all}   /* 回到線上看板的連結（PDF 裡仍可點；網址照印，紙本也能照打） */
 /* --- 目錄：英文小字＋「目錄」，下面每章一列：細體大數字、章名、羅馬數字，列與列之間細線（參考樓層導覽卡） --- */
 .toc-h{display:grid;gap:4px;margin-bottom:28px}
 .toc-h span{font-size:12px;letter-spacing:.32em;color:var(--muted)}
@@ -1887,23 +1899,23 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-paper h2::after{content:none}   /* 報告裡的標題不接全站標題列的細線箭頭 */
 .rpt-ch-h h2{min-width:0;margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;line-height:1.3}
 .rpt-tabs{display:flex;gap:3px;align-self:start}
-.rpt-tabs i{display:grid;place-items:center;min-width:24px;height:20px;padding:0 4px;font:400 10px/1 "Jost",sans-serif;font-style:normal;letter-spacing:.04em;background:#ececf0;color:#9a9aa3}
-.rpt-tabs i.on{background:#2b2b30;color:#fff}
+.rpt-tabs i{display:grid;place-items:center;min-width:24px;height:20px;padding:0 4px;font:400 10px/1 "Jost",sans-serif;font-style:normal;letter-spacing:.04em;background:color-mix(in srgb,var(--ink) 7%,var(--blk));color:color-mix(in srgb,var(--muted) 62%,var(--blk))}
+.rpt-tabs i.on{background:color-mix(in srgb,var(--ink) 88%,var(--blk));color:var(--blk)}
 .rpt-ct,.rpt-bt{display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .2s}
 .rpt-ct{position:absolute;right:0;bottom:calc(100% + 6px)}
 .rpt-ch:hover .rpt-ct,.rpt-ch-h:focus-within .rpt-ct,.rpt-blk:hover>.rpt-bt,.rpt-blk:focus-within>.rpt-bt,.rpt-blk:focus>.rpt-bt{opacity:1;pointer-events:auto}
-.rpt-ct button,.rpt-bt button{min-height:0;height:26px;padding:0 9px;border:1px solid var(--hair);border-radius:999px;background:#fff;color:var(--muted);font-size:11.5px;transition:color .18s,border-color .18s,background-color .18s}
+.rpt-ct button,.rpt-bt button{min-height:0;height:26px;padding:0 9px;border:1px solid var(--hair);border-radius:999px;background:var(--blk);color:var(--muted);font-size:11.5px;transition:color .18s,border-color .18s,background-color .18s}
 .rpt-ct button:hover,.rpt-bt button:hover{color:var(--ink);border-color:var(--ink)}
 .rpt-ct .ico,.rpt-bt .ico{width:12px;height:12px}
-.rpt-bt button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rpt-bt button.on{background:var(--ink);border-color:var(--ink);color:var(--blk)}
 .rpt-bt-sep{width:1px;margin:3px 2px;background:var(--hair)}
 /* --- 圖塊：一章裡一個個排下來；工具列浮在圖塊右上（滑過去、點進去才出現） --- */
 .rpt-blocks{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .rpt-blk{position:relative;border-radius:6px;outline:none}
-.rpt-blk:focus-within,.rpt-blk:focus{box-shadow:0 0 0 6px #fff,0 0 0 7px var(--hair)}
-.rpt-bt{position:absolute;right:0;bottom:calc(100% + 4px);z-index:2;flex-wrap:wrap;justify-content:flex-end;padding:3px;border-radius:999px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.rpt-blk:focus-within,.rpt-blk:focus{box-shadow:0 0 0 6px var(--blk),0 0 0 7px var(--hair)}
+.rpt-bt{position:absolute;right:0;bottom:calc(100% + 4px);z-index:2;flex-wrap:wrap;justify-content:flex-end;padding:3px;border-radius:999px;background:var(--blk);box-shadow:0 4px 14px rgba(0,0,0,.1)/* 例外：陰影黑 */}
 .rpt-ins{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:22px;padding-top:14px;border-top:1px dashed var(--hair);font-size:12px;color:var(--muted)}
-.rpt-ins button{min-height:0;height:30px;padding:0 13px;border:1px solid var(--hair);border-radius:999px;background:#fff;color:var(--ink);font-size:12.5px}
+.rpt-ins button{min-height:0;height:30px;padding:0 13px;border:1px solid var(--hair);border-radius:999px;background:var(--blk);color:var(--ink);font-size:12.5px}
 .rpt-ins button:hover{border-color:var(--ink)}
 /* 圖片：寬度＝內文寬的 --w（25～100％），靠左／置中／靠右；高度最多 150mm（一頁放得下），不變形；右下角拖曳調大小 */
 .rpt-img{margin:0;width:var(--w,66%);max-width:100%;min-width:25%;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
@@ -1913,7 +1925,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-img img{display:block;width:100%;height:auto;max-height:150mm;object-fit:contain;object-position:left top;border-radius:2px}
 .rpt-img[data-al="c"] img{object-position:center top}.rpt-img[data-al="r"] img{object-position:right top}
 .rpt-img figcaption{font-size:12px;color:var(--muted);letter-spacing:.04em}
-.rpt-img-h{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px #fff;cursor:nwse-resize;touch-action:none;opacity:0;transition:opacity .2s,transform .2s}
+.rpt-img-h{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--blk);cursor:nwse-resize;touch-action:none;opacity:0;transition:opacity .2s,transform .2s}
 .rpt-blk:hover .rpt-img-h,.rpt-blk:focus-within .rpt-img-h,.rpt-blk:focus .rpt-img-h,.rpt-img.sizing .rpt-img-h{opacity:1}
 .rpt-img.sizing .rpt-img-h{transform:scale(1.25)}
 .rpt-img.sizing{transition:none}
@@ -1921,7 +1933,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 /* 卡片圖塊（分項說明）：兩欄或三欄，淡灰底、上面一條粗線，項目名稱粗體、說明內文 */
 .rpt-cards{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:12px}
 .rpt-cards[data-cols="3"]{--cols:3}
-.rpt-card{position:relative;display:grid;align-content:start;gap:6px;padding:14px 16px 16px;border-top:2px solid var(--ink);background:#f4f4f6}
+.rpt-card{position:relative;display:grid;align-content:start;gap:6px;padding:14px 16px 16px;border-top:2px solid var(--ink);background:color-mix(in srgb,var(--ink) 4%,var(--blk))}
 .rpt-card b{display:block;font-size:15px;font-weight:700;letter-spacing:.04em;line-height:1.45}
 .rpt-card-t{font-size:13px;line-height:1.7;white-space:pre-wrap}
 .rpt-card-x{position:absolute;top:6px;right:6px;min-height:0;width:22px;height:22px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--muted);opacity:0;transition:opacity .2s}
@@ -1944,7 +1956,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
    今天膠囊也不超出左端（1cqw＝時間軸寬的 1%）；還是超出的裁掉 */
 .rg-axis{position:relative;height:22px;overflow:hidden;container-type:inline-size}
 .rg-axis span{position:absolute;top:3px;left:calc(var(--p) * 1%);font-size:11px;color:var(--muted);transform:translateX(min(3px,calc((100 - var(--p)) * 1cqw - 100%)));white-space:nowrap}
-.rg-axis .rg-now{top:1px;transform:translateX(max(calc(var(--p) * -1cqw),min(-50%,calc((100 - var(--p)) * 1cqw - 100%))));padding:1px 7px;border-radius:999px;background:var(--ok);color:#06210f;font-size:10.5px;line-height:14px}
+.rg-axis .rg-now{top:1px;transform:translateX(max(calc(var(--p) * -1cqw),min(-50%,calc((100 - var(--p)) * 1cqw - 100%))));padding:1px 7px;border-radius:999px;background:var(--ok);color:var(--ink);font-size:10.5px;line-height:14px}
 .rpt-issue{padding:12px 0 14px;border-bottom:1px dashed var(--hair)}
 .rpt-issue:last-child{border-bottom:0}
 .rpt-issue h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin:0;font-size:16px;font-weight:600}
@@ -1960,7 +1972,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .rpt-d{display:inline-block;min-width:4.6em;color:var(--muted);font-family:"Jost",sans-serif}
 .rpt-none{margin:0;color:var(--muted)}
 .rpt-text{--rw1:45px;--rw2:24px;min-height:5.25em;white-space:pre-wrap;counter-reset:rh1}   /* --rw1 大段編號「（一）」的寬、--rw2 小段編號「1. 」的寬 */
-.rpt-text:empty::before{content:attr(data-ph);color:#9a9aa3}
+.rpt-text:empty::before{content:attr(data-ph);color:color-mix(in srgb,var(--muted) 62%,var(--blk))}
 /* 自訂區塊裡的段落層級：大段（（一）（二））、小段（1. 2.，每個大段重新算）、內文；編號自動排 */
 .rpt-text>p{margin:0 0 .35em}
 .rpt-text>.rpt-h1{margin:.9em 0 .3em;padding-left:var(--rw1);font-size:15px;font-weight:600;letter-spacing:.04em;counter-increment:rh1;counter-reset:rh2}
@@ -1975,9 +1987,9 @@ dialog#dlg:has(.csel.open){overflow:visible}
 /* 段落小工具：桌面放在紙張左邊界、對齊游標那一段；手機放在區塊下方。不印出來 */
 .rpt-pt{position:absolute;left:max(4px,calc(var(--pad) - 46px));top:var(--y,0);z-index:1;display:grid;gap:4px;animation:rptPtIn .2s cubic-bezier(.2,.9,.25,1)}
 .rpt-pt[hidden]{display:none}
-.rpt-pt button{min-height:0;width:38px;padding:3px 0;border:1px solid var(--hair);border-radius:8px;background:#fff;color:var(--muted);font-size:11px;letter-spacing:.04em;line-height:1.4;transition:background-color .18s,color .18s,border-color .18s}
+.rpt-pt button{min-height:0;width:38px;padding:3px 0;border:1px solid var(--hair);border-radius:8px;background:var(--blk);color:var(--muted);font-size:11px;letter-spacing:.04em;line-height:1.4;transition:background-color .18s,color .18s,border-color .18s}
 .rpt-pt button:hover{border-color:var(--ink);color:var(--ink)}
-.rpt-pt button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.rpt-pt button.on{background:var(--ink);border-color:var(--ink);color:var(--blk)}
 @keyframes rptPtIn{from{opacity:0;transform:translateX(4px)}}
 @media (max-width:640px){   /* 手機：紙張整張縮小了，段落小工具放在畫面底部、圖塊工具列上面（report.js 的 rptParaTool） */
   .rpt-ov>.rpt-pt:not([hidden]){position:fixed;left:12px;right:12px;top:auto;bottom:calc(64px + env(safe-area-inset-bottom));z-index:3;display:flex;justify-content:center;gap:6px}
@@ -1988,15 +2000,15 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .rpt-hint{display:none}
   .rpt-ct,.rpt-bt{opacity:1;pointer-events:auto}   /* 觸控沒有滑過去：工具一直顯示（圖塊工具列只在點進去的圖塊） */
   .rpt-paper .rpt-bt{display:none}
-  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22);animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
+  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22)/* 例外：陰影黑 */;animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
 }
 /* 列印：只印報告，A4；空白的自訂區塊不印。換頁一律照程式算的斷點（.rpt-brk），頁碼由程式畫在內文底下（.rpt-foot，iPhone 不支援 @page 頁碼） */
 @media print{
   @page{size:A4;margin:14mm 14mm 6mm}
   :root:has(#rptOv){color-scheme:light}
-  html,body{height:auto;overflow:visible;background:#fff}
+  html,body{height:auto;overflow:visible;background:#fff}   /* 例外：工作報告的白紙（列印） */
   body.rpt-open>:not(#rptOv){display:none}
-  body.rpt-open #rptOv{position:static;display:block;padding:0;background:#fff}
+  body.rpt-open #rptOv{position:static;display:block;padding:0;background:#fff}   /* 例外：工作報告的白紙（列印） */
   .rpt-bar,.rpt-pt,.rpt-ct,.rpt-bt,.rpt-ins,.rpt-pg,.rpt-gap,.rpt-sp,.rpt-img-h,.rpt-card-x,.rpt-card-add,.rpt-blk.is-blank,.rpt-ch.is-blank,.rpt-paper [data-ph]:empty{display:none}
   .rpt-scroll{overflow:visible;padding:0}
   .rpt-fit,.rpt-fit.is-fit{width:auto;height:auto;margin:0}
