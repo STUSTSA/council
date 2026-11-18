@@ -876,7 +876,7 @@
   {
    "id": "emvpd6qonvam7",
    "name": "社群內容排程",
-   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n",
+   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n\n☐ ",
    "doneAt": null,
    "staff": [],
    "touched": [
@@ -1001,6 +1001,12 @@
      "id": "bmwm8uygjb6hz",
      "text": "",
      "check": null,
+     "timeId": null
+    },
+    {
+     "id": "bmwm8vcg9jrks",
+     "text": "",
+     "check": false,
      "timeId": null
     }
    ]
