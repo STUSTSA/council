@@ -35,13 +35,15 @@ const devShow=()=>pwaCanInstall()||pwaIosSteps();
 /* Service Worker：只在正式網址（https / localhost）且頁面有 manifest 時註冊 */
 if("serviceWorker" in navigator&&document.querySelector('link[rel="manifest"]')&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>{
-      const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
-      const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
+    /* 這一頁用到的檔案交給 Service Worker 存成離線備份。新版 sw.js 換手時（快取版本換新、舊的快取被刪）再送一次給新的，
+       不然上線後第一次打開送出的清單會跟著舊快取一起被刪（release-03） */
+    const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
+    const send=w=>{if(!w)return;const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
         ...[...document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="manifest"]')].map(l=>l.href)]
         .filter(same).map(u=>u.split("#")[0].split("?")[0]);
-      reg.active&&reg.active.postMessage({type:"precache",urls:[...new Set(urls)]});
-    }).catch(()=>{});
+      w.postMessage({type:"precache",urls:[...new Set(urls)]})};
+    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>send(reg.active)).catch(()=>{});
+    navigator.serviceWorker.addEventListener("controllerchange",()=>send(navigator.serviceWorker.controller));
   });
 }
 

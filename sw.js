@@ -1,8 +1,10 @@
 /* 離線用 Service Worker
    - 網頁、CSS、JS、圖示：網路優先（每次都先拿最新版，拿不到才用離線備份）→ 更新後重開就是新版
-   - data.json、archive/：一律走網路，不存進快取（離線時改由看板顯示最後一次看過的內容）
+   - data.json、archive/：一律走網路，不存進快取（離線時改由看板顯示最後一次看過的內容）；其他部門的 data-*.json 照網路優先（線上永遠是最新的，離線才用備份）
    - GitHub API：不經過這裡 */
-const CACHE="board-cache-v1";
+/* 快取版本：換大版本（改版 03 上線，2026-11-17 改 v2）時改這個名字。sw.js 內容一變，瀏覽器下次開頁就會裝新的 Service Worker（skipWaiting＋clients.claim），
+   activate 時刪掉舊名字的快取，離線備份不會留著舊版的 JS／CSS 跟新的網頁混用 */
+const CACHE="board-cache-v2";
 const NO_CACHE=/(^|\/)data\.json$|\/archive\//;
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["./","index.html","home.html"].map(u=>new Request(u,{cache:"no-cache"})))).catch(()=>{}))});
 self.addEventListener("activate",e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k!==CACHE)await caches.delete(k);await self.clients.claim()})())});
