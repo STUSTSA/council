@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-17 19:22",
+ "savedAt": "2026-11-18 22:56",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -280,7 +280,21 @@
    ],
    "report": false,
    "touchedAt": "2026-11-05T18:51",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "・個人收到工作小組加入邀請。",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "・理事詢問本校加入意願，待本會裁示。",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd2q3bes2i",
@@ -294,7 +308,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "停車場公告",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd2zcx95t3",
@@ -307,7 +329,27 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "需確認外國人讀書會詳情",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "待確認 已出席",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvt1pwvqrhyw",
@@ -329,7 +371,27 @@
    "report": true,
    "roundAt": "2026-11-16T17:33",
    "labels": [],
-   "issueId": "imvpc3f0dcpi6"
+   "issueId": "imvpc3f0dcpi6",
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "確認第二次協商時間",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "本會提出時段供各處室參考",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvteefflmm61",
@@ -353,7 +415,27 @@
    "issueId": "imvpc3f0dcpi6",
    "roundAt": "2026-11-10T19:05",
    "labels": [],
-   "doneAt": "2026-11-16"
+   "doneAt": "2026-11-16",
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "三樓安全門未關閉上鎖",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "學務長聯絡",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd82rr1kit",
@@ -366,7 +448,33 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "學務處 10 月中旬是否已處理",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "改名已成定局 雙方迴轉中 持續觀察",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "陳情人熱情已漸漸消退",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd90c3a8l9",
@@ -386,7 +494,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "編撰與報告",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdjy1qige9",
@@ -399,7 +515,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "與系會議會學生代表會晤洽談社團學分存廢事宜之影響",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdk8nf5mxh",
@@ -412,7 +536,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "出席參與",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdlkubpzoe",
@@ -425,7 +557,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "系會代表互推產生，已順利舉行",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdmkvs29s1",
@@ -445,7 +585,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "由雜草整合四大法規檔案為統一法規彙編",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdnwp0gola",
@@ -459,7 +607,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "已請求行銷部協助發布社群限動通知同學",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdp6p3hitj",
@@ -480,7 +636,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "已確認具體位置",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdq4rpx6v8",
@@ -494,7 +658,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "已拍照整理資訊",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpdros6mg9o",
@@ -508,7 +680,21 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "已會晤課外組/保管組/學務長確認現場狀況和討論後續",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "保管組未出席",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvqlupnq2ij4",
@@ -522,7 +708,15 @@
    "round": 1,
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "如題",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd4765r0ch",
@@ -559,7 +753,15 @@
    "touchedAt": "2026-11-17T19:22",
    "roundAt": "2026-11-05T17:12",
    "report": true,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "等回覆 敲共同商議時間 或提出方案取得反饋",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvqocysbhm9s",
@@ -587,7 +789,21 @@
    "touchedAt": "2026-11-03T20:39",
    "doneAt": "2026-11-03",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "1600 - 1700",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "L003",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvt1lnzfh1kf",
@@ -615,7 +831,21 @@
    "touchedAt": "2026-11-03T20:45",
    "doneAt": "2026-11-03",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "部門例會召開",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvt1nac1jf6f",
@@ -633,12 +863,20 @@
    "doneAt": "2026-11-03",
    "touchedAt": "2026-11-03T20:39",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "討論執行面版構思",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvpd6qonvam7",
    "name": "社群內容排程",
-   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候",
+   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n",
    "doneAt": null,
    "staff": [],
    "touched": [
@@ -646,7 +884,8 @@
     "2026-11-02",
     "2026-11-03",
     "2026-11-05",
-    "2026-11-17"
+    "2026-11-17",
+    "2026-11-18"
    ],
    "links": [
     {
@@ -705,10 +944,66 @@
     }
    ],
    "round": 2,
-   "touchedAt": "2026-11-17T19:01",
+   "touchedAt": "2026-11-18T22:56",
    "report": true,
    "roundAt": "2026-11-05T16:44",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "交付行銷部五天前",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "選舉系列貼文已發布",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L6",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L7",
+     "text": "青民協圖片請公關協助處裡授權問候",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "bmwm8uygjb6hz",
+     "text": "",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw0myswnrccf",
@@ -736,7 +1031,69 @@
    "touchedAt": "2026-11-16T17:38",
    "report": true,
    "roundAt": "2026-11-16T17:38",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "確認上週校正程序是否已更正",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "流程修改",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "第二步驟 決定幾人同意(預設2人)  /  需利益迴避",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L6",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L7",
+     "text": "第三步驟 補充非校方主理事宜無須與校方事前確認",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L8",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L9",
+     "text": "第四/六步驟 校方審核時機寫入第五步驟",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwj2z9n02k6g",
@@ -759,7 +1116,15 @@
    ],
    "touchedAt": "2026-11-16T17:52",
    "report": true,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "討論聲明內容與校內環境檢視",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvz5bo0gi726",
@@ -816,7 +1181,39 @@
    "touchedAt": "2026-11-12T03:01",
    "report": false,
    "roundAt": "2026-11-05T17:37",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "昨日勘查現場已無花束",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "盤點校地周邊區域交通安全死角",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "123",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw0mszjya8iv",
@@ -836,7 +1233,15 @@
    "report": false,
    "labels": [],
    "roundAt": "2026-11-06T00:35",
-   "doneAt": "2026-11-10"
+   "doneAt": "2026-11-10",
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "交付照片文字",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw0lqzfmw4dl",
@@ -858,7 +1263,15 @@
    "fromEv": "emvpd4765r0ch",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "權益部已將選課介面建議方案已備妥。",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw0lb1djdnco",
@@ -884,7 +1297,15 @@
    ],
    "touchedAt": "2026-11-10T19:33",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "各部門功能統整簡化中 導入Google帳號登入解決權限問題",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwanenep6fe1",
@@ -905,7 +1326,27 @@
    "touchedAt": "2026-11-13T12:22",
    "issueId": "imvpc1cuefjii",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "目前補給盒已見底",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "11/12前往衛保組確認",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvt1ohjjrkyg",
@@ -923,7 +1364,45 @@
    "report": false,
    "touchedAt": "2026-11-05T16:52",
    "roundAt": "2026-11-05T16:52",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "申訴案件線上化考量 優先做",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "法規公開",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "衛生棉補給站站點地圖",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "加入學代名單與系統",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "(部門內)提案單產生器",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3aujc3kz9f",
@@ -951,7 +1430,33 @@
    "fromEv": "emvpd6qonvam7",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "更改部分投票資訊時程",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "新增返鄉列車內容",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "訂定世新報導大綱",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3azafd14l2",
@@ -967,7 +1472,21 @@
    "fromEv": "emvqlvpkgu9x6",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "前往拜訪與總務處協調學生代表",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "總務長未召開過總務會議",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3b5i0g9u65",
@@ -983,7 +1502,15 @@
    "fromEv": "emvt1ohjjrkyg",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "製作順序優先調整",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3b7rucq6pn",
@@ -999,7 +1526,27 @@
    "fromEv": "emvt1pwvqrhyw",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "報廢要求被退回學務處",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "與宿舍/生輔組確認",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3b8jiql70l",
@@ -1015,7 +1562,27 @@
    "fromEv": "emvteefflmm61",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "三樓安全門未關閉上鎖",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "生輔組聯絡場勘",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3bmw40mh3r",
@@ -1031,7 +1598,57 @@
    "fromEv": "emw0myswnrccf",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "流程修改",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "第二步驟 決定幾人同意(預設2人)  /  需利益迴避",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "第三步驟 補充非校方主理事宜無須與校方事前確認",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L6",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L7",
+     "text": "第四/六步驟 校方審核時機寫入第五步驟",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3bufhlpm4z",
@@ -1053,7 +1670,33 @@
    "fromEv": "emvpd4765r0ch",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "確認會晤確切時間",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "教務處 課教組 教務長 計網中心 ",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "抓教務長LINE",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3cqm17k1um",
@@ -1088,7 +1731,105 @@
    "fromEv": "emvz5bo0gi726",
    "touched": [],
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "關注事態發展",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "聲明流程檢討",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "交通建議統整",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "Dcard已出現連署聲音，目前關注較少，持續關注輿情",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L6",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L7",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L8",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L9",
+     "text": "社群平台已有民眾、同學自發性獻花行動，已至現場確認悼念位置，動線改善或另設區域",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L10",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L11",
+     "text": "道路改善管道",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L12",
+     "text": "1.國土署街道醫生",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L13",
+     "text": "2.參與式預算",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L14",
+     "text": "3.路權團體",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L15",
+     "text": "4.校方勘查",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3rnualkq35",
@@ -1113,7 +1854,15 @@
    "round": 1,
    "fromEv": "emw0mszjya8iv",
    "touched": [],
-   "report": false
+   "report": false,
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "討論",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw3roxbj65xp",
@@ -1129,7 +1878,15 @@
    "round": 1,
    "fromEv": "emw0pwllmeivk",
    "touched": [],
-   "report": false
+   "report": false,
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "上傳提案單及撰寫",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emvqlvpkgu9x6",
@@ -1149,7 +1906,15 @@
    "touchedAt": "2026-11-05T16:53",
    "report": false,
    "roundAt": "2026-11-05T16:48",
-   "labels": []
+   "labels": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "留意會議提及修改設置辦法 確保學生自治單位席次",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwal3c95oe2w",
@@ -1174,7 +1939,15 @@
    "round": 2,
    "fromEv": "emvteefflmm61",
    "touched": [],
-   "report": false
+   "report": false,
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "現場場勘 後門有上所鎖 無治安死角疑慮 但是否作為逃生通道與男宿對齊待生輔組商榷",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emw0pwllmeivk",
@@ -1193,7 +1966,15 @@
    "touchedAt": "2026-11-10T19:08",
    "report": false,
    "labels": [],
-   "roundAt": "2026-11-06T00:35"
+   "roundAt": "2026-11-06T00:35",
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "NAS上傳",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwj2gm2bmzjb",
@@ -1218,7 +1999,27 @@
    "round": 2,
    "fromEv": "emvt1pwvqrhyw",
    "report": false,
-   "touched": []
+   "touched": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "確認第二次協商時間",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "本會提出時段供各處室參考",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwj2mymw9ljs",
@@ -1241,7 +2042,69 @@
    "round": 2,
    "fromEv": "emw0myswnrccf",
    "report": false,
-   "touched": []
+   "touched": [],
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "確認上週校正程序是否已更正",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L1",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L2",
+     "text": "流程修改",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L3",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L4",
+     "text": "第二步驟 決定幾人同意(預設2人)  /  需利益迴避",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L5",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L6",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L7",
+     "text": "第三步驟 補充非校方主理事宜無須與校方事前確認",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L8",
+     "text": "",
+     "check": null,
+     "timeId": null
+    },
+    {
+     "id": "L9",
+     "text": "第四/六步驟 校方審核時機寫入第五步驟",
+     "check": null,
+     "timeId": null
+    }
+   ]
   },
   {
    "id": "emwajg0p0vpej",
@@ -1268,7 +2131,15 @@
    ],
    "touchedAt": "2026-11-10T21:54",
    "labels": [],
-   "report": false
+   "report": false,
+   "blocks": [
+    {
+     "id": "L0",
+     "text": "尚在規劃ing",
+     "check": null,
+     "timeId": null
+    }
+   ]
   }
  ],
  "yearLabel": "115學年",
@@ -1311,7 +2182,7 @@
   }
  },
  "pwKdf": "rQfwjiQjTGPRWifOAuO0bw==:vsYYW5+doH1lk3vytEhM89Wm9AuZDXTvwdShkCssLXs=",
- "schemaVersion": 13,
+ "schemaVersion": 14,
  "members": [
   {
    "id": "mmvx2r1i3ffnm",
