@@ -3,8 +3,6 @@
 document.addEventListener("click",async e=>{
   const t=e.target;
   const jump=t.closest("[data-jump]");
-  const tgl=t.closest("[data-toggle]");
-  if(tgl&&tgl.closest("#cardDetail"))return;   /* 詳情裡的標題列不收合 */
   /* 進度卡片：點甘特圖的議題列換成該議題詳情，按返回回到甘特圖 */
   if(t.closest("#pvBack")){progShow(null);return}
   if(jump&&!t.closest("[data-marker]")){e.preventDefault();if(curSec!=="progress")setSection("progress",{instant:true});progShow(jump.dataset.jump);return}
@@ -39,9 +37,11 @@ document.addEventListener("click",async e=>{
   /* 新增即時回報（右下角的浮動圓鈕，只有 canEdit 時算數：唯讀檢視中圓鈕正在消失時點到也不算）：開始編輯一張空白的卡片（打開、游標在名稱）；什麼都沒填就點外面＝不留（live.js 的 kpCommit） */
   if(t.closest("#addEvent")&&!editing&&canEdit()){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpFocus("title",true)}return}
-  /* 新增議題：開始編輯一個空白議題、換到它的詳情並打開名稱欄（取消就不留） */
+  /* 「+ 議題」：加一個議題、換到它的詳情，游標直接在名稱上（整段選取，打字就換掉；沒有對話框）；沒命名就點外面／Esc＝不留（inmCommit） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
-    if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);ifFld={t:"i",id:it.id,k:"title"};dirty=true}))progShow(it.id,ifFldFocus);return}
+    if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);inm={id:it.id,isNew:true};dirty=true}))progShow(it.id,()=>inmFocus(true));return}
+  /* 議題詳情：點名稱＝原地改名稱 */
+  const ing=t.closest("[data-iname-go]");if(ing){if(!editing&&canEdit()){const id=ing.closest("[data-issue]").dataset.issue;if(await startEdit("i:"+id,()=>{inm={id,isNew:false}}))inmFocus(false)}return}
   /* 以下都是編輯中那張卡片裡的工具（即時回報卡的原位編輯在 live.js） */
   if(!editing)return;
 
@@ -77,6 +77,34 @@ document.addEventListener("click",async e=>{
 });
 document.addEventListener("toggle",e=>{const d=e.target;if(d.classList&&d.classList.contains("week")&&!d.classList.contains("closing")){openWeeks=openWeeks||new Set();d.open?openWeeks.add(d.dataset.week):openWeeks.delete(d.dataset.week)}},true);
 ["rStart","rEnd"].forEach(id=>$("#"+id).addEventListener("change",e=>{const k=id==="rStart"?"start":"end";if(e.target.value){state.range[k]=e.target.value;if(state.range.end<state.range.start)state.range.end=state.range.start;changed()}}));
+
+/* ---------- 議題名稱的原位編輯（畫面在 views.js 的 cardHTML；DESIGN-next 第八節、第十三節，交接檔第九節） ----------
+   Enter＝存檔；點外面、Esc＝跟點外面一樣存檔並離開（卡片編輯中 Esc＝點外面）。名稱空白：Enter 提示「請填名稱」留在原地，點外面／Esc＝不改。
+   新增的議題沒有命名（空白或還是「新議題」）就點外面／Esc＝不留；按 Enter＝照這個名稱留下。存檔走 saveFlow（同議題的「儲存」），取消存檔時留在原地 */
+let inmBusy=false,inmDown=0;
+function inmFocus(all){const f=$("#cardDetail [data-iname]");if(!f)return;f.focus({preventScroll:true});if(all)f.select();else f.setSelectionRange(f.value.length,f.value.length)}
+async function inmCommit(how){
+  if(!inm||inmBusy||!editing||cardEdit!=="i:"+inm.id)return;
+  const {id,isNew}=inm,it=state.issues.find(i=>i.id===id),f=$("#cardDetail [data-iname]");
+  if(!it){inm=null;return}
+  const v=(f?f.value:it.title).trim();
+  if(!v&&how==="enter"){toast("請填名稱");if(f){f.classList.add("bad");f.focus()}return}
+  if(!v||(isNew?how!=="enter"&&v==="新議題":v===it.title)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改：只離開；新增的沒命名：不留，回甘特圖 */
+  it.title=v;dirty=true;inmBusy=true;
+  try{await saveFlow()}finally{inmBusy=false}
+}
+document.addEventListener("keydown",e=>{
+  const t=e.target;if(!t.matches)return;
+  if(t.matches("[data-iname-go]")&&(e.key==="Enter"||e.key===" ")){e.preventDefault();t.click();return}
+  if(!inm||!t.matches("[data-iname]"))return;
+  if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopImmediatePropagation();inmCommit("enter")}
+  else if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();inmCommit("esc")}
+},true);
+document.addEventListener("input",e=>{if(e.target.matches&&e.target.matches("[data-iname]"))e.target.classList.remove("bad")});
+/* 點外面（對話框、下拉選單、提示訊息不算）；用鍵盤 Tab 離開也一樣（滑鼠、手指按下時交給 click） */
+document.addEventListener("pointerdown",()=>{inmDown=performance.now()},true);
+document.addEventListener("click",e=>{const t=e.target;if(inm&&t.closest&&!t.closest("[data-iname],#dlg,.csel-list,#toast"))inmCommit("out")},true);
+document.addEventListener("focusout",e=>{if(inm&&e.target.matches&&e.target.matches("[data-iname]")&&e.relatedTarget&&!e.relatedTarget.closest("#dlg")&&performance.now()-inmDown>600)inmCommit("out")});
 
 const evOf=el=>{const m=mtOf(el);return (m?m.data:state).events.find(x=>x.id===el.closest("[data-ev]").dataset.ev)};   /* 元素所在的即時回報（膠囊、完成紀錄、右側詳情都帶 data-ev）；秘書處面板裡的卡片屬於別的部門（meeting.js） */
 /* ---------- 即時回報的逐欄編輯（畫面在 views.js 的 evFieldsHTML） ----------

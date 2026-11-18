@@ -34,7 +34,7 @@ function renderWeeks(){
     ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
 }
 
-/* 細刻度（甘特圖每一列、議題詳情的時程條共用）：n 根細直線排滿整條；s～e＝議題期間（%），t＝今天（%；在範圍外就給 -1 或 101）。
+/* 細刻度（甘特圖每一列；會長室追蹤、報告的甘特圖也用）：n 根細直線排滿整條；s～e＝議題期間（%），t＝今天（%；在範圍外就給 -1 或 101）。
    期間外＝淡色短刻度、期間內已過＝深色長刻度、期間內還沒到＝灰色中刻度、今天那一根＝綠色最高 */
 function ticksHTML(n,s,e,t){
   const half=50/n;let h="";
@@ -48,7 +48,9 @@ function renderGantt(){
   if(!ganttSeg&&$("#gTerm"))ganttSeg=new LiquidSeg($("#gTerm"),{onPick:k=>{Anim.swap($("#gantt"),()=>{ganttTerm=k;renderGantt();layoutAll()},"fade")}});
   if(ganttSeg&&!ganttTerm&&ganttSeg.cur!==["all","up","down"].indexOf(gTermNow()))ganttSeg.set(gTermNow(),true);   /* 還沒臨時切過：跟著設定的學期 */
   const ms=months(),tp=pos(today()),[s0,e0]=rangeMs(),inRange=Date.now()>s0&&Date.now()<e0;
-  const all=activeIssues(),list=all.filter(hasDates),undated=all.filter(i=>!hasDates(i));
+  /* 上學期／下學期只列期間碰到那段的議題；「全部」與還沒填期間的照舊全列 */
+  const act=activeIssues(),inView=i=>gTermNow()==="all"||!hasDates(i)||(([a,b])=>pd(a).getTime()<e0&&pd(b).getTime()>=s0)(issueSpan(i));
+  const all=act.filter(inView),list=all.filter(hasDates),undated=all.filter(i=>!hasDates(i));
   const narrow=innerWidth<640,nameW=narrow?104:170;
   /* 手機看單一學期（6 個月）時，時間軸剛好塞進畫面寬，不用左右滑（2026-11-06）；看「全部」照舊依月份數加寬、可以左右滑 */
   const fit=narrow&&gTermNow()!=="all",avail=Math.max(220,($("#gantt").clientWidth||360)-nameW-14);   /* 14：列的左右內距，不然會多出一點點要滑 */
@@ -68,7 +70,8 @@ function renderGantt(){
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
-  if(!all.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 新增議題」開始。"}</p>`;
+  if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
+  else if(!all.length)h+=`<p class="empty">這段期間沒有議題。</p>`;
   morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、刻度、註記都是同一個節點 */
 }
 
@@ -91,11 +94,59 @@ function logHTML(it){
   return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
+/* ---------- 議題詳情的時程條（DESIGN-next 第八節：比照 Android Material 的音量滑桿） ----------
+   已過的一段、直立把手、還沒到的一段，三者之間留縫（外觀在 board.css「議題詳情的時程條」）。把手中心＝時程百分比（schedPct，跟「時程 N%」同一個數），
+   期間＝開始日到結束日（整條）；未排程沒有把手、整條是還沒到的那段。
+   條上放名稱與百分比、負責人（每人一格，名字第一個字）；位置由 slFit 依實際寬度決定，動畫在 slAnim */
+const SL_HW=5,SL_GAP=5,SL_OV=7,SL_PAD=14,SL_END=22,SL_CW=24,SL_CG=4,SL_MW=30;   /* 跟 board.css 同一組：把手寬、縫、把手高出條、文字內距、右端小點、負責人一格的寬與間距、「+N」的寬 */
+function sliderHTML(it){
+  const p=schedPct(it),names=staffNames(it.staff);
+  return `<div class="c-bar sl${p==null?" none":""}" style="--p:${cssNum(p,0)}%" data-p="${p==null?"":cssNum(p,0)}" aria-hidden="true">
+        <span class="sl-a"></span><span class="sl-h"></span><span class="sl-b"></span>
+        <span class="sl-lb"><b>${esc(it.title)}</b><i class="num">${p==null?"未排程":cssNum(p,0)+"%"}</i></span>
+        ${names.length?`<span class="sl-avs">${names.map(n=>`<span class="sl-av">${esc(Array.from(n)[0]||"")}</span>`).join("")}<span class="sl-av sl-more num" hidden></span></span>`:""}
+      </div>`;
+}
+/* 名稱與百分比不能被把手蓋住：先放比較長的那一段裡（已過＝lb-a、還沒到＝lb-b，另一段放得下就換過去），兩段都放不下移到條的上方（lb-up）。
+   負責人靠還沒到那段的右端；放不下時前面幾格照放、其餘收成「+N」，連「+N」都放不下就不放（手機一律不放，看下面議題區塊的專員列）。
+   回傳名稱移到上方時要多留的高度（layoutTrack 用） */
+function slFit(bar){
+  const W=bar.clientWidth,none=bar.dataset.p==="",x=none?0:cssNum(bar.dataset.p)/100*W;
+  const a=none?0:x-SL_HW/2-SL_GAP,b=none?W:W-x-SL_HW/2-SL_GAP;
+  const lb=bar.querySelector(".sl-lb"),lw=lb.offsetWidth,box=bar.querySelector(".sl-avs");
+  const chips=box&&getComputedStyle(box).display!=="none"?[...box.querySelectorAll(".sl-av:not(.sl-more)")]:[],more=box&&box.querySelector(".sl-more");
+  const avMin=chips.length?SL_MW+8:0;   /* 名稱跟負責人擠在還沒到那段時，至少留一格「+N」 */
+  let at="up";
+  for(const k of !none&&x>=W/2?["a","b"]:["b","a"])if(lw<=(k==="a"?a-2*SL_PAD:b-SL_PAD-SL_END-avMin)){at=k;break}
+  ["a","b","up"].forEach(k=>bar.classList.toggle("lb-"+k,k===at));
+  if(chips.length){
+    const room=b-SL_END-SL_PAD-(at==="b"?lw+8:0),n=chips.length;
+    let k=n*(SL_CW+SL_CG)-SL_CG<=room?n:Math.floor((room-SL_MW)/(SL_CW+SL_CG));
+    const fit=k>=0;k=Math.max(0,k);
+    chips.forEach((c,i)=>{c.hidden=!fit||i>=k});
+    more.hidden=!fit||k>=n;more.textContent=fit&&k<n?`+${n-k}`:"";
+  }
+  return at==="up"?lb.offsetHeight+6:0;
+}
+/* 把手從 from（百分比）滑到現在的位置，兩段跟著伸縮（只動 transform；from＝0 是剛打開詳情的進場）。關掉動態時直接到結果 */
+function slAnim(bar,from){
+  if(!bar||reduceMotion()||bar.dataset.p==="")return;
+  const W=bar.clientWidth,to=cssNum(bar.dataset.p);if(!W||from===to)return;
+  const seg=p=>[Math.max(0,p/100*W-SL_HW/2-SL_GAP),Math.max(0,W-p/100*W-SL_HW/2-SL_GAP)],[a0,b0]=seg(from),[a1,b1]=seg(to);
+  const o={duration:MO.slow,easing:"cubic-bezier(.25,1.12,.4,1)"},q=s=>bar.querySelector(s);
+  q(".sl-h").animate([{transform:`translateX(${(from-to)/100*W}px)`},{transform:"none"}],o);
+  if(a1>0)q(".sl-a").animate([{transform:`scaleX(${a0/a1})`},{transform:"none"}],o);
+  if(b1>0)q(".sl-b").animate([{transform:`scaleX(${b0/b1})`},{transform:"none"}],o);
+  q(".sl-lb").animate([{opacity:0},{opacity:1}],{duration:MO.base,delay:MO.fast,easing:MO.out,fill:"backwards"});
+}
+
 /* stack marker labels into lanes so many markers never overlap */
 const LH=22;
 function layoutTrack(tr){
   const isG=tr.classList.contains("g-track"),W=tr.clientWidth;if(!W||!tr.querySelector(".g-bar,.c-bar"))return;   /* 未排程的甘特列沒有條 */
-  const barH=isG?22:16,dotH=isG?6:16,gap=isG?3:4;   /* 註記都放在刻度「上方」、不疊在刻度上：甘特圖是 6px 小點；議題詳情是 16px 細長條（2026-11-06 使用者：長條疊在刻度上又半透明很粗糙） */
+  /* 議題詳情的時程條（滑桿）：把手比條上下各高出 SL_OV；名稱與百分比移到條上方時再多 lift，註記都往上讓 */
+  const sl=!isG&&tr.querySelector(".sl"),lift=sl?slFit(sl):0,ov=sl?SL_OV:0;
+  const barH=isG?22:sl?sl.offsetHeight:16,dotH=isG?6:16,gap=isG?3:4;   /* 註記都放在條的「上方」、不疊在條上：甘特圖是 6px 小點；議題詳情是 16px 細長條（2026-11-06 使用者：長條疊在刻度上又半透明很粗糙） */
   const lanes={up:[],down:[]},info=[];
   [...tr.querySelectorAll(isG?".g-mk":".marker")].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)).forEach(m=>{
     const side=!isG&&m.classList.contains("down")?"down":"up";
@@ -106,14 +157,14 @@ function layoutTrack(tr){
     info.push({m,lbl,side,k});
   });
   const nUp=lanes.up.length,nDown=lanes.down.length;
-  const barTop=(isG?6:8)+nUp*LH+(nUp?6:(isG?14:18))+(isG?0:dotH+gap-10);   /* 議題詳情多留長條的高度 */
-  const below=barTop+barH+(isG?6:20);
+  const barTop=(isG?6:8)+nUp*LH+(nUp?6:(isG?14:18))+(isG?0:dotH+gap-10)+ov+lift;   /* 議題詳情多留長條的高度 */
+  const below=barTop+barH+ov+(isG?6:20),top0=barTop-ov-lift;   /* top0：條（含把手、上方的名稱）的頂端 */
   tr.querySelector(isG?".g-bar":".c-bar").style.top=barTop+"px";
-  tr.querySelectorAll(".tick").forEach(t=>t.style.top=(barTop+barH+3)+"px");
+  tr.querySelectorAll(".tick").forEach(t=>t.style.top=(barTop+barH+ov+3)+"px");
   info.forEach(({m,lbl,side,k})=>{
     const dot=m.querySelector(".dot"),stem=m.querySelector(".stem");
-    dot.style.top=(barTop-dotH-gap)+"px";
-    if(side==="up"){const base=isG?barTop:barTop-dotH-gap,top=base-6-(k+1)*LH+2;lbl.style.top=top+"px";stem.style.top=(top+18)+"px";stem.style.height=Math.max(0,base-top-18)+"px"}
+    dot.style.top=(top0-dotH-gap)+"px";
+    if(side==="up"){const base=isG?barTop:top0-dotH-gap,top=base-6-(k+1)*LH+2;lbl.style.top=top+"px";stem.style.top=(top+18)+"px";stem.style.height=Math.max(0,base-top-18)+"px"}
     else{const top=below+k*LH;lbl.style.top=top+"px";stem.style.top=(barTop+barH)+"px";stem.style.height=Math.max(0,top-barTop-barH)+"px"}
   });
   tr.style.height=(nDown?below+nDown*LH+4:below+(isG?0:4))+"px";
@@ -122,28 +173,27 @@ const layoutAll=()=>document.querySelectorAll(".c-track,.g-track").forEach(layou
 let _rz;window.addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(layoutAll,120)});
 document.fonts?.ready.then(layoutAll);
 
-/* 一張議題卡片；open＝展開內容，sel＝左右兩欄時清單裡選到的那列，pane＝畫在右側詳情（不帶 id，避免重複） */
-function cardHTML(it,open,pane,sel){
-  const ed=cardEd("i",it.id);
-  return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${esc(it.id)}"`} data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}"${sel?' aria-current="true"':""}>
+/* 議題詳情（#cardDetail）的那一張議題卡片；只畫在詳情裡，一律展開 */
+function cardHTML(it){
+  const nm=!!inm&&inm.id===it.id&&cardEd("i",it.id),ed=cardEd("i",it.id)&&!nm;   /* nm：只在改名稱（原位編輯，events.js 的 inmCommit）；ed：整張卡片編輯中 */
+  return `<article class="card open ${it.doneAt?"closed":""} ${ed?"sec-edit":""}" data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}">
     <div class="card-top">
-      <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
+      <div class="card-head">${nm?`<input class="card-title" data-iname value="${esc(it.title)}" maxlength="500" aria-label="議題名稱" autocomplete="off" enterkeyhint="done">`:`<b class="card-title"${canEdit()&&!editing?` data-iname-go tabindex="0" role="button"`:""}>${esc(it.title)}</b>`}${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></div>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
-    ${open?`
     ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${fmt(it.start)} – ${fmt(it.end)}`:"未排入甘特圖"}</span></div>
     <div class="tags">${tagsHTML(it)}</div>
     ${staffHTML(it.staff)}${labelChipsHTML(it.labels)}
     ${it.note?`<p class="note"><span class="note-h">目前進度</span>${esc(it.note)}</p>`:""}`}
     <div class="c-track" data-track>
-      <div class="c-bar">${ticksHTML(Math.round(Math.min(Math.max(innerWidth-(innerWidth>=900?260:60),280),1100)/6),0,100,hasDates(it)?(pd(today())-pd(it.start))/Math.max(1,pd(it.end)-pd(it.start))*100:-1)}</div>
-      ${hasDates(it)?issueSpan(it).map((d,k)=>`<span class="tick ${k?"tick-e":"tick-s"}" style="left:${k*100}%">${fmt(d).slice(5)}</span>`).join(""):`<span class="tick tick-hint" style="left:0">未排程：填開始日與結束日後，時程條才會照時間填色</span>`}
+      ${sliderHTML(it)}
+      ${hasDates(it)?issueSpan(it).map((d,k)=>`<span class="tick ${k?"tick-e":"tick-s"}" style="left:${k*100}%">${fmt(d).slice(5)}</span>`).join(""):""}
       ${(()=>{const L=latestMarkerId(it.markers);return it.markers.map(m=>markerHTML(m,L,it)).join("")})()}
     </div>
     ${(()=>{const kids=state.events.filter(e=>!e.doneAt&&e.issueId===it.id);return kids.length?`<div class="kid-evs"><div class="att-h">進行中的即時回報</div><div class="kid-list">${kids.map(e=>`<span class="kid-ev" data-st="${evStatus(e)}"><span class="live-dot" aria-hidden="true"></span>${esc(e.name)}</span>`).join("")}</div></div>`:""})()}
     ${logHTML(it)}
     ${ed||!it.links.length?"":`<div class="att"><div class="att-h">相關連結</div><div class="links">${it.links.map(linkHTML).join("")}</div></div>`}
-    ${ed?editBarHTML():""}`:`<div class="mini-bar" data-toggle><div class="fill" style="width:${schedPct(it)||0}%"></div></div>`}
+    ${ed?editBarHTML():""}
   </article>`;
 }
 /* ---------- 進度、完成紀錄的逐欄編輯（跟即時回報同一套外觀與操作：點哪一欄改哪一欄、一次一欄、Enter 完成、Esc 取消） ----------
@@ -152,6 +202,8 @@ function cardHTML(it,open,pane,sel){
    k＝title／stage／note／dates／staff／labels／l:連結 id（l:+＝新增）／done（完成日期）／name／desc／issue（母議題）。
    存回在 events.js 的「進度、完成紀錄的逐欄編輯」段 */
 let ifFld=null;
+/* 議題名稱的原位編輯（events.js 的 inmStart／inmCommit）：inm＝{id,isNew}，只開名稱這一欄（用同一套單卡編輯開始，沒有「取消｜儲存」） */
+let inm=null;
 const ifOpen=(t,id,k)=>!!ifFld&&ifFld.t===t&&ifFld.id===id&&ifFld.k===k;
 function ifFieldHTML(t,id,k,label,view,editor){return fldRowHTML({open:ifOpen(t,id,k),k,label,view,editor,del:/^l:(?!\+)/.test(k),key:"iffk",pen:"ifpen",fx:"iffx",attr:`data-ift="${esc(t)}" data-ifid="${esc(id)}"`})}
 /* 欄位沒有內容時的灰字：不用全形括號（2026-11-06 使用者：文字要視覺上對齊——全形「（」左邊自帶半格空白，整欄看起來往右縮） */
@@ -187,22 +239,27 @@ function doneFieldsHTML(o,isEv){
 }
 /* 進度卡片的詳情頁：progOpen＝正在看的議題 id（null＝看甘特圖）。議題不見了（刪除、結案後儲存）就自動回甘特圖 */
 function renderCards(){
-  if(!editing)ifFld=null;
+  if(!editing){ifFld=null;inm=null}
   const it=progOpen&&activeIssues().find(i=>i.id===progOpen);
   if(progOpen&&!it)progOpen=null;
   $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
   morphTo($("#pvBack"),ico("prev","sm")+"返回甘特圖");
-  morphTo($("#cardDetail"),it?cardHTML(it,true,true,false):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
+  const b0=$("#cardDetail .sl"),was=b0&&b0.closest("[data-issue]").dataset.issue===(it&&it.id)?b0.dataset.p:"";
+  morphTo($("#cardDetail"),it?cardHTML(it):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
+  if(was!=="")slAnim($("#cardDetail .sl"),cssNum(was));   /* 同一個議題的時程變了（改了期間）：把手滑到新位置 */
   $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */
 let pvTok=0;
+const pvIn=el=>{if(!reduceMotion())el.animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:340,easing:"cubic-bezier(.2,.9,.25,1)"})};   /* 換上來的那一頁往上淡入 */
 function progShow(id,then){   /* then：換好畫面後要做的事（例如新增議題後把游標放進名稱欄） */
+  if(id===progOpen&&!then&&!$(id?"#pvDetail":"#pvGantt").hidden)return;   /* 已經在那一頁（例如新增的議題沒有命名、點返回時已經回到甘特圖） */
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
   const swap=()=>{if(tok!==pvTok)return;progOpen=id;renderCards();layoutAll();
     const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
-    if(!reduceMotion())$(id?"#pvDetail":"#pvGantt").animate([{opacity:0,transform:"translateY(16px)"},{opacity:1,transform:"none"}],{duration:340,easing:"cubic-bezier(.2,.9,.25,1)"});
+    pvIn($(id?"#pvDetail":"#pvGantt"));
+    if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */
     if(then)then()};
   if(reduceMotion()||out.hidden){swap();return}
   const a=out.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(12px)"}],{duration:160,easing:"cubic-bezier(.4,0,1,1)",fill:"forwards"});

@@ -60,12 +60,11 @@ await p.click(`#cardDetail [data-ifpen="l:${it.links[it.links.length-1].id}"]`);
 ok(await p.evaluate(id=>state.issues.find(i=>i.id===id).links.length,iid)===nl,tag+' 刪除連結');
 await save('#cardDetail');
 ok(remote().issues.some(i=>i.title==='改過的議題名稱'),tag+' 議題儲存後寫進 data.json');
-/* 新增議題：直接打開名稱欄 */
+/* 新增議題：游標直接在名稱上（ui-08：原位編輯，不是整張卡片的編輯；Enter 就存檔，細節見 ui8prog.js） */
 await p.click('#pvBack');await p.waitForTimeout(600);await p.click('#addIssue');await p.waitForTimeout(900);
-ok(await p.evaluate(()=>document.activeElement&&document.activeElement.matches('#cardDetail .evf.open [data-e="title"]')),tag+' 新增議題後游標在名稱欄');
-await p.keyboard.type('全新議題');await p.keyboard.press('Enter');await R();
-ok(await p.evaluate(()=>state.issues.some(i=>i.title==='全新議題')),tag+' 新議題命名');
-await save('#cardDetail');
+ok(await p.evaluate(()=>document.activeElement&&document.activeElement.matches('#cardDetail input[data-iname]')),tag+' 新增議題後游標在名稱上');
+await p.keyboard.type('全新議題');await p.keyboard.press('Enter');await p.waitForTimeout(3200);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(400);
+ok(await p.evaluate(()=>state.issues.some(i=>i.title==='全新議題')&&!editing),tag+' 新議題命名（Enter 存檔）');
 /* 完成紀錄 */
 await p.evaluate(()=>setSection('done',{instant:true}));await R();
 const did=await p.evaluate(()=>state.issues.find(i=>i.doneAt)?.id||null),eid=await p.evaluate(()=>state.events.find(e=>e.doneAt&&!e.fromEv).id);

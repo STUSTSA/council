@@ -1,6 +1,6 @@
 /* 單卡編輯（2026-11-06，render.js 的 cardEdit）：頁首沒有「編輯」；沒登入看不到任何編輯鈕與新增鈕；
    登入後：即時回報卡沒有「編輯」鈕（03 T7），點一行或名稱 → 只有那張進入原位編輯，其他編輯鈕藏起來；改名稱 → 儲存（寫一筆 commit）；
-   即時回報卡沒有「取消」：沒改就點外面只收合、不寫 commit（03 T6 改規格，原本的「取消會還原」）；新增議題 → 開始編輯空白議題，取消就不留；
+   即時回報卡沒有「取消」：沒改就點外面只收合、不寫 commit（03 T6 改規格，原本的「取消會還原」）；新增議題 → 名稱原地打開，沒命名就 Esc＝不留（ui-08）；
    甘特圖時間軸、議題詳情、完成紀錄各自的「編輯」；週報頁登入就有新增、編輯。手機 412 與桌面 1300。固定 8300 埠。
    03 F5（2026-11-17）：原本只印出數值、不會失敗（原本壞的那一步——1300 點詳情說明欄被 .wrap 擋住的「取消會還原」——在 03 T6 已照新規格改寫，
    之後一直通過，但因為只印不判斷，壞了也看不出來），改成每一步都判斷、最後印「全部通過」並用結束碼表示結果；沒改就點外面不寫 commit 兩種寬度都測
@@ -45,9 +45,9 @@ for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login,st}=await c.
   const n0=await p.evaluate(()=>state.issues.length);
   ok(await vis(p,'#ganttEdBtn')===1&&await vis(p,'#addIssue')===1,`${w} 進度：甘特圖「編輯」與新增議題`);
   await p.click('#addIssue');await p.waitForTimeout(900);
-  {const s=await S(p);ok(s.editing&&s.cardEdit.startsWith('i:')&&!!(await p.$('#cardDetail .evf.open [data-e=title]'))&&await vis(p,'#cardDetail .card-tools')===1,`${w} 新增議題：開始編輯空白議題、名稱欄打開（${JSON.stringify(s)}）`);}
-  await p.click('#cardDetail [data-edcancel]');await p.waitForTimeout(900);
-  {const s=await S(p);ok(await p.evaluate(()=>state.issues.length)===n0&&!s.editing,`${w} 新增議題按取消：不留`);}
+  {const s=await S(p);ok(s.editing&&s.cardEdit.startsWith('i:')&&!!(await p.$('#cardDetail input[data-iname]'))&&s.bars===0,`${w} 新增議題：開始編輯空白議題、名稱原地打開（ui-08：只開名稱，沒有「取消｜儲存」）（${JSON.stringify(s)}）`);}
+  await p.keyboard.press('Escape');await p.waitForTimeout(900);
+  {const s=await S(p);ok(await p.evaluate(()=>state.issues.length)===n0&&!s.editing,`${w} 新增議題沒命名就 Esc：不留`);}
   /* 甘特圖時間軸：整區編輯 */
   await p.evaluate(()=>progShow(null));await p.waitForTimeout(500);await p.click('#ganttEdBtn');await p.waitForTimeout(600);
   {const s=await S(p);ok(s.cardEdit==='s:gantt'&&await vis(p,'#pvGantt .range')===1,`${w} 甘特圖時間軸：整區編輯、出現期間`);}
