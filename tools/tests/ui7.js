@@ -7,7 +7,7 @@
    5. 開場：小人先滑入、標誌再上移、字由左到右揭開（各動畫的延遲順序），播完收掉（現有流程沒有開場登入鈕）；關掉動態直接是結果
    6. 進部門過場（桌面鋪滿、手機翻面）與看板到達的底板：Element.animate 的 keyframes 只有 transform／opacity；交接 pfx-burst 用完就刪；回主頁焦點是那個部門
    7. 進行中的張數（資料檔讀一次）；跳脫（部門名含 <img onerror>）；頁面沒有 title 屬性；412 沒有橫捲；深色左邊小人只留線稿
-   9. sw.js：快取版本 v3、NO_CACHE 也排除 data-部門.json、安裝清單含新介面新增的檔；只開看板時主頁的檔已在離線備份、資料檔不存
+   9. sw.js：快取版本照 sw.js（board-cache-v數字）、NO_CACHE 也排除 data-部門.json、安裝清單含新介面新增的檔；只開看板時主頁的檔已在離線備份、資料檔不存
       安裝清單含 index.html、home.html 載入的每個本地 CSS／JS（跟網頁同步，漏加會被測出來）
   10. 只開過主頁就離線：再開部門看板畫得出來、沒有 pageerror；activate 只刪自己的舊版本（board-cache-*），同網域其他快取不動
    失敗會印 FAIL 並以非 0 結束 */
@@ -238,11 +238,11 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
     await ctx.close()}
 
-  /* 9 sw.js（ui-07）：快取版本 v3；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+  /* 9 sw.js（ui-07）：快取版本照 sw.js（不寫死版號）；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
-    ok(sw.CACHE==='board-cache-v3','sw.js 快取版本 v3：'+sw.CACHE);
+    ok(/^board-cache-v\d+$/.test(sw.CACHE)&&sw.CACHE===SW_CACHE,'sw.js 快取版本 board-cache-v數字（照 sw.js）：'+sw.CACHE);
     const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
     ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
     const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];
