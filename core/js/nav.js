@@ -350,7 +350,7 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
     const draw=()=>{list=rows();morphTo(box,`<b class="set-hub-t">${title}</b>${head()}${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
-    const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
+    const me=hubNow={inFlow:false,draw,end(){if(hubNow===me)hubNow=null;box.remove();res()}};   /* draw：資料變了（帳號、角色，account.js 的 acctChanged）時原位重畫 */
     draw();
     box.addEventListener("click",async e=>{
       const b=e.target.closest("[data-hub]");if(!b||me.inFlow||hubNow!==me||b.getAttribute("aria-disabled")==="true")return;

@@ -36,6 +36,7 @@ const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
 let acctCanW="";
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
+  if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
   const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
     if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
 }
