@@ -202,7 +202,7 @@ function cardHTML(it){
    k＝title／stage／note／dates／staff／labels／l:連結 id（l:+＝新增）／done（完成日期）／name／desc／issue（母議題）。
    存回在 events.js 的「進度、完成紀錄的逐欄編輯」段 */
 let ifFld=null;
-/* 議題名稱的原位編輯（events.js 的 inmStart／inmCommit）：inm＝{id,isNew}，只開名稱這一欄（用同一套單卡編輯開始，沒有「取消｜儲存」） */
+/* 議題名稱的原位編輯（events.js 的 inmStart／inmCommit）：inm＝{id,isNew,orig（開始改名時的原名，判斷有沒有改用）}，只開名稱這一欄（用同一套單卡編輯開始，沒有「取消｜儲存」） */
 let inm=null;
 const ifOpen=(t,id,k)=>!!ifFld&&ifFld.t===t&&ifFld.id===id&&ifFld.k===k;
 function ifFieldHTML(t,id,k,label,view,editor){return fldRowHTML({open:ifOpen(t,id,k),k,label,view,editor,del:/^l:(?!\+)/.test(k),key:"iffk",pen:"ifpen",fx:"iffx",attr:`data-ift="${esc(t)}" data-ifid="${esc(id)}"`})}

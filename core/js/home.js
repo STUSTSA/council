@@ -324,7 +324,7 @@
   });
   dk.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches(".hm-lkf input")&&!e.isComposing){e.preventDefault();lkAdd()}});
   dk.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".hm-lku"))e.target.removeAttribute("aria-invalid")});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!e.isComposing&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});   /* 注音選字中的 Esc 給輸入法，不結束編輯 */
   document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk")))lkEdit(false)},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
   addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換 */
     if(LK.ed)return;const old=LK.list.map(x=>x.u+"\n"+x.n).join("\n"),nx=lkRead();if(nx.map(x=>x.u+"\n"+x.n).join("\n")===old)return;

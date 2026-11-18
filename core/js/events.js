@@ -41,7 +41,7 @@ document.addEventListener("click",async e=>{
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
     if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);inm={id:it.id,isNew:true};dirty=true}))progShow(it.id,()=>inmFocus(true));return}
   /* 議題詳情：點名稱＝原地改名稱 */
-  const ing=t.closest("[data-iname-go]");if(ing){if(!editing&&canEdit()){const id=ing.closest("[data-issue]").dataset.issue;if(await startEdit("i:"+id,()=>{inm={id,isNew:false}}))inmFocus(false)}return}
+  const ing=t.closest("[data-iname-go]");if(ing){if(!editing&&canEdit()){const id=ing.closest("[data-issue]").dataset.issue;if(await startEdit("i:"+id,()=>{const it=state.issues.find(i=>i.id===id);inm={id,isNew:false,orig:it?it.title:""}}))inmFocus(false)}return}
   /* 以下都是編輯中那張卡片裡的工具（即時回報卡的原位編輯在 live.js） */
   if(!editing)return;
 
@@ -89,7 +89,7 @@ async function inmCommit(how){
   if(!it){inm=null;return}
   const v=(f?f.value:it.title).trim();
   if(!v&&how==="enter"){toast("請填名稱");if(f){f.classList.add("bad");f.focus()}return}
-  if(!v||(isNew?how!=="enter"&&v==="新議題":v===it.title)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改：只離開；新增的沒命名：不留，回甘特圖 */
+  if(!v||(isNew?how!=="enter"&&v==="新議題":v===inm.orig)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改（跟開始改名時的原名比，不跟 it.title 比：上一次存檔被取消時 it.title 已經是新名稱）：只離開；新增的沒命名：不留，回甘特圖 */
   it.title=v;dirty=true;inmBusy=true;
   try{await saveFlow()}finally{inmBusy=false}
 }
@@ -98,7 +98,7 @@ document.addEventListener("keydown",e=>{
   if(t.matches("[data-iname-go]")&&(e.key==="Enter"||e.key===" ")){e.preventDefault();t.click();return}
   if(!inm||!t.matches("[data-iname]"))return;
   if(e.key==="Enter"&&!e.isComposing){e.preventDefault();e.stopImmediatePropagation();inmCommit("enter")}
-  else if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();inmCommit("esc")}
+  else if(e.key==="Escape"&&!e.isComposing){e.preventDefault();e.stopImmediatePropagation();inmCommit("esc")}   /* 注音選字中的 Esc 給輸入法（取消選字），不存檔 */
 },true);
 document.addEventListener("input",e=>{if(e.target.matches&&e.target.matches("[data-iname]"))e.target.classList.remove("bad")});
 /* 點外面（對話框、下拉選單、提示訊息不算）；用鍵盤 Tab 離開也一樣（滑鼠、手指按下時交給 click） */
