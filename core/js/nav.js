@@ -200,13 +200,13 @@ function settingsInner(){
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
 /* ---------- 設定頁：外觀（主題、深淺色、音效；設定存取在 core/js/theme.js 的 UI） ----------
-   淺色／深色的分段切換（anim.js 的 LiquidSeg）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
+   淺色／深色的分段切換（anim.js 的 LiquidSeg；平面色塊 .glass 直接寫在 HTML 裡，不靠 LiquidSeg 執行時加：合併頁重畫走原位更新，執行時加的 class 會被拿掉）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
    每顆主題按鈕帶自己的 data-pal，按鈕裡的顏色變數就是那一組主題的顏色（深淺跟著目前的 data-theme，見 core/theme.css）。
    畫在合併頁（hubRun）下面：firestore 模式登入後在「帳號」（account.js 的 acctHub），其他情況在設定清單的「外觀」（SET_HUBS.look） */
 function lookHTML(head){
   const u=UI.get();
   return `<section class="look">${head?'<b class="look-t">外觀</b>':""}
-    <div class="lseg look-mode" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
+    <div class="lseg look-mode glass" role="tablist" aria-label="深淺色"><span class="lseg-lens" aria-hidden="true"></span>${[["light","淺色"],["dark","深色"]].map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${u.mode===k}">${t}</button>`).join("")}</div>
     <div class="look-pals" role="radiogroup" aria-label="主題">${UI_PALS.map(([k,t])=>`<button type="button" class="look-pal" role="radio" data-look-pal="${k}" data-pal="${k}" aria-checked="${u.pal===k}"><span class="look-sw" aria-hidden="true"><i></i><i></i><i></i></span>${t}</button>`).join("")}</div>
     <div class="look-row"><span id="lookSndL">音效</span><button type="button" class="sw${u.sound?" on":""}" data-look-snd role="switch" aria-checked="${u.sound}" aria-labelledby="lookSndL"><i aria-hidden="true"></i></button></div></section>`;
 }
@@ -225,17 +225,17 @@ document.addEventListener("click",e=>{
 /* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
 function settingsHTML(){
-  return `<div class="anim-top set-top">${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>
+  return `<div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>
   <div class="set-body"><div class="set-scroll"><div class="set-inner"></div></div><div class="set-pane" hidden></div></div>`;
 }
 /* 鎖頭：鎖扣反覆打開、落下，落下時鎖身輕輕一震 */
 function gateAnim(){
-  const sh=$("#setOv .gate-shackle"),bd=$("#setOv .gate-body");if(!sh||reduceMotion())return;
+  const sh=$("#setOv .gate-shackle"),bd=$("#setOv .gate-body");if(!sh||reduceMotion()||sh.getAnimations().length)return;   /* 原位更新後還是同一個鎖頭：正在播就不再疊一份 */
   const o={duration:2600,iterations:Infinity};
   sh.animate([{transform:"none",offset:0,easing:"cubic-bezier(.3,0,.2,1)"},{transform:"translateY(-8px)",offset:.24},{transform:"translateY(-8px)",offset:.56,easing:"cubic-bezier(.5,0,.8,.4)"},{transform:"translateY(1px)",offset:.68},{transform:"none",offset:.76},{transform:"none",offset:1}],o);
   bd.animate([{transform:"none",offset:0},{transform:"none",offset:.67},{transform:"translateY(1.5px)",offset:.71},{transform:"none",offset:.8},{transform:"none",offset:1}],o);
 }
-function renderSettings(){const el=$("#setOv .set-inner");if(el&&setOpen){const flip=Anim.capture();el.innerHTML=settingsInner();weekDotSync();gateAnim();flowWatch();Anim.play(flip)}}   /* 列有增減（登入前後、標籤數）時照動畫規則 2 滑動／淡入 */
+function renderSettings(){const el=$("#setOv .set-inner");if(el&&setOpen){const flip=Anim.capture();morphTo(el,settingsInner());weekDotSync();gateAnim();flowWatch();Anim.play(flip)}}   /* 列有增減（登入前後、標籤數）時照動畫規則 2 滑動／淡入 */
 async function openSettings(){
   let ov=$("#setOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov" id="setOv" role="dialog" aria-modal="true" aria-label="設定" hidden>${settingsHTML().replace('<div class="set-inner">','<div class="set-inner" data-flip="set">')}</div>`);ov=$("#setOv");
@@ -272,7 +272,7 @@ function setPaneHost(){if(weekPaneEnd)return null;   /* 每週概述開著：生
 let subOpen=false;
 function subEl(){
   let s=$("#setSub");if(s)return s;
-  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="anim-top set-top">${SET_LOGO()}<div class="anim-ctl"><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev")}返回</button></div></div><div class="set-sub-body"></div></div>`);
+  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev")}返回</button></div></div><div class="set-sub-body"></div></div>`);
   $("#subBack").onclick=()=>paneDismiss();return $("#setSub");
 }
 async function subRun(fn){
@@ -359,7 +359,7 @@ function hubRun(title,rows,foot=()=>"",mount){   /* foot：清單下面的內容
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync();if(mount)mount(box)};
+    const draw=()=>{list=rows();morphTo(box,`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{

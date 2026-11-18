@@ -63,7 +63,7 @@ function renderGantt(){
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
   if(!all.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 新增議題」開始。"}</p>`;
-  $("#gantt").innerHTML=h;
+  morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、刻度、註記都是同一個節點 */
 }
 
 /* 階段標籤與連結按鈕（只顯示；編輯中改用逐欄編輯的「階段」「超連結」欄） */
@@ -185,8 +185,8 @@ function renderCards(){
   const it=progOpen&&activeIssues().find(i=>i.id===progOpen);
   if(progOpen&&!it)progOpen=null;
   $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
-  $("#pvBack").innerHTML=ico("prev","sm")+"返回甘特圖";
-  $("#cardDetail").innerHTML=it?cardHTML(it,true,true,false):"";
+  morphTo($("#pvBack"),ico("prev","sm")+"返回甘特圖");
+  morphTo($("#cardDetail"),it?cardHTML(it,true,true,false):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
   $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */
@@ -304,11 +304,11 @@ function renderDone(){
   const cap=x=>`<details class="ev done-ev ${dnew(x.id)} ${md&&x.id===selDone?"sel":""} ${x.id===nextDone?"next":""} ${x.ed?"sec-edit":""}" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr} data-st="done" ${!md&&(openDone.has(x.id)||x.ed)?"open":""}${md&&x.id===selDone?' aria-current="true"':""}>
       <summary><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${x.del?`<button type="button" class="ev-del edit-only" ${x.del}>${ico("close","solo")}</button>`:""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><p class="ev-meta">${x.sub}</p><div class="done-body">${md&&x.id===selDone?"":x.body}</div></div></details>`;   /* 左右兩欄時被選到的那顆只是空位，內容（含編輯欄位）只畫在右側詳情 */
-  $("#doneList").innerHTML=items.map(cap).join("")||`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`;
+  morphTo($("#doneList"),items.map(cap).join("")||`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`);   /* 原位更新（morph.js） */
   if(md){const x=items.find(y=>y.id===selDone);
-    pane.innerHTML=`<div class="evd ${x.ed?"sec-edit":""}" data-st="done" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr}><div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${mdStepHTML("done",items.map(y=>y.id),x.id)}<button type="button" class="icon md-close" data-mdclose="done" aria-label="收起右側">${ico("close")}收起</button></div>
-      <p class="ev-meta">${x.sub}</p><div class="done-body">${x.body}</div></div>`;pane.hidden=false;
-  }else{pane.innerHTML="";pane.hidden=true}
+    morphTo(pane,`<div class="evd ${x.ed?"sec-edit":""}" data-st="done" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr}><div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${mdStepHTML("done",items.map(y=>y.id),x.id)}<button type="button" class="icon md-close" data-mdclose="done" aria-label="收起右側">${ico("close")}收起</button></div>
+      <p class="ev-meta">${x.sub}</p><div class="done-body">${x.body}</div></div>`);pane.hidden=false;
+  }else{pane.textContent="";pane.hidden=true}
   prevDone=ids;Anim.syncPings();
 }
 /* 左右兩欄時換選一筆：右側內容淡入（完成紀錄與個別進度共用） */
