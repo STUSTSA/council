@@ -41,6 +41,7 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     /* 1. 設定鍵開關、沒有 logo 與關閉 */
     await p.click('#setBtn');await W(900);
     let g=await gearSt(p);ok(g.open&&g.on&&g.exp==='true'&&!g.hidden,'1300 設定鍵打開設定、鍵是選中狀態 '+JSON.stringify(g));
+    ok(await p.evaluate(()=>!$('#setOv').hasAttribute('aria-modal')&&!$('#setBtn').closest('[inert],[aria-hidden="true"]')),'1300 設定頁不設 aria-modal：唯一的關閉控制（工具列的設定鍵）報讀器也用得到');
     let c=await noChrome(p);ok(!c.logo&&!c.close,'1300 設定頁沒有 logo、沒有關閉 '+JSON.stringify(c));
     ok(await p.evaluate(()=>!document.querySelector('#setOv .set-top,#setOv .anim-top')),'1300 設定頁沒有標題列');
     /* 2. 登入前 */

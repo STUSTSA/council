@@ -215,7 +215,8 @@ function settingsInner(){
       setRow("device","device","這台裝置"))+
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
-/* 設定頁沒有標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層） */
+/* 設定頁沒有標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
+   所以 #setOv 不設 aria-modal：設成強制回應的話，報讀器會把外面的工具列（唯一的關閉控制）當成不可用（ui-08 審查） */
 function settingsHTML(){
   return `<div class="set-body"><div class="set-scroll"><div class="set-inner"></div></div><div class="set-pane" hidden></div></div>`;
 }
@@ -229,7 +230,7 @@ function gateAnim(){
 function renderSettings(){const el=$("#setOv .set-inner");if(el&&setOpen){const flip=Anim.capture();morphTo(el,settingsInner());weekDotSync();gateAnim();flowWatch();Anim.play(flip)}}   /* 列有增減（登入前後、標籤數）時照動畫規則 2 滑動／淡入 */
 async function openSettings(){
   let ov=$("#setOv");
-  if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov" id="setOv" role="dialog" aria-modal="true" aria-label="設定" hidden>${settingsHTML().replace('<div class="set-inner">','<div class="set-inner" data-flip="set">')}</div>`);ov=$("#setOv");
+  if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov" id="setOv" role="dialog" aria-label="設定" hidden>${settingsHTML().replace('<div class="set-inner">','<div class="set-inner" data-flip="set">')}</div>`);ov=$("#setOv");
     elastic(ov.querySelector(".set-scroll"),ov.querySelector(".set-inner"))}
   if(setOpen)return;
   if(!loggedIn()&&remRead())await remLogin();   /* 這台裝置記住了身分：直接進去，不顯示鎖頭 */
