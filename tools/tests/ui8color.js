@@ -64,6 +64,13 @@ const GRAB=()=>{
     await p.click('#notiBtn').catch(()=>{});await W(1500);await scan(p,'通知頁',tag);await close(p);await W(600);
     await p.click('#setBtn').catch(()=>{});await W(1300);await scan(p,'設定頁',tag);await close(p);
     await p.click('#tabbar .tab[data-tab="progress"]').catch(()=>{});await W(1400);await scan(p,'進度頁',tag);
+    /* 綠底 --ok 上的字（--ok-ink：今天膠囊、狀態「進行中」「完成」、已複製）、學生會黃上的字（--st-go-ink）：九組主題都 ≥ 4.5:1 */
+    if(w>=700){const low=await p.evaluate(PALS=>{const lin=c=>(c/=255)<=.03928?c/12.92:((c+.055)/1.055)**2.4,L=s=>{const [r,g,b]=s.match(/\d+(\.\d+)?/g).map(Number);return .2126*lin(r)+.7152*lin(g)+.0722*lin(b)};
+        const cr=(a,b)=>{const x=L(a),y=L(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};const d=document.createElement('i');d.style.transition='none';document.body.append(d);const pal0=document.documentElement.dataset.pal,out=[];
+        for(const pal of PALS){document.documentElement.dataset.pal=pal;
+          for(const [fg,bg] of [['--ok-ink','--ok'],['--st-ok-ink','--st-ok'],['--st-go-ink','--st-go']]){d.style.color=`var(${fg})`;d.style.backgroundColor=`var(${bg})`;const cs=getComputedStyle(d),k=cr(cs.color,cs.backgroundColor);if(!(k>=4.5))out.push(`${pal} ${fg}/${bg} ${k.toFixed(2)}`)}}
+        d.remove();document.documentElement.dataset.pal=pal0;return out},PALS);
+      ok(!low.length,`${tag} 綠底、黃底上的字九組主題都 ≥ 4.5:1 ${low.join('；')}`)}
     await p.evaluate(()=>{editBoardInfo('year')});await W(1100);await scan(p,'對話框',tag);await close(p);
     ok(!p.errs.length,`${tag} 沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
   const LIST=!!process.env.LIST;

@@ -6,14 +6,14 @@
 /* 圓角（DESIGN-next 第三節）：大色塊與卡片 18、內層項目 14、小方塊 12；膠囊與圓鈕全圓（999px／50%） */
 :root{--r-lg:18px;--r-md:14px;--r-sm:12px}
 :root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-layout:560ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-in:cubic-bezier(.4,0,1,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
-/* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
+/* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--ok-ink、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
    下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）。
    寫死的顏色只剩三種例外：部門（學生會）標誌的藍黃、工作報告的白紙、陰影用的半透明黑，每一處旁邊都註明「例外」（測試 tools/tests/ui8color.js） */
-:root{--surface:var(--blk);--pop:var(--blk);--stack-sh:color-mix(in srgb,var(--ink) 38%,transparent);--line:var(--ink);--ok-dot:var(--ok);--teal:var(--pri);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--st-ok:var(--ok);--st-ok-ink:var(--deep);--st-go:var(--su-yellow);--st-go-ink:var(--deep);--st-stall:var(--red);--st-stall-ink:var(--lite);--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
+:root{--surface:var(--blk);--pop:var(--blk);--stack-sh:color-mix(in srgb,var(--ink) 38%,transparent);--line:var(--ink);--ok-dot:var(--ok);--teal:var(--pri);--warn:var(--late);--onteal:var(--pri-ink);--done:var(--ok);--red:var(--late);--green:var(--ok);--rest:var(--blk2);--prog-hi:var(--green);--prog-lo:var(--red);--prog-hi-ink:var(--prog-hi);--prog-lo-ink:var(--prog-lo);--st-ok:var(--ok);--st-ok-ink:var(--ok-ink);--st-go:var(--su-yellow);--st-go-ink:var(--deep);--st-stall:var(--red);--st-stall-ink:var(--lite);--ease:cubic-bezier(.2,.8,.2,1);--flash:var(--ink);accent-color:var(--ink)}
 /* 材質只有平面（DESIGN-next 第三節）：沒有漸層、毛玻璃、光暈。陰影只給浮在內容上面的東西：--pop-sh 彈出層（對話框、下拉選單、搜尋結果），
    --stack-sh 浮在內容上的色塊（工具列，加一圈 1px --hair）；平鋪的色塊只帶 --blk-sh（只有柔光主題有值） */
 /* 實心色塊上的字（ui-08 G：顏色一律從主題變數來，不寫死）：--lite 永遠是淺色（淺色模式＝--blk、深色模式＝--ink），放在紅、綠實心（--late、--ok）上與 QR 碼的底；
-   --deep 永遠是深色（淺色模式＝--ink、深色模式＝--bg），放在學生會黃、亮綠（--su-yellow、--ok）上 */
+   --deep 永遠是深色（淺色模式＝--ink、深色模式＝--bg），放在學生會黃（--su-yellow）上；綠底 --ok 上的字用各主題的 --ok-ink（theme.css，九組淺深色都 ≥ 4.5:1） */
 :root{--lite:var(--blk);--deep:var(--ink)}
 /* 例外：部門標誌的黃（不跟主題；狀態燈「持續進行」用） */
 :root{--su-yellow:#f0bc23}
@@ -258,7 +258,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .ev,.kid-ev,.cp,.lc{--st:var(--st-stall);--st-ink:var(--st-stall-ink)}
 .ev[data-st="ok"],.kid-ev[data-st="ok"],.cp[data-st="ok"],.lc[data-st="ok"]{--st:var(--st-ok);--st-ink:var(--st-ok-ink)}
 .ev[data-st="go"],.kid-ev[data-st="go"],.cp[data-st="go"],.lc[data-st="go"]{--st:var(--st-go);--st-ink:var(--st-go-ink)}
-.ev[data-st="done"],.cp[data-st="done"],.lc[data-st="done"]{--st:var(--done);--st-ink:var(--lite)}   /* 完成紀錄 */
+.ev[data-st="done"],.cp[data-st="done"],.lc[data-st="done"]{--st:var(--done);--st-ink:var(--ok-ink)}   /* 完成紀錄（綠底上的字） */
 :is(.ev,.kid-ev,.cp,.lc) .live-dot,:is(.ev,.kid-ev,.cp,.lc) .live-dot::after{background:var(--st)}
 :is(.ev,.kid-ev,.cp,.lc):not([data-st="stall"]) .live-dot::after{animation:none;opacity:0}
 /* --- 膠囊清單（live.js 的 cpHTML；完成紀錄的膠囊同一套，views.js 的 renderDone；DESIGN-next 第七節「清單」） ---
@@ -764,7 +764,7 @@ a.doc-pill:active{scale:.96}
 .lg-tk.on{--c:var(--ink);--h:72%}
 .lg-tk.in{--c:var(--muted);--h:45%;opacity:.7}
 /* 今天標籤：白色實心黑字（淺色模式加細框才看得出邊界），左上角一顆會閃的紅點（共用 .live-dot） */
-.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--deep);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -1006,7 +1006,7 @@ a.link:active{transform:scale(.96)}
 .week-wrap.enter .week:nth-child(10){animation-delay:0.530s}
 .week.new{animation:weekNew 1.2s var(--ease) both}
 [data-copyweek]{transition:background-color .2s,color .2s,transform .2s}
-[data-copyweek].copied{background:var(--ok);border-color:var(--ok);color:var(--blk);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+[data-copyweek].copied{background:var(--ok);border-color:var(--ok);color:var(--ok-ink);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
 .week:hover summary .num{letter-spacing:.04em}
 .week .badge{animation:none}
 #backMain span{transition:transform .2s var(--ease)}
