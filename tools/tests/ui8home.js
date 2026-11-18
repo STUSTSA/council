@@ -148,6 +148,20 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     /* 圖示：只向網站自己要 /favicon.ico、不帶 referrer；載不到（這裡外部網路都擋掉）顯示網域第一個字母 */
     const fv=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({k:l.classList.contains('ico'),ch:getComputedStyle(l.querySelector('.hm-lkl')).display})));
     ok(fv.every(f=>!f.k&&f.ch!=='none'),'圖示載不到：顯示網域第一個字母');
+    /* 別的分頁在這一頁編輯中改了清單（直接改 localStorage；編輯中這一頁不跟著換畫面）：這一頁再加、刪時先讀回最新的，不用舊清單整份蓋掉 */
+    {const add=(u,n)=>p.evaluate(([u,n])=>{const a=JSON.parse(localStorage.getItem('stustsa-links'));a.push({u,n});localStorage.setItem('stustsa-links',JSON.stringify(a))},[u,n]);
+      await p.click('.hm-dk-in>.hm-lkadd');await p.waitForTimeout(150);
+      await add('https://other.example/','別頁');
+      await addLk(p,'mine.example','這頁');let s2=await st(p);d=await dock(p);
+      ok(s2.some(x=>x.n==='別頁')&&s2.some(x=>x.n==='這頁')&&d.links.some(l=>l.lbl==='別頁')&&d.links.some(l=>l.lbl==='這頁'),`編輯中別的分頁加了一個，這一頁再加：兩個都留著（存的 ${s2.map(x=>x.n||'·').join('、')}）`);
+      await p.evaluate(()=>{const a=JSON.parse(localStorage.getItem('stustsa-links')).filter(x=>x.n!=='別頁');localStorage.setItem('stustsa-links',JSON.stringify(a))});
+      await add('https://third.example/','第三');
+      await p.click('.hm-dk-in>.hm-lk[data-nm="這頁"] .hm-lkx');await p.waitForTimeout(600);s2=await st(p);d=await dock(p);
+      ok(!s2.some(x=>x.n==='這頁'||x.n==='別頁')&&s2.some(x=>x.n==='第三')&&!d.links.some(l=>l.lbl==='別頁')&&d.links.some(l=>l.lbl==='第三'),`編輯中別的分頁刪一個、加一個，這一頁再刪：照最新的清單刪（存的 ${s2.map(x=>x.n||'·').join('、')}）`);
+      await p.keyboard.press('Escape');await p.waitForTimeout(300);
+      await p.evaluate(()=>{const a=JSON.parse(localStorage.getItem('stustsa-links')).filter(x=>x.n!=='第三');localStorage.setItem('stustsa-links',JSON.stringify(a));dispatchEvent(new StorageEvent('storage',{key:'stustsa-links'}))});
+      await p.waitForTimeout(200);d=await dock(p);
+      ok(!d.links.some(l=>l.lbl==='第三')&&d.links.length===(await st(p)).length,'沒在編輯時收到別的分頁的修改：畫面跟著換')}
     ok(!p.errs.length,'桌面連結沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
   {/* 圖示載得到：不攔截網路（Playwright 攔截時 /favicon.ico 一律失敗），連到測試自己開的小伺服器 */
@@ -172,6 +186,15 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     ok(d.links.length===12&&!d.form&&d.back&&d.ed,'加到 12 個：輸入框收掉、只剩返回鍵（還能按 × 移除）');
     await p.keyboard.press('Escape');await p.waitForTimeout(300);d=await dock(p);
     ok(!d.add&&d.links.length===12,'滿 12 個：「+」不出現');
+    /* 下排放不下（可以橫捲）時，滾輪在下排上不換部門焦點、不擋下排自己捲 */
+    await p.setViewportSize({width:700,height:800});await p.waitForTimeout(400);
+    const wh=await p.evaluate(()=>{const i=document.getElementById('hmDkIn');return {sc:i.classList.contains('sc'),r:i.getBoundingClientRect().toJSON()}});
+    if(wh.sc){const f0=await p.evaluate(()=>document.querySelector('.hm-tile.on').dataset.i);
+      await p.evaluate(()=>{window.__wp=null;document.getElementById('hmDkIn').addEventListener('wheel',e=>{setTimeout(()=>{window.__wp=e.defaultPrevented})},{once:true})});
+      await p.mouse.move(wh.r.x+wh.r.width/2,wh.r.y+wh.r.height/2);await p.mouse.wheel(0,120);await p.waitForTimeout(400);
+      const r=await p.evaluate(()=>({f:document.querySelector('.hm-tile.on').dataset.i,wp:window.__wp}));
+      ok(r.f===f0&&r.wp===false,`滾輪在可橫捲的下排上：部門焦點不換（${f0}→${r.f}）、不擋預設捲動（defaultPrevented ${r.wp}）`);
+    }else ok(false,'700 寬、12 個連結時下排應該放不下（.sc）');
     await p.ctx.close();
     const q=await mk(1300,800,{links:Array.from({length:15},(_,i)=>({u:`https://t${i}.example/`,n:''}))});await q.goto(U+'home.html');await q.waitForTimeout(800);
     d=await dock(q);ok(d.links.length===12&&!d.add,`存了超過 12 個（被別的程式改過）：只顯示前 12 個（${d.links.length}）`);

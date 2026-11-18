@@ -140,7 +140,7 @@
   /* 滾輪：一格換一張（每 170ms 最多一次；到兩端頂一下再彈回）；方向鍵：左右（桌面）、上下（手機）；Enter 在色塊上＝點擊 */
   let wheelAt=0;
   document.addEventListener("wheel",e=>{
-    if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||hmLayerOpen())return;
+    if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||e.target.closest("#hmDkIn.sc")||hmLayerOpen())return;   /* 下排放不下（.sc，可橫捲）時在它上面滾＝捲下排，不換部門 */
     const d=H.mode==="wal"?e.deltaY:Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
     const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1),"wheel");
   },{passive:false});
@@ -238,13 +238,24 @@
   }
   const lkHost=u=>new URL(u).hostname.replace(/^www\./,"");
   let lkSeq=0;const lkKey=()=>"l"+(++lkSeq);   /* 畫面用的代號（同一個網址加兩次也分得開），不存 */
+  let lkOk=true;   /* localStorage 讀寫都正常；讀不到或寫不進去（無痕、滿了）之後就只用畫面上這一份，不再拿存的那份來對（lkSync） */
   function lkRead(){
-    let a;try{a=JSON.parse(localStorage.getItem(LK_KEY)||"[]")}catch(_){a=[]}
+    let raw;try{raw=localStorage.getItem(LK_KEY)}catch(_){lkOk=false;return []}
+    let a;try{a=JSON.parse(raw||"[]")}catch(_){a=[]}
     const out=[];if(!Array.isArray(a))return out;
     for(const x of a){if(out.length>=LK_MAX)break;const u=x&&typeof x==="object"&&lkUrl(x.u);if(u)out.push({u,n:typeof x.n==="string"?lkCut(x.n):"",k:lkKey()})}
     return out;
   }
-  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n})=>({u,n}))))}catch(_){}}
+  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n})=>({u,n}))))}catch(_){lkOk=false}}
+  /* 跟存的那份對齊（別的分頁可能改過）：同網址同名稱的沿用原本的畫面代號（節點、焦點不動），其餘換新；有變回傳 true。
+     加、刪之前都先對一次，再寫回——編輯中收到別的分頁的修改時不會被這個分頁的舊清單整份蓋掉 */
+  function lkSync(){
+    if(!lkOk)return false;
+    const nx=lkRead(),pool=LK.list.slice();
+    if(!lkOk||nx.length===pool.length&&nx.every((x,i)=>x.u===pool[i].u&&x.n===pool[i].n))return false;
+    nx.forEach(x=>{const i=pool.findIndex(o=>o.u===x.u&&o.n===x.n);if(i>=0)x.k=pool.splice(i,1)[0].k});
+    LK.list=nx;return true;
+  }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
   DKN.set("pub",$id("hmPub"));
   function lkNode(x){
@@ -298,21 +309,23 @@
   function lkEdit(on){
     if(LK.ed===on)return;const had=dk.contains(document.activeElement);
     LK.ed=on;tipHide();
-    if(!on){const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
+    if(!on){lkSync();const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
     dkPaint(true,on?"back":"add");
     if(on){const u=$id("hmLkU");(u||DKN.get("back")).focus({preventScroll:true})}
     else if(had)(dkIn.contains(DKN.get("add"))?DKN.get("add"):$id("hmPub")).focus({preventScroll:true});
   }
   function lkAdd(){
-    const ui=$id("hmLkU"),ni=$id("hmLkN");if(!ui||LK.list.length>=LK_MAX)return;
+    const ui=$id("hmLkU"),ni=$id("hmLkN");if(!ui)return;
     const u=lkUrl(ui.value);if(!u){nope(ui);ui.focus({preventScroll:true});return}
+    if(lkSync()&&LK.list.length>=LK_MAX){dkPaint(true);return}   /* 別的分頁加滿了：只換成最新的清單（輸入框收起） */
+    if(LK.list.length>=LK_MAX)return;
     const x={u,n:lkCut(ni.value),k:lkKey()};LK.list.push(x);lkWrite();
     ui.value="";ni.value="";ui.removeAttribute("aria-invalid");
     dkPaint(true,x.k);
     const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
   }
   function lkDel(k){
-    const i=LK.list.findIndex(x=>x.k===k);if(i<0)return;LK.list.splice(i,1);lkWrite();dkPaint(true);
+    lkSync();const i=LK.list.findIndex(x=>x.k===k);if(i>=0){LK.list.splice(i,1);lkWrite()}dkPaint(true);   /* 別的分頁已經刪掉同一個：只換成最新的清單 */
     const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
   }
   dk.addEventListener("click",e=>{
@@ -326,9 +339,8 @@
   dk.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".hm-lku"))e.target.removeAttribute("aria-invalid")});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!e.isComposing&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});   /* 注音選字中的 Esc 給輸入法，不結束編輯 */
   document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk")))lkEdit(false)},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
-  addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換 */
-    if(LK.ed)return;const old=LK.list.map(x=>x.u+"\n"+x.n).join("\n"),nx=lkRead();if(nx.map(x=>x.u+"\n"+x.n).join("\n")===old)return;
-    LK.list.forEach(x=>DKN.delete(x.k));[...dkIn.querySelectorAll(".hm-lk")].forEach(n=>n.remove());LK.list=nx;dkPaint(false)});
+  addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換；編輯中先不動畫面（加、刪、結束編輯時才對齊） */
+    if(!LK.ed&&lkSync())dkPaint(false)});
   /* 名稱的小膠囊：只給有滑鼠的桌面（hover），圖示上方置中；換到別的連結時原地換字與位置，移開淡出 */
   const HOVER=matchMedia("(hover:hover) and (pointer:fine)");let tip=null;
   function tipShow(a){
