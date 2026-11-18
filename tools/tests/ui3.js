@@ -11,9 +11,11 @@
    9. 設定清單、外觀合併頁、通知頁重畫：沒變的節點留著、外觀的分段切換不重建
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
    11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-yes／go-no 重畫不拿掉
-   12. 審查 P2-2：編輯中游標在 .kp-tx，點專員、標籤的勾選膠囊（label）後 activeElement 仍是那一欄（桌面、手機觸控 412）
+   12. 審查 P2-2：編輯中游標在一行，點 label 包著的核取框、「報告」鈕不會失焦（ui-05：專員、標籤膠囊不在卡片上，改測核取行與報告鈕；桌面、手機觸控 412）
    13. 審查 P2-3：照順序配對時含焦點的節點只有 data-* 一樣才沿用（[a,b(焦點)]→[z,a,b]）；MORPH_KEYS 有 evfk iffk kplb lblname
    14. 審查 P2-4：HTML 寫過、後來不寫的 style 拿掉；程式在執行時設的 style 保留
+   ui-05（2026-11-17）：膠囊是 .cp、卡片是 .lc（1300 在右邊）；「+ 一行」換成工具列「文字」、核取行用工具列「核取」加；第 7 項的圖示改用編輯中一行的刪除鈕；
+   手機捲動那項：膠囊不會就地展開，改成多放幾顆讓清單夠長
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -29,27 +31,28 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
   const id=live[0];
 
   /* 3. 沒變的膠囊是同一個節點、沒有新的動畫 */
-  {const r=await p.evaluate(()=>{document.querySelectorAll('#events .ev,#events .ev summary,#events .live-dot,#doneList .ev,#gantt .g-row').forEach(el=>el.__m=1);
-      const before=new Set(document.getAnimations()),cls=[...document.querySelectorAll('#events .ev')].map(e=>e.className).join('|');window.__an=[];
+  {const r=await p.evaluate(()=>{document.querySelectorAll('#events .cp,#events .cp b,#events .live-dot,#doneList .cp,#gantt .g-row').forEach(el=>el.__m=1);
+      const before=new Set(document.getAnimations()),cls=[...document.querySelectorAll('#events .cp')].map(e=>e.className).join('|');window.__an=[];
       render();
-      const same=[...document.querySelectorAll('#events .ev,#events .ev summary,#events .live-dot,#doneList .ev,#gantt .g-row')].every(el=>el.__m===1);
+      const same=[...document.querySelectorAll('#events .cp,#events .cp b,#events .live-dot,#doneList .cp,#gantt .g-row')].every(el=>el.__m===1);
       const fresh=document.getAnimations().filter(a=>!before.has(a));
-      return {same,n:document.querySelectorAll('#events .ev').length,fresh:fresh.length,an:window.__an.length,cls:cls===[...document.querySelectorAll('#events .ev')].map(e=>e.className).join('|')}});
+      return {same,n:document.querySelectorAll('#events .cp').length,fresh:fresh.length,an:window.__an.length,cls:cls===[...document.querySelectorAll('#events .cp')].map(e=>e.className).join('|')}});
     ok(r.same&&r.n>0,`重畫後膠囊、燈號、完成紀錄、甘特圖列都是同一個節點（${r.n} 顆膠囊）`);
     ok(r.fresh===0&&r.an===0,`重畫後沒有新的動畫（getAnimations 多 ${r.fresh}、animate() ${r.an} 次）`);
     ok(r.cls,'重畫後膠囊的 class 沒變（沒有加上進場的 class）');}
   /* 別張卡片的資料變了：只有那一張變，其他同一個節點、沒有新的動畫 */
-  {const r=await p.evaluate(([a,b])=>{document.querySelectorAll('#events .ev').forEach(el=>el.__m=1);const before=new Set(document.getAnimations());
+  {const r=await p.evaluate(([a,b])=>{document.querySelectorAll('#events .cp').forEach(el=>el.__m=1);const before=new Set(document.getAnimations());
       state.events.find(e=>e.id===b).name+='（改）';render();
-      const others=[...document.querySelectorAll('#events .ev')].filter(el=>el.dataset.ev!==b);
+      const others=[...document.querySelectorAll('#events .cp')].filter(el=>el.dataset.ev!==b);
       const fresh=document.getAnimations().filter(x=>!before.has(x)&&x.effect&&x.effect.target&&others.some(o=>o.contains(x.effect.target)));
-      return {same:[...document.querySelectorAll('#events .ev')].every(el=>el.__m===1),txt:document.querySelector(`#events .ev[data-ev="${b}"] summary b`).textContent,fresh:fresh.length}},[id,live[1]]);
+      return {same:[...document.querySelectorAll('#events .cp')].every(el=>el.__m===1),txt:document.querySelector(`#events .cp[data-cp="${b}"] b`).textContent,fresh:fresh.length}},[id,live[1]]);
     ok(r.same&&/（改）$/.test(r.txt)&&r.fresh===0,`別張卡片的名稱改了：那一張原位改字（${r.txt}）、所有膠囊同一個節點、其他膠囊沒有新的動畫（${r.fresh}）`);}
 
   /* 1. 原位編輯中打字，同時重畫 */
-  await p.evaluate(i=>{openEv.add(i);render()},id);await p.waitForTimeout(700);
+  await p.evaluate(i=>lcShow('live',i),id);await p.waitForTimeout(700);   /* ui-05：打開卡片（1300 在右邊） */
   const bid=await p.evaluate(i=>state.events.find(e=>e.id===i).blocks[0].id,id);
-  await p.click(`.ev[data-ev="${id}"] [data-kpgo="${bid}"]`);await p.waitForTimeout(500);
+  const L=`#evDetail .lc[data-ev="${id}"]`;
+  await p.click(`${L} [data-kpgo="${bid}"]`);await p.waitForTimeout(500);
   await p.keyboard.press('End');await p.keyboard.type('打字中');await p.keyboard.press('ArrowLeft');await p.keyboard.press('ArrowLeft');
   {const r=await p.evaluate(([b2])=>{const a=document.activeElement;a.__m=1;const s=[a.selectionStart,a.selectionEnd,a.value];
       render();const r1=document.activeElement===a&&a.isConnected;
@@ -59,29 +62,28 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(r.s[0]===r.s2[0]&&r.s[1]===r.s2[1]&&r.s[0]===r.s[2].length-2,`選取範圍不變（${r.s.slice(0,2)} → ${r.s2.slice(0,2)}）`);
     ok(r.s[2]===r.s2[2]&&/打字中$/.test(r.s2[2]),`值不變（${r.s2[2]}）`);}
   /* 6. 編輯中按卡片上的按鈕：按下那一下不失焦；放開後照規則轉移 */
-  {const btn=await p.$(`.ev[data-ev="${id}"] [data-kpadd]`);const bb=await btn.boundingBox();
+  {const btn=await p.$(`${L} [data-lctool="text"]`);   /* ui-05：「+ 一行」換成底部工具列的「文字」 */const bb=await btn.boundingBox();
     await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.mouse.down();
     const mid=await p.evaluate(()=>document.activeElement.__m===1);
     await p.mouse.up();await p.waitForTimeout(400);
     const aft=await p.evaluate(i=>{const a=document.activeElement,ev=state.events.find(e=>e.id===i);return {kp:a.dataset.kptx,last:ev.blocks[ev.blocks.length-1].id}},id);
-    ok(mid,'編輯中按下「+ 一行」的那一下：輸入欄沒有失焦');
+    ok(mid,'編輯中按下工具列「文字」（新增一行）的那一下：輸入欄沒有失焦');
     ok(aft.kp===aft.last,'放開後：游標移到新的一行（照原本的規則）');
     await p.keyboard.type('第二行');
-    const ck=await p.evaluate(i=>{const ev=state.events.find(e=>e.id===i);return ev.blocks[0].id},id);
-    const cb=await (await p.$(`.ev[data-ev="${id}"] .kp-line[data-blk="${ck}"] .kp-type .csel-btn`)).boundingBox();
-    await p.click(`.ev[data-ev="${id}"] .kp-line[data-blk="${ck}"] .kp-type .csel-btn`);await p.waitForTimeout(250);
-    await p.click(`.ev[data-ev="${id}"] .kp-line[data-blk="${ck}"] .csel-opt[data-v="check"]`);await p.waitForTimeout(400);
-    await p.click(`.ev[data-ev="${id}"] .kp-line:last-child .kp-tx`);await p.waitForTimeout(150);
-    const ckb=await (await p.$(`.ev[data-ev="${id}"] .kp-line[data-blk="${ck}"] [data-kpck]`)).boundingBox();
+    /* ui-05：沒有種類選單，核取行用工具列的「核取」加；游標放回第一行再按核取框 */
+    await p.click(`${L} [data-lctool="check"]`);await p.waitForTimeout(300);await p.keyboard.type('要勾的');
+    const ck=await p.evaluate(i=>{const ev=state.events.find(e=>e.id===i);return ev.blocks[ev.blocks.length-1].id},id);
+    await p.click(`${L} .ln[data-blk="${bid}"] input.tx`);await p.waitForTimeout(150);
+    const ckb=await (await p.$(`${L} .ln[data-blk="${ck}"] [data-kpck]`)).boundingBox();
     await p.mouse.move(ckb.x+ckb.width/2,ckb.y+ckb.height/2);await p.mouse.down();
-    const mid2=await p.evaluate(()=>{const a=document.activeElement;return a.matches('.kp-tx')&&a.closest('.kp-line:last-child')!==null});
+    const mid2=await p.evaluate(b=>{const a=document.activeElement;return a.dataset.kptx===b},bid);
     await p.mouse.up();await p.waitForTimeout(300);
     const aft2=await p.evaluate(([i,k])=>({kp:document.activeElement.dataset.kptx,on:state.events.find(e=>e.id===i).blocks.find(b=>b.id===k).check}),[id,ck]);
     ok(mid2,'編輯中按下核取框的那一下：輸入欄沒有失焦');
     ok(aft2.kp===ck&&aft2.on===true,`放開後：勾起來、游標到那一行（照原本的規則；${aft2.kp===ck}、${aft2.on}）`);}
   /* 8. FLIP：同一頁重畫時位置變了的滑過去（同一個節點）、新的浮現、不見的留分身 */
   await p.click('#evH');await p.waitForTimeout(2600);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(400);
-  {const r=await p.evaluate(()=>{const evs=()=>[...document.querySelectorAll('#events .events>.ev')];evs().forEach(el=>el.__m=1);
+  {const r=await p.evaluate(()=>{const evs=()=>[...document.querySelectorAll('#events .cp')];evs().forEach(el=>el.__m=1);
       const ids=evs().map(e=>e.dataset.ev),a=state.events.findIndex(e=>e.id===ids[0]),z=state.events.findIndex(e=>e.id===ids[ids.length-1]);
       [state.events[a],state.events[z]]=[state.events[z],state.events[a]];window.__an=[];render();
       const now=evs(),moved=[now[0],now[now.length-1]];
@@ -89,21 +91,22 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(r.same&&r.order,'換順序後膠囊都是同一個節點（搬動，不重建）');
     ok(r.slid,'換順序：頭尾兩顆從舊位置滑到新位置（FLIP）');}
   {const r=await p.evaluate(()=>{const ev={...JSON.parse(JSON.stringify(state.events.find(e=>!e.doneAt))),id:'ui3new',name:'新的一筆'};state.events.push(ev);window.__an=[];render();
-      const el=document.querySelector('#events .ev[data-ev="ui3new"]'),rise=window.__an.some(x=>x.el===el&&x.in);
+      const el=document.querySelector('#events .cp[data-cp="ui3new"]'),rise=window.__an.some(x=>x.el===el&&x.in);
       const n0=document.body.children.length;state.events=state.events.filter(e=>e.id!=='ui3new');render();
-      const g=[...document.body.children].slice(n0-1).find(x=>x.matches&&x.matches('.ev')&&x.getAttribute('aria-hidden')==='true');
-      return {rise,ghost:!!g,gone:!document.querySelector('#events .ev[data-ev="ui3new"]')}});
+      const g=[...document.body.children].slice(n0-1).find(x=>x.matches&&x.matches('.cp')&&x.getAttribute('aria-hidden')==='true');
+      return {rise,ghost:!!g,gone:!document.querySelector('#events .cp[data-cp="ui3new"]')}});
     ok(r.rise,'新的一筆由下浮現（從透明開始）');ok(r.ghost&&r.gone,'不見的一筆：清單裡拿掉、原位留一個分身淡出');}
 
-  /* 7. 正在播的圖示動作不會被重畫打斷（右側詳情的「收起」鈕） */
-  await p.evaluate(i=>{selEv=i;render()},live[2]);await p.waitForTimeout(800);
-  {await p.dispatchEvent('#evDetail [data-mdclose]','pointerdown',{pointerType:'mouse'});await p.waitForTimeout(150);
-    const r=await p.evaluate(()=>{const btn=document.querySelector('#evDetail [data-mdclose]');btn.__m=1;
+  /* 7. 正在播的圖示動作不會被重畫打斷（ui-05：編輯中卡片一行右邊的刪除鈕；以前是右側詳情的「收起」） */
+  await p.evaluate(i=>lcShow('live',i),live[2]);await p.waitForTimeout(800);
+  await p.click('#evDetail .ln [data-kpgo]');await p.waitForTimeout(500);
+  {await p.dispatchEvent('#evDetail .ln-x','pointerdown',{pointerType:'mouse'});await p.waitForTimeout(150);
+    const r=await p.evaluate(()=>{const btn=document.querySelector('#evDetail .ln-x');btn.__m=1;
       const a=btn.getAnimations({subtree:true}).filter(x=>/^ico/.test(x.animationName||''));const t0=a.map(x=>x.currentTime);
-      render();const btn2=document.querySelector('#evDetail [data-mdclose]');const a2=btn2.getAnimations({subtree:true}).filter(x=>/^ico/.test(x.animationName||''));
+      render();const btn2=document.querySelector('#evDetail .ln-x');const a2=btn2.getAnimations({subtree:true}).filter(x=>/^ico/.test(x.animationName||''));
       return {n:a.length,same:btn2.__m===1&&btn2.classList.contains('ico-on')&&a2.length===a.length&&a2.every((x,i)=>x===a[i]&&x.currentTime>=t0[i])}});
     ok(r.n>0&&r.same,`圖示正在播的動作重畫後是同一個動畫、時間接著走（${r.n} 個）`);}
-  await p.evaluate(()=>{selEv=null;render()});await p.waitForTimeout(500);
+  await p.keyboard.press('Escape');await p.waitForTimeout(2600);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.evaluate(()=>{lcShow('live',null)});await p.waitForTimeout(500);
 
   /* 4. 換分頁：頁首同一個節點、不參加進場動畫；5. 進場動畫的目標沒有 SVG 或圖示零件 */
   {await p.evaluate(()=>{document.querySelector('.dhead').__m=1;window.__an=[]});
@@ -159,9 +162,9 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
 
   /* 2. 捲動到中間後重畫：scrollTop 不變（手機寬） */
   {const q=await mk(412,700,'dark',true);await q.evaluate(HOOK);
-    await q.evaluate(()=>{state.events.filter(e=>!e.doneAt).forEach(e=>openEv.add(e.id));render()});await q.waitForTimeout(900);
+    await q.evaluate(()=>{const e=state.events.find(e=>!e.doneAt);for(let i=0;i<14;i++)state.events.push({...JSON.parse(JSON.stringify(e)),id:'ui3x'+i,name:'捲動用 '+i});render()});await q.waitForTimeout(900);   /* ui-05：膠囊不會就地展開，多放幾顆讓清單夠長 */
     for(const sec of ['live','done']){
-      await q.evaluate(s=>{setSection(s,{instant:true});if(s==='done')state.events.filter(e=>e.doneAt).slice(0,4).forEach(e=>openDone.add(e.id));render()},sec);await q.waitForTimeout(700);
+      await q.evaluate(s=>{setSection(s,{instant:true});render()},sec);await q.waitForTimeout(700);
       const r=await q.evaluate(()=>{const sc=document.getElementById('pageMain'),max=sc.scrollHeight-sc.clientHeight;sc.scrollTop=Math.round(max/2);const t=sc.scrollTop;
         render();const t1=sc.scrollTop;state.savedAt='2026-11-17 12:00';render();return {max,t,t1,t2:sc.scrollTop}});
       ok(r.max>100&&r.t>50&&r.t1===r.t&&r.t2===r.t,`${sec}：捲到中間（${r.t}／${r.max}）重畫後 scrollTop 不變（${r.t1}、${r.t2}）`);
@@ -191,22 +194,26 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(r.g0&&r.same&&r.glass,`外觀的分段切換重畫兩次後仍有 glass（重畫前 ${r.g0}、同一個節點 ${r.same}、重畫後 ${r.glass}）`);
     ok(r.gy,'卡片堆飛出去時的 go-yes 重畫後還在');
     await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(400);}
-  /* 12. 審查 P2-2：編輯中游標在一行的文字欄，點專員、標籤的勾選膠囊（label 包核取框）：勾起來，焦點留在原本那一欄（桌面滑鼠、手機觸控） */
+  /* 12. 審查 P2-2：編輯中游標在一行的文字欄，點 label 包著的核取框、「報告」鈕：焦點不掉（桌面滑鼠、手機觸控） */
   for(const [w,h,touch] of [[1300,900,false],[412,800,true]]){
     const s2=await c.setup(),q=await s2.mk(w,h,'light',touch);await s2.login(q);   /* 各自一份測試資料（第一頁登入時已經建了身分，同一份再登入一次的流程不同） */
     await q.evaluate(()=>{if(!state.labels.length)state.labels.push({id:'ui3lb',kind:LABEL_KINDS[0],name:'膠囊測試'});setSection('live',{instant:true});render()});await q.waitForTimeout(600);
-    const eid=await q.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt&&e.blocks&&e.blocks.length);openEv.add(ev.id);render();return ev.id});await q.waitForTimeout(700);
-    const go=`.ev[data-ev="${eid}"] [data-kpgo]`;if(touch)await q.tap(go);else await q.click(go);await q.waitForTimeout(600);
+    const eid=await q.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt&&e.blocks&&e.blocks.length);lcShow('live',ev.id);return ev.id});await q.waitForTimeout(900);
+    const L=`.lc[data-ev="${eid}"]`,go=`${L} .ln [data-kpgo]`;if(touch)await q.tap(go);else await q.click(go);await q.waitForTimeout(600);
     const tag=touch?'手機觸控':'桌面';
-    for(const [f,nm] of [['staff','專員'],['labels','標籤']]){
-      const sel=`.ev[data-ev="${eid}"] [data-kpf="${f}"] label.chip`;
-      const pre=await q.evaluate(([e])=>{const a=document.activeElement;a.__k=1;return {tx:a.matches('.kp-tx'),n:document.querySelectorAll(`.ev[data-ev="${e}"] .kp [data-kpf] label.chip`).length}},[eid]);
-      if(!(await q.$(sel))){ok(false,`${tag}：找不到${nm}膠囊`);continue}
-      const b0=await q.evaluate(s=>document.querySelector(s+' input').checked,sel);
+    /* ui-05：負責人在「人」頁、標籤不在卡片上改，改測卡片上一樣是 label 包核取框的「核取行」與「報告」鈕 */
+    await q.click(`${L} [data-lctool="check"]`);await q.waitForTimeout(300);await q.keyboard.type('要勾的');
+    const bid=await q.evaluate(e=>state.events.find(x=>x.id===e).blocks[0].id,eid),ck=await q.evaluate(e=>{const b=state.events.find(x=>x.id===e).blocks;return b[b.length-1].id},eid);
+    await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);
+    {const sel=`${L} .ln[data-blk="${ck}"] label.ln-ck`;
+      const pre=await q.evaluate(()=>{const a=document.activeElement;a.__k=1;return a.matches('input.tx')});
       if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
-      const r=await q.evaluate(s=>{const a=document.activeElement;return {same:a.__k===1&&a.matches('.kp-tx'),on:document.querySelector(s+' input').checked,act:a.tagName+'.'+a.className}},sel);
-      ok(pre.tx&&r.same&&r.on!==b0,`${tag}：游標在 .kp-tx 點${nm}膠囊後勾選變了（${r.on}）、activeElement 仍是同一個 .kp-tx（${r.act}）`);
-    }
+      const r=await q.evaluate(([e,ck])=>{const a=document.activeElement;return {to:a.dataset.kptx===ck,on:state.events.find(x=>x.id===e).blocks.find(b=>b.id===ck).check,act:a.tagName+'.'+a.className}},[eid,ck]);
+      ok(pre&&r.to&&r.on===true,`${tag}：游標在一行時點核取框（label 包著）：勾起來、游標到那一行、沒有掉到 body（${r.act}）`);}
+    {await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);await q.evaluate(()=>{document.activeElement.__k=2});
+      const sel=`${L} .lc-rep`;if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
+      const r=await q.evaluate(e=>({same:document.activeElement.__k===2,rep:state.events.find(x=>x.id===e).report}),eid);
+      ok(r.same&&r.rep===true,`${tag}：游標在一行時按「報告」：標記改了、activeElement 還是那一欄`);}
     ok(!q.errs.length,`${tag}：沒有錯誤`+(q.errs.length?'：'+q.errs.slice(0,3).join(' | '):''));
     await s2.b.close();
   }

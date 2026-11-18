@@ -8,6 +8,15 @@ ICONS.tag='<path d="M3.8 12.6V4.6a.8.8 0 0 1 .8-.8h8l7.6 7.6a1.2 1.2 0 0 1 0 1.7
 ICONS.plus='<path class="i-plus" d="M12 5.5v13M5.5 12h13"/>';
 ICONS.eye='<path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>';
 ICONS.bell='<g class="i-bell"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10.2 20.4a2 2 0 0 0 3.6 0"/></g>';
+/* 2026-11-17 新介面：即時回報卡片（live.js）的返回、上一張／下一張（實心三角，下一張是左右翻過來）與底部工具列（文字、人、時間、地點、核取、超連結） */
+ICONS.back='<path class="i-back" d="M19 12H5M11 6l-6 6 6 6"/>';
+ICONS.tri='<path d="M16 5v14L6 12z" stroke="none" fill="currentColor"/>';
+ICONS.text='<path d="M5.5 6.5h13M12 6.5v12"/>';
+ICONS.user='<circle cx="12" cy="8.5" r="3.4"/><path d="M5.2 19.5c.7-3.4 3.4-5.2 6.8-5.2s6.1 1.8 6.8 5.2"/>';
+ICONS.clock='<circle cx="12" cy="12" r="7.6"/><path d="M12 7.8V12l2.8 1.8"/>';
+ICONS.pin='<path d="M12 20.5s6-5.3 6-10.2a6 6 0 0 0-12 0c0 4.9 6 10.2 6 10.2z"/><circle cx="12" cy="10.2" r="2"/>';
+ICONS.box='<rect x="4.8" y="4.8" width="14.4" height="14.4" rx="4"/><path d="M8.6 12.3l2.4 2.4 4.4-4.9"/>';
+ICONS.link='<path d="M10.2 13.8a3.8 3.8 0 0 0 5.4 0l2.9-2.9a3.8 3.8 0 0 0-5.4-5.4l-1 1"/><path d="M13.8 10.2a3.8 3.8 0 0 0-5.4 0l-2.9 2.9a3.8 3.8 0 0 0 5.4 5.4l1-1"/>';
 const ico=(n,mod="")=>`<svg class="ico ${mod}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]||""}</svg>`;
 const icoHost=t=>t&&t.closest&&t.closest("button,a,.tab,.tb-gear");
 function icoStart(h){if(!h||!h.querySelector(".ico"))return;clearTimeout(h._icoT);h.classList.add("ico-on")}

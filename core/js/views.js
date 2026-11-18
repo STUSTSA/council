@@ -209,7 +209,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
 }
 
 /* ===== 即時回報、完成紀錄、秘書處會議卡共用的小片段 =====
-   即時回報專屬的畫面（狀態列、原位編輯器、時間選取器、膠囊 evCapHTML、右側詳情 evDetailHTML、整區 renderEvents）在 live.js。 */
+   即時回報專屬的畫面（膠囊、卡片、逐行內容、時間頁、整區 renderEvents）在 live.js。 */
 /* 時間標記清單（即時回報區、完成紀錄、秘書處會議卡共用）；free＝只列沒有連到任何一行的（即時回報：連到行的畫在那一行上） */
 function evTimesHTML(ev,free){
   const par=parentOf(ev),ts=free?evFreeTimes(ev):evTimesSorted(ev);if(!ts.length)return "";
@@ -274,49 +274,39 @@ function evFieldsHTML(ev){
         ${evFldOpen(ev,"l:+")?evFieldHTML(ev,"l:+","",'',()=>linkEditorHTML(null,ev.links.length,"evfx")):ev.links.length<StoreMap.LNK_MAX?`<button type="button" class="ghost evd-add" data-evpen="l:+">+ 超連結</button>`:""}</div>
     </div>`;
 }
-/* 左右兩欄詳情卡上的「上一個／下一個」（開會時照清單順序一路講下去；鍵盤左右鍵同功能，見 motion.js） */
-function mdStepHTML(k,ids,id){const i=ids.indexOf(id);
-  return `<span class="md-step"><button type="button" class="icon" data-mdstep="${k}" data-dir="-1" ${i<=0?"disabled":""} aria-label="上一個">${ico("prev")}上一個</button><button type="button" class="icon" data-mdstep="${k}" data-dir="1" ${i<0||i>=ids.length-1?"disabled":""} aria-label="下一個">下一個${ico("next")}</button></span>`}
-
-/* 完成紀錄：一般是可展開的清單；桌面 1000px 以上（mdOn）改成左側清單、右側詳情 */
-function renderDone(){
-  const ds=doneIssues();
-  const de=state.events.filter(ev=>ev.doneAt);
-  const ids=new Set([...ds.map(i=>i.id),...de.map(e=>e.id)]);
-  const dnew=id=>prevDone&&!prevDone.has(id)?"new":"";
-  const link=l=>`<a class="link" style="--c:${cssColor(l.color)}" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;
-  /* 每一筆拆成：屬性、標題、副標、內容，膠囊與右側詳情共用。內容最下面「編輯」（登入才看得到）；
-     編輯中（cardEd）名稱、完成日期、說明（即時回報多母議題）換成逐欄編輯（doneFieldsHTML），最下面「取消｜儲存」 */
-  const tail=(key,ed)=>ed?editBarHTML():`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
-  const items=ds.map(it=>{const ed=cardEd("i",it.id);return {id:it.id,ed,key:"i:"+it.id,d:it.doneAt||"",attr:`data-issue="${esc(it.id)}"`,title:esc(it.title),sub:`${esc(fmt(it.doneAt))||"—"} · 議題`,del:fsDelOk()?`data-deldone aria-label="刪除「${esc(it.title)}」"`:"",
-    body:`${ed?doneFieldsHTML(it,false):""}${hasDates(it)?`<div class="sub">期間 ${fmt(it.start)} – ${fmt(it.end)}</div>`:""}
-        ${!ed&&it.note?`<p style="margin:0;white-space:pre-wrap">${esc(it.note)}</p>`:""}
-        ${it.tags.length?`<div class="tags">${it.tags.map((g,k)=>`<span class="tag ${k===it.cur?"cur":k<it.cur?"past":""}">${esc(g)}</span>`).join("")}</div>`:""}
-        ${it.markers.length?`<ul>${sortedMarkers(it).map(m=>`<li>${m.date?`<span class="num">${fmt(m.date)}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
-        ${it.links.length?`<div class="links">${it.links.map(link).join("")}</div>`:""}
-        <span class="edit-only" style="gap:6px"><button type="button" class="icon" data-restore>取消結案</button></span>${tail("i:"+it.id,ed)}`}})
-  .concat(de.map(ev=>{const ed=cardEd("e",ev.id);return {id:ev.id,ed,key:"e:"+ev.id,d:ev.doneAt,attr:`data-ev="${esc(ev.id)}"`,title:esc(evName(ev)),sub:`${esc(fmt(ev.doneAt))||"—"} · 即時回報${parentOf(ev)?` → ${esc(parentOf(ev).title)}`:""}`,del:`data-evdel aria-label="刪除「${esc(ev.name)}」"`,
-    body:`${ed?doneFieldsHTML(ev,true):ev.desc?`<p style="margin:0;white-space:pre-wrap">${esc(ev.desc)}</p>`:""}${(ev.links||[]).length?`<div class="links">${ev.links.map(link).join("")}</div>`:""}
-        ${evTimesHTML(ev)}
-        ${ev.fromEv?"":`<span class="edit-only" style="gap:6px"><button type="button" class="icon" data-evundo>移回即時回報</button></span>`}${tail("e:"+ev.id,ed)}`}}))
-  .sort((a,b)=>b.d.localeCompare(a.d));
-  /* 跟即時回報同一套膠囊與左右兩欄（class ev＋done-ev、data-st="done"）：外觀跟即時回報一樣，只有燈號是綠色；data-done＝這一筆的 id */
-  if(!items.some(x=>x.id===selDone))selDone=null;
-  openDone.forEach(id=>{if(!items.some(x=>x.id===id))openDone.delete(id)});   /* 移回即時回報、刪掉的不再算打開（新增圓鈕看 openDone，nav.js 的 liveCardOpen） */
-  const md=mdOn("done")&&!!selDone,pane=$("#doneDetail");mdLast.done=mdOn("done");
-  $("#doneMD").classList.toggle("split",md);
-  $("#doneCount").textContent=items.length;
-  const nextDone=md?(items[items.findIndex(y=>y.id===selDone)+1]||{}).id:null;
-  const cap=x=>`<details class="ev done-ev ${dnew(x.id)} ${md&&x.id===selDone?"sel":""} ${x.id===nextDone?"next":""} ${x.ed?"sec-edit":""}" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr} data-st="done" ${!md&&(openDone.has(x.id)||x.ed)?"open":""}${md&&x.id===selDone?' aria-current="true"':""}>
-      <summary><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${x.del?`<button type="button" class="ev-del edit-only" ${x.del}>${ico("close","solo")}</button>`:""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
-      <div class="ev-body"><p class="ev-meta">${x.sub}</p><div class="done-body">${md&&x.id===selDone?"":x.body}</div></div></details>`;   /* 左右兩欄時被選到的那顆只是空位，內容（含編輯欄位）只畫在右側詳情 */
-  morphTo($("#doneList"),items.map(cap).join("")||`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`);   /* 原位更新（morph.js） */
-  if(md){const x=items.find(y=>y.id===selDone);
-    morphTo(pane,`<div class="evd ${x.ed?"sec-edit":""}" data-st="done" data-done="${esc(x.id)}" data-edbox="${esc(x.key)}" ${x.attr}><div class="evd-head"><span class="live-dot" aria-hidden="true"></span><b>${x.title}</b>${mdStepHTML("done",items.map(y=>y.id),x.id)}<button type="button" class="icon md-close" data-mdclose="done" aria-label="收起右側">${ico("close")}收起</button></div>
-      <p class="ev-meta">${x.sub}</p><div class="done-body">${x.body}</div></div>`);pane.hidden=false;
-  }else{pane.textContent="";pane.hidden=true}
-  prevDone=ids;Anim.syncPings();
+/* 完成紀錄（DESIGN-next 第七節「完成紀錄」）：一筆一顆膠囊（半透明、右邊完成日），點了打開卡片——跟即時回報同一套卡片外框（live.js 的 lcFrame），
+   寬螢幕在右邊、其他全螢幕。完成的即時回報：狀態「完成」、負責人、完成日、逐行內容唯讀、編輯次數；結案的議題：完成日、期間、階段、處理紀錄、連結。
+   有權限的人卡片最下面「編輯」＝原本的逐欄編輯（doneFieldsHTML；議題的「取消結案」、即時回報的「移回即時回報」照舊在編輯中，位置不變）。 */
+function doneItems(){
+  const ev=state.events.filter(e=>e.doneAt).map(e=>({id:e.id,k:"e",o:e,d:e.doneAt||"",title:evName(e)}));
+  return doneIssues().map(i=>({id:i.id,k:"i",o:i,d:i.doneAt||"",title:i.title})).concat(ev).sort((a,b)=>b.d.localeCompare(a.d));
 }
-/* 左右兩欄時換選一筆：右側內容淡入（完成紀錄與個別進度共用） */
-function mdPaneIn(el){if(el&&!reduceMotion())el.animate([{opacity:0,transform:"translateX(14px)"},{opacity:1,transform:"none"}],{duration:280,easing:"cubic-bezier(.2,.9,.25,1)"})}
+const doneLink=l=>`<a class="lnk" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;
+/* 一筆完成紀錄的卡片（full＝全螢幕） */
+function doneCardHTML(id,full){
+  const items=doneItems(),x=items.find(y=>y.id===id);if(!x)return "";
+  const ids=items.map(y=>y.id),key=x.k+":"+x.id,ed=cardEd(x.k,x.id),o=x.o;
+  const tail=ed?`<div class="lc-ops">${x.k==="e"?`<button type="button" class="icon danger" data-evdel>刪除</button>${o.fromEv?"":`<button type="button" class="icon" data-evundo>移回即時回報</button>`}`
+      :`${fsDelOk()?`<button type="button" class="icon danger" data-deldone>刪除</button>`:""}<button type="button" class="icon" data-restore>取消結案</button>`}</div>${editBarHTML()}`
+    :`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
+  if(x.k==="e")return lcLiveHTML(o,{k:"done",ids,full,edit:ed,tail,body:ed?doneFieldsHTML(o,true)+evTimesHTML(o):null});
+  const body=ed?doneFieldsHTML(o,false):`${hasDates(o)?`<p class="sub">期間 <span class="num">${fmt(o.start)} – ${fmt(o.end)}</span></p>`:""}${o.note?`<p class="dn-note">${esc(o.note)}</p>`:""}
+      ${o.tags.length?`<div class="tags">${o.tags.map((g,k)=>`<span class="tag ${k===o.cur?"cur":k<o.cur?"past":""}">${esc(g)}</span>`).join("")}</div>`:""}
+      ${o.markers.length?`<ul class="dn-mk">${sortedMarkers(o).map(m=>`<li>${m.date?`<span class="num">${fmt(m.date)}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
+      ${o.links.length?`<div class="lnks">${o.links.map(doneLink).join("")}</div>`:""}`;
+  return lcFrame({k:"done",id:o.id,key,st:"done",ids,full,ro:true,sec:ed,attr:`data-issue="${esc(o.id)}"`,title:`<b class="lc-title">${esc(o.title)}</b>`,
+    meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>議題</span>`,body,tail,save:""});
+}
+function renderDone(){
+  const items=doneItems(),ids=new Set(items.map(x=>x.id));
+  const dnew=id=>prevDone&&!prevDone.has(id)?" new":"";
+  if(dnOpen&&!ids.has(dnOpen))dnOpen=null;
+  const wide=lvWide(),split=wide&&!!dnOpen,pane=$("#doneDetail");
+  $("#doneMD").classList.toggle("split",split);
+  $("#doneCount").textContent=items.length;
+  const cp=x=>`<button type="button" class="cp done${dnew(x.id)}${split&&x.id===dnOpen?" sel":""}${!wide&&x.id===dnOpen?" away":""}" data-cp="${esc(x.id)}" data-done="${esc(x.id)}" ${x.k==="e"?`data-ev="${esc(x.id)}"`:`data-issue="${esc(x.id)}"`} data-st="done"${split&&x.id===dnOpen?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(x.title)}</b><span class="cp-d num">${esc(fmt(x.d).slice(5))}</span></button>`;
+  morphTo($("#doneList"),items.length?`<div class="cps">${items.map(cp).join("")}</div>`:`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`);   /* 原位更新（morph.js） */
+  if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
+  prevDone=ids;lcFullSync();Anim.syncPings();fabSync();   /* 打開的那一筆不見了（移回、刪除）時圓鈕要回來：renderEvents 先跑，這裡再對一次 */
+}
 

@@ -64,11 +64,11 @@ function hsGo(x){
   if(notiOpen)closeNoti(true);if(setOpen)closeSettings(true);
   const sec=secOf(x.k==="issue"?"progress":x.k);if(typeof setSection==="function"&&secTab(sec))setSection(sec);
   setTimeout(()=>{
-    const el=x.k==="issue"?document.querySelector(`#gantt [data-jump="${CSS.escape(x.id)}"]`):document.querySelector(x.k==="live"?`#events [data-ev="${CSS.escape(x.id)}"]`:`#donePanel [data-done="${CSS.escape(x.id)}"]`);
+    const el=x.k==="issue"?document.querySelector(`#gantt [data-jump="${CSS.escape(x.id)}"]`):document.querySelector(x.k==="live"?`#events [data-cp="${CSS.escape(x.id)}"]`:`#donePanel [data-cp="${CSS.escape(x.id)}"]`);
     if(!el){toast("在看板上找不到這一項");return}
     el.scrollIntoView({block:"center",behavior:reduceMotion()?"auto":"smooth"});
     if(x.k==="issue"){el.click();return}
-    if(el.tagName==="DETAILS"&&!el.open&&!el.classList.contains("sel")){const s=el.querySelector("summary");s&&s.click()}
+    const k=x.k==="live"?"live":"done",c=lcCur();if(!(c&&c[0]===k&&c[1]===x.id))lcShow(k,x.id);   /* 打開那一張（live.js） */
   },reduceMotion()?0:360);
 }
 (()=>{

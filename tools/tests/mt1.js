@@ -1,6 +1,8 @@
 /* mt1：權益部預設（即時回報點了才分欄）、財務部空白看板新增即時回報並存到 data-finance.json、會長室追蹤三種項目並儲存。固定 8300 埠
    2026-11-11 改寫：登入改從設定頁鎖頭（頁首「編輯」已拿掉）；新增即時回報＝開始編輯一筆空白的（桌面左右兩欄），卡片的「儲存」；
-   追蹤是整區「編輯」（"s:follow"）＋區塊的「儲存」；網站上的 data-*.json 一律當成不存在（真的資料檔有身分、全會密碼，會改變登入流程） */
+   追蹤是整區「編輯」（"s:follow"）＋區塊的「儲存」；網站上的 data-*.json 一律當成不存在（真的資料檔有身分、全會密碼，會改變登入流程）
+   2026-11-17（ui-05 審查 P1-1）：即時回報改新入口（膠囊 .cp、lvOpen、再點同一顆收回；新增卡片名稱 Enter 加一行、Esc 存檔）。
+   「rights default」那條（.logo-box 裡要有 svg）ui-04 就已失敗（頁首 logo 早就不是 svg），跟 ui-05 無關，維持原樣 */
 const {chromium}=require('playwright');const fs=require('fs');const A=(ok,m)=>{if(!ok){console.log('FAIL:',m);process.exitCode=1}};(async()=>{const b=await chromium.launch();
 const files={'data.json':JSON.parse(fs.readFileSync('data_v5.json','utf8'))},shas={},commits=[];
 const mk=async(q,w=1300,h=900)=>{const ctx=await b.newContext({viewport:{width:w,height:h},colorScheme:'dark',serviceWorkers:'block'});
@@ -21,19 +23,19 @@ const login=async p=>{await p.click('#setBtn');await p.waitForTimeout(800);await
 // rights default
 let p=await mk('');const r0=await p.evaluate(()=>[CFG.deptId,state.title,!!document.querySelector('.logo-box svg'),$('#liveMD').classList.contains('split'),$('#followPanel').hidden,cloudCfg().path]);console.log('rights',r0);
 A(r0[0]==='rights'&&r0[2]&&!r0[3]&&r0[4]&&r0[5]==='data.json','rights default: not split, no follow panel');
-/* 膠囊格分上下兩區後是 #events .events>.ev；左右兩欄時被選到的那顆只是空位（點不到），收起用右側的「收起」 */
-const e2=await p.evaluate(()=>document.querySelector('#events .events>.ev:nth-child(2)').dataset.ev);
-await p.click('#events .events>.ev:nth-child(2) summary');await p.waitForTimeout(500);const sp=await p.evaluate(()=>[$('#liveMD').classList.contains('split'),selEv]);console.log('click->split',sp);A(sp[0]&&sp[1]===e2,'click splits');
+/* ui-05：膠囊是 #events .cp、打開的那張是 lvOpen；寬螢幕（容器 980 以上）右邊是卡片，再點一次同一顆膠囊＝收回（ui-05 審查 P1-1，以前是 .events>.ev summary、selEv、右側的「收起」） */
+const e2=await p.evaluate(()=>liveOrder()[1].id);
+await p.click(`#events .cp[data-cp="${e2}"]`);await p.waitForTimeout(700);const sp=await p.evaluate(()=>[$('#liveMD').classList.contains('split'),lvOpen]);console.log('click->split',sp);A(sp[0]&&sp[1]===e2,'click splits');
 await p.screenshot({path:'m2_rights.png'});
-await p.click('#evDetail [data-mdclose=live]');await p.waitForTimeout(600);const cl=await p.evaluate(()=>$('#liveMD').classList.contains('split'));console.log('close->not split',!cl);A(!cl,'close unsplits');
+await p.click(`#events .cp[data-cp="${e2}"]`);await p.waitForTimeout(700);const cl=await p.evaluate(()=>$('#liveMD').classList.contains('split'));console.log('close->not split',!cl);A(!cl,'close unsplits');
 console.log('rights errs',p.errs);A(!p.errs.length,'rights errors');
 // finance blank
 p=await mk('?d=finance');const f0=await p.evaluate(()=>[state.title,document.querySelector('.logo-text b')?.textContent,state.events.length,state.issues.length,cloudCfg().path,$('#saveInfo').textContent]);console.log('finance',f0);
 A(f0[2]===0&&f0[3]===0&&f0[4]==='data-finance.json','finance blank board');
 await p.screenshot({path:'m2_fin.png'});
 await login(p);await p.click('#addEvent');await p.waitForTimeout(800);
-await p.fill('#evDetail [data-kptitle]','預算表彙整');await p.click('#evDetail [data-kpadd]');await p.waitForTimeout(300);await p.keyboard.type('等各部門回傳');   /* 03：原位編輯器 */
-await p.click('#evDetail [data-kpsave]');await p.waitForTimeout(2500);
+await p.fill('#evDetail [data-kptitle]','預算表彙整');await p.keyboard.press('Enter');await p.waitForTimeout(300);await p.keyboard.type('等各部門回傳');   /* 03：原位編輯器；ui-05：名稱按 Enter＝新增第一行（以前是「+ 新增一行」鈕 data-kpadd） */
+await p.keyboard.press('Escape');await p.waitForTimeout(2500);   /* ui-05：沒有「儲存」鈕（以前 data-kpsave），Esc＝存檔並離開編輯 */
 console.log('finance saved',commits[0],Object.keys(files));console.log('fin errs',p.errs);
 A(/^data-finance\.json :: /.test(commits[0]||'')&&files['data-finance.json']&&files['data-finance.json'].events.some(e=>e.name==='預算表彙整'&&e.desc==='等各部門回傳'),'finance event saved to data-finance.json');A(!p.errs.length,'finance errors');
 // president

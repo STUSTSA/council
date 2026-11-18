@@ -5,25 +5,29 @@ function selfDoc(){
   const body=BODY_SRC.replace(/(<script id="state" type="application\/json">)[\s\S]*?(<\/script>)/,(_,a,b)=>a+"\n"+JSON.stringify(state).replace(/</g,"\\u003c")+"\n"+b);
   return `<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${reset}</style></head><body>${body}</body></html>`;
 }
+/* persistErr：GitHub 模式最後一次儲存失敗的原因（跟提示訊息同一句；不含權杖等機密）。即時回報卡的儲存回饋接在「儲存失敗：」後面（live.js 的 kpSave）；firestore 模式的原因在 store.js 的 fsLastErr */
+let persistErr="";
 async function persist(msg){
+  persistErr="";
   if(fsMode())return fsPersist(msg);   /* 02D：firestore 模式寫進新資料庫（store.js） */
-  if(storeLocked()){toast(STORE_NOTE[storeSource()]);return false}   /* 搬家中或已搬到新資料庫：不寫資料檔（store.js） */
+  const fail=m=>{persistErr=m;toast(m);return false};
+  if(storeLocked())return fail(STORE_NOTE[storeSource()]);   /* 搬家中或已搬到新資料庫：不寫資料檔（store.js） */
   if(artifactNS){
     try{await artifactNS.publish(selfDoc());toast(msg||"已發布，所有人都會看到最新版");return true}
     catch(e){
       const c=e&&e.code;
-      if(c==="conflict")toast("剛剛有人更新了看板，已載入最新版本");
-      else if(c==="not_writer"||c==="not_granted"){canWrite=false;toast("你只有檢視權限，無法儲存");render()}
-      else toast("發布失敗，請稍後再試");
-      return false;
+      if(c==="conflict")return fail("剛剛有人更新了看板，已載入最新版本");
+      if(c==="not_writer"||c==="not_granted"){canWrite=false;fail("你只有檢視權限，無法儲存");render();return false}
+      return fail("發布失敗，請稍後再試");
     }
   }
   if(cloudOn()){
     try{localStorage.setItem(KEY,JSON.stringify(state))}catch(_){}
     const r=await cloudPush();renderHeader();
-    toast(r.ok?(msg||"已儲存並同步到雲端，其他人約 1 分鐘內會看到"):r.msg);return r.ok;
+    if(!r.ok)return fail(r.msg);
+    toast(msg||"已儲存並同步到雲端，其他人約 1 分鐘內會看到");return true;
   }
-  try{localStorage.setItem(KEY,JSON.stringify(state));localOK=true;toast(msg||"已儲存並定型");return true}catch(e){localOK=false;toast("這個瀏覽器無法保存，請按「匯出備份」");return false}
+  try{localStorage.setItem(KEY,JSON.stringify(state));localOK=true;toast(msg||"已儲存並定型");return true}catch(e){localOK=false;return fail("這個瀏覽器無法保存，請按「匯出備份」")}
 }
 function save(){
   state.savedAt=nowStr();if(meName())state.savedBy=meName();

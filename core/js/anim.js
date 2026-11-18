@@ -17,14 +17,14 @@
      out＝減速（進場、移動）｜in＝加速（退場）｜spring＝略帶回彈（彈出、放下）
    分段切換：用 LiquidSeg（本檔最後），跟底部工具列同一套鏡片物理與外觀。
    減少動態（prefers-reduced-motion）時全部直接跳到結果。
-   不做的情況：膠囊正在展開收合（motion-busy）、左右兩欄正在開合（mdBusy）、拖曳排序中、分頁在背景、開頁進場中。 */
+   不做的情況：膠囊正在展開收合（motion-busy）、拖曳中（ev-drag-on）、分頁在背景、開頁進場中。 */
 const MO={fast:160,base:280,slow:460,layout:560,out:"cubic-bezier(.2,.9,.25,1)",in:"cubic-bezier(.4,0,1,1)",spring:"cubic-bezier(.3,1.3,.5,1)"};
 const Anim=(()=>{
   const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
   const KEY_ATTRS=["ev","done","issue","fw","week","set","fk"];
   const ITEM_SEL=KEY_ATTRS.map(a=>`[data-${a}]`).join(",");
   const keyOf=el=>{for(const a of KEY_ATTRS){const v=el.dataset[a];if(v!=null&&v!=="")return a+":"+v}return null};
-  const off=()=>reduced()||document.hidden||document.documentElement.matches(".motion-busy,.ev-drag-on")||(typeof mdBusy!=="undefined"&&mdBusy)||document.body.matches(".intro");
+  const off=()=>reduced()||document.hidden||document.documentElement.matches(".motion-busy,.ev-drag-on")||document.body.matches(".intro");
   /* 容器裡「最外層」的項目（項目裡面再包項目的不算，例如完成紀錄膠囊同時有 data-done 與 data-ev） */
   function items(box){return [...box.querySelectorAll(ITEM_SEL)].filter(el=>{const p=el.parentElement&&el.parentElement.closest(ITEM_SEL);return !p||!box.contains(p)})}
   /* render 前：記下每個 data-flip 容器裡項目的位置 */

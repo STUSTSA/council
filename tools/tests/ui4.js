@@ -8,6 +8,7 @@
    6. 新增圓鈕：只在即時回報分頁、沒有搜尋、沒有卡片打開時出現；點了新增一張；舊的「+ 新增即時回報」小字不在清單裡
    7. 圖示：按下工具列與標題列的圖示有動作（getAnimations）；沒有 title 屬性
    8. 關掉動態（reduced-motion）：按圖示、切換唯讀檢視、搜尋都沒有動畫
+   ui-05（2026-11-17）：打開的卡片改看 lvOpen／dnOpen（live.js），膠囊是 #events .cp
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
@@ -76,9 +77,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await p.fill('#boardQ','停車');await p.waitForTimeout(500);
     const want=await p.evaluate(()=>HS.items[0].id);
     await p.click('#boardRes .dr-sec[data-key="live"] .dr-item');await p.waitForTimeout(1300);
-    r=await p.evaluate(id=>({q:$('#boardQ').value,lay:getComputedStyle(document.querySelector('.layout')).display,res:$('#boardRes').hidden,open:selEv===id||openEv.has(id)}),want);
+    r=await p.evaluate(id=>({q:$('#boardQ').value,lay:getComputedStyle(document.querySelector('.layout')).display,res:$('#boardRes').hidden,open:lvOpen===id||dnOpen===id}),want);
     ok(!r.q&&r.lay!=='none'&&r.res&&r.open,`點結果：清掉搜尋、回到看板並打開那一項（${JSON.stringify(r)}）`);
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(500);
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(500);
     await p.fill('#boardQ','議');await p.waitForTimeout(300);await p.press('#boardQ','Escape');await p.waitForTimeout(300);
     r=await p.evaluate(()=>[$('#boardQ').value,$('#boardRes').hidden,getComputedStyle(document.querySelector('.layout')).display]);
     ok(r[0]===''&&r[1]&&r[2]!=='none','Esc 清除搜尋');
@@ -100,9 +101,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await p.click('#tabbar .tab[data-tab="progress"]');await p.waitForTimeout(700);
     ok(await p.evaluate(()=>$('#addEvent').hidden),'進度分頁：圓鈕不出現');
     await p.click('#tabbar .tab[data-tab="live"]');await p.waitForTimeout(700);
-    await p.click('#events .ev summary');await p.waitForTimeout(1000);
+    await p.click('#events .cp');await p.waitForTimeout(1000);
     ok(await p.evaluate(()=>$('#addEvent').hidden),'有卡片打開（右側詳情）：圓鈕不出現');
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(700);
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(700);
     const n0=await p.evaluate(()=>state.events.length);
     await p.click('#addEvent');await p.waitForTimeout(900);
     const s=await p.evaluate(()=>({n:state.events.length,editing,fab:$('#addEvent').hidden}));
@@ -186,29 +187,29 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await s.evaluate(()=>{localStorage.clear();localStorage.setItem('workboard:ghtoken','T')});await s.reload();await s.waitForTimeout(2000);await D.login(s);await s.waitForTimeout(600);
     const fab=()=>s.evaluate(()=>!$('#addEvent').hidden&&$('#addEvent')._tgl===true);
     const f0=await fab();
-    await s.click('[data-done="D1"] summary');await s.waitForTimeout(700);const f1=await fab();
+    await s.click('#doneList .cp[data-cp="D1"]');await s.waitForTimeout(700);const f1=await fab();
     await s.evaluate(()=>{state.events.find(e=>e.id==='D1').doneAt=null;render()});await s.waitForTimeout(600);const f2=await fab();
-    await s.click('[data-done="D2"] summary');await s.waitForTimeout(700);const f3=await fab();
+    await s.click('#doneList .cp[data-cp="D2"]');await s.waitForTimeout(700);const f3=await fab();
     await s.evaluate(()=>{state.events=state.events.filter(e=>e.id!=='D2');render()});await s.waitForTimeout(600);const f4=await fab();
     ok(f0&&!f1&&f2&&!f3&&f4,`P1-1 秘書處：完成卡打開時圓鈕不出現（${f1}），移回即時回報（${f2}）、刪除之後（${f4}）圓鈕回來`);
     ok(!s.errs.length,'秘書處沒有錯誤'+(s.errs.length?'：'+s.errs.slice(0,3).join(' | '):''));
     await D.b.close();}
   {/* P1-2：唯讀檢視切換後（圓鈕正在消失）馬上點圓鈕，不會開始編輯 */
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(600);
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(600);
     const fb=await box(p,'#addEvent'),n0=await p.evaluate(()=>state.events.length);
     await p.evaluate(()=>$('#peekBtn').click());await p.waitForTimeout(30);
     await p.mouse.click(fb.l+fb.w/2,fb.t+fb.h/2);await p.waitForTimeout(500);
     const r=await p.evaluate(async n0=>{const ev=state.events.find(e=>!e.doneAt);const se=await startEdit('e:'+ev.id);return {ro:roView,editing,n:state.events.length===n0,se,inert:$('#addEvent').inert}},n0);
     ok(r.ro&&!r.editing&&r.n&&r.se===false&&r.inert,`P1-2 唯讀檢視切換後 30ms 點圓鈕不會進編輯；唯讀檢視時 startEdit 直接回 false（${JSON.stringify(r)}）`);
-    await p.evaluate(()=>{if(editing)cancelEdit();selEv=null;openEv.clear();$('#peekBtn').click()});await p.waitForTimeout(700);
+    await p.evaluate(()=>{if(editing)cancelEdit();lvOpen=null;dnOpen=null;$('#peekBtn').click()});await p.waitForTimeout(700);
     ok(await p.evaluate(()=>!roView&&!$('#addEvent').hidden&&!$('#addEvent').inert),'P1-2 唯讀檢視結束：圓鈕回來、可以點');}
   {/* P2-3：搜尋中焦點不在搜尋欄時按 Esc 也清掉搜尋，而且先於收起右側詳情 */
     await p.fill('#boardQ','停車');await p.waitForTimeout(400);
-    const id=await p.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt);selEv=ev.id;render();document.activeElement.blur();return ev.id});
+    const id=await p.evaluate(()=>{const ev=state.events.find(e=>!e.doneAt);lcShow('live',ev.id);document.activeElement.blur();return ev.id});
     await p.keyboard.press('Escape');await p.waitForTimeout(400);
-    const r=await p.evaluate(id=>({q:$('#boardQ').value,mode:HS.mode,sel:selEv===id,res:$('#boardRes').hidden}),id);
+    const r=await p.evaluate(id=>({q:$('#boardQ').value,mode:HS.mode,sel:lvOpen===id,res:$('#boardRes').hidden}),id);
     ok(r.q===''&&!r.mode&&r.res&&r.sel,`P2-3 焦點不在搜尋欄時 Esc 清掉搜尋，右側詳情這一下不收（${JSON.stringify(r)}）`);
-    await p.evaluate(()=>{selEv=null;render()});await p.waitForTimeout(400);}
+    await p.evaluate(()=>{lvOpen=null;render()});await p.waitForTimeout(400);}
   {/* P2-4：有結束時間、結束是今天而且時刻已過，也算逾期 */
     const r=await p.evaluate(()=>{const d=new Date();if(d.getHours()===23&&d.getMinutes()===59||d.getHours()===0&&d.getMinutes()===0)return {skip:true};
       const t=today(),ev=state.events.find(e=>!e.doneAt);ev.times=ev.times||[];ev.blocks=ev.blocks||[];const n0=notiLate();
@@ -248,11 +249,11 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     ok(f1.outOn&&f1.out.includes('translate(0px,-48px)')&&f1.inn.includes('translate(0px,48px)')&&f2.out.includes('translate(0px,48px)')&&f2.inn.includes('translate(0px,-48px)'),
       `1300：往後面的分頁＝舊的往上退、新的從下面進；往前反過來（${JSON.stringify([f1.out,f1.inn,f2.out,f2.inn])}）`);
     ok(await p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].every(g=>!g.getAnimations().length&&!g.classList.contains('sg-out')&&!g.style.position&&!g.inert)),'換完之後舊區塊的退場層拿掉');
-    await p.click('#events .ev summary');await p.waitForTimeout(1000);
+    await p.click('#events .cp');await p.waitForTimeout(1000);
     const md=await p.evaluate(()=>{const L=$('#events').getBoundingClientRect(),R=$('#evDetail').getBoundingClientRect(),g=document.querySelector('.sgroup[data-sec="live"]');
       return {split:!$('#evDetail').hidden&&R.left>=L.right-1&&R.width>200,inLive:g.contains($('#events'))&&g.contains($('#evDetail')),others:[...document.querySelectorAll('.layout>.sgroup:not([data-sec="live"])')].every(x=>getComputedStyle(x).display==='none')}});
     ok(md.split&&md.inLive&&md.others,`1300：即時回報左邊膠囊清單、右邊卡片，是同一區的內部兩欄（${JSON.stringify(md)}）`);
-    await p.evaluate(()=>{selEv=null;openEv.clear();render()});await p.waitForTimeout(500);}
+    await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(500);}
   {const c3=await c.setup();const q=await c3.mk(412,860,'light',true);await c3.login(q);await q.waitForTimeout(500);
     /* P2-8a：手機上圓鈕跟設定鍵中心對齊（右緣以設定鍵為準） */
     const al=async()=>{const f=await box(q,'#addEvent'),g=await box(q,'#setBtn');return Math.abs((f.l+f.w/2)-(g.l+g.w/2))};

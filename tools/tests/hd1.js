@@ -1,5 +1,6 @@
 /* 頁首精簡（logo 置中、玻璃搜尋欄、只留週次）、頁首搜尋、設定頁「每週概述」、秘書處「各部門週報」調閱。
-   桌面 1300 深色、手機 412 淺色。固定 8300 埠；截圖 hd1_*.png */
+   桌面 1300 深色、手機 412 淺色。固定 8300 埠；截圖 hd1_*.png
+   2026-11-17（ui-05 審查 P1-1）：搜尋按 Enter 打開的即時回報改看 lvOpen＋卡片（#evDetail／#lcFull 的 .lc；以前是 details.ev[open]、.ev.sel、.evd） */
 const c=require('./common');c.serveRemote=true;
 const A=(ok,m)=>{if(!ok){console.log('FAIL:',m);process.exitCode=1}};   /* 2026-11-11：只印數值改成逐項判斷，壞了就以非 0 結束 */
 (async()=>{const {b,mk}=await c.setup();
@@ -14,7 +15,7 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){c.q='
  const sr=await p.evaluate(()=>[!$('#boardRes').hidden,document.querySelectorAll('#boardRes .hr-item').length,$('#boardRes mark')?.textContent]);console.log(w,'search',q,sr);A(sr[0]&&sr[1]>0&&sr[2]===q,'search results');
  await p.screenshot({path:`hd1_${w}_search.png`});
  await p.keyboard.press('Enter');await p.waitForTimeout(900);
- const go=await p.evaluate(()=>[curSec,$('#boardRes').hidden||getComputedStyle($('#boardRes')).opacity,!!document.querySelector('#events details.ev[open], #events .ev.sel, #evDetail .evd')]);console.log(w,'go',go);A(go[0]==='live'&&(go[1]===true||go[1]==='0')&&go[2],'enter opens event');
+ const go=await p.evaluate(()=>[curSec,$('#boardRes').hidden||getComputedStyle($('#boardRes')).opacity,!!lvOpen&&!!document.querySelector('#evDetail>.lc, #lcFull:not([hidden])>.lc')]);console.log(w,'go',go);A(go[0]==='live'&&(go[1]===true||go[1]==='0')&&go[2],'enter opens event');
  /* 設定 → 每週概述 */
  await p.click('#setBtn');await p.waitForTimeout(800);
  const wr=await p.evaluate(()=>!!$('#setOv [data-set=week]'));console.log(w,'set week row',wr);A(wr,'week row');

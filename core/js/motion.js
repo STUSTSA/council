@@ -47,18 +47,14 @@ document.addEventListener("click",e=>{
   const d=sm.parentElement;if(!d||!d.matches(".ev,.week,.log"))return;
   if(e.target.closest("input,button,a")){if(e.target.closest("summary button,summary input"))e.preventDefault();return}
   e.preventDefault();
-  /* 桌面 1000px 以上、在那一區時：點即時回報或完成紀錄的一筆＝在右側打開，再點一次＝收起（不就地展開）。
-     例外：窄畫面時就地展開過、變寬後還開著的那一筆，點了先就地收起（不然會收不起來、直接跳去分欄） */
-  if(!d.open&&d.matches(".ev:not([data-done]):not(.mt-ev)")&&mdOn("live")){mdSelect("live",d.dataset.ev);return}   /* 秘書處的會議膠囊（.mt-ev）是別的部門的，一律就地展開 */
-  if(!d.open&&d.matches("[data-done]")&&mdOn("done")){mdSelect("done",d.dataset.issue||d.dataset.ev);return}
-  /* 手機：即時回報、完成紀錄一次只開一張（打開這張時，同一區開著的其他張一起收起） */
-  if(!d.open&&d.matches(".ev")&&isPhone()){const box=d.closest("#events,#doneList,#meetEdList,#wkBody");if(box)box.querySelectorAll(".ev[open]").forEach(o=>{if(o!==d)animateDetails(o,false)})}   /* 秘書處的報告事項、週報膠囊也照這條（2026-11-06 使用者：一次只能開一個） */
+  /* 手機：秘書處的報告事項、週報膠囊一次只開一張（打開這張時，同一區開著的其他張一起收起） */
+  if(!d.open&&d.matches(".ev")&&isPhone()){const box=d.closest("#meetEdList,#wkBody");if(box)box.querySelectorAll(".ev[open]").forEach(o=>{if(o!==d)animateDetails(o,false)})}   /* 秘書處的報告事項、週報膠囊也照這條（2026-11-06 使用者：一次只能開一個） */
   animateDetails(d,!d.open);
 },true);
 
 /* open link buttons robustly: new tab first, fall back to same tab when a viewer blocks pop-ups */
 document.addEventListener("click",e=>{
-  const a=e.target.closest("a.link[href]");if(!a||a.closest(".sec-edit"))return;
+  const a=e.target.closest("a.link[href],a.lnk[href]");if(!a||a.closest(".sec-edit"))return;
   const url=a.getAttribute("href");if(!url||url==="#")return;
   e.preventDefault();e.stopPropagation();
   let w=null;try{w=window.open(url,"_blank")}catch(_){}
@@ -72,85 +68,19 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("mouseover",e=>{const m=e.target.closest(".marker.quiet,.g-mk.quiet");const tr=m&&m.closest(".c-track,.g-track");document.querySelectorAll(".peeking").forEach(x=>{if(x!==tr)x.classList.remove("peeking")});if(tr)tr.classList.add("peeking")});
 
-/* ---------- 左右兩欄的開合（即時回報、完成紀錄） ----------
-   被點的那一項「飛」到右半邊變成詳情卡，原位留虛線空位（CSS 的 .sel）；收起時詳情卡縮小彈回空位，那一項再出現。
-   三種動作都走 mdSelect：
-   - 打開（沒選→選）：清單 FLIP 縮到左半邊，詳情卡從被點那一項原本的位置彈出放大（mdPop "out"）
-   - 換選（選 A→選 B）：A 的詳情卡先縮回 A 的空位（mdPop "in"），A 出現；再從 B 彈出
-   - 收起（選→沒選）：詳情卡縮回空位，那一項出現，清單 FLIP 展開回全寬
-   只動 transform／clip-path（不縮放內容，字不變形）；動作進行中 mdBusy 擋住重複點擊 */
-const MD={live:{list:"#events",item:".ev",key:el=>el.dataset.ev,pane:"#evDetail",get:()=>selEv,set:v=>{selEv=v},render:()=>renderEvents()},
-  done:{list:"#doneList",item:"[data-done]",key:el=>el.dataset.done,pane:"#doneDetail",get:()=>selDone,set:v=>{selDone=v},render:()=>renderDone()}};
-const MD_POP={out:{duration:560,easing:"cubic-bezier(.3,1.3,.5,1)"},in:{duration:300,easing:"cubic-bezier(.5,0,.3,1)"}};
-let mdBusy=false;
-const mdItem=(m,id)=>id&&[...document.querySelectorAll(`${m.list} ${m.item}`)].find(el=>m.key(el)===id);
-const mdBox=el=>el&&{rect:el.getBoundingClientRect(),r:parseFloat(getComputedStyle(el).borderRadius)||0};
-async function mdSelect(k,id){
-  if(mdBusy)return;
-  const m=MD[k],cur=m.get(),next=cur===id?null:id,pane=$(m.pane);
-  const set=v=>{m.set(v);m.render();layoutAll()};
-  if(reduceMotion()){set(next);if(next)mdPaneIn(pane);return}
-  mdBusy=true;
-  try{
-    /* 1. 原本開著的先彈回自己的空位 */
-    if(cur&&pane&&!pane.hidden){const home=mdBox(mdItem(m,cur));if(home)await mdPop(pane,home,"in")}
-    /* 2. 切換：打開／收起要換版面（FLIP），換選只換內容 */
-    const from=next&&!cur?mdBox(mdItem(m,next)):null;           /* 打開：從清單換版面之前的位置彈出 */
-    if(!!cur!==!!next)mdFlip(m,()=>set(next));else set(next);
-    pane&&pane.getAnimations().forEach(x=>x.cancel());
-    if(cur)mdLand(mdItem(m,cur));
-    /* 3. 新選的彈出去 */
-    if(next&&pane)mdPop(pane,from||mdBox(mdItem(m,next)),"out");
-  }finally{mdBusy=false}
-}
-/* 詳情卡在「清單那一項的位置與大小」和「自己的位置」之間變形：位移＋clip-path 圓角裁切 */
-function mdPop(pane,home,dir){
-  if(!home)return Promise.resolve();
-  const a=home.rect,b=pane.getBoundingClientRect(),R=parseFloat(getComputedStyle(pane).borderRadius)||0;
-  const w=Math.min(a.width,b.width),h=Math.min(a.height,b.height);
-  const small={transform:`translate(${a.left-b.left}px,${a.top-b.top}px)`,clipPath:`inset(0px ${b.width-w}px ${b.height-h}px 0px round ${Math.min(home.r,h/2)}px)`};
-  const big={transform:"none",clipPath:`inset(0px 0px 0px 0px round ${R}px)`};
-  const kids=[...pane.children],o=MD_POP[dir];
-  if(dir==="out"){kids.forEach(c=>c.animate([{opacity:0},{opacity:0,offset:.3},{opacity:1}],{duration:o.duration,easing:"ease-out"}));return pane.animate([small,big],o).finished.catch(()=>{})}
-  kids.forEach(c=>c.animate([{opacity:1},{opacity:0}],{duration:120,fill:"forwards"}));
-  return pane.animate([big,small],{...o,fill:"forwards"}).finished.catch(()=>{});
-}
-/* 那一項回到清單：輕輕彈一下，像剛落回原位 */
-function mdLand(el){if(el)el.animate([{scale:1.05},{scale:1}],{duration:320,easing:"cubic-bezier(.3,1.5,.5,1)"})}
-function mdFlip(m,mutate){
-  if(reduceMotion())return mutate();
-  const first=new Map([...document.querySelectorAll(`${m.list} ${m.item}`)].map(el=>[m.key(el),el.getBoundingClientRect()]));
-  mutate();
-  document.querySelectorAll(`${m.list} ${m.item}`).forEach((el,i)=>{
-    const a=first.get(m.key(el));if(!a)return;const b=el.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top;
-    if(Math.abs(dx)<1&&Math.abs(dy)<1&&Math.abs(a.width-b.width)<1)return;
-    el.animate([{transform:`translate(${dx}px,${dy}px)`,width:a.width+"px"},{transform:"none",width:b.width+"px"}],{duration:460,delay:Math.min(i,8)*14,easing:"cubic-bezier(.2,.9,.25,1)",fill:"backwards"});
-  });
-}
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-mdclose]");if(b){e.preventDefault();const k=b.dataset.mdclose;mdSelect(k,MD[k].get())}});
-/* 上一個／下一個：照清單畫面上的順序換選（現在這張縮回空位、下一張彈出）；鍵盤左右鍵同功能（游標在輸入框裡時不搶） */
-function mdStep(k,dir){const m=MD[k],ids=[...document.querySelectorAll(`${m.list} ${m.item}`)].map(m.key),to=ids[ids.indexOf(m.get())+dir];if(to)mdSelect(k,to)}
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("[data-mdstep]");if(b&&!b.disabled){e.preventDefault();mdStep(b.dataset.mdstep,+b.dataset.dir)}});
-document.addEventListener("keydown",e=>{
-  if((e.key!=="ArrowLeft"&&e.key!=="ArrowRight")||e.altKey||e.ctrlKey||e.metaKey||setOpen||notiOpen||$("#dlg").open)return;
-  const a=document.activeElement;if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
-  const k=selEv&&mdOn("live")?"live":selDone&&mdOn("done")?"done":null;if(!k)return;
-  e.preventDefault();mdStep(k,e.key==="ArrowRight"?1:-1);
-});
-
 /* ---------- 版面長度過渡（全介面共用） ----------
    區塊（.panel）、設定頁的群組與右側面板，內容一變高或變矮，就從原本的高度滑到新的高度，下面的東西跟著滑，不會「卡一下整個往下」。
    用 ResizeObserver 看高度（在畫面畫出來之前就收到），所以各處的程式不用自己呼叫。
    不做的情況：裡面的膠囊／清單正在跑自己的展開收合（motionBusy）、第一次出現、從隱藏變顯示（高度 0）、寬度也一起變（換區塊放大、視窗縮放，交給原本的 FLIP）、減少動態、動畫模式。
    動畫進行中自己造成的尺寸變化不理；動畫結束後如果內容又變了，ResizeObserver 會再收到一次，從目前高度接著滑 */
-const FLOW_SEL=".panel,.md-pane,.ev[open],[data-flow],#setOv .set-list,#setOv .set-pane";   /* 動畫規則 1（anim.js）：新的容器加 data-flow 就有長度過渡 */
+const FLOW_SEL=".panel,.ev[open],[data-flow],#setOv .set-list,#setOv .set-pane";   /* 動畫規則 1（anim.js）：新的容器加 data-flow 就有長度過渡 */
 const flowLast=new WeakMap();
 const flowRO=typeof ResizeObserver==="function"?new ResizeObserver(es=>{
   for(const e of es){
     const el=e.target;if(el._flow)continue;
     const bs=e.borderBoxSize&&e.borderBoxSize[0],w=bs?bs.inlineSize:el.offsetWidth,h=bs?bs.blockSize:el.offsetHeight,last=flowLast.get(el);
     flowLast.set(el,{w,h});
-    if(!last||!last.h||!h||Math.abs(last.w-w)>1||Math.abs(last.h-h)<3||_busy||reduceMotion()||document.hidden||document.body.matches(".intro"))continue;   /* _busy：膠囊自己在展開收合，區塊本來就跟著平滑變高 */
+    if(!last||!last.h||!h||Math.abs(last.w-w)>1||Math.abs(last.h-h)<3||_busy||reduceMotion()||isPhone()||document.hidden||document.body.matches(".intro"))continue;   /* 手機不做高度動畫（DESIGN-next 第五節） */   /* _busy：膠囊自己在展開收合，區塊本來就跟著平滑變高 */
     el.style.overflow="clip";
     const a=el.animate([{height:last.h+"px"},{height:h+"px"}],{duration:Math.min(560,260+Math.abs(h-last.h)*.35),easing:"cubic-bezier(.2,.9,.25,1)"});
     el._flow=a;

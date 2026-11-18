@@ -1,5 +1,5 @@
 /* 核心｜整體重繪＋區塊切換 */
-let openWeeks=null,newWeekId=null,prevDone=null,openDone=new Set(),openEv=new Set(),editing=false,dirty=false,snapshot="",keepIds=new Set();
+let openWeeks=null,newWeekId=null,prevDone=null,editing=false,dirty=false,snapshot="",keepIds=new Set();
 
 /* ---------- timeline math ---------- */
 /* 甘特圖看的範圍（2026-11-05）：「全部」＝設定的時間軸（state.range）；「上學期」＝8 月～隔年 1 月；「下學期」＝2 月～7 月。
@@ -50,7 +50,7 @@ const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
   if(roView)return false;   /* 唯讀檢視中不開始編輯（圓鈕、編輯鈕正在消失的途中也一樣） */
   if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;
-  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;kpTp=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
+  morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
     /* 即時回報卡（進行中、不是秘書處的會議卡）：原位編輯器，記下開始前的內容（新增的卡片＝null） */
     const ev=key[0]==="e"&&state.events.find(e=>e.id===key.slice(2)),was=ev&&JSON.parse(snapshot).events.find(e=>e.id===ev.id);
     kp=ev&&!ev.doneAt?{id:ev.id,before:was?JSON.stringify(was):null}:null;render()});
@@ -76,7 +76,8 @@ document.addEventListener("mousedown",e=>{
   const hit=t.closest("button,[role=button],label,input[type=checkbox],input[type=radio]");if(!hit||!box.contains(hit))return;
   if(hit.tagName==="LABEL"&&hit.control&&!/^(checkbox|radio)$/.test(hit.control.type))return;
   e.preventDefault();
-  if(hit.tagName==="LABEL"&&hit.control)keepFld={a,c:hit.control,at:performance.now()};
+  if(hit.tagName==="LABEL"&&hit.control){keepFld={a,c:hit.control,at:performance.now()};
+    if(a.selectionStart!==a.selectionEnd&&a.setSelectionRange)try{a.setSelectionRange(a.selectionEnd,a.selectionEnd)}catch(_){}}   /* 文字欄有選取範圍時瀏覽器不讓 label 的點擊勾到核取框（新卡片名稱整段選取時點負責人沒反應；ui-05 審查 P2-1）：收成游標 */
 });
 document.addEventListener("click",()=>{const k=keepFld;if(!k)return;keepBack();clearTimeout(k.t);k.t=setTimeout(()=>{keepBack();if(keepFld===k)keepFld=null},0)});
 document.addEventListener("change",keepBack);
@@ -111,14 +112,8 @@ function render(){
 const SECS=["live","progress","done","ext"].filter(secTab);
 let curSec=(SECS.includes(appStartSec)&&appStartSec)||SECS[0]||"live",secTok=0;   /* appStartSec：app.js 留下的初始區塊（現在都是空的，從第一個區塊開始） */
 const isPhone=()=>matchMedia("(max-width:640px)").matches;
-function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec));
-  /* 切換區塊時，個別進度／完成紀錄要不要改成左右兩欄跟著變 */
-  if(mdOn("live")!==mdLast.live)renderEvents();if(mdOn("done")!==mdLast.done)renderDone()}
-/* 桌面（1000px 以上）、在那一區時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
-const MD_MQ=matchMedia("(min-width:1000px)");
-const mdOn=sec=>MD_MQ.matches&&curSec===sec;
-let progOpen=null,selDone=null,selEv=null;const mdLast={};
-MD_MQ.addEventListener("change",()=>render());
+function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec))}
+let progOpen=null;   /* 進度：甘特圖／議題詳情切換（views.js 的 progShow）。即時回報、完成紀錄的左右兩欄在 live.js（lvWide） */
 /* 換分頁（DESIGN-next 第一節「部門內一次只顯示一區」、第五節「部門內換分頁」）：手機、桌面都一次只顯示一區。
    舊內容往一邊退、新內容從另一邊進，方向跟工具列一致：桌面（左側直排）上下、900px 以下（底部橫排）左右；往工具列後面的分頁＝舊的往上／左退、新的從下／右進，往前反過來。
    舊區塊留成一層（.sg-out：原地絕對定位、不能點）淡出退開，結束後拿掉；新區塊裡的每一塊（面板）帶柔回彈滑進來，每塊錯開 30ms。
