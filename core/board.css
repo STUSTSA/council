@@ -1268,7 +1268,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-round{display:grid;place-items:center;flex:none;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink)}
 .hm-round .ico{width:22px;height:22px}
 .hm-stage{position:relative;flex:none;min-height:0;display:flex;flex-direction:column;margin-top:clamp(24px,9vh,110px)}   /* 桌面：色塊列在上半部、下排緊接在下面（照模擬頁） */
-.hm-rail{position:relative;flex:none;display:flex;gap:34px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 calc(-1*clamp(16px,4vw,56px));padding:40px clamp(34px,4vw,56px)}
+.hm-rail{position:relative;flex:none;display:flex;gap:34px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));padding:40px clamp(34px,4vw,56px)}
 .hm-rail::-webkit-scrollbar{display:none}
 .hm-tile{position:relative;flex:none;display:block;width:clamp(150px,17vw,214px);aspect-ratio:1;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;-webkit-user-drag:none;
   transition:transform var(--mo-slow) cubic-bezier(.3,1.45,.45,1),opacity var(--mo-base) var(--mo-out)}
