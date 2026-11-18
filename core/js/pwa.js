@@ -9,16 +9,41 @@ function offlinePill(){
 window.addEventListener("offline",()=>{if(!editing)render();else offlinePill()});
 window.addEventListener("online",async()=>{netFail=false;if(cloudOn()){const r=await cloudPull({force:true});if(r==="updated")toast("已重新連線，看板已更新")}if(!editing)render();else offlinePill()});
 
+/* ---------- 安裝成 App（03 F4，設定 →「這台裝置」）----------
+   瀏覽器支援安裝（Android Chrome、電腦的 Chrome／Edge：beforeinstallprompt）時記下事件，「這台裝置」頁顯示一顆「安裝」；
+   已經是安裝後的 App 打開的、或瀏覽器不支援時不顯示。iPhone／iPad 的 Safari（沒有安裝事件）尚未加入主畫面時，改顯示加入主畫面的步驟。 */
+let pwaPrompt=null;
+/* 已安裝＝從主畫面／App 打開（manifest 是 fullscreen，所以三種顯示模式都算；iOS 看 navigator.standalone） */
+const pwaStandalone=()=>{try{return matchMedia("(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)").matches||navigator.standalone===true}catch(_){return false}};
+/* iPhone／iPad 的 Safari：IS_IOS（nav.js）、不是 App 內建瀏覽器（inAppBrowser，account.js）、不是其他瀏覽器（iOS 的 Chrome／Firefox／Edge…） */
+const pwaIosSafari=()=>IS_IOS&&!inAppBrowser()&&/Safari\//.test(navigator.userAgent)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|YaBrowser|DuckDuckGo/.test(navigator.userAgent);
+const pwaCanInstall=()=>!!pwaPrompt&&!pwaStandalone();
+const pwaIosSteps=()=>!pwaPrompt&&!pwaStandalone()&&pwaIosSafari();
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();pwaPrompt=e;if(typeof renderSettings==="function")renderSettings()});
+addEventListener("appinstalled",()=>{pwaPrompt=null;if(typeof renderSettings==="function")renderSettings()});
+/* 安裝視窗只能叫一次：不論接受或取消都把事件清掉（取消後要等瀏覽器下次再給；03 審查 P1-1） */
+async function pwaInstall(){
+  const e=pwaPrompt;if(!e)return;pwaPrompt=null;
+  try{await e.prompt();const r=await e.userChoice;if(r&&r.outcome==="accepted")toast("已安裝")}catch(_){}
+  if(typeof renderSettings==="function")renderSettings();
+}
+const PWA_IOS_STEPS=["點「分享」","選「加入主畫面」","按「新增」"];
+/* 這台裝置的「忘記這台裝置」只在舊的身分登入（GitHub 模式的看板）才有；用 Google 登入的看板（新資料庫、凍結中）沒有 */
+const devForget=()=>!(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON));
+const devShow=()=>pwaCanInstall()||pwaIosSteps();
+
 /* Service Worker：只在正式網址（https / localhost）且頁面有 manifest 時註冊 */
 if("serviceWorker" in navigator&&document.querySelector('link[rel="manifest"]')&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>{
-      const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
-      const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
+    /* 這一頁用到的檔案交給 Service Worker 存成離線備份。新版 sw.js 換手時（快取版本換新、舊的快取被刪）再送一次給新的，
+       不然上線後第一次打開送出的清單會跟著舊快取一起被刪（release-03） */
+    const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
+    const send=w=>{if(!w)return;const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
         ...[...document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="manifest"]')].map(l=>l.href)]
         .filter(same).map(u=>u.split("#")[0].split("?")[0]);
-      reg.active&&reg.active.postMessage({type:"precache",urls:[...new Set(urls)]});
-    }).catch(()=>{});
+      w.postMessage({type:"precache",urls:[...new Set(urls)]})};
+    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>send(reg.active)).catch(()=>{});
+    navigator.serviceWorker.addEventListener("controllerchange",()=>send(navigator.serviceWorker.controller));
   });
 }
 

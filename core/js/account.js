@@ -13,7 +13,8 @@ const JOIN_KEY="workboard:join";
 })();
 const joinToken=()=>{try{return sessionStorage.getItem(JOIN_KEY)||""}catch(_){return ""}};
 const joinClear=()=>{try{sessionStorage.removeItem(JOIN_KEY)}catch(_){}};
-const acctOn=()=>FB_ON&&storeSource()==="firestore";
+/* 02D D-a：凍結中的部門也用 Google 登入（總管理員在這裡進會長室管理 → 匯入；看板本身照舊唯讀、不讀 Firestore） */
+const acctOn=()=>FB_ON&&(storeSource()==="firestore"||storeSource()==="frozen");
 const ROLE_T={admin:"管理員",editor:"編輯者"};
 const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
@@ -57,10 +58,11 @@ async function acctStart(){
     acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
+    if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
-    if(!first&&acctOn())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態） */
+    if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
   });
 }
@@ -92,14 +94,15 @@ function acctCopyUrl(){
 
 /* ---------- 設定頁（firestore 模式；nav.js 的 settingsInner 交給這裡） ---------- */
 function acctGateHTML(){
-  if(inAppBrowser())return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span><b>用瀏覽器開啟</b><button type="button" class="primary" data-fb-copy>複製網址</button></div>`;
-  return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button><b>未登入</b><button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
+  const fz=storeSource()==="frozen",t=fz?`<b>暫停編輯</b><p class="sub">${STORE_NOTE.frozen}</p>`:"";   /* 凍結中：原本的「暫停編輯」＋登入鈕 */
+  if(inAppBrowser())return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span>${t||"<b>用瀏覽器開啟</b>"}<button type="button" class="primary" data-fb-copy>複製網址</button></div>`;
+  return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button>${t||"<b>未登入</b>"}<button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
 }
 function acctSettingsInner(){
   const wk=setRow("week","doc","每週概述",weekSub());
   if(!FB_ON)return setSec(wk);
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
-  if(!acct.user)return setSec(wk)+acctGateHTML();
+  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
@@ -107,7 +110,8 @@ function acctSettingsInner(){
       +setRow("backup","download","備份")):"";
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
+    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
+    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -189,7 +193,9 @@ async function councilHub(){
     {k:"people",ic:"people",t:"人員",sub:"",flow:()=>peoplePanel()},
     {k:"invite",ic:"share",t:"QR 邀請",sub:"",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",sub:pending.length?`${pending.length} 筆待審`:"沒有待審",flow:async()=>{await requestsPanel();pending=await A.requestsPending().catch(()=>pending)}},
-    {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()}]);
+    {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()},
+    {k:"import",ic:"cloud",t:"匯入",sub:"",flow:()=>importPanel()},
+    {k:"export",ic:"download",t:"匯出全部資料",sub:"",act:exportAllData}]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
@@ -201,6 +207,7 @@ function peoplePanel(){
     const A=await acctLoad();
     let roles=[],users=[],who=null;
     const load=async()=>{[roles,users]=await Promise.all([A.rolesList(),A.usersList()]);acct.names=await A.profiles().catch(()=>acct.names)};
+    A.rosterSync().catch(()=>{});   /* 03 F3：打開人員時把全部的專員名單對齊角色（補上 F3 之前就有角色的人、清掉已撤權的） */
     const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
@@ -215,7 +222,7 @@ function peoplePanel(){
       p.box.innerHTML=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="sr-t"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
-    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){await load();draw()}};
+    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});await load();draw()}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補） */
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
@@ -247,6 +254,77 @@ function peoplePanel(){
     });
     await load();draw();
   });
+}
+
+/* ---------- 匯入（02D D-a，正式切換用）：選一個部門 → 讀資料檔（只讀）→ 照 migrate-core.js 寫進這個網站設定的 Firebase 專案 → 筆數報告 ----------
+   權限由規則判斷（遷移批次與匯入分支只有總管理員）；可重跑（內容相同跳過、不覆寫被改過的）。資料操作在 migrate-web.js */
+let migMod=null;
+function migLoad(){
+  if(!migMod)migMod=new Promise((ok,no)=>{if(window.MigrateCore)return ok();const s=document.createElement("script");s.src="core/js/migrate-core.js";s.onload=ok;s.onerror=()=>no(new Error("load"));document.head.append(s)})
+    .then(()=>storeModLoad("migrate-web.js","board-migrate-ready","BoardMigrate")).catch(e=>{migMod=null;throw e});
+  return migMod;
+}
+const SRC_T={github:"GitHub",frozen:"凍結中",firestore:"新資料庫"};
+/* 匯入讀哪個 repo：只看 dept/config.js 的 data（owner／repo 留空＝從 github.io 網址推）與它的分支，不看資料檔或本機暫存裡的 sync（02D 審查 P1-2）。
+   不是 github.io 又沒設 owner／repo（本機開發）＝讀網站上的檔案 */
+function impRepo(){
+  let owner=CFG.data.owner||"",repo=CFG.data.repo||"";
+  if(!owner&&/\.github\.io$/i.test(location.hostname)){owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];repo=seg&&!/\.html?$/i.test(seg)?seg:location.hostname}
+  return {owner,repo,branch:CFG.data.branch||"main"};
+}
+const IMP_STEP={read:"讀取資料檔",write:"寫入",check:"檢查"};
+const IMP_ERR={source:"讀不到資料檔","permission-denied":"沒有權限",unavailable:"沒有連上網路"};
+const impBig=lines=>lines&&lines.length?`<ol class="acct-log imp-big">${lines.map(x=>`<li><span class="acct-log-b"><small>${esc(x)}</small></span></li>`).join("")}</ol>`:"";   /* 超過規則上限的卡片（03 審查 P2-2） */
+function importPanel(){
+  return acctPanel("匯入",async p=>{
+    let busy=false,res=null,err="",errBig=null,step="",dept="";
+    const nm=id=>deptNameOf(id);
+    const rowsHTML=r=>`<table class="imp-tbl"><thead><tr><th>項目</th><th>資料檔</th><th>Firestore</th><th>結果</th></tr></thead><tbody>${r.report.rows.map(x=>
+      `<tr${x.ok?"":' class="bad"'}><td>${esc(x.label)}</td><td class="num">${x.source}</td><td class="num">${x.firestore}</td><td>${x.ok?"相同":"不同"}</td></tr>`).join("")}</tbody></table>`;
+    const draw=()=>{
+      if(!p.alive)return;
+      if(dept){
+        const head=`<div class="acct-person"><b>${esc(nm(dept))}</b><small>${esc(CFG.firebase.projectId)}</small></div>`;
+        if(busy){p.box.innerHTML=p.head()+head+`<p class="set-p imp-step" role="status">${esc(step)}</p>`;return}
+        if(err){p.box.innerHTML=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
+        const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
+        p.box.innerHTML=p.head()+head
+          +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`${esc(res.repo)} · commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
+          +impBig(res.report.tooBig)+rowsHTML(res)
+          +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
+          +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
+          +`<div class="acct-acts"><button type="button" class="add-row" data-run>再匯入一次</button><button type="button" class="add-row" data-back>返回</button></div>`;
+        return}
+      p.box.innerHTML=p.head()+`<div class="set-list">${BOARD_DEPTS.map(d=>`<button type="button" class="set-row acct-row" data-imp="${esc(d.id)}"><span class="sr-t"><b>${esc(d.name)}</b><span class="acct-chips"><span class="acct-chip${deptSourceOf(d.id)==="frozen"?" on":""}">${SRC_T[deptSourceOf(d.id)]}</span></span></span>${SR_CHEV}</button>`).join("")}</div>`;
+    };
+    const run=async()=>{
+      if(busy)return;busy=true;err="";errBig=null;res=null;step=IMP_STEP.read;draw();
+      try{
+        const B=await migLoad();
+        res=await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
+      }catch(e){console.error(e);err=e&&e.code==="too-big"?`有 ${e.tooBig.length} 張卡片超過上限，沒有寫入`:IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`;if(e&&e.code==="too-big")errBig=e.tooBig}
+      busy=false;draw();
+    };
+    p.box.addEventListener("click",async e=>{
+      const b=e.target.closest("button");if(!b||busy)return;
+      if(b.dataset.imp){const id=b.dataset.imp,src=deptSourceOf(id);
+        const v=await ask(`匯入 ${nm(id)}${src==="frozen"?"":src==="firestore"?"（已切到新資料庫）":"（還沒凍結）"}`,[],{danger:"匯入"});if(v!=="delete")return;
+        dept=id;await run();return}
+      if(b.hasAttribute("data-run")){await run();return}
+      if(b.hasAttribute("data-back")){dept="";res=null;err="";draw()}
+    });
+    draw();
+  });
+}
+/* ---------- 匯出全部資料（02D D-c，migration.md 第 8 節）：總管理員讀得到的全部集合＋批次資訊＋每個部門的 schemaVersion 13 檔，存成一個 JSON ---------- */
+let exportBusy=false;
+async function exportAllData(){
+  if(exportBusy)return;exportBusy=true;toast("匯出中…");
+  try{
+    const B=await migLoad(),x=await B.exportAll(CFG.firebase,BOARD_DEPTS);
+    await saveJsonFile(`學生會看板_全部資料_${x.projectId}_${today()}.json`,JSON.stringify(x,null,1),"全部資料");
+  }catch(e){console.error(e);toast(acctErr(e))}
+  exportBusy=false;
 }
 
 /* QR 邀請：產生（10 分鐘、一次性）、重新產生（舊的同時撤銷）、撤銷；下面是最近的邀請。權杖只在這個面板的記憶體裡 */
@@ -321,7 +399,7 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){await load();draw()}}
+      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});await load();draw()}}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")){await load();draw()}}
     });
     await load();draw();
@@ -338,6 +416,7 @@ function auditWhat(l){
     return {act:{invite:"QR 加入",request:"核准申請",manual:"手動調整",revoke:"撤權",bootstrap:"建立總管理員"}[l.action]||l.action,obj:nameOf(l.docId),diff:ch.join("、")};
   }
   if(l.col==="cards")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
+  if(l.action==="delete"&&{issues:1,weeks:1,labels:1}[l.col])return {act:{issues:"刪除議題",weeks:"刪除週報",labels:"刪除標籤"}[l.col],obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};   /* 02D D-d */
   if(l.col==="invitations")return {act:l.action==="create"&&l.ref?"重新產生 QR":l.action==="revoke"&&l.ref?"撤銷 QR（重新產生）":{create:"建立 QR",redeem:"QR 加入",revoke:"撤銷 QR"}[l.action]||l.action,obj:`QR #${l.docId.slice(0,6)}`,diff:""};
   if(l.col==="roleRequests")return {act:{request:"送出申請",approve:"核准申請",reject:"拒絕申請",cancel:"撤回申請"}[l.action]||l.action,obj:`申請 #${l.docId.slice(0,6)}`,diff:""};
   const col={legacyIdentities:"舊身分",deptSettings:"部門設定",grants:"會議授權",migrations:"遷移",bookings:"預約"}[l.col]||l.col;

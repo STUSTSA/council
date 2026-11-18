@@ -1,6 +1,8 @@
 /* 核心｜會長室的「追蹤」面板（設定檔 follow:true 的部門才有）
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
-   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理 */
+   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
+   02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
+   會長室追蹤、秘書處會議的授權、通知「全會」、讀秘書處學年設定都經過這裡 */
 const FW_KIND={live:"即時回報",issue:"進度",done:"完成紀錄",week:"週報"};
 const fwCache=new Map();   /* dept id → {at,data|null,err} */
 const fwDept=id=>(window.BOARD_DEPTS||[]).find(d=>d.id===id);
@@ -8,13 +10,14 @@ async function fwLoad(id,force){
   const c=fwCache.get(id);if(c&&!force&&Date.now()-c.at<3e5)return c;
   const d=fwDept(id);if(!d)return {at:Date.now(),data:null,err:"沒有這個部門"};
   let data=null,err="";
-  try{
+  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){err=STORE_XERR(e)}}
+  else try{
     const cc=cloudCfg(),tok=ghToken();
     if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}`,{headers:{Accept:"application/vnd.github.raw+json",Authorization:"Bearer "+tok},cache:"no-store"});if(r.ok)data=await r.json();else if(r.status===404)err="這個部門還沒有資料"}
     if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="這個部門還沒有資料"}
   }catch(_){err="讀不到這個部門的資料"}
   if(data)data=normalize(data);
-  const v={at:Date.now(),data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;
+  const v={at:data?Date.now():Date.now()-3e5+3e4,data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;   /* 讀不到的 30 秒後再試（不是 5 分鐘） */
 }
 /* 某部門某類別可以選的項目 → [[ref,顯示文字],…] */
 function fwOptions(d,kind){
@@ -30,13 +33,13 @@ function fwBody(f,d){
   if(f.kind==="live"||(f.kind==="done"&&d.events.some(e=>e.id===f.ref))){
     const e=d.events.find(x=>x.id===f.ref);if(!e)return miss("（找不到）");
     const st=e.doneAt?"":evStatus(e);
-    return {title:evName(e),dot:st||"done",html:`<p class="fw-meta">${e.doneAt?`已完成 ${fmt(e.doneAt)}`:EV_ST[st]}${e.round>1&&!e.doneAt?` · 第 ${e.round} 段`:""}${e.touchedAt?` · 最後更新 ${fmt(e.touchedAt).slice(5)}`:""}</p>${e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:""}`};
+    return {title:evName(e),dot:st||"done",html:`<p class="fw-meta">${e.doneAt?`已完成 ${esc(fmt(e.doneAt))}`:EV_ST[st]}${e.round>1&&!e.doneAt?` · 第 ${e.round} 段`:""}${e.touchedAt?` · 最後更新 ${esc(fmt(e.touchedAt).slice(5))}`:""}</p>${e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:""}`};
   }
   if(f.kind==="issue"||f.kind==="done"){
     const i=d.issues.find(x=>x.id===f.ref);if(!i)return miss("（找不到）");
     const mk=sortedMarkers(i)[0];
-    return {title:i.title,dot:i.doneAt?"done":"issue",html:`<p class="fw-meta">${i.doneAt?`已結案 ${fmt(i.doneAt)}`:`${esc(i.tags[i.cur]||"")}${i.tags[i.cur]?" · ":""}${schedLabel(i)}`}</p>
-      ${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?fmt(mk.date).slice(5)+" ":""}${esc(mk.text)}</p>`:""}`};
+    return {title:i.title,dot:i.doneAt?"done":"issue",html:`<p class="fw-meta">${i.doneAt?`已結案 ${esc(fmt(i.doneAt))}`:`${esc(i.tags[i.cur]||"")}${i.tags[i.cur]?" · ":""}${schedLabel(i)}`}</p>
+      ${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?esc(fmt(mk.date).slice(5))+" ":""}${esc(mk.text)}</p>`:""}`};
   }
   if(f.kind==="week"){
     const ws=[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)),w=f.ref==="latest"?ws[0]:ws.find(x=>x.id===f.ref);
@@ -89,7 +92,7 @@ if(CFG.follow){
    state.docs[]＝{id,name,url}。平常是一排膠囊按鈕（點了用新分頁打開）；按這區的「編輯」後每個按鈕旁邊有修改、上下移、刪除，下面「+ 新增文件」。
    新增、修改用對話框（名稱、網址；沒寫 http 的自動補 https://），按這張卡片的「儲存」才上傳。網址存在公開的資料檔，任何人都看得到 */
 const docsEd=()=>editing&&cardEdit==="s:docs";
-const docURL=u=>{u=String(u||"").trim();if(!u)return "";return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:"https://"+u};
+const docURL=u=>{u=String(u||"").trim();return u?safeUrl(u):""};   /* 只收 http(s)，其他（javascript:、data: 等）變成 https:// 開頭的無效網址（util.js 的 safeUrl） */
 function renderDocs(){
   const p=$("#docsPanel");if(!p)return;p.hidden=!CFG.follow;if(!CFG.follow)return;
   const ds=state.docs||[],ed=docsEd();

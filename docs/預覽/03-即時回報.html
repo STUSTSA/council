@@ -1287,6 +1287,11 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
 .set-hub-t{font-size:20px;font-weight:500;letter-spacing:.08em;padding-bottom:12px;border-bottom:1px solid var(--hair)}
+/* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。外框同 .set-list，一步一列、前面等寬步驟號 */
+.dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;border:1px solid var(--line);border-radius:24px;overflow:hidden}
+.dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:13px 20px;font-size:15px}
+.dev-steps li+li{border-top:1px solid var(--hair)}
+.dev-steps li::before{content:counter(dev);flex:0 0 auto;color:var(--muted);font-family:"Jost",sans-serif;font-variant-numeric:tabular-nums}
 /* 「報告」那一列、合併頁裡「每週概述」那一列（登入前是清單上的「每週概述」）：本週週報還沒產出時，圖示右上角紅點 */
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]) .sr-ico{position:relative}
 .set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]).due .sr-ico::after{content:"";position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
@@ -1354,6 +1359,19 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .acct-log-b small{color:var(--muted);font-size:12.5px}
 .acct-chain{font-size:13px;color:var(--ok)}
 .acct-chain.bad{color:var(--red)}
+/* 匯入（02D D-a）：筆數報告表（項目、資料檔、Firestore、結果），外框同 .acct-log；不同的列與「不通過」用紅字。數字欄等寬靠右 */
+.imp-tbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:24px;overflow:hidden;font-size:13.5px}
+.imp-tbl th,.imp-tbl td{padding:10px 14px;text-align:left;font-weight:400}
+.imp-tbl th{color:var(--muted);font-size:12.5px}
+.imp-tbl tbody td{border-top:1px solid var(--hair)}
+.imp-tbl .num{text-align:right;font-variant-numeric:tabular-nums}
+.imp-tbl tr.bad td,.imp-res.bad{color:var(--red)}
+.imp-res{color:var(--ok)}
+.imp-hash{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.imp-sum{padding-inline:0}
+.imp-step{padding:6px 0}
+.imp-big .acct-log-b small{color:var(--red)}
+@media (max-width:520px){.imp-tbl th,.imp-tbl td{padding:9px 10px}}
 
 /* ===== 通知層（notify.js）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05，交接說明四十二） =====
    版面沿用設定頁的 .set-ov；內容寬度上限 920px 置中。顏色：本部門＝即時回報狀態色、全會＝部門色（--c，由 JS 給） */
@@ -2556,11 +2574,11 @@ const deptSourceOf=id=>{const d=BOARD_DEPTS.find(x=>x.id===id);return d&&STORE_S
 const storeSource=()=>deptSourceOf(CFG.deptId);
 const fsMode=()=>storeSource()==="firestore";
 /* 02D：firestore 模式的編輯權限＝Google 登入的角色（account.js 的 acct.roles，即時監聽，撤權時畫面立刻變回唯讀），而且這次讀取成功（storeFsBase）。
-   fsAdmin＝部門管理員或總管理員（部門設定）；fsDelOk＝議題、週報、標籤能不能刪（規則只給總管理員） */
+   fsAdmin＝部門管理員或總管理員（部門設定）；fsDelOk＝議題、週報、標籤能不能刪（02D D-d：部門管理員或總管理員，規則要求同批寫刪除紀錄） */
 const fsRole=()=>typeof acct!=="undefined"&&acct.user&&acct.roles?(acct.roles.super?"super":(acct.roles.depts||{})[CFG.deptId]||""):"";
 const fsWriter=()=>fsMode()&&!!storeFsBase&&["super","admin","editor"].includes(fsRole());
 const fsAdmin=()=>fsWriter()&&["super","admin"].includes(fsRole());
-const fsDelOk=()=>!fsMode()||(fsWriter()&&fsRole()==="super");
+const fsDelOk=()=>!fsMode()||fsAdmin();
 const storeLocked=()=>storeSource()!=="github"&&!fsWriter();
 const boardLocked=()=>!!state.locked||storeLocked();   /* 看板唯讀：定型版（state.locked）、凍結、或 firestore 模式沒有編輯權限 */
 const STORE_NOTE={frozen:"這個部門正在搬到新資料庫，暫停編輯。",firestore:"這個部門已搬到新資料庫，目前只能檢視。"};
@@ -2576,8 +2594,17 @@ function storeModLoad(file,ev,name){
 }
 const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
 function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
-/* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除＝卡片的部門；其他（角色、邀請、遷移）不算 */
-const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId:a.col==="cards"&&a.action==="purge"?(a.before||{}).deptId||"":"";
+/* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、通知「全會」）跟著那個部門的資料來源：
+   firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
+   回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
+function storeDeptData(id){
+  if(!(CFG.firebase&&CFG.firebase.projectId))return Promise.reject(Object.assign(new Error("firebase"),{code:"unavailable"}));
+  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id)).then(r=>r.data);
+}
+const STORE_XERR=e=>e&&e.code==="permission-denied"?"這個部門已搬到新資料庫，登入後才看得到":"讀不到這個部門的資料";
+/* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除、議題／週報／標籤的刪除（D-d）＝被刪文件的部門；其他（角色、邀請、遷移）不算 */
+const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId
+  :(a.col==="cards"&&a.action==="purge")||(["issues","weeks","labels"].includes(a.col)&&a.action==="delete")?(a.before||{}).deptId||"":"";
 /* 讀到的內容放上畫面，並記下這一份（寫入時拿它跟畫面比對，只寫改過的文件）；讀取失敗時 storeFsBase＝null（唯讀，不會把空白或舊的畫面存回去） */
 let storeFsBase=null;
 function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.orig,state:JSON.parse(JSON.stringify(state))}}
@@ -2670,7 +2697,8 @@ const JOIN_KEY="workboard:join";
 })();
 const joinToken=()=>{try{return sessionStorage.getItem(JOIN_KEY)||""}catch(_){return ""}};
 const joinClear=()=>{try{sessionStorage.removeItem(JOIN_KEY)}catch(_){}};
-const acctOn=()=>FB_ON&&storeSource()==="firestore";
+/* 02D D-a：凍結中的部門也用 Google 登入（總管理員在這裡進會長室管理 → 匯入；看板本身照舊唯讀、不讀 Firestore） */
+const acctOn=()=>FB_ON&&(storeSource()==="firestore"||storeSource()==="frozen");
 const ROLE_T={admin:"管理員",editor:"編輯者"};
 const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
@@ -2714,10 +2742,11 @@ async function acctStart(){
     acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
+    if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
-    if(!first&&acctOn())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態） */
+    if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
   });
 }
@@ -2749,14 +2778,15 @@ function acctCopyUrl(){
 
 /* ---------- 設定頁（firestore 模式；nav.js 的 settingsInner 交給這裡） ---------- */
 function acctGateHTML(){
-  if(inAppBrowser())return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span><b>用瀏覽器開啟</b><button type="button" class="primary" data-fb-copy>複製網址</button></div>`;
-  return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button><b>未登入</b><button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
+  const fz=storeSource()==="frozen",t=fz?`<b>暫停編輯</b><p class="sub">${STORE_NOTE.frozen}</p>`:"";   /* 凍結中：原本的「暫停編輯」＋登入鈕 */
+  if(inAppBrowser())return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span>${t||"<b>用瀏覽器開啟</b>"}<button type="button" class="primary" data-fb-copy>複製網址</button></div>`;
+  return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button>${t||"<b>未登入</b>"}<button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
 }
 function acctSettingsInner(){
   const wk=setRow("week","doc","每週概述",weekSub());
   if(!FB_ON)return setSec(wk);
   if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
-  if(!acct.user)return setSec(wk)+acctGateHTML();
+  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec();
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
@@ -2764,7 +2794,8 @@ function acctSettingsInner(){
       +setRow("backup","download","備份")):"";
   return setSec(fsWriter()?setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people",name,`${u.email} · ${acctRoleSub()}`))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"");
+    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
+    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -2846,7 +2877,9 @@ async function councilHub(){
     {k:"people",ic:"people",t:"人員",sub:"",flow:()=>peoplePanel()},
     {k:"invite",ic:"share",t:"QR 邀請",sub:"",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",sub:pending.length?`${pending.length} 筆待審`:"沒有待審",flow:async()=>{await requestsPanel();pending=await A.requestsPending().catch(()=>pending)}},
-    {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()}]);
+    {k:"audit",ic:"history",t:"紀錄",sub:"",flow:()=>auditPanel()},
+    {k:"import",ic:"cloud",t:"匯入",sub:"",flow:()=>importPanel()},
+    {k:"export",ic:"download",t:"匯出全部資料",sub:"",act:exportAllData}]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
@@ -2858,6 +2891,7 @@ function peoplePanel(){
     const A=await acctLoad();
     let roles=[],users=[],who=null;
     const load=async()=>{[roles,users]=await Promise.all([A.rolesList(),A.usersList()]);acct.names=await A.profiles().catch(()=>acct.names)};
+    A.rosterSync().catch(()=>{});   /* 03 F3：打開人員時把全部的專員名單對齊角色（補上 F3 之前就有角色的人、清掉已撤權的） */
     const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
@@ -2872,7 +2906,7 @@ function peoplePanel(){
       p.box.innerHTML=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="sr-t"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
-    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){await load();draw()}};
+    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});await load();draw()}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補） */
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
@@ -2904,6 +2938,77 @@ function peoplePanel(){
     });
     await load();draw();
   });
+}
+
+/* ---------- 匯入（02D D-a，正式切換用）：選一個部門 → 讀資料檔（只讀）→ 照 migrate-core.js 寫進這個網站設定的 Firebase 專案 → 筆數報告 ----------
+   權限由規則判斷（遷移批次與匯入分支只有總管理員）；可重跑（內容相同跳過、不覆寫被改過的）。資料操作在 migrate-web.js */
+let migMod=null;
+function migLoad(){
+  if(!migMod)migMod=new Promise((ok,no)=>{if(window.MigrateCore)return ok();const s=document.createElement("script");s.src="core/js/migrate-core.js";s.onload=ok;s.onerror=()=>no(new Error("load"));document.head.append(s)})
+    .then(()=>storeModLoad("migrate-web.js","board-migrate-ready","BoardMigrate")).catch(e=>{migMod=null;throw e});
+  return migMod;
+}
+const SRC_T={github:"GitHub",frozen:"凍結中",firestore:"新資料庫"};
+/* 匯入讀哪個 repo：只看 dept/config.js 的 data（owner／repo 留空＝從 github.io 網址推）與它的分支，不看資料檔或本機暫存裡的 sync（02D 審查 P1-2）。
+   不是 github.io 又沒設 owner／repo（本機開發）＝讀網站上的檔案 */
+function impRepo(){
+  let owner=CFG.data.owner||"",repo=CFG.data.repo||"";
+  if(!owner&&/\.github\.io$/i.test(location.hostname)){owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];repo=seg&&!/\.html?$/i.test(seg)?seg:location.hostname}
+  return {owner,repo,branch:CFG.data.branch||"main"};
+}
+const IMP_STEP={read:"讀取資料檔",write:"寫入",check:"檢查"};
+const IMP_ERR={source:"讀不到資料檔","permission-denied":"沒有權限",unavailable:"沒有連上網路"};
+const impBig=lines=>lines&&lines.length?`<ol class="acct-log imp-big">${lines.map(x=>`<li><span class="acct-log-b"><small>${esc(x)}</small></span></li>`).join("")}</ol>`:"";   /* 超過規則上限的卡片（03 審查 P2-2） */
+function importPanel(){
+  return acctPanel("匯入",async p=>{
+    let busy=false,res=null,err="",errBig=null,step="",dept="";
+    const nm=id=>deptNameOf(id);
+    const rowsHTML=r=>`<table class="imp-tbl"><thead><tr><th>項目</th><th>資料檔</th><th>Firestore</th><th>結果</th></tr></thead><tbody>${r.report.rows.map(x=>
+      `<tr${x.ok?"":' class="bad"'}><td>${esc(x.label)}</td><td class="num">${x.source}</td><td class="num">${x.firestore}</td><td>${x.ok?"相同":"不同"}</td></tr>`).join("")}</tbody></table>`;
+    const draw=()=>{
+      if(!p.alive)return;
+      if(dept){
+        const head=`<div class="acct-person"><b>${esc(nm(dept))}</b><small>${esc(CFG.firebase.projectId)}</small></div>`;
+        if(busy){p.box.innerHTML=p.head()+head+`<p class="set-p imp-step" role="status">${esc(step)}</p>`;return}
+        if(err){p.box.innerHTML=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
+        const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
+        p.box.innerHTML=p.head()+head
+          +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`${esc(res.repo)} · commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
+          +impBig(res.report.tooBig)+rowsHTML(res)
+          +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
+          +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
+          +`<div class="acct-acts"><button type="button" class="add-row" data-run>再匯入一次</button><button type="button" class="add-row" data-back>返回</button></div>`;
+        return}
+      p.box.innerHTML=p.head()+`<div class="set-list">${BOARD_DEPTS.map(d=>`<button type="button" class="set-row acct-row" data-imp="${esc(d.id)}"><span class="sr-t"><b>${esc(d.name)}</b><span class="acct-chips"><span class="acct-chip${deptSourceOf(d.id)==="frozen"?" on":""}">${SRC_T[deptSourceOf(d.id)]}</span></span></span>${SR_CHEV}</button>`).join("")}</div>`;
+    };
+    const run=async()=>{
+      if(busy)return;busy=true;err="";errBig=null;res=null;step=IMP_STEP.read;draw();
+      try{
+        const B=await migLoad();
+        res=await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
+      }catch(e){console.error(e);err=e&&e.code==="too-big"?`有 ${e.tooBig.length} 張卡片超過上限，沒有寫入`:IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`;if(e&&e.code==="too-big")errBig=e.tooBig}
+      busy=false;draw();
+    };
+    p.box.addEventListener("click",async e=>{
+      const b=e.target.closest("button");if(!b||busy)return;
+      if(b.dataset.imp){const id=b.dataset.imp,src=deptSourceOf(id);
+        const v=await ask(`匯入 ${nm(id)}${src==="frozen"?"":src==="firestore"?"（已切到新資料庫）":"（還沒凍結）"}`,[],{danger:"匯入"});if(v!=="delete")return;
+        dept=id;await run();return}
+      if(b.hasAttribute("data-run")){await run();return}
+      if(b.hasAttribute("data-back")){dept="";res=null;err="";draw()}
+    });
+    draw();
+  });
+}
+/* ---------- 匯出全部資料（02D D-c，migration.md 第 8 節）：總管理員讀得到的全部集合＋批次資訊＋每個部門的 schemaVersion 13 檔，存成一個 JSON ---------- */
+let exportBusy=false;
+async function exportAllData(){
+  if(exportBusy)return;exportBusy=true;toast("匯出中…");
+  try{
+    const B=await migLoad(),x=await B.exportAll(CFG.firebase,BOARD_DEPTS);
+    await saveJsonFile(`學生會看板_全部資料_${x.projectId}_${today()}.json`,JSON.stringify(x,null,1),"全部資料");
+  }catch(e){console.error(e);toast(acctErr(e))}
+  exportBusy=false;
 }
 
 /* QR 邀請：產生（10 分鐘、一次性）、重新產生（舊的同時撤銷）、撤銷；下面是最近的邀請。權杖只在這個面板的記憶體裡 */
@@ -2978,7 +3083,7 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){await load();draw()}}
+      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});await load();draw()}}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")){await load();draw()}}
     });
     await load();draw();
@@ -2995,6 +3100,7 @@ function auditWhat(l){
     return {act:{invite:"QR 加入",request:"核准申請",manual:"手動調整",revoke:"撤權",bootstrap:"建立總管理員"}[l.action]||l.action,obj:nameOf(l.docId),diff:ch.join("、")};
   }
   if(l.col==="cards")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
+  if(l.action==="delete"&&{issues:1,weeks:1,labels:1}[l.col])return {act:{issues:"刪除議題",weeks:"刪除週報",labels:"刪除標籤"}[l.col],obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};   /* 02D D-d */
   if(l.col==="invitations")return {act:l.action==="create"&&l.ref?"重新產生 QR":l.action==="revoke"&&l.ref?"撤銷 QR（重新產生）":{create:"建立 QR",redeem:"QR 加入",revoke:"撤銷 QR"}[l.action]||l.action,obj:`QR #${l.docId.slice(0,6)}`,diff:""};
   if(l.col==="roleRequests")return {act:{request:"送出申請",approve:"核准申請",reject:"拒絕申請",cancel:"撤回申請"}[l.action]||l.action,obj:`申請 #${l.docId.slice(0,6)}`,diff:""};
   const col={legacyIdentities:"舊身分",deptSettings:"部門設定",grants:"會議授權",migrations:"遷移",bookings:"預約"}[l.col]||l.col;
@@ -3149,12 +3255,12 @@ const SHELL_HTML=`<div class="pager" id="pager">
   <div class="page page-main" id="pageMain">
     <div class="wrap">
       <header class="hero">
-        <a class="logo-box" href="home.html" title="各部門總覽"></a>
+        <a class="logo-box" href="home.html" aria-label="各部門總覽"></a>
         <div class="hero-find">
           <label class="hero-search"><svg class="hs-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.6 15.6 4.4 4.4"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" aria-label="搜尋這個看板" aria-controls="boardRes"><button type="button" class="hq-clear" aria-label="清除搜尋"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
           <div class="hero-res glass" id="boardRes" role="listbox" aria-label="搜尋結果" hidden></div>
         </div>
-        <button type="button" class="noti-btn" id="notiBtn" aria-label="通知" title="今日／明日要處理的事、行事曆"><svg class="ico solo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g class="i-bell"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10.2 20.4a2 2 0 0 0 3.6 0"/></g></svg><span class="noti-n num" hidden></span></button>
+        <button type="button" class="noti-btn" id="notiBtn" aria-label="通知"><svg class="ico solo" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><g class="i-bell"><path d="M6.2 16.4V11a5.8 5.8 0 0 1 11.6 0v5.4l1.6 1.8H4.6z"/><path d="M10.2 20.4a2 2 0 0 0 3.6 0"/></g></svg><span class="noti-n num" hidden></span></button>
       </header>
       <div class="hero-rule"><span class="hero-info"><span class="sub sr-only" id="saveInfo" role="status"></span></span><span class="actions"><span class="hero-btns" id="actions"></span></span></div>
 
@@ -3238,7 +3344,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <div class="week-top">
         <button class="icon" id="backMain" aria-label="回到「報告」"><svg class="ico" viewBox="0 0 8 14" width="7" height="12" aria-hidden="true"><path d="M6.5 1.5 1.5 7l5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>返回</span></button>
         <h2 id="weekH">每週概述</h2>
-        <a class="week-sec" id="weekSecLink" href="?d=secretariat" title="秘書處可以調閱各部門的週報">秘書處調閱 →</a>
+        <a class="week-sec" id="weekSecLink" href="?d=secretariat">秘書處調閱 →</a>
         <button class="gen-btn" id="genWeek"><svg class="spark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M10 3l1.9 5.1L17 10l-5.1 1.9L10 17l-1.9-5.1L3 10l5.1-1.9z"/><path fill="currentColor" d="M18.5 2l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/><path fill="currentColor" d="M18 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/></svg>生成週報</button>
         <button class="ghost auth-only" id="addWeek">+ 新增週報</button>
       </div>
@@ -3855,17 +3961,17 @@ function renderGantt(){
   /* 細刻度（2026-11-05 使用者選的 A 方案）：每一列整條時間軸是一排細直線（約每 6px 一根），格子與「已經過去」的打亮都拿掉；
      今天＝每列一條往下淡掉的細綠線，時間軸上方綠色小膠囊寫日期。tN＝今天在時間軸上的位置（範圍之前 -1、之後 101） */
   const tN=inRange?tp:Date.now()>=e0?101:-1,nT=Math.max(40,Math.round(width/6));
-  const grid=inRange?`<span class="today" style="left:${tp}%" title="今天"></span>`:"";
+  const grid=inRange?`<span class="today" style="left:${tp}%"></span>`:"";
   let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name sub" style="font-weight:400">議題</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     const l=pos(s),w=Math.max(.8,pos(e)-l);
-    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" title="${esc(fmt(m.date))} ${m.stage?"【"+esc(m.stage)+"】":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
-    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
+    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
+    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
       <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
   }).join("");
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
-  h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}" title="點一下看「${esc(it.title)}」的詳情"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
+  h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
   if(!all.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 新增議題」開始。"}</p>`;
   $("#gantt").innerHTML=h;
@@ -3881,13 +3987,13 @@ function latestMarkerId(list){
 }
 function markerHTML(m,latest,it){
   const at=cssNum(mkAt(it,m),50),edge=at<18?"edgeL":at>82?"edgeR":"";
-  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" data-marker="${esc(m.id)}" title="${m.date?esc(fmt(m.date))+" ":""}${esc(m.text)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
+  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" data-marker="${esc(m.id)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
 }
 
 const sortedMarkers=it=>[...it.markers].sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||a.at-b.at);
 function logHTML(it){
   const ms=sortedMarkers(it);if(!ms.length)return "";
-  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub" title="來自即時回報">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
+  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
 /* stack marker labels into lanes so many markers never overlap */
@@ -3926,7 +4032,7 @@ function cardHTML(it,open,pane,sel){
   const ed=cardEd("i",it.id);
   return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${esc(it.id)}"`} data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}"${sel?' aria-current="true"':""}>
     <div class="card-top">
-      <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct title="時程：設定的期間已經過的比例">${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
+      <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
     ${open?`
@@ -3942,7 +4048,7 @@ function cardHTML(it,open,pane,sel){
     ${(()=>{const kids=state.events.filter(e=>!e.doneAt&&e.issueId===it.id);return kids.length?`<div class="kid-evs"><div class="att-h">進行中的即時回報</div><div class="kid-list">${kids.map(e=>`<span class="kid-ev" data-st="${evStatus(e)}"><span class="live-dot" aria-hidden="true"></span>${esc(e.name)}</span>`).join("")}</div></div>`:""})()}
     ${logHTML(it)}
     ${ed||!it.links.length?"":`<div class="att"><div class="att-h">相關連結</div><div class="links">${it.links.map(linkHTML).join("")}</div></div>`}
-    ${ed?editBarHTML():""}`:`<div class="mini-bar" data-toggle title="點一下展開"><div class="fill" style="width:${schedPct(it)||0}%"></div></div>`}
+    ${ed?editBarHTML():""}`:`<div class="mini-bar" data-toggle><div class="fill" style="width:${schedPct(it)||0}%"></div></div>`}
   </article>`;
 }
 /* ---------- 進度、完成紀錄的逐欄編輯（跟即時回報同一套外觀與操作：點哪一欄改哪一欄、一次一欄、Enter 完成、Esc 取消） ----------
@@ -4038,12 +4144,12 @@ function fldRowHTML(o){
   const lb=o.label?`<span class="evf-l">${o.label}</span>`:"",at=o.attr?" "+o.attr:"";
   if(o.open)return `<div class="evf open" data-${o.key}="${esc(o.k)}"${at}>${lb}<div class="evf-ed">${o.editor()}</div>
         <div class="evf-btns">${o.del?`<button type="button" class="icon danger" data-${o.fx}="del">刪除</button><span class="evd-gap"></span>`:""}<button type="button" class="ghost" data-${o.fx}="cancel">取消</button><button type="button" class="primary" data-${o.fx}="ok">完成</button></div></div>`;
-  return `<div class="evf" data-${o.key}="${esc(o.k)}"${at}>${lb}<button type="button" class="evf-v" data-${o.pen}="${esc(o.k)}" title="點一下修改${o.label||"這一項"}">${o.view}</button></div>`;
+  return `<div class="evf" data-${o.key}="${esc(o.k)}"${at}>${lb}<button type="button" class="evf-v" data-${o.pen}="${esc(o.k)}">${o.view}</button></div>`;
 }
 function evFieldHTML(ev,k,label,view,editor){return fldRowHTML({open:evFldOpen(ev,k),k,label,view,editor,del:/^[tl]:(?!\+)/.test(k),key:"evfk",pen:"evpen",fx:"evfx"})}
 /* 時間的文字：「日期 時刻 名稱 期間 · 地點」（顯示與編輯中共用） */
 function evTimeView(t,par){const x=evTimeText(t);
-  return `<span class="num ev-t-when">${esc(x.when)}</span><span class="ev-t-label">${esc(t.label)}</span>${x.span?`<span class="sub num">${esc(x.span)}</span>`:""}${t.place?`<span class="ev-t-place">· ${esc(t.place)}</span>`:""}${t.toIssue&&par?`<span class="sub" title="這筆也寫進母議題的處理紀錄">（母議題）</span>`:""}`}
+  return `<span class="num ev-t-when">${esc(x.when)}</span><span class="ev-t-label">${esc(t.label)}</span>${x.span?`<span class="sub num">${esc(x.span)}</span>`:""}${t.place?`<span class="ev-t-place">· ${esc(t.place)}</span>`:""}${t.toIssue&&par?`<span class="sub">（母議題）</span>`:""}`}
 /* 時間標記的輸入框（名稱、日期、時刻、結束、地點、寫進母議題） */
 function evTimeEditor(ev,tm){
   const par=parentOf(ev),sp=x=>[(x||"").slice(0,10),(x||"").slice(11,16)],[sd,st]=tm?sp(tm.start):[today(),""],[ed,et]=tm?sp(tm.end):["",""];
@@ -4445,8 +4551,12 @@ async function exportBackup(){
   s.schemaVersion=13;   /* 03：v14 只多了即時回報的 blocks（desc 照樣有、核取攤成文字），標 13 讓舊網站（main）的匯入備份照常讀；新網站讀到 13 會再對齊 blocks（state.js 的 v13 → v14） */
   if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
-  const kind={mime:"application/json",ext:".json",desc:"JSON"},doc=JSON.stringify(s,null,1);
-  const name=`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,label="備份";
+  const doc=JSON.stringify(s,null,1);
+  await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
+}
+/* 存一個 JSON 檔：看板「匯出備份」與會長室管理「匯出全部資料」（02D D-c）共用 */
+async function saveJsonFile(name,doc,label){
+  const kind={mime:"application/json",ext:".json",desc:"JSON"};
   if(HOSTED){
     const dl=await window.claude.use("downloads");
     if(dl){try{await dl.save({filename:name,data:new Blob([doc],{type:kind.mime})});toast(`已下載${label}`)}catch(e){if(e&&e.code!=="declined")toast("下載失敗："+(e&&e.code||""))}return}
@@ -4632,7 +4742,7 @@ function weekDue(t=today()){
 function weekDotSync(){
   const due=weekDue()&&!readOnly();
   document.querySelectorAll("#setBtn,#setOv [data-set=week],#setOv [data-set=report],[data-hub=week]").forEach(el=>el.classList.toggle("due",due));
-  const g=$("#setBtn");if(g)g.title=due?"本週週報還沒產出（設定 → 報告 → 每週概述）":"";
+  const g=$("#setBtn");if(g)g.setAttribute("aria-label",due?"設定（本週週報還沒產出）":"設定");   /* 紅點對讀屏器的說法（03 F1 拿掉 title 後改用名稱，不是提示框） */
 }
 /* 網頁一直開著跨過週五也要冒出來：每 10 分鐘、回到這個分頁時再檢查一次 */
 setInterval(weekDotSync,6e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)weekDotSync()});
@@ -4933,7 +5043,7 @@ function rptBind(ov){
 const RPT_LV={h1:{tag:"H3",cls:"rpt-h1",name:"大段"},h2:{tag:"H4",cls:"rpt-h2",name:"小段"},p:{tag:"P",cls:"",name:"內文"}};
 function rptParaTool(ov){
   const pt=document.createElement("div");pt.className="rpt-pt";pt.contentEditable="false";pt.hidden=true;
-  pt.innerHTML=Object.entries(RPT_LV).map(([k,v])=>`<button type="button" data-lv="${k}" title="${v.name}：游標在段尾＝換新段落，在段中＝改成這一層">${v.name}</button>`).join("");
+  pt.innerHTML=Object.entries(RPT_LV).map(([k,v])=>`<button type="button" data-lv="${k}">${v.name}</button>`).join("");
   /* 把區塊裡的純文字、瀏覽器自己產生的 <div>／<br> 整理成一段一個 <p> */
   const tidy=box=>{
     if(!box.textContent.trim()&&!box.querySelector("h3,h4")){box.innerHTML="";return}
@@ -5003,7 +5113,9 @@ function boardURL(){return location.href.split("#")[0]}
 <script>
 /* 核心｜會長室的「追蹤」面板（設定檔 follow:true 的部門才有）
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
-   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理 */
+   其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
+   02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
+   會長室追蹤、秘書處會議的授權、通知「全會」、讀秘書處學年設定都經過這裡 */
 const FW_KIND={live:"即時回報",issue:"進度",done:"完成紀錄",week:"週報"};
 const fwCache=new Map();   /* dept id → {at,data|null,err} */
 const fwDept=id=>(window.BOARD_DEPTS||[]).find(d=>d.id===id);
@@ -5011,13 +5123,14 @@ async function fwLoad(id,force){
   const c=fwCache.get(id);if(c&&!force&&Date.now()-c.at<3e5)return c;
   const d=fwDept(id);if(!d)return {at:Date.now(),data:null,err:"沒有這個部門"};
   let data=null,err="";
-  try{
+  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){err=STORE_XERR(e)}}
+  else try{
     const cc=cloudCfg(),tok=ghToken();
     if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}`,{headers:{Accept:"application/vnd.github.raw+json",Authorization:"Bearer "+tok},cache:"no-store"});if(r.ok)data=await r.json();else if(r.status===404)err="這個部門還沒有資料"}
     if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="這個部門還沒有資料"}
   }catch(_){err="讀不到這個部門的資料"}
   if(data)data=normalize(data);
-  const v={at:Date.now(),data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;
+  const v={at:data?Date.now():Date.now()-3e5+3e4,data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;   /* 讀不到的 30 秒後再試（不是 5 分鐘） */
 }
 /* 某部門某類別可以選的項目 → [[ref,顯示文字],…] */
 function fwOptions(d,kind){
@@ -5639,7 +5752,8 @@ async function mtLoadAll(force){
   const cc=cloudCfg(),tok=ghToken();
   await Promise.all((window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId).map(async d=>{
     let data=null,sha=null,err="";
-    try{
+    if(deptSourceOf(d.id)==="firestore"){try{data=await storeDeptData(d.id)}catch(e){err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore（只讀；寫回時 mtPushAll 擋下） */
+    else try{
       if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}&t=${Date.now()}`,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+tok},cache:"no-store"});
         if(r.ok){const j=await r.json();sha=j.sha;data=JSON.parse(b64dec(j.content))}else if(r.status===404)err="還沒有資料"}
       if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="還沒有資料"}
@@ -5682,10 +5796,10 @@ function renderMeet(){
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
   $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${esc(m.id)}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
     +(MTS.sel?`<a class="fw-open mt-open" href="?d=${encodeURIComponent(MTS.sel)}" target="_blank" rel="noopener">開啟看板 →</a>`:"");   /* 開啟看板放在部門膠囊那一排的右邊，不另外佔一列 */
-  const ed=mtCanEdit(),loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
+  const ed=mtCanEdit()&&deptSourceOf(MTS.sel)==="github",loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
   $("#meetEdList").innerHTML=loading+(MTS.sel?mtGroupHTML(MT.depts.get(MTS.sel),ed):MT.depts.size?`<p class="empty">目前沒有部門標「會議要報告」。各部門在自己的即時回報按「會議要報告」後會出現在這裡。</p>`:"")
     +(none.length?`<p class="sub mt-none">沒有報告事項：${none.map(m=>esc(m.name)).join("、")}</p>`:"")
-    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(ed&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
+    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(mtCanEdit()&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
   const i=has.findIndex(m=>m.id===MTS.sel);
   $("#meetStep").innerHTML=has.length>1?`<button type="button" class="icon" data-mtstep="-1"${i>0?"":" disabled"}>${ico("prev")}${i>0?esc(has[i-1].name):"上一個部門"}</button><span class="sub num">${i+1} / ${has.length}</span><button type="button" class="icon" data-mtstep="1"${i<has.length-1?"":" disabled"}>${i<has.length-1?esc(has[i+1].name):"下一個部門"}${ico("next")}</button>`:"";
   const mins=state.minutes||[];
@@ -6323,7 +6437,7 @@ const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name
   return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?"":String(id).slice(0,8))};
 const staffNames=ids=>(ids||[]).map(staffName).filter(Boolean);
 /* 即時回報「專員」欄的選項：github 模式＝本看板的身分；firestore 模式（staffPplLoad 讀）：
-   總管理員＝這個部門有角色的帳號；其他人＝已標的＋自己＋這個部門版本歷史裡出現過的編輯者 */
+   總管理員＝這個部門有角色的帳號（roles）；部門的編輯者、管理員＝已標的＋自己＋這個部門的專員名單（03 F3，deptMembers：同部門有角色的人，只有 uid，名字從 profiles） */
 const staffPpl={key:"",roles:null,editors:null,mail:{}};
 /* 讀到的名單只給同一個帳號、同一個角色、同一個部門用（登出、換帳號、撤權後不沿用，信箱只有總管理員看得到） */
 const staffKey=()=>`${CFG.deptId}|${typeof acct!=="undefined"&&acct.user?acct.user.uid:""}|${fsRole()}`;
@@ -6339,7 +6453,7 @@ async function staffPplLoad(){
   try{
     if(fsRole()==="super"){const A=await acctLoad(),[rs,us]=await Promise.all([A.rolesList(),A.usersList()]);
       staffPpl.roles=rs.filter(r=>(r.depts||{})[CFG.deptId]).map(r=>r.uid);us.forEach(u=>{if(u.email)staffPpl.mail[u.uid]=u.email})}
-    else{const F=await storeFsGet(),v=await F.versionsSince(CFG.firebase,CFG.deptId,0);staffPpl.editors=[...new Set(v.filter(x=>!x.imported&&x.by).map(x=>x.by))]}
+    else{const A=await acctLoad();staffPpl.editors=await A.roster(CFG.deptId)}
   }catch(_){staffPpl.key=""}   /* 讀不到：只有已標的與自己，下次開始編輯再試 */
   if(editing&&kp&&!document.querySelector(".csel.open"))render();   /* 原位編輯器的專員選項 */
 }
@@ -6477,9 +6591,10 @@ async function loadLog(){
 /* 02D：firestore 模式的編輯紀錄＝這個部門的版本歷史（卡片每存一版一筆，遷移產生的第 1 版是「匯入」）＋總管理員才讀得到的稽核紀錄
    （部門設定的修改、卡片刪除）。同一個人相隔 10 秒內的寫入併成一筆（一次儲存可能分成好幾批）。版本歷史只有總管理員與這個部門的編輯者讀得到 */
 const fsLog={vers:[],cur:null,audits:[]};
+const FS_DEL_T={issues:"議題",weeks:"週報",labels:"標籤"};   /* 02D D-d 刪除紀錄 */
 const FS_FIELD={title:"看板名稱",range:"時間軸",reportBase:"週報基準",docs:"文件",follows:"追蹤"};
 const fsLogLine=x=>x.kind==="ver"?`${x.imported?"遷移｜匯入":x.version===1?"即時回報｜新增":"即時回報｜修改"}｜${x.title}`
-  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
+  :x.col==="cards"?`即時回報｜刪除｜${x.before.title||""}`:FS_DEL_T[x.col]?`${FS_DEL_T[x.col]}｜刪除｜${x.before.title||""}`:`設定｜${((x.after.fields||[]).map(f=>FS_FIELD[f]||f).join("、"))||"看板設定"}`;
 function fsLogItems(rows){
   const out=[];
   rows.slice().sort((a,b)=>b.t-a.t).forEach(x=>{const g=out[out.length-1];
@@ -6656,7 +6771,7 @@ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest
 
 /* ---------- 設定頁「標籤」：管理員新增、改名、刪除；其他人只看 ---------- */
 function labelSetHTML(){
-  const adm=fsMode()?fsWriter():isAdmin(),del=fsMode()?fsDelOk():adm,use=labelUse();   /* firestore 模式：編輯者以上能新增、改名，只有總管理員能刪（規則） */
+  const adm=fsMode()?fsWriter():isAdmin(),del=fsMode()?fsDelOk():adm,use=labelUse();   /* firestore 模式：編輯者以上能新增、改名，部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   const grp=k=>{const ls=labelsOf(k,use);
     return `<section class="tm-sec"><div class="att-h">${k}<span class="sub">　${{人:"例如：學務處、某位老師",事:"例如：宿舍、交通安全",時:"例如：期中考週、校慶",地:"例如：六宿、圖書館",物:"例如：飲水機、機車"}[k]}</span></div>
       <ul class="tm-list">${ls.map(l=>`<li class="tm-row">${adm?`<input data-lblname="${esc(l.id)}" value="${esc(l.name)}" aria-label="標籤名稱">`:`<span class="tm-name">${esc(l.name)}</span>`}<span class="sub">用了 ${use.get(l.id)||0} 次</span>${del?`<button type="button" class="icon danger" data-x="del" data-id="${esc(l.id)}">刪除</button>`:""}</li>`).join("")||'<li class="sub">還沒有</li>'}</ul>
@@ -6868,15 +6983,17 @@ const SR_CHEV='<span class="sr-chev" aria-hidden="true"><svg viewBox="0 0 8 14" 
 const setRow=(k,ic,t,sub,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${esc(k)}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><span class="sr-t"><b>${esc(t)}</b>${sub?`<small>${esc(sub)}</small>`:""}</span>${off?"":SR_CHEV}</button>`;
 const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div></section>`;
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
+/* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
+const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
 const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=>w.date).sort().pop())}`:"還沒有週報";
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
 function settingsInner(){
-  if(storeSource()==="firestore")return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js） */
+  if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
   if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
-    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`);
-  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"));
+    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec();
+  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec();
   const rem=remRead(),remName=rem&&(state.members.find(m=>m.id===rem.id)||{}).name,t=termCfg();
   return setSec(setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"))+
     setSec(setRow("title","edit","看板名稱",state.title)+
@@ -7019,12 +7136,12 @@ function forgetDevice(){remClear();if(!editing){meId="";sessionPw="";sharedPwSes
    - act（直接執行的，例如匯出備份、忘記這台裝置）：合併頁留著，執行完更新文字。
    返回（子頁的「返回」、系統返回、Esc）一次退一層：先退出功能回到合併頁，再退才離開（paneDismiss）。 */
 let hubNow=null;
-function hubRun(title,rows){
+function hubRun(title,rows,foot=()=>""){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟） */
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b><div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`;weekDotSync()};
+    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync()};
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{
@@ -7047,8 +7164,11 @@ const SET_HUBS={
   backup:()=>hubRun("備份",()=>[
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
+  /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
   device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
-    return [{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}]}),
+    return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",sub:"",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
+      ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}])]},
+    ()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
@@ -7077,7 +7197,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);
@@ -7254,7 +7374,7 @@ document.addEventListener("click",async e=>{
     if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);state.events.forEach(e=>{e.report=false});newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
   /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
   if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
-  if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有總管理員能刪（規則） */
+  if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   if(t.closest("#addWeek")){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
     const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:""}],{wide:true});
@@ -7287,13 +7407,16 @@ document.addEventListener("click",async e=>{
   const evAct=t.closest("[data-evdone],[data-evundo],[data-evdel]");
   if(evAct){e.preventDefault();const ev=evOf(evAct);
     /* 結案、移回、刪除都會讓這張卡片離開原本的位置（找不到它的「儲存」）：做完直接儲存，結束這次編輯。
-       原位編輯中的卡片（結案、刪除）先走跟點外面一樣的檢查與整理（kpReady：時間選取器、名稱與超連結的按鈕名稱不能空白、blocks 同步 desc；03 審查 P2-6） */
-    if(kp&&kp.id===ev.id&&cardEdit==="e:"+ev.id&&evAct.dataset.evundo===undefined&&!kpReady(ev))return;
+       原位編輯中的卡片結案時先走跟點外面一樣的檢查與整理（kpReady：時間選取器、名稱與超連結的按鈕名稱不能空白、blocks 同步 desc；03 審查 P2-6）。
+       刪除不檢查（03 F2：名稱被清空也能直接刪，不用先填回名稱）：只收掉開著的時間選取器 */
+    const inKp=kp&&kp.id===ev.id&&cardEdit==="e:"+ev.id;
+    if(inKp&&evAct.dataset.evdel===undefined&&evAct.dataset.evundo===undefined&&!kpReady(ev))return;
     if(evAct.dataset.evdone!==undefined){if(!fldCommitOpen())return;ev.doneAt=today();evTouch(ev);syncLink(ev);dirty=true;await saveFlow();toast(parentOf(ev)?`已結案，並記錄到「${parentOf(ev).title}」`:"已結案，移到完成紀錄")}
     else if(evAct.dataset.evundo!==undefined){if(!fldCommitOpen())return;ev.doneAt=null;evTouch(ev);syncLink(ev);dirty=true;await saveFlow()}
     else{const n=(ev.times||[]).length;   /* 刪除是永久的（D16）：有時間標記再確認一次，寫出會一起刪掉幾個 */
-      const v=await ask(`刪除「${ev.name}」？`,[],{danger:"刪除"});if(v!=="delete")return;
+      const v=await ask((ev.name||"").trim()?`刪除「${ev.name.trim()}」？`:"刪除這張卡片？",[],{danger:"刪除"});if(v!=="delete")return;
       if(n&&await ask(`一起刪掉 ${n} 個時間標記？`,[],{danger:"刪除"})!=="delete")return;
+      if(inKp)kpTp=null;   /* 確認刪除之後才收掉時間選取器（取消的話選取器照舊開著，03 審查） */
       {unlinkEv(ev);state.events=state.events.filter(x=>x!==ev);evFld=null;dirty=true;await saveFlow()}}
     return}
   /* 逐欄編輯（只在編輯中出現）：點一欄＝原本開著的那欄先存回（填錯就停在原欄），再打開這一欄；data-evfx＝取消／完成／刪除 */
@@ -7786,6 +7909,29 @@ function offlinePill(){
 }
 window.addEventListener("offline",()=>{if(!editing)render();else offlinePill()});
 window.addEventListener("online",async()=>{netFail=false;if(cloudOn()){const r=await cloudPull({force:true});if(r==="updated")toast("已重新連線，看板已更新")}if(!editing)render();else offlinePill()});
+
+/* ---------- 安裝成 App（03 F4，設定 →「這台裝置」）----------
+   瀏覽器支援安裝（Android Chrome、電腦的 Chrome／Edge：beforeinstallprompt）時記下事件，「這台裝置」頁顯示一顆「安裝」；
+   已經是安裝後的 App 打開的、或瀏覽器不支援時不顯示。iPhone／iPad 的 Safari（沒有安裝事件）尚未加入主畫面時，改顯示加入主畫面的步驟。 */
+let pwaPrompt=null;
+/* 已安裝＝從主畫面／App 打開（manifest 是 fullscreen，所以三種顯示模式都算；iOS 看 navigator.standalone） */
+const pwaStandalone=()=>{try{return matchMedia("(display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui)").matches||navigator.standalone===true}catch(_){return false}};
+/* iPhone／iPad 的 Safari：IS_IOS（nav.js）、不是 App 內建瀏覽器（inAppBrowser，account.js）、不是其他瀏覽器（iOS 的 Chrome／Firefox／Edge…） */
+const pwaIosSafari=()=>IS_IOS&&!inAppBrowser()&&/Safari\//.test(navigator.userAgent)&&!/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|YaBrowser|DuckDuckGo/.test(navigator.userAgent);
+const pwaCanInstall=()=>!!pwaPrompt&&!pwaStandalone();
+const pwaIosSteps=()=>!pwaPrompt&&!pwaStandalone()&&pwaIosSafari();
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();pwaPrompt=e;if(typeof renderSettings==="function")renderSettings()});
+addEventListener("appinstalled",()=>{pwaPrompt=null;if(typeof renderSettings==="function")renderSettings()});
+/* 安裝視窗只能叫一次：不論接受或取消都把事件清掉（取消後要等瀏覽器下次再給；03 審查 P1-1） */
+async function pwaInstall(){
+  const e=pwaPrompt;if(!e)return;pwaPrompt=null;
+  try{await e.prompt();const r=await e.userChoice;if(r&&r.outcome==="accepted")toast("已安裝")}catch(_){}
+  if(typeof renderSettings==="function")renderSettings();
+}
+const PWA_IOS_STEPS=["點「分享」","選「加入主畫面」","按「新增」"];
+/* 這台裝置的「忘記這台裝置」只在舊的身分登入（GitHub 模式的看板）才有；用 Google 登入的看板（新資料庫、凍結中）沒有 */
+const devForget=()=>!(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON));
+const devShow=()=>pwaCanInstall()||pwaIosSteps();
 
 /* Service Worker：只在正式網址（https / localhost）且頁面有 manifest 時註冊 */
 if("serviceWorker" in navigator&&document.querySelector('link[rel="manifest"]')&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname))){

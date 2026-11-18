@@ -10,11 +10,11 @@ const deptSourceOf=id=>{const d=BOARD_DEPTS.find(x=>x.id===id);return d&&STORE_S
 const storeSource=()=>deptSourceOf(CFG.deptId);
 const fsMode=()=>storeSource()==="firestore";
 /* 02D：firestore 模式的編輯權限＝Google 登入的角色（account.js 的 acct.roles，即時監聽，撤權時畫面立刻變回唯讀），而且這次讀取成功（storeFsBase）。
-   fsAdmin＝部門管理員或總管理員（部門設定）；fsDelOk＝議題、週報、標籤能不能刪（規則只給總管理員） */
+   fsAdmin＝部門管理員或總管理員（部門設定）；fsDelOk＝議題、週報、標籤能不能刪（02D D-d：部門管理員或總管理員，規則要求同批寫刪除紀錄） */
 const fsRole=()=>typeof acct!=="undefined"&&acct.user&&acct.roles?(acct.roles.super?"super":(acct.roles.depts||{})[CFG.deptId]||""):"";
 const fsWriter=()=>fsMode()&&!!storeFsBase&&["super","admin","editor"].includes(fsRole());
 const fsAdmin=()=>fsWriter()&&["super","admin"].includes(fsRole());
-const fsDelOk=()=>!fsMode()||(fsWriter()&&fsRole()==="super");
+const fsDelOk=()=>!fsMode()||fsAdmin();
 const storeLocked=()=>storeSource()!=="github"&&!fsWriter();
 const boardLocked=()=>!!state.locked||storeLocked();   /* 看板唯讀：定型版（state.locked）、凍結、或 firestore 模式沒有編輯權限 */
 const STORE_NOTE={frozen:"這個部門正在搬到新資料庫，暫停編輯。",firestore:"這個部門已搬到新資料庫，目前只能檢視。"};
@@ -30,8 +30,17 @@ function storeModLoad(file,ev,name){
 }
 const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
 function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
-/* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除＝卡片的部門；其他（角色、邀請、遷移）不算 */
-const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId:a.col==="cards"&&a.action==="purge"?(a.before||{}).deptId||"":"";
+/* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、通知「全會」）跟著那個部門的資料來源：
+   firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
+   回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
+function storeDeptData(id){
+  if(!(CFG.firebase&&CFG.firebase.projectId))return Promise.reject(Object.assign(new Error("firebase"),{code:"unavailable"}));
+  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id)).then(r=>r.data);
+}
+const STORE_XERR=e=>e&&e.code==="permission-denied"?"這個部門已搬到新資料庫，登入後才看得到":"讀不到這個部門的資料";
+/* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除、議題／週報／標籤的刪除（D-d）＝被刪文件的部門；其他（角色、邀請、遷移）不算 */
+const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId
+  :(a.col==="cards"&&a.action==="purge")||(["issues","weeks","labels"].includes(a.col)&&a.action==="delete")?(a.before||{}).deptId||"":"";
 /* 讀到的內容放上畫面，並記下這一份（寫入時拿它跟畫面比對，只寫改過的文件）；讀取失敗時 storeFsBase＝null（唯讀，不會把空白或舊的畫面存回去） */
 let storeFsBase=null;
 function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.orig,state:JSON.parse(JSON.stringify(state))}}

@@ -209,6 +209,12 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
       wl=await whiteLeft(p);ok(!wl.length,`深色 412 卡片以外沒有白底殘留（${wl.join(' ')}）`);
       await outside(p);
     }
+    /* 03 F1：全站不用瀏覽器內建提示（title 屬性）；即時回報、進度、甘特圖、設定、通知都畫過一次再數 */
+    {const n=await p.evaluate(async()=>{const seen=new Set();const grab=()=>document.querySelectorAll('[title]').forEach(e=>seen.add(e.outerHTML.slice(0,80)));
+      for(const k of ['live','progress','timeline','done']){try{setSection(k,{instant:true})}catch(_){}await new Promise(r=>setTimeout(r,250));grab()}
+      try{await openSettings();await new Promise(r=>setTimeout(r,400));grab();closeSettings(true)}catch(_){}
+      return [...seen]});
+      ok(!n.length,`${T}：畫面上沒有 title 屬性（瀏覽器內建提示）${n.length?'：'+n.join(' | '):''}`);}
     ok(!p.errs.length,`${T}：沒有頁面錯誤（${p.errs.join(' | ')}）`);
     await p.context().close();
   }

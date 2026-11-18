@@ -4,7 +4,7 @@
 這兩份是從 claude.ai 對話交接過來的。裡面提到「交接包、zip、免資料夾、flat.py、上傳」的地方，都以這份 CLAUDE.md 為準（見「交付方式」）。
 
 ## 這是什麼
-- 南臺科大學生會各部門的工作看板。靜態前端（HTML／CSS／一般 script）放在 GitHub Pages：https://linkmasterking.github.io/-/
+- 南臺科大學生會各部門的工作看板，靜態前端（HTML／CSS／一般 script）放在 GitHub Pages：https://stustsa.github.io/council/（repo STUSTSA/council；2026-11 從 linkmasterking/- 移轉）
 - 改版中（已核准的架構，見 `docs/architecture/`）：登入與資料改用 Firebase（Authentication、Cloud Firestore、Security Rules），Spark 免費方案。授權一律由 Security Rules 判斷，前端只負責顯示。切換完成前，各部門仍讀寫 GitHub 上的 `data*.json`。
 - 使用者是權益部幹部，用繁體中文溝通。回覆一律繁體中文，不要 emoji。
 
@@ -38,7 +38,7 @@
 - 準備：把整個 repo 複製到暫存資料夾，放一份 `tools/tests/data_test.json`（或 `data_v5.json`）改名成 `data.json`，在那裡開 `python3 -m http.server 8300`。伺服器要在同一個指令裡開（背景執行容易在指令之間被關掉，可用 `setsid nohup ... &`）。
 - 在 `tools/tests/` 執行 `node xxx.js`（Playwright＋Chromium）。各測試的用途見 `docs/交接說明.md` 第七節與各節的「測試」。
 - Google Fonts、GitHub API 在測試裡用 route 模擬，不要真的連 GitHub 寫資料。
-- Firestore 與登入用 Firebase Emulator Suite；不連正式專案。規則測試放在 `backend/tests/`：`cd backend && npm install && npm test`（規則＋遷移）、`npm run test:web`（網頁：資料來源開關 `fs1.js`＋Google 登入、QR、撤權、紀錄 `acc1.js`＋firestore 模式寫入 `fw1.js`＋即時回報原位編輯器與逐行內容 `kp1.js`＋即時回報驗收（桌面、手機、深色）與跳脫攻擊 `kp3.js`＋十個部門切換演練 `sw1.js`，用 Firestore＋Auth 模擬器）。
+- Firestore 與登入用 Firebase Emulator Suite；不連正式專案。規則測試放在 `backend/tests/`：`cd backend && npm install && npm test`（規則＋遷移）、`npm run test:web`（網頁：資料來源開關 `fs1.js`＋Google 登入、QR、撤權、紀錄 `acc1.js`＋firestore 模式寫入 `fw1.js`＋即時回報原位編輯器與逐行內容 `kp1.js`＋即時回報驗收（桌面、手機、深色）與跳脫攻擊 `kp3.js`＋十個部門切換演練 `sw1.js`＋網頁匯入頁與匯出全部資料 `im1.js`＋跨部門讀取混合狀態 `cx1.js`＋專員名單與安裝成 App `dv1.js`，用 Firestore＋Auth 模擬器）。
 - 只跑跟這次修改有關的測試；視覺效果由使用者自己看。
 - 測試產生的截圖、PDF、報告檔不要 commit（`.gitignore` 已排除）。
 

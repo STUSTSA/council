@@ -131,7 +131,10 @@ h1,.note{animation:rise .7s var(--ease) both}
   <p class="foot">南臺科技大學學生會・各部門工作看板</p>
 </div>
 <script src="core/js/pagefx.js"></script>
-<script>/* 安裝成 App：總覽頁也要註冊 Service Worker（跟看板同一個 sw.js），才能從這一頁安裝、離線打開 */if("serviceWorker" in navigator&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
+<script>/* 安裝成 App：總覽頁也要註冊 Service Worker（跟看板同一個 sw.js），才能從這一頁安裝、離線打開 */if("serviceWorker" in navigator&&(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))addEventListener("load",()=>{   /* 總覽頁用到的檔案也交給 Service Worker 存成離線備份；新版換手時再送一次（release-03，同 pwa.js） */
+  const send=w=>{if(!w)return;const urls=[new URL("./",location.href).href,location.href.split("#")[0].split("?")[0],...performance.getEntriesByType("resource").map(e=>e.name)].filter(u=>{try{return new URL(u).origin===location.origin}catch(_){return false}}).map(u=>u.split("#")[0].split("?")[0]);w.postMessage({type:"precache",urls:[...new Set(urls)]})};
+  navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(r=>send(r.active)).catch(()=>{});
+  navigator.serviceWorker.addEventListener("controllerchange",()=>send(navigator.serviceWorker.controller))});</script>
 <script src="dept/config.js"></script>
 <script>
 (()=>{

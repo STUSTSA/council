@@ -48,8 +48,12 @@ async function exportBackup(){
   s.schemaVersion=13;   /* 03：v14 只多了即時回報的 blocks（desc 照樣有、核取攤成文字），標 13 讓舊網站（main）的匯入備份照常讀；新網站讀到 13 會再對齊 blocks（state.js 的 v13 → v14） */
   if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
-  const kind={mime:"application/json",ext:".json",desc:"JSON"},doc=JSON.stringify(s,null,1);
-  const name=`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,label="備份";
+  const doc=JSON.stringify(s,null,1);
+  await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
+}
+/* 存一個 JSON 檔：看板「匯出備份」與會長室管理「匯出全部資料」（02D D-c）共用 */
+async function saveJsonFile(name,doc,label){
+  const kind={mime:"application/json",ext:".json",desc:"JSON"};
   if(HOSTED){
     const dl=await window.claude.use("downloads");
     if(dl){try{await dl.save({filename:name,data:new Blob([doc],{type:kind.mime})});toast(`已下載${label}`)}catch(e){if(e&&e.code!=="declined")toast("下載失敗："+(e&&e.code||""))}return}
@@ -88,18 +92,19 @@ const changed=()=>{dirty=true;render()};
 
 /* ---------- 雲端設定與儲存流程 ---------- */
 async function cloudSettings(){
-    const c=cloudCfg();
+    const c=cloudCfg(),byUrl=!!pagesRepo();   /* github.io 上帳號與 repo 依網址判斷（cloud.js），這兩欄沒作用就不顯示 */
     const v=await ask("雲端同步設定（GitHub）",[
-      {name:"owner",label:"GitHub 帳號（或組織）",value:c.owner},
-      {name:"repo",label:"Repo 名稱",value:c.repo},
+      ...(byUrl?[]:[{name:"owner",label:"GitHub 帳號（或組織）",value:c.owner},
+      {name:"repo",label:"Repo 名稱",value:c.repo}]),
       {name:"branch",label:"分支",value:c.branch},
       {name:"path",label:"資料檔路徑",value:c.path},
       ...(ghToken()?[{name:"tokact",label:"這台裝置已設定權杖",type:"select",value:"keep",options:[["keep","保持不變"],["clear","從這台裝置移除"]]}]:[]),
-      {name:"token",label:ghToken()?"換新權杖（留空＝不變更）":"權杖（只存在這台裝置，不會放進網頁）",type:"password",value:""}],{wide:true});
+      {name:"token",label:ghToken()?"換新權杖（留空＝不變更）":"權杖（只存在這台裝置，不會放進網頁）",type:"password",value:""}],
+      {wide:true});
     if(!v)return false;
-    state.sync={owner:v.owner,repo:v.repo,branch:v.branch||"main",path:v.path||"data.json"};dirty=true;
+    {const o=state.sync||{};state.sync={owner:byUrl?o.owner||"":v.owner,repo:byUrl?o.repo||"":v.repo,branch:v.branch||"main",path:v.path||"data.json"}}dirty=true;   /* 隱藏時保留資料檔原本的值 */
     try{const nt=(v.token||"").trim();if(nt){localStorage.setItem(TOKEN_KEY,nt);siteAdminMark()}else if(v.tokact==="clear")localStorage.removeItem(TOKEN_KEY)}catch(_){}
-    {const nt=(v.token||"").trim(),me=meMember();if(nt&&me&&(sessionPw||await needPw()))me.tok=await encToken(nt,sessionPw);if(nt&&sharedPwSession)await rememberToken(nt,sharedPwSession)}
+    {const nt=(v.token||"").trim(),me=meMember();if(nt&&me&&(sessionPw||await needPw()))me.tok=await encToken(nt,sessionPw)}
     cloud={sha:null,etag:null,status:"",last:""};
     let res=await cloudPull({force:true});
     if(res==="pending"&&cloud.pending){const ok=await ask("雲端已經有看板資料，要載入雲端的內容嗎？",[],{danger:"載入雲端內容"});
@@ -130,7 +135,7 @@ async function prepareSave(){
   let weak=false;
   const me=meMember();
   if(ghToken()&&me&&!me.tok&&sessionPw)me.tok=await encToken(ghToken(),sessionPw);
-  if(ghToken()&&sharedPwSession&&!(state.sync&&state.sync.tokenEnc)){const r=await rememberToken(ghToken(),sharedPwSession);weak=r==="weak"}
+  if(ghToken()&&sharedPwSession&&!(state.sync&&state.sync.tokenEnc))weak=sharedPwSession.length<8;   /* 共用密碼太短的提醒照舊；不再寫 tokenEnc（auth.js 的 dropSharedToken） */
   return {weak};
 }
 async function saveFlow(){
