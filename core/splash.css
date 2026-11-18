@@ -19,4 +19,4 @@
 .su-b,.su-t{fill:#0a5baa}
 .su-k{fill:var(--ink)}
 :root[data-theme="dark"] :is(.su-b,.su-t){fill:var(--ink)}
-:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.8px}
+:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke}   /* 線稿的粗細照畫面上的像素算：開場的大標誌與主頁左上的小標誌（高 28–32px）一樣看得清楚 */
