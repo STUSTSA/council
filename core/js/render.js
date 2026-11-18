@@ -112,7 +112,9 @@ function render(){
 const SECS=["live","progress","done","ext"].filter(secTab);
 let curSec=(SECS.includes(appStartSec)&&appStartSec)||SECS[0]||"live",secTok=0;   /* appStartSec：app.js 留下的初始區塊（現在都是空的，從第一個區塊開始） */
 const isPhone=()=>matchMedia("(max-width:640px)").matches;
-function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec))}
+/* 畫面上那一區：通知與行事曆（notify.js 的 notiOpen）開著時是它，不然是工具列選到的分頁 */
+const secShown=()=>notiOpen?"noti":curSec;
+function renderSections(){const k=secShown();document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===k))}
 let progOpen=null;   /* 進度：甘特圖／議題詳情切換（views.js 的 progShow）。即時回報、完成紀錄的左右兩欄在 live.js（lvWide） */
 /* 換分頁（DESIGN-next 第一節「部門內一次只顯示一區」、第五節「部門內換分頁」）：手機、桌面都一次只顯示一區。
    舊內容往一邊退、新內容從另一邊進，方向跟工具列一致：桌面（左側直排）上下、900px 以下（底部橫排）左右；往工具列後面的分頁＝舊的往上／左退、新的從下／右進，往前反過來。
@@ -123,12 +125,16 @@ function secFxStop(groups){groups.forEach(g=>{g.getAnimations().forEach(a=>a.can
   if(g.classList.contains("sg-out")){g.classList.remove("sg-out");g.style.top=g.style.left=g.style.width="";g.inert=false}})}
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
-  const tok=++secTok,prev=curSec,lay=document.querySelector(".layout"),sc=$("#pageMain");
+  const prev=curSec,ord=TABS().map(t=>t[0]),dir=ord.indexOf(k)>=ord.indexOf(prev)?1:-1;
+  curSec=k;if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
+  secSwap(prev,k,dir,instant);
+}
+/* 從 prev 那一區換到 k 那一區（dir：1＝往工具列後面、-1＝往前；通知與行事曆 noti 也用這一套，notify.js 的 openNoti／closeNoti） */
+function secSwap(prev,k,dir,instant){
+  const tok=++secTok,lay=document.querySelector(".layout"),sc=$("#pageMain");
   const groups=[...lay.querySelectorAll(":scope>.sgroup")],out=groups.find(g=>g.dataset.sec===prev),inn=groups.find(g=>g.dataset.sec===k);
   /* 區塊頂端已經捲到畫面外時，捲回來讓新區塊從頭看 */
   const toTop=()=>{const d=lay.getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d};
-  const ord=TABS().map(t=>t[0]),dir=ord.indexOf(k)>=ord.indexOf(prev)?1:-1;
-  curSec=k;if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
   secFxStop(groups);
   const r0=out&&out.offsetParent?out.getBoundingClientRect():null;
   renderSections();layoutAll();toTop();

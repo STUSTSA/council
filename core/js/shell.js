@@ -14,7 +14,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <span class="dh-st"><span class="sr-only" id="saveInfo" role="status"></span></span>
         <span class="dh-sp"></span>
         <button type="button" class="dh-btn dh-eye" id="peekBtn" aria-pressed="false" aria-label="用唯讀檢視看這個單位" hidden></button>
-        <button type="button" class="dh-btn noti-btn" id="notiBtn" aria-label="通知" hidden><span class="noti-n num" hidden></span></button>
+        <button type="button" class="dh-btn noti-btn" id="notiBtn" aria-label="通知" aria-pressed="false" hidden><span class="noti-n num" hidden></span></button>
       </header>
       <!-- 搜尋列（即時回報、進度、完成紀錄三頁；search.js）：有輸入時內容換成分區的結果清單（#boardRes），點結果跳到那一項並打開 -->
       <label class="dsearch" id="dSearch"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋" aria-controls="boardRes"><button type="button" class="ds-x" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
@@ -89,6 +89,8 @@ const SHELL_HTML=`<div class="pager" id="pager">
             <div class="md" id="doneMD"><div class="ev-list" id="doneList" data-flip></div><div class="lc-pane" id="doneDetail" hidden></div></div>
           </aside>
         </div>
+        <!-- 通知與行事曆（DESIGN-next 第九節）：標題列的通知鈕進到這一頁（不是工具列的分頁，鏡片留在原分頁）；內容由 notify.js 的 renderNoti 畫 -->
+        <div class="sgroup sg-noti" data-sec="noti" id="notiPage" role="region" aria-label="通知與行事曆"></div>
       </div>
     </div>
   </div>

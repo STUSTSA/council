@@ -1,12 +1,13 @@
-/* 今日層收合（2026-11-06 第二版：自己的欠阻尼彈簧，底板收到卡片大小後由卡片接著縮過頭到 .94、彈回、停在 1）
+/* ui-06：通知改成部門內的一頁（#notiPage），選擇器 #notiOv → #notiPage。
+   今日層收合（2026-11-06 第二版：自己的欠阻尼彈簧，底板收到卡片大小後由卡片接著縮過頭到 .94、彈回、停在 1）
    與「記住這台裝置」開頁就登入（卡片上的編輯鈕一進來就看得到）。固定 8300 埠 */
 const c=require('./common');(async()=>{const {b,mk,login}=await c.setup();
 for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const p=await mk(w,h,sc,tc);
  await p.click('#notiBtn');await p.waitForTimeout(900);
- await p.click('#notiOv .nd-card.today');await p.waitForTimeout(1200);
+ await p.click('#notiPage .nd-card.today');await p.waitForTimeout(1200);
  console.log(w,'today open',await p.evaluate(()=>todayOpen));
  const t0=Date.now();await p.keyboard.press('Escape');
- const tr=await p.evaluate(()=>new Promise(res=>{const out=[],s=performance.now(),card=$('#notiOv .nd-card.today');(function f(){const t=performance.now()-s;
+ const tr=await p.evaluate(()=>new Promise(res=>{const out=[],s=performance.now(),card=$('#notiPage .nd-card.today');(function f(){const t=performance.now()-s;
    const m=getComputedStyle(card).transform,sc=m==='none'?1:+m.match(/matrix\(([^,]+)/)[1];out.push([Math.round(t),+sc.toFixed(3),$('#todayOv').hidden?'card':'ov']);if(t<1300)requestAnimationFrame(f);else res(out)})()}));
  const swap=tr.find(x=>x[2]==='card'),land=tr.filter(x=>x[2]==='card').map(x=>x[1]);
  console.log(w,'swap at',swap&&swap[0],'ms; card scale min',Math.min(...land),'max',Math.max(...land),'end',land[land.length-1]);

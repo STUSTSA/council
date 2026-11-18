@@ -118,12 +118,12 @@ const liveCardOpen=()=>!!lvOpen||(CFG.mergeDone&&!!dnOpen);   /* 即時回報的
 function fabSync(){
   let fb=$("#addEvent");
   if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
-  const on=secTab("live")&&curSec==="live"&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
+  const on=secTab("live")&&curSec==="live"&&!notiOpen&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
   Anim.toggle(fb,on);
   /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
   document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
-function tabGo(k){if(setOpen)closeSettings();if(notiOpen)closeNoti();setSection(k)}
+function tabGo(k){if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
 function setupTabbar(tb){
   const main=tb.querySelector(".tb-main"),gear=tb.querySelector(".tb-gear"),lensEl=tb.querySelector(".tb-lens");
   /* 毛玻璃：分頁列、設定鍵各一塊（桌面也一樣，分頁列直立） */
@@ -157,6 +157,7 @@ function setupTabbar(tb){
     const i=Math.round(clampV(lens.val.x,0,d.n-1)),k=tabEls()[i]&&tabEls()[i].dataset.tab;
     lens.vel.t=lens.vel.x;lens.off.t=0;lens.hl.t=0;lens.val.t=i;lensRelease();tbKick();
     if(d.moved&&k&&k!==tbActive())setTimeout(()=>tabGo(k),60);
+    else if(!d.moved&&k&&notiOpen)setTimeout(()=>tabGo(k),60);   /* 通知與行事曆那一頁：按鏡片那一格（指標被整列接走，click 不會落在分頁上）＝回到原分頁 */
   }
   main.addEventListener("pointerup",dragEnd);main.addEventListener("pointercancel",dragEnd);
   /* 觸控時瀏覽器會先把指標鎖在按下的那顆按鈕；改鎖到整列時，那顆按鈕送出的 lostpointercapture 會冒泡上來，不能當成放開 */
@@ -182,7 +183,10 @@ document.addEventListener("click",e=>{
   /* 用滑鼠／手指點的：先放掉焦點，關掉對話框後才不會在按鈕上留下焦點框 */
   const tbBtn=t.closest("#tabbar button");if(tbBtn&&e.detail>0)tbBtn.blur();
   const tab=t.closest("#tabbar .tab");if(tab){tabGo(tab.dataset.tab);return}
-  if(t.closest("#setBtn")){if(notiOpen)closeNoti(true);setOpen?closeSettings():openSettings();return}
+  if(t.closest("#setBtn")){
+    /* 通知頁開著：把它那一筆瀏覽紀錄直接換成設定（Back.replace），不先 history.back() 再推一筆——非同步的退一筆會跟設定推的那筆打架，紀錄變 null、系統返回直接離站（ui-06 審查 P2-7） */
+    if(notiOpen&&!setOpen){Back.replace("noti","settings",i=>closeSettings(i));closeNoti(true)}
+    setOpen?closeSettings():openSettings();return}
 },true);
 
 /* ---------- 設定頁 ---------- */

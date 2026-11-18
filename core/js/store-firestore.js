@@ -50,5 +50,17 @@ async function auditSince(cfg, since) {
   return qs.docs.map(s => { const a = s.data(); return { kind: "audit", id: s.id, t: a.at ? a.at.toMillis() : 0, by: a.actor || "", col: a.col, docId: a.docId, action: a.action, before: a.before || {}, after: a.after || {} }; });
 }
 
-window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince };
+/* ui-06：行事曆「活動」「會議」與主頁的全會行事曆：scope 是 all-activity／all-meeting 的時間事件（索引 Q13：scope＋start）。
+   讀取量：只讀 [from, to) 開始的那幾筆（呼叫端給一個月份前後的範圍，讀過的留在記憶體）；只讀不寫。回傳 {id, ...時間值換成 __ts}。
+   o.pub（公共版）而且沒登入：規則只讓沒登入的人讀 visibility 是 public 的事件（L0），查詢要帶這個條件，不然整個被拒（ui-06 審查 P2-5）。
+   沒有 scope＋visibility＋start 的複合索引，所以用總覽／全會行事曆（未登入）已經有的索引 Q2（visibility＋start），scope 在這裡篩 */
+async function eventsByScope(cfg, scope, from, to, o = {}) {
+  await authReady(cfg);
+  const { db, auth } = fb(cfg), range = [where("start", ">=", Timestamp.fromMillis(from)), where("start", "<", Timestamp.fromMillis(to)), orderBy("start")];
+  if (o.pub && !auth.currentUser)
+    return (await many(query(collection(db, "events"), where("visibility", "==", "public"), ...range))).filter(e => e.scope === scope);
+  return many(query(collection(db, "events"), where("scope", "==", scope), ...range));
+}
+
+window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope };
 dispatchEvent(new Event("board-firestore-ready"));

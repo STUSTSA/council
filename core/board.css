@@ -52,10 +52,12 @@ body.log-open{overflow:hidden}
   *::before,*::after{animation:none!important;transition:none!important}
   button:hover{transform:none!important}
 }
+/* 被指到放大、按下縮回。自己有指到／按壓樣子的按鈕在這裡用 :not(:where()) 排除（權重不變，不用在各元件再蓋回去）：
+   今日／明日卡片（notify.js 的 ndPress 做按壓、指到只換底色）、海報月曆的日期（指到＝淡圓、按下 .pc-d:active）、月份選單的月份（指到只換底色） */
 @media (hover:hover){
-  button:hover{transform:scale(1.05)}
+  button:not(:where(.nd-card,.pc-d,.cal-pop button)):hover{transform:scale(1.05)}
 }
-button:active{transform:scale(.96)}
+button:not(:where(.nd-card)):active{transform:scale(.96)}
 button.ghost{border-color:var(--muted)}
 @media (max-width:640px){
   h2{min-width:0;font-size:15px;gap:8px}
@@ -151,7 +153,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn .ico{width:22px;height:22px;stroke-width:1.8}
 .dh-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .dh-btn[hidden]{display:none}
-.dh-eye.on{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中：實心 */
+.dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
 .dh-name{display:grid;min-width:0;line-height:1.15}
 .dh-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;margin-bottom:2px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1379,218 +1381,199 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .look-sw i:nth-child(3){background:var(--acc)}
 .look-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:15px}
 
-/* ===== 通知層（notify.js）：搜尋＋今日／明日＋近期（智慧堆疊）＋海報月曆（2026-11-05，交接說明四十二） =====
-   版面沿用設定頁的 .set-ov；內容寬度上限 920px 置中。顏色：本部門＝即時回報狀態色、全會＝部門色（--c，由 JS 給） */
-.noti-ov{z-index:37}
-.noti-inner{max-width:920px;margin:0 auto;padding:18px 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:30px}
-.noti-ov .set-scroll{padding-inline:10px;margin-inline:-10px}   /* 本部門／全會貼著內容左邊：捲動區左右多留 10px，按下放大時玻璃的外陰影不會被切掉（內容位置不變） */
-.noti-note{margin:-14px 0 -8px}
-/* 小標題：粗體名稱＋次要色說明 */
-.noti-h{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font-size:12.5px;font-weight:400;color:var(--muted);letter-spacing:.08em}
-.noti-h b{color:var(--ink);font-size:17px;font-weight:700;letter-spacing:.12em}
-
-/* --- 範圍切換＋常駐搜尋欄：捲動時貼在最上面（內容從底下滑過去） --- */
-.noti-bar{position:sticky;top:0;z-index:5;max-width:920px;margin:0 auto;padding:14px 0 12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(var(--bg) 62%,color-mix(in srgb,var(--bg) 0%,transparent))}
-.noti-find{position:relative;flex:1 1 240px;min-width:0}
-/* 搜尋膠囊：平面色塊（.glass，glassify 加上去）；輸入框本身沒有外觀 */
-.noti-search{display:flex;align-items:center;gap:10px;height:46px;padding:0 6px 0 16px;border-radius:999px;cursor:text;transition:transform var(--mo-slow) var(--mo-spring),box-shadow var(--mo-base) var(--mo-out)}
-/* 點下去的動畫：跟頁首搜尋欄同一套（按下微縮、聚焦彈開、放大鏡轉一下、提示字淡開） */
-.noti-search:active{transform:scale(.97);transition-duration:var(--mo-fast)}
-.noti-search:focus-within{transform:scale(1.02);outline:1.5px solid var(--ink);outline-offset:-1.5px}   /* 聚焦框同搜尋欄：outline，不跟 --blk-sh 串 */
-.noti-search .ns-ico{transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
-.noti-search:focus-within .ns-ico{transform:rotate(-14deg) scale(1.15);opacity:.9}
-.noti-search input::placeholder{transition:opacity var(--mo-base) var(--mo-out)}
-.noti-search input:focus::placeholder{opacity:.4}
-.noti-search .ns-ico{flex:none;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;opacity:.7}
-.noti-search input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--ink);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
-.noti-search input::placeholder{color:var(--muted);opacity:1}
-.noti-search input:focus,.noti-search input:focus-visible{outline:none}
-.nq-clear{flex:none;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;display:grid;place-items:center;opacity:0;pointer-events:none;transform:scale(.6);transition:opacity var(--mo-fast) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
-.noti-search.has-q .nq-clear{opacity:.75;pointer-events:auto;transform:none}
-.nq-clear .ico{width:16px;height:16px}
-@media (hover:hover){.nq-clear:hover{transform:none;box-shadow:none;opacity:1}}
-/* 搜尋結果：搜尋欄下面浮出的清單（彈出層，柔和陰影） */
-/* 要比 .glass（position:relative，在後面的「平面色塊」段）權重高，才會浮在內容上面而不是把搜尋欄下面撐開 */
-.noti-find .noti-res{position:absolute;left:0;right:0;top:calc(100% + 8px);max-height:min(56vh,380px);overflow:auto;overscroll-behavior:contain;border-radius:var(--r-lg);padding:6px;display:grid;align-content:start;box-shadow:var(--pop-sh)}
-.noti-find .noti-res[hidden]{display:none}
-.nr{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:baseline;width:100%;min-height:0;padding:10px 12px;border:0;border-radius:var(--r-md);background:transparent;text-align:left;white-space:normal}
-.nr+.nr{box-shadow:0 -1px 0 color-mix(in srgb,var(--ink) 8%,transparent)}
-.nr:hover,.nr:focus-visible{transform:none;box-shadow:none;background:color-mix(in srgb,var(--ink) 7%,transparent)}
-.nr-when{min-width:5.2em;font-size:13px;color:var(--muted);position:relative;padding-left:12px}
-.nr-when::before{content:"";position:absolute;left:0;top:.45em;width:6px;height:6px;border-radius:50%;background:var(--c)}
-.nr-main{display:grid;gap:1px;min-width:0}
-.nr-main b{font-weight:500}
-.nr-main small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nr mark{background:color-mix(in srgb,var(--su-yellow) 55%,transparent);color:inherit;border-radius:3px;padding:0 1px}
-.nr-none{margin:0;padding:12px;color:var(--muted);font-size:13.5px}
-
-/* --- 今日／明日：左右兩張卡片（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk） --- */
+/* ===== 通知頁（notify.js 的 #notiPage；DESIGN-next 第九節） =====
+   部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：由上到下今日／明日、逾期、行事曆，區塊之間 28px。
+   區塊標題：上面很小的英文小標＋粗體名稱（.nt-h，用 h3：全站的 h2 有細線裝飾）。列印不印這一頁 */
+.sg-noti{gap:28px;padding-bottom:12px}
+@media print{.sgroup.sg-noti{display:none}}
+.nt-h{display:grid;justify-items:start;gap:3px;margin:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2}
+.nt-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
+/* ===== 今日／明日卡片（notify.js 的 dayCardHTML；通知頁最上面） =====
+   左右兩張（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk）。大日期 Jost 300；沒有事＝下方一條短細線。
+   按壓回饋由 notify.js 的 ndPress（只動 transform；共用按鈕的指到放大、按下縮回在 button 那段排除） */
 .noti-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .nd-card{--nd-bg:var(--blk);--nd-ink:var(--ink);--nd-mut:var(--muted);--nd-rule:color-mix(in srgb,var(--ink) 12%,transparent);
-  display:flex;flex-direction:column;align-items:stretch;gap:14px;min-height:196px;padding:18px 18px 16px;border:0;border-radius:var(--r-lg);background:var(--nd-bg);color:var(--nd-ink);text-align:left;white-space:normal;font-weight:400;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:14px;min-height:196px;padding:18px 18px 16px;border:0;border-radius:var(--r-lg);background:var(--nd-bg);color:var(--nd-ink);text-align:left;white-space:normal;font-weight:400;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .nd-card.today{--nd-bg:var(--pri);--nd-ink:var(--pri-ink);--nd-mut:color-mix(in srgb,var(--pri-ink) 62%,var(--pri));--nd-rule:color-mix(in srgb,var(--pri-ink) 18%,transparent)}
-/* 按壓回饋由 notify.js 的 ndPress（Web Animations）做，這裡關掉共用按鈕的 hover／active 縮放 */
-.nd-card:hover,.nd-card:active{transform:none;box-shadow:none}
 @media (hover:hover){.nd-card:hover{background:color-mix(in srgb,var(--nd-ink) 4%,var(--nd-bg))}}
 .nd-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--nd-rule)}
-.nd-num{font-family:"Jost",sans-serif;font-weight:200;font-size:54px;line-height:.8;letter-spacing:-.02em}
+.nd-num{font-family:"Jost",sans-serif;font-weight:300;font-size:52px;line-height:.8;letter-spacing:-.02em}
 .nd-lab{display:grid;justify-items:end;gap:3px;text-align:right}
 .nd-lab b{font-size:14px;font-weight:700;letter-spacing:.12em;white-space:nowrap}
 .nd-lab b i{font-style:normal;font-weight:400;color:var(--nd-mut)}
 .nd-lab small{font-size:12px;color:var(--nd-mut);letter-spacing:.06em}
 .nd-list{display:grid;gap:11px}
 .nd-row{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:8px;align-items:baseline}
-.nd-t{position:relative;padding-left:11px;font-size:12.5px;color:var(--nd-mut);font-variant-numeric:tabular-nums;white-space:nowrap}
-.nd-t::before{content:"";position:absolute;left:0;top:.48em;width:5px;height:5px;border-radius:50%;background:var(--c)}
-.nd-card.today .nd-t::before{box-shadow:0 0 0 1.5px var(--nd-bg)}
+.nd-t{font-size:12.5px;color:var(--nd-mut);font-variant-numeric:tabular-nums;white-space:nowrap}
 .nd-x{display:grid;gap:1px;min-width:0}
 .nd-x b{font-size:14px;font-weight:500;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .nd-x small{font-size:11.5px;line-height:1.4;color:var(--nd-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nd-more{font-size:12px;color:var(--nd-mut);padding-left:calc(3.4em + 8px)}
-/* 今日卡片下方「● 今天處理 N 件」：只寫件數，點今日卡片看全螢幕的「今日」層；出現時由下往上淡入（2026-11-06 使用者：浮現的字要有動畫） */
-.nd-pick{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:11px;border-top:1px dashed var(--nd-rule);white-space:nowrap;animation:ndRise .5s var(--mo-out) both}
-.nd-pick>i{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
-.nd-pick>small{font-size:11.5px;letter-spacing:.08em;color:var(--nd-mut)}
-.nd-pick>b{font-size:20px;font-weight:300;line-height:1}
-@keyframes ndRise{from{opacity:0;transform:translateY(8px)}}
-/* 沒有事件：一條短細線＋淡字，放在卡片下方 */
-.nd-empty{margin-top:auto;display:grid;gap:10px;font-size:13px;color:var(--nd-mut);letter-spacing:.1em}
-.nd-empty i{display:block;width:28px;height:1px;background:currentColor;opacity:.6}
+/* 沒有事件：卡片下方一條短細線 */
+.nd-empty{margin-top:auto}
+.nd-empty i{display:block;width:28px;height:1px;background:var(--nd-mut)}
 @media (max-width:640px){
   .noti-days{gap:10px}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
   .nd-num{font-size:44px}
   .nd-lab b{font-size:13px;letter-spacing:.06em}
-  .nd-row{grid-template-columns:minmax(0,1fr);gap:1px}
   .nd-x b{font-size:13.5px}
-  .nd-more{padding-left:11px}
 }
 
-/* --- 今日（獨立一層，notify.js 的 openToday） ---
-   點今日卡片：整層用 clip-path 從卡片的位置與圓角揭開成全螢幕、內容從卡片位置彈到定位（彈簧，略帶回彈）；各列逐一由下往上；關閉時彈回卡片 */
-.td-ov{position:fixed;inset:0;z-index:39;color:var(--bg)}
+/* ===== 今日層（notify.js 的 openToday；DESIGN-next 第五節「彈簧與回彈」、第九節） =====
+   點今日卡片：整層用 clip-path 從卡片的位置與圓角揭開成全螢幕（彈簧 .62／190）、內容從卡片位置彈到定位；各列逐一由下往上；
+   收回用 .55／90，卡片接著播縮過頭再彈回（notify.js 的 todayMorph／tdCardLand）。跟今日卡片同色（--pri 底、--pri-ink 字）。只有「本來就要做」一區 */
+.td-ov{position:fixed;inset:0;z-index:39;color:var(--pri-ink)}
 .td-ov[hidden]{display:none}
-.td-bg{position:absolute;inset:0;background:var(--ink)}
+.td-bg{position:absolute;inset:0;background:var(--pri)}
 .td-scroll{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(40px + var(--bar-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(18px,env(safe-area-inset-left)))}   /* 讓出底部工具列／左側細欄 */
 .td-in{max-width:720px;margin:0 auto;display:grid;gap:28px}   /* 展開／收合的位移、縮放、透明度由 notify.js 的 todayMorph 依彈簧曲線做 */
-.td-top{display:flex;align-items:flex-end;gap:14px;padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,var(--bg) 18%,transparent)}
-.td-num{font-family:"Jost",sans-serif;font-weight:200;font-size:88px;line-height:.78;letter-spacing:-.03em}
+.td-top{display:flex;align-items:flex-end;gap:14px;padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.td-num{font-family:"Jost",sans-serif;font-weight:300;font-size:88px;line-height:.78;letter-spacing:-.03em}
 .td-lab{display:grid;gap:4px}
 .td-lab b{font-size:20px;font-weight:700;letter-spacing:.14em}
 .td-lab small{font-size:13px;opacity:.65;letter-spacing:.08em}
-.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;border-color:color-mix(in srgb,var(--bg) 40%,transparent);background:transparent;color:var(--bg)}
+.td-x-btn{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:6px;height:42px;padding:0 18px 0 14px;border-color:color-mix(in srgb,currentColor 40%,transparent);background:transparent;color:inherit}
 .td-x-btn .ico{width:15px;height:15px}
 .td-sec h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:15px;font-weight:700;letter-spacing:.14em}
-.td-sec h3 small{font-size:11.5px;font-weight:400;opacity:.6;letter-spacing:.06em}
-.td-sec h3 .num{margin-left:auto;font-size:13px;font-weight:400;padding:0 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);line-height:20px}
-.td-sec.is-pick h3{color:var(--ok)}
-.td-sec.is-pick h3 .num{border-color:var(--ok)}
+.td-sec h3 .num{margin-left:auto;font-size:13px;font-weight:400;padding:0 9px;border-radius:999px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);line-height:20px}
 .td-list{list-style:none;margin:0;padding:0;display:grid}
-.td-row{display:grid;grid-template-columns:6.4em minmax(0,1fr);gap:12px;align-items:baseline;padding:13px 0;border-top:1px solid color-mix(in srgb,var(--bg) 12%,transparent);opacity:0;transform:translateY(10px)}
-.td-ov.on .td-row{opacity:1;transform:none;transition:opacity .35s,transform .5s var(--mo-out);transition-delay:calc(.26s + var(--s,0) * .1s + var(--i) * .04s)}
-.td-sec{--s:0}.td-sec.is-pick{--s:1}
-.td-t{position:relative;padding-left:13px;font-size:13px;opacity:.75;white-space:nowrap}
-.td-t::before{content:"";position:absolute;left:0;top:.45em;width:7px;height:7px;border-radius:50%;background:var(--c)}
+.td-row{display:grid;grid-template-columns:5.2em minmax(0,1fr);gap:12px;align-items:baseline;padding:13px 0;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent);opacity:0;transform:translateY(10px)}
+.td-ov.on .td-row{opacity:1;transform:none;transition:opacity .35s,transform .5s var(--mo-out);transition-delay:calc(.26s + var(--i) * .04s)}
+.td-t{font-size:13px;opacity:.75;white-space:nowrap}
 .td-x{display:grid;gap:2px;min-width:0}
 .td-x b{font-size:16px;font-weight:500;line-height:1.45}
 .td-x small{font-size:12.5px;opacity:.62}
-.td-none{margin:0;padding:12px 0;font-size:13.5px;opacity:.6;border-top:1px solid color-mix(in srgb,var(--bg) 12%,transparent)}
+.td-none{margin:0;padding:12px 0;font-size:13.5px;opacity:.6;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
 @media (max-width:640px){.td-num{font-size:72px}}
+@media (prefers-reduced-motion:reduce){.td-ov.on .td-row{transition:none}}
 
-/* --- 整理：交友軟體式左滑右滑（notify.js 的 deckHTML／dkBind） ---
-   卡片堆最多露出三張（後面的往下 10px、縮 5%）；最上面那張跟手指走並傾斜，右滑浮出綠色「今天處理」、左滑浮出「還不要」；
-   下面一排：✕（還不要）、復原、✓（今天處理）；全部滑完整區收起來（notify.js 的 triFold），不畫空狀態 */
-.noti-deck{display:grid;gap:12px;scroll-margin-top:150px}   /* scroll-margin：捲過來時留出上面 sticky 的範圍切換＋搜尋欄 */
-.dk-stack{position:relative;height:196px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.dk-card{position:absolute;inset:0 0 20px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:18px;padding:22px 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 10px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform}
-.dk-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}   /* 卡片堆浮在內容上：平面色塊＋陰影（沒有細框） */
+/* ===== 逾期卡片堆（notify.js 的 lateHTML／dkBind／dkFly；DESIGN-next 第九節） =====
+   最多露出三張（後面的往下 12px、縮 5%、越後面越淡）；最上面那張跟手指走並傾斜：往右拖浮出「改時間」（左上，焦點色）、往左拖浮出「延後」（右上，文字色）；
+   下面一排：延後（外框圓鈕）、剩幾件、改時間（主要動作色圓鈕）。卡片堆浮在內容上：平面色塊＋陰影。後面的卡片往前補位時滑過去（transform 過渡；拖曳中由程式關掉） */
+.nt-late{display:grid;gap:14px}
+.dk-stack{position:relative;height:184px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.dk-card{position:absolute;inset:0 0 14px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:20px;padding:0 26px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 12px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform;transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
+.dk-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}
+.dk-card[data-i="1"]{opacity:.7}
+.dk-card[data-i="2"]{opacity:.4}
 .dk-card[data-i="0"]:active{cursor:grabbing}
+.dk-stack.ro .dk-card{cursor:default}   /* 不能編輯：只能看（notify.js 的 lateHTML） */
 .dk-card:not([data-i="0"]){pointer-events:none}
-.dk-date{display:grid;justify-items:center;min-width:3.6em;padding-right:18px;border-right:1px solid color-mix(in srgb,var(--ink) 12%,transparent);line-height:1}
-.dk-date b{font-family:"Jost",sans-serif;font-weight:200;font-size:54px;line-height:.85}
-.dk-date small{margin-top:8px;font-size:11.5px;color:var(--muted);letter-spacing:.06em;text-align:center;line-height:1.4}
+.dk-date{display:grid;justify-items:center;min-width:3.6em;padding-right:20px;border-right:1px solid var(--hair);line-height:1}
+.dk-date b{font-family:"Jost",sans-serif;font-weight:300;font-size:46px;line-height:.9}
+.dk-date small{margin-top:6px;font-size:12px;color:var(--muted);letter-spacing:.06em;text-align:center;line-height:1.4}
 .dk-main{display:grid;gap:5px;min-width:0}
-.dk-main b{font-size:18px;font-weight:700;line-height:1.35;letter-spacing:.02em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.dk-dot{display:inline-block;width:9px;height:9px;margin:0 8px 2px 0;border-radius:50%;background:var(--c);vertical-align:middle}
-.dk-main small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* 拖曳時浮出的印章（--yes／--no＝0～1，由拖曳距離決定） */
-.dk-yes,.dk-no{position:absolute;top:16px;padding:3px 12px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.12em;pointer-events:none;opacity:var(--o,0)}
-.dk-yes{left:16px;--o:var(--yes,0);color:#06210f;background:var(--ok);transform:rotate(-8deg)}
-.dk-no{right:16px;--o:var(--no,0);color:var(--bg);background:var(--muted);transform:rotate(8deg)}
-.dk-card.go-yes .dk-yes,.dk-card.go-no .dk-no{opacity:1}
+.dk-main b{font-size:17px;font-weight:700;line-height:1.35;letter-spacing:.04em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.dk-main small{display:flex;gap:12px;font-size:13px;color:var(--muted);overflow:hidden;white-space:nowrap}
+.dk-main small>.num{flex:none}
+/* 拖曳時浮出的印章（--r／--l＝0～1，由拖曳距離決定；飛出去時 .go-r／.go-l 全亮） */
+.dk-stp{position:absolute;top:16px;display:grid;place-items:center;height:30px;padding:0 14px;border-radius:999px;font-size:13px;line-height:1;letter-spacing:.08em;pointer-events:none;opacity:0}
+.dk-stp.r{left:16px;opacity:var(--r,0);background:var(--acc2);color:var(--acc2-ink)}
+.dk-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
+.dk-card.go-r .dk-stp.r,.dk-card.go-l .dk-stp.l{opacity:1}
 .dk-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.dk-btn{width:54px;height:54px;min-height:0;padding:0;border-radius:50%;display:grid;place-items:center;font-size:20px}
-.dk-btn.yes{background:var(--ok);border-color:var(--ok);color:#06210f}
-.dk-btn.no{border-color:var(--hair)}
-.dk-undo[disabled]{opacity:.35;pointer-events:none}
-.dk-count{margin:-4px 0 0;text-align:center}
+.dk-btn{width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh)}
+.dk-btn.pri{background:var(--pri);color:var(--pri-ink)}
+.dk-btn .ico{width:20px;height:20px}
+.dk-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
+.dk-undo{justify-content:center}   /* 延後後的「已延後到明天＋復原」（字樣沿用即時回報卡的 .lc-save／.kp-st／.lc-undo） */
+@media (prefers-reduced-motion:reduce){.dk-card{transition:none}}
 @media (max-width:640px){
-  .dk-stack{height:180px}
-  .dk-card{padding:18px;gap:14px;border-radius:var(--r-lg)}
-  .dk-date{padding-right:14px;min-width:3em}
-  .dk-date b{font-size:44px}
-  .dk-main b{font-size:16.5px}
+  .dk-stack{height:174px}
+  .dk-card{padding:0 20px;gap:16px}
+  .dk-date{padding-right:16px;min-width:3em}
+  .dk-date b{font-size:42px}
+  .dk-main b{font-size:16px}
 }
 
-/* --- 行事曆：月份列＋「這一天」＋海報月曆 --- */
-.noti-cal{display:grid;gap:14px}
-.cal-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.cal-top .noti-h{margin:0 auto 0 0}
-.cal-top :is([data-nmon="-1"],[data-nmon="1"]){width:36px;height:36px;min-height:0;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}   /* 上一月、下一月：正圓（「回到本月」是一般膠囊鈕，不能套到） */
-/* 海報月曆：超大月份縮寫（Jost 粗體）＋右上兩行年份；不畫格線；今天＝綠色數字；選到的日子＝實心圓 */
-/* 「這一天」：點了月曆上某一天才出現（在月曆上方），一列事件標籤：顏色點＋時刻＋名稱＋小字出處；右上 ✕ 收起 */
-.noti-dayview{scroll-margin-top:150px;display:grid;gap:10px;padding:14px 16px 16px;border-radius:var(--r-lg);background:color-mix(in srgb,var(--ink) 5%,var(--bg))}
-.dv-top{display:flex;align-items:baseline;gap:10px}
-.dv-top b{font-size:22px;font-weight:300}
-.dv-top span{font-size:12.5px;color:var(--muted);letter-spacing:.06em}
-.dv-x{margin-left:auto;width:32px;height:32px;min-height:0;padding:0;border-radius:50%;display:inline-grid;place-items:center;align-self:center}
-/* 這一天的事件（2026-11-06 使用者：膠囊遇到長標題會折行、太醜 → 改成清單列）：左邊一條部門／狀態色的細直條，右邊標題（可以折行）、下一行次要色小字「時間・所屬」；列與列之間細線 */
-.dv-tags{display:grid}
-.dv-tag{animation:ndRise .45s var(--mo-out) both}.dv-tag:nth-child(2){animation-delay:.04s}.dv-tag:nth-child(3){animation-delay:.08s}.dv-tag:nth-child(4){animation-delay:.12s}.dv-tag:nth-child(n+5){animation-delay:.16s}
-.dv-tag{display:grid;grid-template-columns:7px minmax(0,1fr);gap:12px;padding:11px 2px;font-size:14px}
-.dv-tag+.dv-tag{border-top:1px solid var(--hair)}
-/* 狀態色用燈號（7px 圓點，對齊名稱第一行的中間），跟今日卡片、今日層同一種（2026-11-06 使用者：原本的直條跟現在的視覺語言不合） */
-.dv-tag i{width:7px;height:7px;margin-top:calc((1.45em - 7px) / 2);border-radius:50%;background:var(--c)}
-.dv-tx{display:grid;gap:3px;min-width:0}
-.dv-tx b{font-weight:500;line-height:1.45}
-.dv-tx small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dv-tx .num{letter-spacing:.02em}
-.pc{--pc-lane:9px;padding-top:4px}   /* 每一層事件線 9px（不寫字，只看幾條線） */
+/* ===== 行事曆（notify.js 的 calHTML；通知頁最下面，主頁的全會行事曆是公共版 .cal.pub） =====
+   上面一大塊色塊（.cal-top）：英文小標＋「行事曆」、右上月份鈕（外框膠囊，點開月份選單）、模式切換、海報月曆；
+   下面＝選到那一天的清單（.cal-list，一件事一張色塊；寬的時候兩欄）。換內容時舊的清單分身（.cal-ghost）原地淡出 */
+.cal{position:relative;display:grid;gap:14px;container-type:inline-size}
+.cal-top{display:grid;gap:18px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.cal-h{display:flex;align-items:flex-start;gap:14px}
+.cal-h .nt-h{margin-right:auto}
+.cal-mp{position:relative;flex:none}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
+.cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
+/* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
+.cal-pop{position:absolute;right:0;top:calc(100% + 8px);z-index:8;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:236px;padding:8px;border-radius:var(--r-md);background:var(--pop);box-shadow:var(--pop-sh);transform-origin:100% 0}
+.cal-pop button{height:40px;min-height:0;padding:0;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink);font-size:14px}
+.cal-pop button[aria-selected="true"]{background:var(--acc);color:var(--acc-ink);font-weight:700}
+@media (hover:hover){.cal-pop button:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}}
+.cal-list{display:grid;gap:12px}
+@container (min-width:760px){.cal-list{grid-template-columns:1fr 1fr}}
+.cal-ghost{position:absolute;margin:0;pointer-events:none}
+.cal-ev{display:grid;gap:12px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.ce-t{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--hair)}
+.ce-t b{font-size:17px;font-weight:500}
+.ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
+.ce-n{font-size:15.5px;font-weight:500;line-height:1.45}
+.ce-b{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--muted)}
+.ce-pl{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ce-pl .ico{flex:none;width:15px;height:15px}
+/* 所屬的小膠囊：本部門與活動＝主要動作色、會長室＝選中色、會議＝外框（跟活動分得開）、其他部門＝次色塊 */
+.ce-k{flex:none;margin-left:auto;display:grid;place-items:center;height:26px;padding:0 12px;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:12px;line-height:1;white-space:nowrap}
+.ce-k.pri{background:var(--pri);color:var(--pri-ink)}
+.ce-k.acc{background:var(--acc);color:var(--acc-ink)}
+.ce-k.line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
+@media (max-width:640px){
+  .cal-top{padding:18px 16px}
+  .cal-mon{height:46px;padding:0 14px 0 18px}
+}
+/* ===== 行事曆的模式切換（notify.js 的 calModesHTML；DESIGN-next 第九節「五類模式」） =====
+   分段切換（LiquidSeg，在「液態分段切換」段）：本部門、會長室、活動、會議、其他；公共版：全部、活動、會議。放不下時這一列自己左右捲。
+   「其他」：下面一排部門膠囊＝自製勾選（role=checkbox；勾了＝實心 --ink 底，沒勾＝次色塊），勾了才去讀那個部門 */
+.cal-modes{margin:0 -6px;padding:0 6px;overflow-x:auto;scrollbar-width:none}
+.cal-modes::-webkit-scrollbar{display:none}
+.cal-oth{display:flex;flex-wrap:wrap;gap:8px;margin-top:-6px}
+.cal-chip{height:36px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
+.cal-chip[aria-checked="true"]{background:var(--ink);color:var(--blk)}
+.cal-chip:active{transform:scale(.94)}
+.cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
+@media (prefers-reduced-motion:reduce){.cal-chip{transition:none}.cal-oth .cal-chip{animation:none}}
+
+/* ===== 海報月曆（notify.js 的 posterHTML；DESIGN-next 第九節） =====
+   超大月份（細體數字＋粗體英文縮寫）、右上兩行年份；週一開頭、MON–SUN 下一條實線；日期只有數字、沒有格線。
+   選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體。事件不寫字：單天＝日期下一顆小點、跨天＝橫跨那幾天的細線（兩端圓點），同一週撞在一起的往下排一層（每層 9px） */
+.pc{--pc-lane:9px;container-type:inline-size}
 .pc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-.pc-mon{font-family:"Jost",sans-serif;font-weight:600;font-size:clamp(68px,13vw,120px);line-height:.82;letter-spacing:-.02em}
+.pc-mon{font-family:"Jost",sans-serif;font-weight:600;font-size:clamp(60px,19cqw,116px);line-height:.82;letter-spacing:-.02em}
 /* 月份數字（2026-11-06 使用者：只有英文縮寫不直觀）：放在縮寫前面，同樣大小、Jost 細體，跟粗體縮寫一細一粗 */
-.pc-mn{font-weight:200;margin-right:.14em;letter-spacing:-.04em}
-.pc-yr{font-weight:600;font-size:clamp(26px,4.4vw,40px);line-height:.95;text-align:right}
+.pc-mn{font-weight:300;margin-right:.14em;letter-spacing:-.04em}
+.pc-yr{font-weight:600;font-size:clamp(24px,6.4cqw,40px);line-height:.95;text-align:right}
 .pc-wk,.pc-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
-.pc-wk{padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--ink);font-family:"Jost",sans-serif;font-weight:500;font-size:12px;letter-spacing:.08em;text-align:center;color:var(--muted)}
-.pc-week{position:relative;align-content:start;min-height:calc(46px + var(--lanes) * var(--pc-lane));padding-bottom:6px}
-.pc-d{position:relative;isolation:isolate;justify-self:center;display:grid;place-items:center;width:38px;height:38px;min-height:0;margin-top:4px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink)}
-.pc-d::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--ink);opacity:0;transform:scale(.7);transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
-.pc-d:hover{transform:none;box-shadow:none}
-@media (hover:hover){.pc-d:hover::before{opacity:.07;transform:none}}
+.pc-wk{padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--ink);font-family:"Jost",sans-serif;font-weight:500;font-size:11.5px;letter-spacing:.08em;text-align:center;color:var(--muted)}
+.pc-week{position:relative;align-content:start;min-height:calc(48px + var(--lanes) * var(--pc-lane));padding-bottom:6px}
+.pc-d{position:relative;isolation:isolate;justify-self:center;display:grid;place-items:center;width:40px;height:40px;min-height:0;margin-top:4px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--ink);transition:transform .42s var(--mo-spring),color var(--mo-base) var(--mo-out)}
+.pc-d::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:50%;background:var(--acc);opacity:0;transform:scale(.6);transition:opacity var(--mo-base) var(--mo-out),transform .42s var(--mo-spring)}
+.pc-d:active{transform:scale(.9)}
+@media (hover:hover){.pc-d:not(.sel):hover::before{opacity:.28;transform:none}}
 .pc-pad{visibility:hidden}
 .pc-n{font-size:19px;line-height:1}
 .pc-d.has .pc-n{font-weight:500}
-.pc-d.is-today .pc-n{color:var(--ok);font-weight:600}
+.pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
-.pc-d.sel .pc-n{color:var(--bg)}
-.pc-d.flash::before{animation:pcFlash .7s ease-in-out 2}
-@keyframes pcFlash{50%{opacity:.22;transform:none}}
-/* 事件（不寫字）：時段＝細線（兩端小圓點）橫跨開始到結束那幾天的中心；單天＝那天下面一顆小點。--ln＝第幾層（每層 9px），看幾條線就知道幾件事；點日期才在上方「這一天」區塊看文字 */
-.pc-e{position:absolute;top:calc(46px + var(--ln) * var(--pc-lane));left:calc(var(--i0) / 7 * 100%);width:calc((var(--i1) - var(--i0) + 1) / 7 * 100%);height:5px;color:var(--c);pointer-events:none}
-.pc-e.span::before{content:"";position:absolute;top:0;height:5px;left:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);right:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);background:radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent),radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent),linear-gradient(currentColor,currentColor) center/100% 1px no-repeat}
+.pc-d.sel .pc-n{color:var(--acc-ink)}
+/* 事件（不寫字）：時段＝細線（兩端小圓點）橫跨開始到結束那幾天的中心；單天＝那天下面一顆小點。--ln＝第幾層（每層 9px），看幾條線就知道幾件事；點日期才在下面的清單看文字。
+   跨週（或跨月）延續的那一端（.cont-l 左、.cont-r 右）：沒有圓點、線畫到那一格的邊緣；在某一週只佔一格時就是從那格中心到邊緣的半條線 */
+.pc-e{position:absolute;top:calc(48px + var(--ln) * var(--pc-lane));left:calc(var(--i0) / 7 * 100%);width:calc((var(--i1) - var(--i0) + 1) / 7 * 100%);height:5px;color:var(--ink);pointer-events:none}
+.pc-e.span::before{--in:calc(50% / (var(--i1) - var(--i0) + 1) - 2.5px);--dl:radial-gradient(circle 2.5px at 2.5px 50%,currentColor 96%,transparent);--dr:radial-gradient(circle 2.5px at calc(100% - 2.5px) 50%,currentColor 96%,transparent);--ll:2.5px;--lr:2.5px;
+  content:"";position:absolute;top:0;height:5px;left:var(--in);right:var(--in);background:var(--dl),var(--dr),linear-gradient(currentColor,currentColor) var(--ll) 50%/calc(100% - var(--ll) - var(--lr)) 1.5px no-repeat}
+.pc-e.cont-l::before{left:0;--dl:none;--ll:0px}
+.pc-e.cont-r::before{right:0;--dr:none;--lr:0px}
 .pc-e:not(.span)::after{content:"";position:absolute;top:0;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
 .pc-foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);letter-spacing:.24em}
-.cal-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted)}
-.cal-legend span{display:inline-flex;align-items:center;gap:6px}
-.cal-legend i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 @media (max-width:640px){
-  .pc-d{width:34px;height:34px}
   .pc-n{font-size:17px}
   .pc-wk{font-size:10.5px;letter-spacing:.02em}
 }
+@media (prefers-reduced-motion:reduce){.pc-d,.pc-d::before,.cal-mon .ico{transition:none}}
 
-/* ===== 液態分段切換（anim.js 的 LiquidSeg；目前用在通知層的本部門／全會） =====
+/* ===== 液態分段切換（anim.js 的 LiquidSeg；行事曆的模式切換、甘特圖範圍、外觀的淺色／深色） =====
    軌道是次色塊（--blk2，平鋪不加陰影）、鏡片是主要動作的實心膠囊（--pri）、鏡片底下那一格（.lit）文字用 --pri-ink；
    整列放大與偏移、鏡片形變都由 JS 寫 inline（這裡不對 transform／scale 設 transition，避免跟彈簧打架） */
 .lseg{display:inline-flex;padding:4px;border-radius:999px;background:var(--blk2);box-shadow:none;transform-origin:0 50%;   /* 按下時往右放大，貼著內容左邊也不會被切到 */
@@ -1838,7 +1821,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .rpt-hint{display:none}
   .rpt-ct,.rpt-bt{opacity:1;pointer-events:auto}   /* 觸控沒有滑過去：工具一直顯示（圖塊工具列只在點進去的圖塊） */
   .rpt-paper .rpt-bt{display:none}
-  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22);animation:ndRise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
+  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22);animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
 }
 /* 列印：只印報告，A4；空白的自訂區塊不印。換頁一律照程式算的斷點（.rpt-brk），頁碼由程式畫在內文底下（.rpt-foot，iPhone 不支援 @page 頁碼） */
 @media print{

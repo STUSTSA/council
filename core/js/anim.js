@@ -57,7 +57,7 @@ const Anim=(()=>{
     });
   }
   /* 上下層：移動中的項目暫時浮到上面（移動越遠越上面） */
-  function lift(el,z){el.style.zIndex=String(2+Math.min(6,Math.round(z/80)));   /* 最多 8：只在同一區裡排上下，不會蓋過疊層頁（設定 38、通知 37） */el.style.position=getComputedStyle(el).position==="static"?"relative":el.style.position}
+  function lift(el,z){el.style.zIndex=String(2+Math.min(6,Math.round(z/80)));   /* 最多 8：只在同一區裡排上下，不會蓋過疊層頁（設定 38） */el.style.position=getComputedStyle(el).position==="static"?"relative":el.style.position}
   function drop(el){el.style.zIndex="";if(el.style.position==="relative")el.style.position=""}
   /* 消失的項目：在原位放一個分身淡出縮小（分身不能點、沒有 id） */
   function ghost(r,src){
@@ -109,7 +109,7 @@ const Anim=(()=>{
    整列按下時放大、拖曳時整列跟著偏最多 4px、白光（--hp／--hx）；只有按在鏡片那一格才能拖，放開吸到最近的一格；
    點別格＝按下 → 移過去 → 接近目標或 400ms 後放開。
    用法：new LiquidSeg(box,{onPick:k=>…})；box 裡放 <span class="lseg-lens"> 和一排 button[data-k]（role="tab"）；
-   程式改選取用 seg.set(k)（instant＝不播動畫）。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在 nav.js。 */
+   程式改選取用 seg.set(k)（instant＝不播動畫）；這排會被移除時呼叫 seg.destroy()。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在 nav.js。 */
 class LiquidSeg{
   constructor(box,{onPick}={}){
     this.box=box;this.onPick=onPick;this.lensEl=box.querySelector(".lseg-lens");
@@ -117,8 +117,10 @@ class LiquidSeg{
     this.drag=null;this.raf=0;this.last=0;this.releasing=false;this.releaseAt=0;this.cur=0;this.suppress=false;
     glassify(box);this.bind();
     const on=this.btns().findIndex(b=>b.getAttribute("aria-selected")==="true");this.set(on<0?0:on,true);
-    addEventListener("resize",()=>this.set(this.cur,true));document.fonts?.ready.then(()=>this.set(this.cur,true));
+    this.onResize=()=>this.set(this.cur,true);addEventListener("resize",this.onResize);document.fonts?.ready.then(()=>{if(!this.dead)this.set(this.cur,true)});
   }
+  /* 拆掉：這排會被移除時（例如公共版行事曆 calUnmount）解除視窗的 resize 監聽、停掉動畫；box 自己身上的監聽跟著 box 一起回收 */
+  destroy(){this.dead=true;removeEventListener("resize",this.onResize);if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
   btns(){return [...this.box.querySelectorAll("[data-k]")]}
   geo(){const bs=this.btns();return bs.map(b=>({x:b.offsetLeft+b.offsetWidth/2,w:b.offsetWidth,k:b.dataset.k}))}
   set(i,instant){

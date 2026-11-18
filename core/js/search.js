@@ -28,7 +28,7 @@ function hsIndex(ql){
 }
 const hsHL=(s,q)=>{const t=String(s||"");const i=t.toLowerCase().indexOf(q.toLowerCase());return i<0||!q?esc(t):esc(t.slice(0,i))+`<mark>${esc(t.slice(i,i+q.length))}</mark>`+esc(t.slice(i+q.length))};
 /* 搜尋列只在三頁出現（會長室、秘書處自己的分頁沒有）；不在那三頁時順便清掉 */
-const hsHere=()=>curSec!=="ext";
+const hsHere=()=>curSec!=="ext"&&!notiOpen;   /* 通知與行事曆那一頁也沒有搜尋列（notify.js） */
 function hsBar(){const bar=$("#dSearch");if(!bar)return;const on=hsHere();bar.hidden=!on;if(!on&&HS.q)hsClear()}
 /* 有沒有在搜尋：看板內容（.layout）換成結果清單。換的時候新的一塊一塊由下浮上來 */
 function hsMode(on){
@@ -81,7 +81,7 @@ function hsGo(x){
   });
   $("#dSearch .ds-x").addEventListener("click",e=>{e.preventDefault();hsClear();q.focus()});
   /* 搜尋中按 Esc（焦點不在搜尋欄也算）：清掉搜尋。在 document 的捕獲階段先處理，排在「收起右側詳情」（events.js）之前；
-     有對話框、設定、通知層、今日層、報告預覽、編輯紀錄開著時不管（各自的 Esc 先關它們） */
+     有對話框、設定、通知與行事曆、今日層、報告預覽、編輯紀錄開著時不管（各自的 Esc 先關它們） */
   document.addEventListener("keydown",e=>{
     if(e.key!=="Escape"||!HS.mode||$("#dlg").open||setOpen||notiOpen||todayOpen||rptOpen||($("#logOv")&&!$("#logOv").hidden))return;
     e.preventDefault();e.stopImmediatePropagation();hsClear();

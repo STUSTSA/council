@@ -58,7 +58,7 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
   {await p.evaluate(()=>{document.querySelector('.dhead').__m=1});
     for(const t of ['progress','done','live']){await p.click(`#tabbar .tab[data-tab="${t}"]`);await p.waitForTimeout(700)}
     await p.click('#setBtn');await p.waitForTimeout(900);await p.click('#setBtn');await p.waitForTimeout(900);
-    await p.click('#notiBtn');await p.waitForTimeout(900);await p.click('#notiClose');await p.waitForTimeout(900);
+    await p.click('#notiBtn');await p.waitForTimeout(900);await p.click('#notiBtn');await p.waitForTimeout(900);   /* ui-06：通知是部門內的一頁，再按通知鈕回原分頁 */
     ok(await p.evaluate(()=>document.querySelector('.dhead').__m===1&&document.querySelectorAll('.dhead').length===1),'換分頁、進出設定與通知：標題列是同一個節點');}
 
   /* 4. 搜尋 */
