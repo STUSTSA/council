@@ -807,7 +807,6 @@ a.doc-pill:active{scale:.96}
 #cardDetail{margin:0 calc(-1*var(--cpx)) -16px}
 #cardDetail .card{background:transparent}
 #cardDetail .card-toggle{pointer-events:none}
-#cardDetail .chev-btn{display:none}
 .card-top{display:flex;align-items:center;gap:6px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .card-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:0;background:none;padding:2px 0;text-align:left;border-radius:6px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .card-toggle .card-title{flex:1;min-width:0}
@@ -815,9 +814,6 @@ a.doc-pill:active{scale:.96}
 .hpct small{font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;margin-right:6px;color:var(--muted);vertical-align:.45em}
 .hpct.none{font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:400;color:var(--muted)}
 .closed-tag{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.chev{color:var(--muted);font-size:14px;display:inline-block;transition:transform .3s var(--ease)}
-.card.open .chev{transform:rotate(180deg)}
-.mini-bar .fill{transition:width .2s}
 .tag.sm{font-size:11px;min-height:20px;padding:0 7px 2px!important;line-height:17px}
 .card{padding:16px var(--cpx,18px);display:flex;flex-direction:column;gap:8px;scroll-margin-top:60px;border-radius:0;transition:background-color .25s,opacity .2s;background:transparent;border:0;border-top:1px solid var(--line)}
 .card.open{background:color-mix(in srgb,var(--ink) 5%,transparent)}
@@ -830,14 +826,6 @@ a.doc-pill:active{scale:.96}
 .tag.cur{background:var(--acc);color:var(--acc-ink);font-weight:500;padding-top:.5px!important;padding-bottom:1.5px!important}   /* 目前的階段＝選中色（DESIGN-next 第二節 --acc） */
 .c-track{position:relative;height:84px;margin:0 8px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .c-bar{position:absolute;left:0;right:0;top:34px;height:16px}   /* 議題的時程條＝一排細刻度（ticksHTML，整條就是這個議題的期間） */
-.mini-bar .fill{position:absolute}
-.mini-bar .fill{left:0}
-.mini-bar .fill{top:50%}
-.mini-bar .fill{height:4px!important}
-.mini-bar .fill{transform:translateY(-50%)}
-.mini-bar .fill{background:var(--tone,var(--ink))}
-.mini-bar .fill{border-radius:2px}
-.mini-bar .fill{max-width:100%}
 .tick{position:absolute;top:52px;font-size:10.5px;color:var(--muted);transform:translateX(-50%);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 時程條兩端標開始、結束日：靠內對齊，不要超出列；沒有期間時改成一行說明 */
 .tick.tick-s{transform:none}
@@ -859,11 +847,6 @@ a.link:active{transform:scale(.96)}
 .card:focus-within{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .note{margin:2px 0 0;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);font-size:14px;line-height:1.7;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}   /* 平面色塊：在卡片（--blk）裡用頁面底色 --bg 區隔，沒有細框 */
 .note-h{display:block;font-size:11.5px;letter-spacing:.12em;color:var(--muted);margin-bottom:2px}
-.chev-btn{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);border:1px solid transparent;background:var(--blk2);border-radius:999px;white-space:nowrap}
-.card-toggle:hover .chev-btn{color:var(--ink);border-color:var(--ink)}
-.mini-bar{cursor:pointer;background:none;overflow:visible!important;border-radius:0;position:relative;height:16px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.mini-bar::before{content:"";position:absolute;left:0;right:0;top:50%;height:2.5px;transform:translateY(-50%);border-radius:2px;background:var(--rest)}
-.mini-bar .fill::after{content:"";position:absolute;right:-2px;top:50%;width:4px;transform:translateY(-50%);border-radius:2px;background:var(--tone,var(--ink));height:16px;box-shadow:none}
 .card.flash{animation:flash2 .7s ease-in-out .35s 2 both}
 @media (hover:hover){
   .card:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}
@@ -871,7 +854,6 @@ a.link:active{transform:scale(.96)}
 .tag.past{background:transparent;color:var(--muted)}
 .log li:last-child{border-left-color:transparent}
 .c-track.peeking .marker:not(.quiet) .lbl{opacity:0}
-.chev-btn .chev{position:relative;top:-1px}
 .card-tools [data-move="1"]{padding-top:2px;padding-bottom:4px}
 @media (hover:hover){
   .tag:hover{transform:scale(1.05)}
@@ -892,9 +874,7 @@ a.link:active{transform:scale(.96)}
   .card-toggle{gap:6px}
   .card-title{font-size:15px}
   .hpct{font-size:24px}
-  .chev-btn{padding:2px 8px}
 }
-.chev-btn{padding:2.5px 9px 1.5px 10px}
 @media (max-width:640px){
   .card-toggle .tag.sm{display:none}
   .card-tools{width:100%;justify-content:flex-end}

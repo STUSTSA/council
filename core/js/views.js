@@ -122,15 +122,14 @@ const layoutAll=()=>document.querySelectorAll(".c-track,.g-track").forEach(layou
 let _rz;window.addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(layoutAll,120)});
 document.fonts?.ready.then(layoutAll);
 
-/* 一張議題卡片；open＝展開內容，sel＝左右兩欄時清單裡選到的那列，pane＝畫在右側詳情（不帶 id，避免重複） */
-function cardHTML(it,open,pane,sel){
+/* 議題詳情（#cardDetail）的那一張議題卡片；只畫在詳情裡，一律展開 */
+function cardHTML(it){
   const ed=cardEd("i",it.id);
-  return `<article class="card ${it.doneAt?"closed":""} ${open?"open":""} ${sel?"sel":""} ${pane?"in-pane":""} ${ed?"sec-edit":""}" ${pane?"":`id="card-${esc(it.id)}"`} data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}"${sel?' aria-current="true"':""}>
+  return `<article class="card open ${it.doneAt?"closed":""} ${ed?"sec-edit":""}" data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}">
     <div class="card-top">
-      <button type="button" class="card-toggle" data-toggle aria-expanded="${open}"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span><span class="chev-btn">${open?"收合":"展開"}<span class="chev" aria-hidden="true">▾</span></span></button>
+      <button type="button" class="card-toggle"><span class="card-title">${esc(it.title)}</span>${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></button>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
-    ${open?`
     ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${fmt(it.start)} – ${fmt(it.end)}`:"未排入甘特圖"}</span></div>
     <div class="tags">${tagsHTML(it)}</div>
     ${staffHTML(it.staff)}${labelChipsHTML(it.labels)}
@@ -143,7 +142,7 @@ function cardHTML(it,open,pane,sel){
     ${(()=>{const kids=state.events.filter(e=>!e.doneAt&&e.issueId===it.id);return kids.length?`<div class="kid-evs"><div class="att-h">進行中的即時回報</div><div class="kid-list">${kids.map(e=>`<span class="kid-ev" data-st="${evStatus(e)}"><span class="live-dot" aria-hidden="true"></span>${esc(e.name)}</span>`).join("")}</div></div>`:""})()}
     ${logHTML(it)}
     ${ed||!it.links.length?"":`<div class="att"><div class="att-h">相關連結</div><div class="links">${it.links.map(linkHTML).join("")}</div></div>`}
-    ${ed?editBarHTML():""}`:`<div class="mini-bar" data-toggle><div class="fill" style="width:${schedPct(it)||0}%"></div></div>`}
+    ${ed?editBarHTML():""}
   </article>`;
 }
 /* ---------- 進度、完成紀錄的逐欄編輯（跟即時回報同一套外觀與操作：點哪一欄改哪一欄、一次一欄、Enter 完成、Esc 取消） ----------
@@ -192,7 +191,7 @@ function renderCards(){
   if(progOpen&&!it)progOpen=null;
   $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
   morphTo($("#pvBack"),ico("prev","sm")+"返回甘特圖");
-  morphTo($("#cardDetail"),it?cardHTML(it,true,true,false):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
+  morphTo($("#cardDetail"),it?cardHTML(it):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
   $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */

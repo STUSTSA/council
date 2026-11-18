@@ -3,8 +3,6 @@
 document.addEventListener("click",async e=>{
   const t=e.target;
   const jump=t.closest("[data-jump]");
-  const tgl=t.closest("[data-toggle]");
-  if(tgl&&tgl.closest("#cardDetail"))return;   /* 詳情裡的標題列不收合 */
   /* 進度卡片：點甘特圖的議題列換成該議題詳情，按返回回到甘特圖 */
   if(t.closest("#pvBack")){progShow(null);return}
   if(jump&&!t.closest("[data-marker]")){e.preventDefault();if(curSec!=="progress")setSection("progress",{instant:true});progShow(jump.dataset.jump);return}
