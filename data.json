@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "權益部工作進度",
  "locked": false,
- "savedAt": "2026-11-10 21:54",
+ "savedAt": "2026-11-17 19:22",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -59,6 +59,12 @@
    "id": "wmw3wyif3m3x4",
    "date": "2026-11-06",
    "text": "權益部 本週例行回報\n日期：【2026.11.06】\n\n一、會議報告事項\n❏ 社群內容排程\n❏ 權益部網站線上化\n❏ 停車場冷氣機報廢後續\n❏ 六宿女宿舍通道安全\n❏ 數位會務改革\n❏ 交流簡報討論\n❏ 緊急公關聲明流程\n❏ 上傳NAS與常會資料以及提案單追蹤\n❏ 數位校務改革\n\n二、本週完成\n❏ 交流簡報討論（第 1 段）\n❏ 上傳NAS與常會資料以及提案單追蹤（第 1 段）\n❏ 社群內容排程（第 1 段）\n❏ 總務會議代表（第 1 段）\n❏ 權益部網站線上化（第 1 段）\n❏ 停車場冷氣機報廢後續（第 1 段）\n❏ 六宿女宿舍通道安全（第 1 段）\n❏ 緊急公關聲明流程（第 1 段）\n❏ 數位校務改革（第 2 段）\n❏ 車禍事件（第 1 段）\n❏ 獎助學金第三次常會\n❏ 部門會議\n❏ 獎助學金系統構想\n❏ 數位校務改革（第 1 段）",
+   "auto": true
+  },
+  {
+   "id": "wmwj2q9k6vkep",
+   "date": "2026-11-16",
+   "text": "三、學權部\n    （一）週例行政工作回報\n    說 明：本週行政工作相關執行狀況如下：\n        1. 六宿女宿舍通道安全\n        2. 停車場冷氣機報廢後續\n        3. 數位校務改革\n        4. 社群內容排程\n        5. 數位會務改革\n        6. 衛生棉補給站點\n        7. 緊急公關聲明流程",
    "auto": true
   }
  ],
@@ -148,6 +154,24 @@
      "tmId": "tmw3b7vk5uwv7",
      "text": "六宿女宿舍通道安全：安全場勘時間",
      "date": "2026-11-09"
+    },
+    {
+     "id": "mmwj2gm2b6mim",
+     "evId": "emwj2gm2bmzjb",
+     "at": 30,
+     "stage": "待回覆",
+     "pos": "up",
+     "text": "停車場冷氣機報廢後續（第 2 段）",
+     "date": "2026-11-16"
+    },
+    {
+     "id": "mmwj34fbsjjwy",
+     "evId": "emvteefflmm61",
+     "at": 30,
+     "stage": "待回覆",
+     "pos": "up",
+     "text": "六宿女宿舍通道安全（第 3 段・結案）",
+     "date": "2026-11-16"
     }
    ],
    "links": [],
@@ -286,60 +310,26 @@
    "labels": []
   },
   {
-   "id": "emvz5bo0gi726",
-   "name": "車禍事件",
-   "desc": "昨日勘查現場已無花束\n\n盤點校地周邊區域交通安全死角",
-   "createdAt": "2026-11-02",
+   "id": "emvt1pwvqrhyw",
+   "name": "停車場冷氣機報廢後續",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考",
+   "createdAt": "2026-10-29",
    "staff": [],
-   "links": [
-    {
-     "id": "lmvz5djk8pm0w",
-     "name": "報導",
-     "url": "https://tw.news.yahoo.com/%E5%BF%AB%E8%A8%8A-%E5%8D%97%E5%8F%B0%E7%A7%91%E5%A4%A7%E6%96%B0%E7%94%9F%E8%B5%B0%E8%B7%AF%E9%81%AD%E6%92%9E%E6%AD%BB-%E9%A7%95%E9%A7%9B%E9%85%92%E9%A7%95%E8%82%87%E9%80%83%E6%8A%93%E5%88%B0%E4%BA%86-022100206.html",
-     "color": "#6b6b75"
-    },
-    {
-     "id": "lmvz5elbb8xec",
-     "name": "校方動態",
-     "url": "https://www.cdns.com.tw/articles/1483881",
-     "color": "#3d7fe0"
-    },
-    {
-     "id": "lmw0ln6sybrdj",
-     "name": "道路改善行動參考案例",
-     "url": "https://www.instagram.com/p/DYwDOZhmlll/?img_index=1",
-     "color": "#a24fc0"
-    }
-   ],
-   "times": [
-    {
-     "id": "tmw3cp9dlvinh",
-     "label": "初版評估",
-     "start": "2026-11-29",
-     "end": "",
-     "toIssue": false,
-     "place": ""
-    },
-    {
-     "id": "tmw3cq666wkce",
-     "label": "發布調查表單",
-     "start": "2026-11-23",
-     "end": "",
-     "toIssue": false,
-     "place": ""
-    }
-   ],
-   "round": 2,
    "touched": [
-    "2026-11-02",
+    "2026-10-27",
     "2026-11-03",
     "2026-11-05",
-    "2026-11-10"
+    "2026-11-09",
+    "2026-11-16"
    ],
-   "touchedAt": "2026-11-10T20:10",
+   "links": [],
+   "times": [],
+   "round": 3,
+   "touchedAt": "2026-11-16T17:33",
    "report": true,
-   "roundAt": "2026-11-05T17:37",
-   "labels": []
+   "roundAt": "2026-11-16T17:33",
+   "labels": [],
+   "issueId": "imvpc3f0dcpi6"
   },
   {
    "id": "emvteefflmm61",
@@ -352,17 +342,18 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-09",
-    "2026-11-10"
+    "2026-11-10",
+    "2026-11-16"
    ],
    "links": [],
    "times": [],
    "round": 3,
-   "touchedAt": "2026-11-10T19:05",
-   "report": true,
+   "touchedAt": "2026-11-16T17:52",
+   "report": false,
    "issueId": "imvpc3f0dcpi6",
    "roundAt": "2026-11-10T19:05",
    "labels": [],
-   "doneAt": null
+   "doneAt": "2026-11-16"
   },
   {
    "id": "emvpd82rr1kit",
@@ -534,34 +525,41 @@
    "labels": []
   },
   {
-   "id": "emvt1pwvqrhyw",
-   "name": "停車場冷氣機報廢後續",
-   "desc": "報廢要求被退回學務處\n\n與宿舍/生輔組確認",
-   "createdAt": "2026-10-29",
+   "id": "emvpd4765r0ch",
+   "name": "數位校務改革",
+   "desc": "等回覆 敲共同商議時間 或提出方案取得反饋",
+   "links": [
+    {
+     "id": "lmvqlr6quzwgj",
+     "name": "建議方案",
+     "url": "https://drive.google.com/file/d/1fN_IB_ZY_i0dspiXa7d-XKKLtgck19Qo/view?usp=sharing",
+     "color": "#3d7fe0"
+    }
+   ],
+   "doneAt": null,
    "staff": [],
    "touched": [
     "2026-10-27",
     "2026-11-03",
     "2026-11-05",
-    "2026-11-09"
+    "2026-11-16",
+    "2026-11-17"
    ],
-   "links": [],
    "times": [
     {
-     "id": "tmw3b6j9am1v8",
-     "label": "安全場勘時間順代提出",
-     "start": "2026-11-09T16:00",
+     "id": "tmw3bt7meduhn",
+     "label": "打招呼",
+     "start": "2026-11-19T14:00",
      "end": "",
      "toIssue": false,
      "place": ""
     }
    ],
-   "round": 2,
-   "touchedAt": "2026-11-09T02:08",
+   "round": 3,
+   "touchedAt": "2026-11-17T19:22",
+   "roundAt": "2026-11-05T17:12",
    "report": true,
-   "roundAt": "2026-11-05T16:54",
-   "labels": [],
-   "issueId": "imvpc3f0dcpi6"
+   "labels": []
   },
   {
    "id": "emvqocysbhm9s",
@@ -638,51 +636,17 @@
    "labels": []
   },
   {
-   "id": "emvpd4765r0ch",
-   "name": "數位校務改革",
-   "desc": "等回覆 敲共同商議時間 或提出方案取得反饋",
-   "links": [
-    {
-     "id": "lmvqlr6quzwgj",
-     "name": "建議方案",
-     "url": "https://drive.google.com/file/d/1qv76O5Or6Qs0bb6EMvLNNf5E5OvLV4qH/view?usp=drive_link",
-     "color": "#3d7fe0"
-    }
-   ],
-   "doneAt": null,
-   "staff": [],
-   "touched": [
-    "2026-10-27",
-    "2026-11-03",
-    "2026-11-05"
-   ],
-   "times": [
-    {
-     "id": "tmw3bt7meduhn",
-     "label": "打招呼",
-     "start": "2026-11-11T14:00",
-     "end": "",
-     "toIssue": false,
-     "place": ""
-    }
-   ],
-   "round": 3,
-   "touchedAt": "2026-11-05T17:12",
-   "roundAt": "2026-11-05T17:12",
-   "report": true,
-   "labels": []
-  },
-  {
    "id": "emvpd6qonvam7",
    "name": "社群內容排程",
-   "desc": "交付行銷部五天前\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n",
+   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候",
    "doneAt": null,
    "staff": [],
    "touched": [
     "2026-10-27",
     "2026-11-02",
     "2026-11-03",
-    "2026-11-05"
+    "2026-11-05",
+    "2026-11-17"
    ],
    "links": [
     {
@@ -741,54 +705,118 @@
     }
    ],
    "round": 2,
-   "touchedAt": "2026-11-05T16:44",
+   "touchedAt": "2026-11-17T19:01",
    "report": true,
    "roundAt": "2026-11-05T16:44",
    "labels": []
   },
   {
-   "id": "emw0lb1djdnco",
-   "name": "數位會務改革",
-   "desc": "各部門功能統整簡化中 導入Google帳號登入解決權限問題",
+   "id": "emw0myswnrccf",
+   "name": "緊急公關聲明流程",
+   "desc": "確認上週校正程序是否已更正\n\n流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
    "createdAt": "2026-11-03",
    "staff": [],
-   "links": [],
+   "links": [
+    {
+     "id": "lmwal5zucgc3s",
+     "name": "初版流程",
+     "url": "https://drive.google.com/file/d/1B0mLeHIdJXyk9DO6ouRxlYUXKpTRwSxD/view?usp=drive_link",
+     "color": "#6a4fd8"
+    }
+   ],
+   "times": [],
+   "round": 3,
+   "touched": [
+    "2026-11-03",
+    "2026-11-05",
+    "2026-11-06",
+    "2026-11-10",
+    "2026-11-16"
+   ],
+   "touchedAt": "2026-11-16T17:38",
+   "report": true,
+   "roundAt": "2026-11-16T17:38",
+   "labels": []
+  },
+  {
+   "id": "emwj2z9n02k6g",
+   "name": "婉如日聲明",
+   "desc": "討論聲明內容與校內環境檢視",
+   "createdAt": "2026-11-16",
+   "staff": [],
+   "links": [
+    {
+     "id": "lmwj33pk67jjt",
+     "name": "婉如日聲明",
+     "url": "https://drive.google.com/file/d/1syFs51V7FCsfoZocGqtD8x62GDdo1Vau/view",
+     "color": "#6a4fd8"
+    }
+   ],
+   "times": [],
+   "round": 1,
+   "touched": [
+    "2026-11-16"
+   ],
+   "touchedAt": "2026-11-16T17:52",
+   "report": true,
+   "labels": []
+  },
+  {
+   "id": "emvz5bo0gi726",
+   "name": "車禍事件",
+   "desc": "昨日勘查現場已無花束\n\n盤點校地周邊區域交通安全死角\n\n123",
+   "createdAt": "2026-11-02",
+   "staff": [],
+   "links": [
+    {
+     "id": "lmvz5djk8pm0w",
+     "name": "報導",
+     "url": "https://tw.news.yahoo.com/%E5%BF%AB%E8%A8%8A-%E5%8D%97%E5%8F%B0%E7%A7%91%E5%A4%A7%E6%96%B0%E7%94%9F%E8%B5%B0%E8%B7%AF%E9%81%AD%E6%92%9E%E6%AD%BB-%E9%A7%95%E9%A7%9B%E9%85%92%E9%A7%95%E8%82%87%E9%80%83%E6%8A%93%E5%88%B0%E4%BA%86-022100206.html",
+     "color": "#6b6b75"
+    },
+    {
+     "id": "lmvz5elbb8xec",
+     "name": "校方動態",
+     "url": "https://www.cdns.com.tw/articles/1483881",
+     "color": "#3d7fe0"
+    },
+    {
+     "id": "lmw0ln6sybrdj",
+     "name": "道路改善行動參考案例",
+     "url": "https://www.instagram.com/p/DYwDOZhmlll/?img_index=1",
+     "color": "#a24fc0"
+    }
+   ],
    "times": [
     {
-     "id": "tmw0n4x291fog",
-     "label": "秘書處會議資料格式重整",
-     "start": "2026-11-06",
+     "id": "tmw3cp9dlvinh",
+     "label": "初版評估",
+     "start": "2026-11-29",
+     "end": "",
+     "toIssue": false,
+     "place": ""
+    },
+    {
+     "id": "tmw3cq666wkce",
+     "label": "發布調查表單",
+     "start": "2026-11-23",
      "end": "",
      "toIssue": false,
      "place": ""
     }
    ],
-   "round": 1,
+   "round": 2,
    "touched": [
+    "2026-11-02",
     "2026-11-03",
-    "2026-11-10"
+    "2026-11-05",
+    "2026-11-10",
+    "2026-11-12"
    ],
-   "touchedAt": "2026-11-10T19:33",
-   "report": true,
+   "touchedAt": "2026-11-12T03:01",
+   "report": false,
+   "roundAt": "2026-11-05T17:37",
    "labels": []
-  },
-  {
-   "id": "emwanenep6fe1",
-   "name": "衛生棉補給站點",
-   "desc": "目前補給盒已見底\n\n11/12前往衛保組確認",
-   "createdAt": "2026-11-10",
-   "staff": [
-    "mmvz4b7d5emiy"
-   ],
-   "links": [],
-   "times": [],
-   "round": 1,
-   "touched": [
-    "2026-11-10"
-   ],
-   "touchedAt": "2026-11-10T20:23",
-   "issueId": "imvpc1cuefjii",
-   "report": true
   },
   {
    "id": "emw0mszjya8iv",
@@ -805,7 +833,7 @@
     "2026-11-10"
    ],
    "touchedAt": "2026-11-10T19:32",
-   "report": true,
+   "report": false,
    "labels": [],
    "roundAt": "2026-11-06T00:35",
    "doneAt": "2026-11-10"
@@ -833,30 +861,50 @@
    "labels": []
   },
   {
-   "id": "emw0myswnrccf",
-   "name": "緊急公關聲明流程",
-   "desc": "流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
+   "id": "emw0lb1djdnco",
+   "name": "數位會務改革",
+   "desc": "各部門功能統整簡化中 導入Google帳號登入解決權限問題",
    "createdAt": "2026-11-03",
    "staff": [],
-   "links": [
+   "links": [],
+   "times": [
     {
-     "id": "lmwal5zucgc3s",
-     "name": "初版流程",
-     "url": "https://drive.google.com/file/d/1B0mLeHIdJXyk9DO6ouRxlYUXKpTRwSxD/view?usp=drive_link",
-     "color": "#6a4fd8"
+     "id": "tmw0n4x291fog",
+     "label": "秘書處會議資料格式重整",
+     "start": "2026-11-06",
+     "end": "",
+     "toIssue": false,
+     "place": ""
     }
    ],
-   "times": [],
-   "round": 2,
+   "round": 1,
    "touched": [
     "2026-11-03",
-    "2026-11-05",
-    "2026-11-06",
     "2026-11-10"
    ],
-   "touchedAt": "2026-11-10T19:07",
+   "touchedAt": "2026-11-10T19:33",
    "report": false,
-   "roundAt": "2026-11-05T17:06",
+   "labels": []
+  },
+  {
+   "id": "emwanenep6fe1",
+   "name": "衛生棉補給站點",
+   "desc": "目前補給盒已見底\n\n11/12前往衛保組確認",
+   "createdAt": "2026-11-10",
+   "staff": [
+    "mmvz4b7d5emiy"
+   ],
+   "links": [],
+   "times": [],
+   "round": 1,
+   "touched": [
+    "2026-11-10",
+    "2026-11-12",
+    "2026-11-13"
+   ],
+   "touchedAt": "2026-11-13T12:22",
+   "issueId": "imvpc1cuefjii",
+   "report": false,
    "labels": []
   },
   {
@@ -875,26 +923,6 @@
    "report": false,
    "touchedAt": "2026-11-05T16:52",
    "roundAt": "2026-11-05T16:52",
-   "labels": []
-  },
-  {
-   "id": "emvqlvpkgu9x6",
-   "name": "總務會議代表",
-   "desc": "留意會議提及修改設置辦法 確保學生自治單位席次",
-   "createdAt": "2026-10-27",
-   "staff": [],
-   "touched": [
-    "2026-10-27",
-    "2026-11-02",
-    "2026-11-03",
-    "2026-11-05"
-   ],
-   "links": [],
-   "times": [],
-   "round": 2,
-   "touchedAt": "2026-11-05T16:53",
-   "report": false,
-   "roundAt": "2026-11-05T16:48",
    "labels": []
   },
   {
@@ -1104,23 +1132,24 @@
    "report": false
   },
   {
-   "id": "emw0pwllmeivk",
-   "name": "上傳NAS資料",
-   "desc": "NAS上傳",
-   "createdAt": "2026-11-03",
+   "id": "emvqlvpkgu9x6",
+   "name": "總務會議代表",
+   "desc": "留意會議提及修改設置辦法 確保學生自治單位席次",
+   "createdAt": "2026-10-27",
    "staff": [],
+   "touched": [
+    "2026-10-27",
+    "2026-11-02",
+    "2026-11-03",
+    "2026-11-05"
+   ],
    "links": [],
    "times": [],
    "round": 2,
-   "touched": [
-    "2026-11-03",
-    "2026-11-06",
-    "2026-11-10"
-   ],
-   "touchedAt": "2026-11-10T19:08",
+   "touchedAt": "2026-11-05T16:53",
    "report": false,
-   "labels": [],
-   "roundAt": "2026-11-06T00:35"
+   "roundAt": "2026-11-05T16:48",
+   "labels": []
   },
   {
    "id": "emwal3c95oe2w",
@@ -1143,7 +1172,76 @@
     }
    ],
    "round": 2,
-   "fromEv": "emvteefflmm61"
+   "fromEv": "emvteefflmm61",
+   "touched": [],
+   "report": false
+  },
+  {
+   "id": "emw0pwllmeivk",
+   "name": "上傳NAS資料",
+   "desc": "NAS上傳",
+   "createdAt": "2026-11-03",
+   "staff": [],
+   "links": [],
+   "times": [],
+   "round": 2,
+   "touched": [
+    "2026-11-03",
+    "2026-11-06",
+    "2026-11-10"
+   ],
+   "touchedAt": "2026-11-10T19:08",
+   "report": false,
+   "labels": [],
+   "roundAt": "2026-11-06T00:35"
+  },
+  {
+   "id": "emwj2gm2bmzjb",
+   "name": "停車場冷氣機報廢後續",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考",
+   "createdAt": "2026-10-29",
+   "doneAt": "2026-11-16",
+   "issueId": "imvpc3f0dcpi6",
+   "links": [],
+   "staff": [],
+   "labels": [],
+   "times": [
+    {
+     "id": "tmw3b6j9am1v8",
+     "label": "安全場勘時間順代提出",
+     "start": "2026-11-09T16:00",
+     "end": "",
+     "toIssue": false,
+     "place": ""
+    }
+   ],
+   "round": 2,
+   "fromEv": "emvt1pwvqrhyw",
+   "report": false,
+   "touched": []
+  },
+  {
+   "id": "emwj2mymw9ljs",
+   "name": "緊急公關聲明流程",
+   "desc": "確認上週校正程序是否已更正\n\n流程修改\n\n第二步驟 決定幾人同意(預設2人)  /  需利益迴避\n\n\n第三步驟 補充非校方主理事宜無須與校方事前確認\n\n第四/六步驟 校方審核時機寫入第五步驟",
+   "createdAt": "2026-11-03",
+   "doneAt": "2026-11-16",
+   "issueId": null,
+   "links": [
+    {
+     "id": "lmwal5zucgc3s",
+     "name": "初版流程",
+     "url": "https://drive.google.com/file/d/1B0mLeHIdJXyk9DO6ouRxlYUXKpTRwSxD/view?usp=drive_link",
+     "color": "#6a4fd8"
+    }
+   ],
+   "staff": [],
+   "labels": [],
+   "times": [],
+   "round": 2,
+   "fromEv": "emw0myswnrccf",
+   "report": false,
+   "touched": []
   },
   {
    "id": "emwajg0p0vpej",
@@ -1176,7 +1274,7 @@
  "yearLabel": "115學年",
  "termStart": "2026-09-07",
  "reportBase": {
-  "date": "2026-11-06",
+  "date": "2026-11-16",
   "issues": {
    "imvpc3f0dcpi6": {
     "stage": "待回覆",
@@ -1207,9 +1305,9 @@
    "c": "8Hh4DyZJ+lqHEKTPZX1pPl1EggomqyDXqqla6zDffsw5Zd8L/Tv6fcK/MP76qHj1QzsHnKmgcUW2d/v40pNpJGWIZJf/EaK/n98RE0YIc+oewnJuoWO8/pyctfShmmf0YAXfVcYN7HaHpEM55Q=="
   },
   "tokenAll": {
-   "s": "W79GOIphyuvs7mvMnLGFbA==",
-   "i": "aUDJplEkRp+3Zt/o",
-   "c": "Z8VbFgJFvN1wRdXVy2+z4+w1KlRs9IfUySVPGC32HQdmHr4ozS4Kihr8dSau9q/gGSZLyO76iwn5zJO2+ltZmAZat7Yn/sNR/hupeytRWmy1vWw92u2wqaULsnQ5p4cn8UO89dTn2aAtyKkdOA=="
+   "s": "Dt0dxgLoR2ZWHOD4XA/jmg==",
+   "i": "O2Kev3fyzYV0N7C7",
+   "c": "aN2uc+MrRSeLAx6OmD6FxQRVtbxQap15uH+/7IuBBWF5wBCp0pB+eP97mjNih4iaU/RZIvdA0hSLmNorwfw+yIXYWcbPX3FZAmkDIJoN8vwAiCO5sTsn9DfMIn4Qj5TOpGrfJQKdW9cQX7lapA=="
   }
  },
  "pwKdf": "rQfwjiQjTGPRWifOAuO0bw==:vsYYW5+doH1lk3vytEhM89Wm9AuZDXTvwdShkCssLXs=",
@@ -1222,9 +1320,9 @@
    "kdf": "Dv2iWmbagR5nvbqObzHDSA==:+22LBOrErm7cKwpYBKULTNMjRzP32Rs2Daq95c8LWkw=",
    "createdAt": "2026-11-01 08:11",
    "tok": {
-    "s": "RX4xJ6RXesdX2hr5uC718g==",
-    "i": "N4thr2iHns+3W0T8",
-    "c": "Ay70qejViV0MPXBBqelTmbPvaxit5vJZQ6HzmtpKw5cnoA4Zbz4SQv0qjPpJ0AVdaZB9NH2/GScEQfKhMC/P+x22yyudxJLpjyoTJt3fPQlM8yOlrFc7c37+XA/O0FPr6jyJ8/05g1yqCODNkA=="
+    "s": "WAEGN3YWpYkX/Y4iUqv8jQ==",
+    "i": "CasvY+1Xa3Zh+bPK",
+    "c": "6cBQQgQaMc19S27fQQj6536b3z73lQ9TUFuG6uAauHK+r/p6F/QGP0xzUNrhnLOnLPlr+8eQ4s575sKg5N2qMMWGb2PgkbLLZn9iW9+IiUNA60lFListl8bTRW8OTRLYJaDnVDGxpXFeap8nlA=="
    }
   },
   {

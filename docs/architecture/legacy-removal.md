@@ -109,7 +109,7 @@ HEAD 的欄位名稱（只讀名稱，沒讀值）：
 |---|---|---|---|
 | `sync.tokenAll` | 全部 10 個 | `auth.js` 26–37、`provision.js`、`save.js:116`、`team.js:46` | 沒有程式讀；`backend/migrate/run.js:16` 只用來確認**不搬** |
 | `sync.tokenEnc` | `data.json`、`data-events.json` | `auth.js:19–23,33–37,60–61`、`save.js:116,132`、`team.js:122` | 同上 |
-| `sync.owner/repo/branch/path` | `data.json`、affairs、finance、fruit、marketing、pr、works | `cloud.js:5`（會蓋過 `CFG.data`） | 沒有 |
+| `sync.owner/repo/branch/path` | `data.json`、affairs、finance、fruit、marketing、pr、works | `cloud.js` 的 `cloudCfg`（release-03 起在 `*.github.io` 上以網址為準，只在其他網址會蓋過 `CFG.data`） | 沒有 |
 | `sync.resetAt` | `data-fruit.json` | `provision.js:90` 寫 | 沒有 |
 | `sync.initial` | 目前沒有檔案有 | `team.js:50,123`、`auth.js:41–42` | 沒有 |
 | `pwKdf` | `data.json`、events、president、secretariat | `auth.js:14–15,29,48` | 沒有（不搬） |
@@ -178,3 +178,13 @@ HEAD 的欄位名稱（只讀名稱，沒讀值）：
 9. **預設來源**：拿掉 `"github"` 時 `deptSourceOf` 的預設一定要改成 `firestore`，不然漏設的部門會掉回不存在的模式。
 10. `dept/config.js:32` 現在是開發專案設定，進 main 前要換正式專案（README 既有待辦），跟這次清理無關但會一起被看到。
 11. 第 1 節的 `G` 指令對中文介面字要用 `F`；`-w` 對 `_te`、`KEY` 這類短名稱會同時抓到別的檔案的同名字，結果要逐筆看，不要只看筆數。
+
+## 10. release-03（main 合併改版）之後要補的項目
+
+main 在改版鏈之外另外加的過渡機制，切換完成、權杖作廢後跟上面一起拆。**本節沒有行號**：合併後行號都變了，拆除前照第 0 節的指令用 `git grep -n` 重查。
+- `core/js/auth.js` 的 `tokenRecover`（權杖作廢後輸入全會密碼恢復）、`dropSharedToken`（不再寫 `sync.tokenEnc`）；`core/js/cloud.js` 的 `cloudPush` 401 分支（呼叫 `tokenRecover` 後重試）。交接說明九十二。
+- `core/js/cloud.js` 的 `pagesRepo`（`cloudCfg` 在 github.io 上以網址為準）：GitHub 寫入拆掉後跟 `cloudCfg` 一起拆。交接說明九十三。
+- `tools/redirect-page/`（舊網址 `linkmasterking.github.io/-/` 的轉址頁）：放在舊 repo，看使用者什麼時候停用舊網址，跟切換無關。
+- 測試：`tk1.js`（權杖恢復）、`mv1.js`（網址判斷 repo）、`rd1.js`（轉址頁）跟著它們測的程式一起拆或改寫。
+- `core/js/store-map.js` 的「☑ 」「☐ 」還原（`chkOf`）與 `state.js` 拿掉 `_newer`：是給舊網站（schemaVersion 13）並存期間的防護，所有人都換到新版、資料都在 Firestore 之後可以留著（無害），不必拆。
+
