@@ -118,7 +118,7 @@ function fabSync(){
   /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
   document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
-function tabGo(k){if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
+function tabGo(k){Sfx.play("tab");if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
 function setupTabbar(tb){
   const main=tb.querySelector(".tb-main"),gear=tb.querySelector(".tb-gear"),lensEl=tb.querySelector(".tb-lens");
   /* 毛玻璃：分頁列、設定鍵各一塊（桌面也一樣，分頁列直立） */
@@ -144,6 +144,7 @@ function setupTabbar(tb){
     d.raw+=dx/d.slot;sprSnap(lens.val,clampV(d.raw,0,d.n-1));sprSnap(lens.off,(d.raw-lens.val.x)*d.slot);   /* 拖過兩端：鏡片停在端點，超出的部分讓整條列跟著偏 */
     const now=performance.now(),dt=Math.max(8,now-lastT)/1000;sprSnap(lens.vel,(lens.val.x-lastV)/dt/Math.max(1,d.n-1));lastV=lens.val.x;lastT=now;d.t=now;lastX=c;
     const near=Math.round(lens.val.x);tabEls().forEach((b,i)=>b.classList.toggle("hov",i===near));
+    if(near!==d.near){if(d.near!==undefined)Sfx.play("move");d.near=near}   /* 鏡片拖過一格＝移動焦點 */
     tbKick();
   });
   function dragEnd(){
@@ -240,7 +241,7 @@ async function openSettings(){
   PageFx.swap(from,ov);   /* 換頁動畫：底下那頁往後退、設定從後面浮上來 */
 }
 function closeSettings(instant){
-  const ov=$("#setOv");if(!ov||!setOpen)return;
+  const ov=$("#setOv");if(!ov||!setOpen)return;if(!instant)Sfx.play("back");
   if(paneKey){paneSeq++;paneDismiss(true);paneReset()}
   const sub=subOpen&&!instant?$("#setSub"):null,under=pageUnder(ov);
   subCloseNow(!!sub);

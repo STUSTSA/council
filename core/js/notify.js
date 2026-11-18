@@ -200,13 +200,14 @@ function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
 /* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
 function calMonth(c,m){
   if(m===c.month){calPop(c,false);return}
+  Sfx.play("roll");   /* 換月＝滾動 */
   const dir=m>c.month?1:-1;c.month=m;c.day=today().slice(0,7)===m?today():m+"-01";c.pop=false;calLoad(c);calPaint(c);
   const pc=calHost(c)?.querySelector(".pc");if(pc&&!reduceMotion())pc.animate([{opacity:0,transform:`translateX(${dir*18}px)`},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.out});
   calHost(c)?.querySelector("[data-calmon]")?.focus({preventScroll:true});
 }
 /* 月份選單開關：打開時由右上長出來、焦點到選到的那個月；關的時候淡出再拿掉 */
 function calPop(c,on){
-  if(c.pop===on)return;const h=calHost(c);
+  if(c.pop===on)return;const h=calHost(c);Sfx.play(on?"open":"back");
   if(on){c.pop=true;calPaint(c);const p=h&&h.querySelector(".cal-pop");if(!p)return;
     if(!reduceMotion())p.animate([{opacity:0,transform:"translateY(-6px) scale(.96)"},{opacity:1,transform:"none"}],{duration:MO.base,easing:MO.spring});
     p.querySelector('[aria-selected="true"]')?.focus({preventScroll:true});return}
@@ -394,7 +395,7 @@ function openToday(card){
   todayMorph(ov,card,false).then(()=>ov.getAnimations({subtree:true}).forEach(a=>a.cancel())).catch(()=>{});
 }
 function closeToday(instant){
-  const ov=$("#todayOv");if(!ov||!todayOpen)return;todayOpen=false;Back.closed("today");
+  const ov=$("#todayOv");if(!ov||!todayOpen)return;todayOpen=false;Back.closed("today");Sfx.play("back");
   const card=ov._card&&ov._card.isConnected?ov._card:$("#notiPage .nd-card.today"),done=()=>{ov.hidden=true;ov.classList.remove("on","off");ov.getAnimations({subtree:true}).forEach(a=>a.cancel());tdCardShow(card,true)};
   if(instant===true||reduceMotion()||!card){done();return}
   ov.getAnimations({subtree:true}).forEach(a=>a.cancel());ov.querySelector(".td-scroll").scrollTo({top:0});
@@ -423,7 +424,7 @@ async function openNoti(){
 }
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
-  if(!notiOpen)return;
+  if(!notiOpen)return;if(!instant)Sfx.play("back");   /* 從工具列換分頁（to）時換頁音先響，這裡不會蓋過 */
   if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;dkUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);

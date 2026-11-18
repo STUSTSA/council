@@ -183,7 +183,7 @@ class LiquidSeg{
     const end=()=>{const d=this.drag;if(!d)return;this.drag=null;
       if(d.moved){this.suppress=true;setTimeout(()=>this.suppress=false,80)}
       const i=Math.round(Math.max(0,Math.min(d.n-1,s.val.x)));s.vel.t=s.vel.x;s.off.t=0;s.hl.t=0;s.val.t=i;this.release();this.kick();
-      if(i!==this.cur){this.cur=i;this.btns().forEach((b,j)=>b.setAttribute("aria-selected",j===i));this.onPick&&this.onPick(this.btns()[i].dataset.k)}};
+      if(i!==this.cur){Sfx.play("tab");this.cur=i;this.btns().forEach((b,j)=>b.setAttribute("aria-selected",j===i));this.onPick&&this.onPick(this.btns()[i].dataset.k)}};
     box.addEventListener("pointerup",end);box.addEventListener("pointercancel",end);box.addEventListener("lostpointercapture",e=>{if(e.target===box)end()});
   }
 }
