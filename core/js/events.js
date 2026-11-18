@@ -137,7 +137,7 @@ function ifFldWrite(box){
 /* 逐欄編輯的寫回（即時回報、議題、完成紀錄、秘書處會議卡共用一份）：把打開的那一欄 k 的值寫進 o；填錯回傳 false、停在原欄。
    k＝name／title／desc／note／dates／stage／staff／labels／done／issue／t:時間標記 id／l:連結 id（t:+、l:+ 是新增） */
 function fldApply(box,o,k){
-  const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{g(n).classList.add("bad");g(n).focus();return false};
+  const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{Sfx.play("no");g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
   else if(k==="note")o.note=g(k).value.trim();
   else if(k==="desc"){const v=g(k).value.trim(),m=descTooBig(v);if(m){toast(m);return bad(k)}evSetDesc(o,v)}   /* 即時回報的說明（會議卡、完成紀錄）：照文字重建逐行內容，沒改的行沿用；超過行數、字數上限給明確訊息（不然存檔時才被規則擋成「沒有權限」；03 審查 P2-2） */

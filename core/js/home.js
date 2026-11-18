@@ -58,6 +58,7 @@
   /* 換焦點：原地換 class，不重畫（重畫會讓放大、焦點框都變成直接跳）；超過兩端＝頂一下再彈回（拉過頭的回彈） */
   function setFoc(i,how){
     const want=i;i=Math.max(0,Math.min(D.length-1,i));
+    if(!(H.mode==="wal"&&WAL.lock)&&i!==(H.mode==="wal"?WAL.f:H.i)){Sfx.play(how==="wheel"?"roll":"move");WAL.snd=false}   /* 音效：點、方向鍵＝移動焦點，滾輪一格＝滾動；WAL.snd＝手指拖、甩出去的期間，卡片堆每過一張響一次滾動（walDraw） */
     if(H.mode==="wal"){if(WAL.lock)return;if(i===WAL.f&&want!==i){WAL.v+=want<i?-2.6:2.6;walRun();return}WAL.f=i;walRun();if(how==="key")walFocus(i);return}
     if(i===H.i){if(want!==i)bump(want<i?-1:1);return}
     H.i=i;
@@ -94,7 +95,7 @@
     const els=WAL.els,p=WAL.p,y0=WU*Math.max(0,Math.min(p,2)),rf=Math.max(0,Math.min(els.length-1,Math.round(p)));
     els.forEach((el,i)=>{const d=i-p,y=d<=0?y0+Math.max(d,-2)*WU-(d<-2?Math.min(1,-2-d)*16:0):d<=1?y0+d*(WH+WG):y0+WH+WG+(d-1)*WU,sc=d<0?1+Math.max(d,-3)*.05:1;
       el.style.transform=`translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;el.style.opacity=d>=-2?"":Math.max(0,3+d).toFixed(3)});
-    if(WAL.lr!==rf){WAL.lr=rf;H.i=rf;els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
+    if(WAL.lr!==rf){if(WAL.lr!=null&&WAL.snd)Sfx.play("roll");WAL.lr=rf;H.i=rf;els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
   }
   function walRun(){
     cancelAnimationFrame(WAL.raf);
@@ -109,11 +110,11 @@
     const w=$id("hmWal");WAL.els=[...w.querySelectorAll(".hm-wc")];WAL.f=WAL.p=H.i;WAL.v=0;WAL.lr=null;walDraw();
     w.addEventListener("pointerdown",e=>{if(WAL.lock||e.button>0)return;cancelAnimationFrame(WAL.raf);WAL.raf=0;
       WAL.d={id:e.pointerId,y:e.clientY,p:WAL.p,moved:false,t:e.target.closest(".hm-wc"),ly:e.clientY,lt:e.timeStamp,vy:0};try{w.setPointerCapture(e.pointerId)}catch(_){}});
-    w.addEventListener("pointermove",e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.moved&&Math.abs(dy)<6)return;d.moved=true;
+    w.addEventListener("pointermove",e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.moved&&Math.abs(dy)<6)return;d.moved=WAL.snd=true;
       const dt=e.timeStamp-d.lt;if(dt>0){d.vy=d.vy*.4+(e.clientY-d.ly)/dt*.6;d.ly=e.clientY;d.lt=e.timeStamp}
       const n=WAL.els.length;let q=d.p-dy/WDRAG;if(q<0)q*=.35;else if(q>n-1)q=n-1+(q-n+1)*.35;WAL.p=q;walDraw()});
     const up=e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;WAL.d=null;const n=WAL.els.length;
-      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){hmEnter(i);return}WAL.f=i}walRun();return}
+      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){hmEnter(i);return}if(i!==WAL.f)Sfx.play("move");WAL.snd=false;WAL.f=i}walRun();return}
       const v=e.timeStamp-d.lt>90?0:d.vy,b=Math.round(d.p);   /* 手指停住才放開＝沒有速度 */
       let to=Math.round(WAL.p-v*170/WDRAG);if(to===b&&Math.abs(v)>.35)to=b+(v<0?1:-1);
       WAL.f=Math.max(0,Math.min(n-1,Math.max(b-3,Math.min(b+3,to))));WAL.v=-v*1000/WDRAG;walRun()};
@@ -140,7 +141,7 @@
   document.addEventListener("wheel",e=>{
     if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||hmLayerOpen())return;
     const d=H.mode==="wal"?e.deltaY:Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
-    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1));
+    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1),"wheel");
   },{passive:false});
   document.addEventListener("keydown",e=>{
     if(hmLayerOpen()||e.altKey||e.ctrlKey||e.metaKey||(e.target.closest&&e.target.closest("input,textarea")))return;
@@ -153,7 +154,7 @@
      看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
      減少動態時直接換頁、不交接 */
   function hmEnter(i){
-    const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";
+    const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
@@ -236,7 +237,7 @@
       el.hidden=false;
       if(kind==="cal")calMount(L.host);else{L.host.innerHTML=lookHTML(true);lookMount(L.host)}
     }else L.el.hidden=false;
-    LY={kind,opener,...L};$id("hm").inert=true;
+    LY={kind,opener,...L};$id("hm").inert=true;Sfx.play("open");
     try{history.pushState({hmLayer:kind},"")}catch(_){}
     if(!reduceMotion()){L.el.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});L.el.firstElementChild.animate([{transform:"translateY(28px)"},{transform:"none"}],{duration:MO.layout,easing:"cubic-bezier(.25,1.12,.4,1)"})}
     L.el.querySelector(".hm-ly-x").focus({preventScroll:true});
@@ -245,7 +246,7 @@
   function layerClose(fromPop){
     if(!LY)return;
     if(!fromPop&&history.state&&history.state.hmLayer){history.back();return}
-    const L=LY;LY=null;$id("hm").inert=false;
+    const L=LY;LY=null;$id("hm").inert=false;Sfx.play("back");
     const done=()=>{L.el.hidden=true;if(L.kind==="cal"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
     if(reduceMotion())done();
     else{L.el.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(a=>{done();},()=>done()).then(()=>L.el.getAnimations().forEach(a=>a.cancel()));

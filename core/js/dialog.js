@@ -42,7 +42,7 @@ function ask(title,fields,{danger,wide,alt,note,validate}={}){
     let busy=false;
     const ok=async()=>{if(busy)return;
       if(validate){busy=true;let m;try{m=await validate(collect())}finally{busy=false}
-        if(m){const e=f.querySelector(".dlg-err");e.textContent=m;e.hidden=false;if(!reduceMotion())e.animate([{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"none"}],{duration:240,easing:"ease-out"});
+        if(m){Sfx.play("no");const e=f.querySelector(".dlg-err");e.textContent=m;e.hidden=false;if(!reduceMotion())e.animate([{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"none"}],{duration:240,easing:"ease-out"});
           f.querySelector("input:not([type=hidden]):not([type=checkbox])")?.focus();return}}
       d.close("ok")};
     f.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>b.dataset.act==="ok"?ok():d.close(b.dataset.act));
@@ -117,9 +117,11 @@ document.addEventListener("keydown",e=>{
 /* ---------- 對話框：玻璃質地＋開關都有過渡 ---------- */
 (function(){
   const d=$("#dlg");if(!d)return;glassify(d);
+  d.addEventListener("cancel",e=>{if(e.isTrusted)Sfx.play("no")});   /* Esc＝取消（設定子頁返回送的 cancel 不是使用者按的，那一下由返回自己響） */
   const nativeClose=HTMLDialogElement.prototype.close;
   d.close=function(v){
     if(!this.open)return;
+    if(v==="ok"||v==="alt")Sfx.play("ok");else if(v==="cancel"||v==="delete")Sfx.play("no");   /* 確定＝確認音；取消、刪除＝否定音（其他程式關掉 #dlg 時不帶 v，不響） */
     if(this.classList.contains("in-pane")){
       /* 右側面板裡的表單：先在原地淡出、往右滑一點再關，避免內容一關就整片消失（面板接著自己收起）。
          淡出中又要打開（例如時間格式錯了重問）時，dlgOpen 會先把這次關完 */
