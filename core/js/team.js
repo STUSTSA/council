@@ -161,7 +161,7 @@ function teamHTML(){
 }
 async function teamSettings(){
   const d=$("#dlg"),f=$("#dlgForm");d.classList.add("wide");
-  const paint=()=>{f.innerHTML=teamHTML();bind()};
+  const paint=()=>{morphTo(f,teamHTML(),"team");bind()};   /* 原位更新（morph.js） */
   const reopen=()=>{paint();d.oncancel=ev=>{ev.preventDefault();f.querySelector('[data-x="done"]')?.click()};if(!d.open)dlgOpen(false)};
   const leave=async()=>{d.oncancel=null;d.onclose=null;if(d.open)await new Promise(r=>{d.addEventListener("close",()=>setTimeout(r,0),{once:true});d.close()})};
   const bind=()=>{
@@ -385,7 +385,7 @@ let logDone=null;
 function openLog(host){
   let ov=$("#logOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="log-ov" id="logOv" role="dialog" aria-modal="true" aria-label="編輯紀錄" hidden>
-    <div class="anim-top"><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b><span class="sub">每次「儲存並同步」都會留下一筆</span></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
+    <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b><span class="sub">每次「儲存並同步」都會留下一筆</span></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
     <div class="log-scroll"><div class="log-inner"><ol class="log-list" id="logList"></ol><p class="sub log-msg" id="logMsg"></p><button type="button" class="ghost log-more" id="logMore">載入更早的紀錄</button></div></div></div>`);
     ov=$("#logOv");$("#logClose").onclick=closeLog;elastic(ov.querySelector(".log-scroll"),ov.querySelector(".log-inner"));$("#logMore").onclick=loadLog;}
   Object.assign(logState,{page:0,done:false,busy:false,items:[]});Object.assign(fsLog,{vers:[],cur:null,audits:[]});

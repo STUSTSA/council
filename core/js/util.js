@@ -19,10 +19,13 @@ const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const pd=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
 const today=()=>ymd(new Date());
+const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const nowStr=()=>{const d=new Date();return `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
 const fmt=s=>s?String(s).slice(0,10).replaceAll("-","/"):"";
 const safeUrl=u=>!u?"#":/^https?:\/\//i.test(u)?u:"https://"+u;
 const clamp=(v,a=0,b=100)=>Math.min(b,Math.max(a,v));
+/* 關掉動態（prefers-reduced-motion）時直接跳到結果 */
+const reduceMotion=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2000)};
 const hasDates=i=>!!(i.start&&i.end);
 /* 時程：議題設定的期間（開始日～結束日）到某天為止已經過了幾 %；沒有日期＝null（未排程） */
@@ -34,3 +37,22 @@ const mkAt=(i,m)=>hasDates(i)&&m.date?schedPct(i,m.date):m.at;
 const schedLabel=i=>{const p=schedPct(i);return p==null?"未排程":`時程 ${p}%`};
 /* 毛玻璃材質 .glass（對話框、底部工具列、搜尋欄、分段切換） */
 function glassify(el){if(el)el.classList.add("glass")}
+
+/* Service Worker（sw.js）：只在正式網址（https／localhost）且頁面有 manifest 時註冊。看板（pwa.js）與主頁（home.js）共用。
+   sw.js 是網路優先＋執行期快取：第一次打開時 Service Worker 還沒接手，這一頁已經載入的檔案不會自己進離線備份，
+   所以註冊好了把這一頁用到的同站檔案（這一頁本身、載入紀錄、圖示、manifest，加上 extra：之後才會讀的檔，例如主頁的部門標誌）交給它收進去（precache 訊息）。
+   新版 sw.js 換手時（快取版本換新、舊的快取被刪）再送一次給新的，不然上線後第一次打開送出的清單會跟著舊快取一起被刪（release-03，main 的 pwa.js／home.html 搬到這裡） */
+function swReg(extra){
+  if(!("serviceWorker" in navigator)||!document.querySelector('link[rel="manifest"]')||!(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))return;
+  const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
+  const send=w=>{if(!w)return;
+    const urls=[new URL("./",location.href).href,location.href,...performance.getEntriesByType("resource").map(e=>e.name),
+      ...[...document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="manifest"]')].map(l=>l.href),...(extra||[]).map(u=>new URL(u,location.href).href)]
+      .filter(same).map(u=>u.split("#")[0].split("?")[0]);
+    w.postMessage({type:"precache",urls:[...new Set(urls)]})};
+  const go=()=>{
+    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>send(reg.active)).catch(()=>{});
+    navigator.serviceWorker.addEventListener("controllerchange",()=>send(navigator.serviceWorker.controller));
+  };
+  if(document.readyState==="complete")go();else addEventListener("load",go,{once:true});
+}

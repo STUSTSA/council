@@ -3,7 +3,7 @@
    用 Auth 模擬器＋Firestore 模擬器、正式規則；全部部門先用遷移程式匯入，再在 Firestore 改幾個值（跟資料檔不同），看讀到的是哪一邊。
    A. 設定：權益部、秘書處＝firestore，其他＝github。在行銷部（github）看板：
       1. 已登入：fwLoad 權益部＝Firestore 的內容；活動部＝資料檔的內容；學年設定＝Firestore 的 org/config（秘書處已切換）
-      2. 通知「全會」：權益部的時間標記用 Firestore 的名稱
+      2. 行事曆「其他」勾權益部（ui-06 以前是通知「全會」）：權益部的時間標記用 Firestore 的名稱
       3. 未登入：權益部讀不到（顯示要登入），還在 GitHub 的部門照常；沒有頁面錯誤
    B. 設定：只有權益部＝firestore（秘書處還在 GitHub）。在秘書處（github）看板：
       4. 秘書處讀各部門：權益部＝Firestore、活動部＝資料檔；學年設定＝秘書處自己的資料檔
@@ -74,8 +74,11 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     const m=await fw(p,'events');
     ok(!m.err&&m.events===(rt.events||[]).length&&!m.ev.some(e=>e.name.startsWith('FS ')),'還在 GitHub 的活動部：讀資料檔');
     ok(await until(()=>p.evaluate(()=>termCfg().yearLabel==='FS 學年')),'學年設定：秘書處已切換＝讀 Firestore 的 org/config（FS 學年）');
-    await p.evaluate(()=>{NOTI.scope='all'});const nn=await p.evaluate(async()=>{await notiLoadAll();return NOTI.all.filter(x=>JSON.stringify(x).includes('FS 時間標記')).length});
-    if(t0)ok(nn>0,'通知「全會」：權益部（已切換）的時間標記用 Firestore 的名稱');
+    /* ui-06：通知的「全會」改成行事曆五類模式的「其他」（勾了才讀那個部門，同一個 fwLoad） */
+    const nn=await p.evaluate(async()=>{Object.assign(NOTI,{mode:'other',oth:['rights']});CAL_DATA.clear();calLoad(NOTI);
+      for(let i=0;i<100&&!(CAL_DATA.get('dept:rights')||{}).at;i++)await new Promise(r=>setTimeout(r,100));
+      return calItems(NOTI).xs.filter(x=>JSON.stringify(x).includes('FS 時間標記')).length});
+    if(t0)ok(nn>0,'行事曆「其他」勾權益部：權益部（已切換）的時間標記用 Firestore 的名稱');
     ok(p.errs.length===0,`沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);
     await p.ctx.close();}
   {const p=await open('marketing',['rights','secretariat']);

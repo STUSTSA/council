@@ -87,8 +87,11 @@ const t0=Date.now();
   const dlgAct=async(p,a)=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(500)};
   const editCard=(p,id,fn)=>p.evaluate(async([id,fn])=>{await startEdit('e:'+id);const ev=state.events.find(e=>e.id===id);(0,eval)(fn)(ev);evTouch(ev);syncLink(ev);dirty=true;render();if(fldCommitOpen())await saveFlow()},[id,fn.toString()]);
   /* 新增一張卡片（看板的「新增即時回報」） */
+  /* ui-05：新增鈕開一張空白卡片（游標在名稱）→ 打名稱、Enter 到第一行打說明 → Esc（＝點外面）存檔、再 Esc 收回 */
   const addCard=async(p,name,desc)=>{await p.evaluate(()=>document.querySelector('#addEvent').click());
-    await p.waitForSelector('#dlg[open]',{timeout:8000});await dlgSet(p,{name,desc});await dlgAct(p,'ok');await settled(p);
+    await p.waitForSelector('.lc-ed [data-kptitle]',{timeout:8000});await p.fill('.lc-ed [data-kptitle]',name);
+    if(desc){await p.keyboard.press('Enter');await p.keyboard.type(desc)}await p.keyboard.press('Escape');await settled(p);
+    await p.keyboard.press('Escape');await p.waitForTimeout(700);   /* 再按一次 Esc＝卡片收回（窄畫面是全螢幕卡片，會蓋住設定鍵） */
     return p.evaluate(n=>(state.events.find(e=>e.name===n)||{}).id,name)};
 
   /* ---------- A. 十個部門逐一切換 ---------- */

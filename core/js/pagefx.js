@@ -1,7 +1,7 @@
 /* 核心｜換頁動畫（2026-11-05 使用者指定；2026-11-06 第四版改成 Windows 10 Mobile 的做法，見 run 上面的說明）：
-   每一種整頁切換都用這一套：總覽 ↔ 各部門看板（跨頁）、看板 ↔ 每週概述、打開／關閉設定、通知、編輯紀錄、工作報告、設定子頁。
+   每一種整頁切換都用這一套：總覽 ↔ 各部門看板（跨頁）、看板 ↔ 每週概述、打開／關閉設定、編輯紀錄、工作報告、設定子頁。
    - 前進：舊頁很快淡掉；新頁的區塊由下往上滑入、浮現（由上往下錯開）。返回：目前這頁往下滑、淡掉；上一頁的區塊在原位淡入。沒有模糊、沒有 3D。
-   - 圖層前後照舊：疊層（設定、通知、編輯紀錄、工作報告、設定子頁；z-index 比較高的）打開時底下那頁不動，疊層很快變成不透明、裡面的區塊依序滑上來；
+   - 圖層前後照舊：疊層（設定、編輯紀錄、工作報告、設定子頁；z-index 比較高的）打開時底下那頁不動，疊層很快變成不透明、裡面的區塊依序滑上來；
      關閉（返回）時疊層往下滑、淡掉，底下那頁的區塊淡入歸位（2026-11-05 使用者：打開設定不要閃現主頁）。同一層級之間（每週概述、跨頁）才是前後兩頁一起動：
      新頁等舊頁播到七成才出發。上一次換頁還沒播完的其他層，新的換頁一開始就停掉並藏起來。
    - 減少動態（prefers-reduced-motion）時直接換，不播動畫。
@@ -22,21 +22,23 @@ const PageFx=(()=>{
   function reset(el){(anims.get(el)||[]).forEach(a=>a.cancel());anims.delete(el);const k=keep.get(el);if(!k)return;keep.delete(el);el.style.opacity=k.o;el.style.pointerEvents=k.p}
   /* 先藏起來（新頁還沒輪到它浮上來時）：只動透明度 */
   function hold(el){save(el);el.style.opacity="0"}
-  /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊 */
-  function pieces(el){
+  /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊。
+     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico、.logo）與按鈕不往裡面拆，不會挑到圖形的零件。
+     標題列（data-fx-keep）是換畫面時沿用的節點：一直留在畫面上，不參加進場動畫；只有跨頁到達（all）時整頁一起浮上來 */
+  function pieces(el,all){
     const H=innerHeight,W=innerWidth,out=[];
     const walk=(n,depth)=>{for(const c of n.children){
       if(out.length>=MAXP)return;
-      if(c.matches("script,style,template,link,[hidden]"))continue;
+      if(c.matches("script,style,template,link,[hidden]")||(!all&&c.matches("[data-fx-keep]")))continue;
       const cs=getComputedStyle(c);if(cs.display==="none"||cs.visibility==="hidden")continue;
       if(cs.display==="contents"){walk(c,depth);continue}
       const r=c.getBoundingClientRect();if(!(r.bottom>0&&r.top<H&&r.right>0&&r.left<W&&r.width>1&&r.height>1))continue;
-      if(r.height>H*.42&&c.children.length&&depth<7)walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
+      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico,.logo"))walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
     }};
     walk(el,0);return out;
   }
   /* 一段動畫：dir＝"out"（離開）或 "in"（進來）；back＝返回；fadeIn＝新頁在前幾成變成不透明；lag＝整段晚多久開始（期間區塊停在起始狀態） */
-  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0){
+  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false,rnd=false){
     if(!el)return Promise.resolve();
     save(el);el.style.pointerEvents="none";(anims.get(el)||[]).forEach(a=>a.cancel());
     const o=dir==="out",H=innerHeight||1,list=[];
@@ -46,9 +48,14 @@ const PageFx=(()=>{
       list.push(el.animate(back?[{transform:"translateY(0)"+B,opacity:1},{transform:"translateY(80px)"+B,opacity:0}]:[{opacity:1},{opacity:0}],
         {duration:(back?BOUT:OUT)+lag,easing:EASE_OUT,fill:"both",delay:0}));
     }else{
-      const ps=pieces(el),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
+      const ps=pieces(el,all),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
       ps.forEach(({el:p,r,base})=>{
-        const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread),B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
+        const B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
+        /* rnd＝不規則浮現（手機從主頁翻進部門之後，DESIGN-next 第五節）：每一塊各自的延遲（0–320ms）、方向、距離與大小，不照順序 */
+        if(rnd){const dl=lag+Math.random()*320,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
+          list.push(p.animate([{opacity:0},{opacity:1}],{duration:220,delay:dl,easing:"ease-out",fill:"both"}));
+          list.push(p.animate([{transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})${B}`},{transform:`translate(0,0)${B}`}],{duration:560+Math.random()*160,delay:dl,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"both"}));return}
+        const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread);
         list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:1,offset:.4},{transform:`translateY(0)${B}`,opacity:1}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
       });
       if(fadeIn>0)list.push(el.animate([{opacity:0},{opacity:1,offset:Math.max(.02,fadeIn*dur/total)},{opacity:1}],{duration:total,easing:"linear",fill:"both"}));
@@ -70,7 +77,7 @@ const PageFx=(()=>{
     const zf=from===to?0:zOf(from),zt=from===to?0:zOf(to);
     if(from===to){await run(from,"out",my);M();reset(from);save(from);from.style.opacity="0";await run(to,"in",my)}
     else if(zt>zf){
-      /* 疊層蓋上來（打開設定、通知、編輯紀錄、工作報告、設定子頁）：底下那頁不動，疊層從後面浮上來、一開始就變不透明蓋住它（2026-11-05 使用者：不要閃現主頁） */
+      /* 疊層蓋上來（打開設定、編輯紀錄、工作報告、設定子頁）：底下那頁不動，疊層從後面浮上來、一開始就變不透明蓋住它（2026-11-05 使用者：不要閃現主頁） */
       owner.delete(from);live.delete(from);hold(to);M();await run(to,"in",my,COVER_IN);
     }else if(zf>zt){
       /* 疊層退開（關閉，返回）：疊層的區塊朝你翻走、疊層淡掉；播到 BACK_OVER 時底下那頁的區塊從被翻開的位置轉回來（底下那頁本身一直是不透明的） */
@@ -94,16 +101,31 @@ const PageFx=(()=>{
   }
   /* 到達：等整頁載入完、再等兩格（看板第一次畫完、字型就位）才開始浮上來，動畫期間主執行緒比較閒，不會一頓一頓；
      區塊由下往上滑入（2026-11-06 第四版） */
+  /* 從主頁點部門進來（index.html 開頭的小程式設了 html[data-pfx]）：開頁第一格就蓋著主頁過場的終點——
+     桌面（tile）＝色塊鋪滿的底板（--blk）加部門標誌；手機（flip）＝翻過來的部門底板（--bg）加部門標誌。蓋在 <html> 下（body 還是透明的時候也看得到） */
+  /* 部門標誌放進頁面（不用 <img>）：秘書處的白色零件（.dg-w）才吃得到 board.css「部門標誌」段的填色，交接前後同色、深色時沒有白塊。
+     讀 SVG 檔、解析成這一頁的 <svg>（不是 svg 就給 null）；主頁色塊（home.js）也用這一個 */
+  const svg=u=>fetch(u).then(r=>r.ok?r.text():"").then(t=>{const s=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
+    if(!s||s.nodeName!=="svg")return null;const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");return n}).catch(()=>null);
+  let cover=null;const arriveFns=[];
+  {const h=document.documentElement,k=h.dataset.pfx,d=h.dataset.pfxD;
+    if(k&&d&&h.classList.contains("pfx-arrive")&&!RM()){const c=cover=document.createElement("div");c.className="pfx-cover";c.dataset.k=k;c.setAttribute("aria-hidden","true");h.append(c);
+      svg(`dept/icons/dept-${d}.svg`).then(s=>{if(s)c.append(s)})}   /* 主頁剛讀過同一個檔，從快取拿，通常趕得上第一格 */
+    delete h.dataset.pfx;delete h.dataset.pfxD}
   function arrive(){
-    const h=document.documentElement;if(!h.classList.contains("pfx-arrive"))return;
-    if(RM()){h.classList.remove("pfx-arrive");return}
+    const h=document.documentElement;if(!h.classList.contains("pfx-arrive")){arriveFns.splice(0).forEach(f=>f());return}
+    if(RM()){h.classList.remove("pfx-arrive");if(cover){cover.remove();cover=null}arriveFns.splice(0).forEach(f=>f());return}
     /* 2026-11-06 使用者：進部門後整個介面卡一下。看板剛載入時要畫第一次畫面、讀雲端、套秘書處的學年（又重畫一次），
        翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 5 格都在 22ms 內畫完才開始，最多等 1.6 秒；
        等的這段時間整頁還是透明（底色），看不到半成品 */
     const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=5||now-t0>1600)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
     const start=()=>calm(()=>{
-      const my=++tok;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
-      run(document.body,"in",my).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
+      const my=++tok,c=cover,flip=c&&c.dataset.k==="flip";cover=null;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
+      /* 主頁過場的底板：桌面＝淡出並略放大，區塊照常浮上來；手機＝標誌淡出，區塊不規則浮現 */
+      if(c){const a=flip?c.animate([{opacity:1},{opacity:0}],{duration:320,easing:EASE_OUT,fill:"forwards"}):c.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(1.04)"}],{duration:360,delay:60,easing:EASE_OUT,fill:"forwards"});
+        a.finished.catch(()=>{}).then(()=>c.remove())}
+      arriveFns.splice(0).forEach(f=>f());
+      run(document.body,"in",my,FADE_IN,false,0,true,flip).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
     });
     let go=false;const once=()=>{if(!go){go=true;start()}};
     if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 最多等 0.9 秒（字型、圖片很慢時不要一直空白） */
@@ -117,5 +139,7 @@ const PageFx=(()=>{
   });
   addEventListener("pageshow",e=>{if(e.persisted){reset(document.body);document.documentElement.classList.add("pfx-arrive");arrive()}});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",arrive);else arrive();
-  return {swap,settle,leave,hold,reset};
+  /* 跨頁到達開始浮上來的那一刻呼叫 f（沒有要浮上來就馬上呼叫）：主頁從部門回來時，收回色塊的動畫跟著這一刻開始 */
+  function onArrive(f){if(document.documentElement.classList.contains("pfx-arrive"))arriveFns.push(f);else f()}
+  return {swap,settle,leave,hold,reset,onArrive,svg};
 })();

@@ -1,6 +1,7 @@
 /* pe1：進度、完成紀錄改成「點欄位直接改」（views.js 的 issueFieldsHTML／doneFieldsHTML、events.js 的 ifFldAct／ifFldWrite）。
    頁首「編輯」後兩區都沒有「編輯這區」；議題詳情：名稱（Enter 完成）、階段（新增、換目前、刪除）、目前進度（Esc 取消）、期間（結束早於開始擋下）、超連結（新增、刪除）、
    點別欄時先存回目前那欄；新增議題直接打開名稱欄；完成紀錄：議題名稱、即時回報完成日期與母議題；儲存後寫進 data.json。桌面 1300 與手機 412。固定 8300 埠
+   2026-11-17（ui-05）：完成紀錄的膠囊與卡片換新介面（.cp 打開 .lc），編輯的流程不變
    2026-11-15（03 T4）：改成單卡編輯的入口——每張卡片按自己的「編輯」（.card-edit-btn）才出現逐欄工具，一次只編一張，按那張的「儲存」（[data-edsave]）；原本按頁首「編輯」、最後一次按 #saveBtn */
 const C=require('./common.js');
 (async()=>{let bad=0;const ok=(c,m)=>{console.log((c?'OK  ':'FAIL')+' '+m);if(!c)bad++};
@@ -68,8 +69,9 @@ await save('#cardDetail');
 /* 完成紀錄 */
 await p.evaluate(()=>setSection('done',{instant:true}));await R();
 const did=await p.evaluate(()=>state.issues.find(i=>i.doneAt)?.id||null),eid=await p.evaluate(()=>state.events.find(e=>e.doneAt&&!e.fromEv).id);
-const openDone=async id=>{await p.click(`#doneList [data-done="${id}"] summary`);await p.waitForTimeout(700)};
-const scope=async id=>(await p.$('#doneDetail .evd'))&&w>=1000?'#doneDetail':`#doneList [data-done="${id}"]`;
+/* ui-05：完成紀錄點膠囊打開卡片（寬螢幕在右邊、手機全螢幕，都是 .lc）；換一張前先按 Esc 收回 */
+const openDone=async id=>{if(await p.evaluate(()=>!!dnOpen)){await p.keyboard.press('Escape');await p.waitForTimeout(700)}await p.click(`#doneList .cp[data-cp="${id}"]`);await p.waitForTimeout(700)};
+const scope=async id=>'.lc:not(.lc-ghost)';
 const edit=async id=>{const sc=await scope(id);await p.click(`${sc} .card-edit-btn`);await p.waitForTimeout(700);return scope(id)};
 await openDone(eid);let S=await edit(eid);
 await p.click(`${S} [data-ifpen="done"]`);await R();await p.fill(`${S} .evf.open [data-e="done"]`,'2026-11-01');await p.click(`${S} .evf.open [data-iffx="ok"]`);await R();

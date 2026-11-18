@@ -1,29 +1,22 @@
-/* 開頁的學生會進場畫面（core/js/splash.js）：看板 index.html 與總覽 home.html 共用（2026-11-06 從 board.css 拆出來） */
-/* 跟著深淺色（2026-11-06 起；以前一律白底）：淺色＝白底彩色 logo、深色＝黑底單色 logo（標誌兩塊與字都是 #f1f1f4，藍色那塊外框描一圈黑當分隔縫 .sp-gap）。
-   顏色寫死（不用變數）：開場時看板的色彩變數可能還沒套好。整個學生會 logo（splash.js 的 SU_LOGO），每個字是自己的小 svg、用 % 定位在 .sp-logo 裡；
-   動畫由 splash.js 的 splashPlay 用 Web Animations 做（只動 transform／opacity），這裡只負責版面 */
-.splash{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:#fff}
-.sp-logo{position:relative;width:min(560px,78vw);aspect-ratio:547/186}
-.sp-grp,.sp-clip,.sp-txt{position:absolute;inset:0}
-.sp-grp,.sp-g{will-change:transform}
-.sp-clip{clip-path:inset(-20% -5% -20% var(--cut))}   /* 從標誌右緣切開：還在標誌範圍裡的字看不到（不會從眼睛的洞、黃藍之間的縫透出來），像從標誌後面出來 */
-.sp-grp svg{position:absolute;display:block;overflow:visible}
+/* 開頁的學生會開場（core/js/splash.js）：看板 index.html 與主頁 home.html 共用（2026-11-06 從 board.css 拆出來；ui-07 換成 DESIGN-next 第五節「開場」）
+   底色 --bg（core/theme.css；theme.js 在 <head> 就設好）。直式：兩個小人在上（.sp-emb）、STUSTSA 與南臺科大學生會兩行在下（每個字一個窗 .sp-gw）；
+   位置都用 %（splash.js 照模擬頁 340×336 的框算好），動畫由 splashPlay 用 Web Animations 做（只動 transform／opacity），這裡只負責版面。
+   標誌大小同時看畫面寬與高：寬最多 212px／七成畫面寬，高最多四成畫面高（手機 202px／五成四畫面寬／三成四畫面高，照模擬頁） */
+.splash{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:var(--bg)}
+.sp-logo{position:relative;width:min(212px,70vw,calc(40dvh * 340 / 336));aspect-ratio:340/336}
+@media (max-width:640px){.sp-logo{width:min(202px,54vw,calc(34dvh * 340 / 336))}}
+.sp-emb,.sp-gw{position:absolute;display:block}
+.sp-gw{overflow:hidden}   /* 字的窗：窗往右移進來、字往左，窗的左緣由左到右掃過去＝揭開 */
+.sp-emb svg,.sp-gw svg{display:block;width:100%;height:100%;overflow:visible}
+.sp-gw svg{will-change:transform,opacity}
 .sp-emb path{will-change:transform,opacity}
-.sp-gap{fill:none;stroke:#000;stroke-width:4;stroke-linejoin:round;display:none}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .splash{background:#000}
-  :root:not([data-theme="light"]) .splash path:not(.sp-gap){fill:#f1f1f4}
-  :root:not([data-theme="light"]) .sp-gap{display:inline}
-}
-:root[data-theme="dark"] .splash{background:#000}
-:root[data-theme="dark"] .splash path:not(.sp-gap){fill:#f1f1f4}
-:root[data-theme="dark"] .sp-gap{display:inline}
-/* 深色模式的標誌用單色線稿（splash.js 的 SU_LINE）：淺色時藏起來；深色時藏起彩色兩塊、顯示線稿（白色，黑底） */
-.sp-line{display:none;transform-box:fill-box;transform-origin:center}
-.sp-line path{fill:#f1f1f4}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .sp-line{display:inline}
-  :root:not([data-theme="light"]) :is(.sp-y,.sp-b){display:none}
-}
-:root[data-theme="dark"] .sp-line{display:inline}
-:root[data-theme="dark"] :is(.sp-y,.sp-b){display:none}
+/* 兩個小人縮到主頁左上標誌上時的分身（開場外面，開場淡掉時它還在） */
+.sp-fly{position:fixed;z-index:91;transform-origin:0 0;pointer-events:none}
+.sp-fly svg{display:block;width:100%;height:100%;overflow:visible}
+/* ===== 學生會標誌（splash.js 的 suLogoH：主頁左上；開場也用同一組 class） =====
+   淺色：黃、藍兩個小人與藍字照原檔顏色（標誌的藍黃不跟主題變），深藍字＝文字色；深色：左邊小人只留線稿、右邊小人與字都是文字色 */
+.su-y{fill:#f0bc23}
+.su-b,.su-t{fill:#0a5baa}
+.su-k{fill:var(--ink)}
+:root[data-theme="dark"] :is(.su-b,.su-t){fill:var(--ink)}
+:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.8px}

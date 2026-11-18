@@ -1,13 +1,26 @@
 /* 離線用 Service Worker
    - 網頁、CSS、JS、圖示：網路優先（每次都先拿最新版，拿不到才用離線備份）→ 更新後重開就是新版
-   - data.json、archive/：一律走網路，不存進快取（離線時改由看板顯示最後一次看過的內容）；其他部門的 data-*.json 照網路優先（線上永遠是最新的，離線才用備份）
+   - data.json、各部門的 data-*.json、archive/：一律走網路，不存進快取（離線時改由看板顯示這台裝置最後一次看過的內容）
    - GitHub API：不經過這裡 */
-/* 快取版本：換大版本（改版 03 上線，2026-11-17 改 v2）時改這個名字。sw.js 內容一變，瀏覽器下次開頁就會裝新的 Service Worker（skipWaiting＋clients.claim），
-   activate 時刪掉舊名字的快取，離線備份不會留著舊版的 JS／CSS 跟新的網頁混用 */
-const CACHE="board-cache-v2";
-const NO_CACHE=/(^|\/)data\.json$|\/archive\//;
-self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["./","index.html","home.html"].map(u=>new Request(u,{cache:"no-cache"})))).catch(()=>{}))});
-self.addEventListener("activate",e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k!==CACHE)await caches.delete(k);await self.clients.claim()})())});
+/* 快取版本：換大版本（改版 03 上線，2026-11-17 改 v2；新介面上線改 v3）時改這個名字。sw.js 內容一變，瀏覽器下次開頁就會裝新的 Service Worker（skipWaiting＋clients.claim），
+   activate 時刪掉自己舊名字（board-cache-*）的快取，離線備份不會留著舊版的 JS／CSS 跟新的網頁混用 */
+const CACHE="board-cache-v3";
+const NO_CACHE=/(^|\/)data(-[^/]*)?\.json$|\/archive\//;
+/* 安裝時先收進離線備份的檔案：網頁本身、看板（index.html）載入的所有 CSS／JS、主頁另外用的 home.js 與九個部門標誌——
+   App 打開的是主頁，只開過主頁就離線、再點部門時看板也畫得出來；第一次只打開看板就離線時，主頁也打得開。
+   看板的清單要跟 index.html 的 <link>／<script> 同步（tools/tests/ui7.js 會檢查，漏加會被測出來）。
+   其他檔案（圖示、manifest 等）由頁面送來的清單補（util.js 的 swReg：這一頁用到的檔、換手後再送一次）。
+   一個一個收，單一個檔失敗不影響其他的 */
+const SHELL=["./","index.html","home.html",
+  "core/theme.css","core/board.css","core/splash.css",
+  ...["theme","app","pagefx"].map(f=>`core/js/${f}.js`),"dept/config.js",
+  ...["config","store-map","store","account","splash","shell","util","morph","anim","icons","state","cloud","render","views","dialog","save","weekly",
+      "report","follow","notify","activity","meeting","back","motion","auth","team","provision","labels","nav","search","events","sfx","live","pwa","boot",
+      "home"].map(f=>`core/js/${f}.js`),
+  ...["president","secretariat","rights","marketing","finance","events","affairs","pr","works"].map(d=>`dept/icons/dept-${d}.svg`)];
+self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:"no-cache"})).catch(()=>{})))).catch(()=>{}))});
+self.addEventListener("activate",e=>{e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith("board-cache-")&&k!==CACHE)await caches.delete(k);   /* 只刪自己的舊版本：同一個網域（github.io）上其他 repo 的快取不動 */
+  await self.clients.claim()})())});
 self.addEventListener("message",e=>{
   const d=e.data||{};if(d.type!=="precache"||!Array.isArray(d.urls))return;
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(d.urls.filter(u=>!NO_CACHE.test(new URL(u).pathname)).map(u=>c.match(u).then(hit=>hit||c.add(new Request(u,{cache:"no-cache"}))).catch(()=>{})))));

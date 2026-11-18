@@ -65,7 +65,6 @@ function evTimeText(t){
 }
 const evTimesSorted=ev=>[...(ev.times||[])].sort((a,b)=>a.start.localeCompare(b.start));
 /* ---------- weekly report generator ---------- */
-const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 /* 週報基準（下一份週報從哪天算起）存在部門設定；firestore 模式只有部門管理員以上能寫部門設定（規則），編輯者產出週報時不改基準，
    免得畫面上看起來更新了、存檔時卻沒寫進去（02D 審查） */
 function snapshotBase(date){

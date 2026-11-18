@@ -3,7 +3,7 @@ const ctx=await b.newContext({viewport:{width:390,height:844},hasTouch:true,isMo
 await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
 const p=await ctx.newPage();const e=[];p.on('pageerror',x=>e.push(x.message));
 await p.goto('http://127.0.0.1:8300/home.html');await p.waitForTimeout(1200);
-await p.evaluate(()=>document.querySelector('#srList a[href="index.html"]').click());   /* 2026-11-06：總覽頁的部門改成長按標誌選（hm1.js 測），這裡直接點隱藏的部門連結 */await p.waitForTimeout(2000);console.log('on board',p.url());
+await p.evaluate(()=>document.querySelector('.hm-wc[href="index.html"]').click());   /* ui-07：主頁改成卡片堆，焦點卡（權益部）用鍵盤式的點擊進入（舊的 #srList 隱藏連結已拿掉） */await p.waitForTimeout(2000);console.log('on board',p.url());
 const st=()=>p.evaluate(()=>({len:history.length,state:history.state,set:setOpen,week:document.querySelector('#pager').scrollLeft>40}));
 await p.click('#setBtn');await p.waitForTimeout(700);console.log('settings open',await st());
 await p.goBack();await p.waitForTimeout(700);console.log('after back',await st(),p.url());
@@ -23,5 +23,5 @@ await p.click('#setClose');await p.waitForTimeout(600);
 // gesture on main（停用，應該留在 index.html）
 await tp('touchStart',5);for(let x=20;x<=300;x+=20){await tp('touchMove',x);await p.waitForTimeout(16)}await tp('touchEnd',300);await p.waitForTimeout(2000);console.log('main gesture ->',p.url());
 // logo link
-await p.goto('http://127.0.0.1:8300/index.html?d=finance');await p.waitForTimeout(1500);await p.click('.logo-box');await p.waitForTimeout(1500);console.log('logo ->',p.url());
+await p.goto('http://127.0.0.1:8300/index.html?d=finance');await p.waitForTimeout(1500);await p.click('.dh-home')   /* ui-04 起頁首換成標題列：首頁鍵 */;await p.waitForTimeout(1500);console.log('logo ->',p.url());
 console.log('errs',e.filter(x=>!x.includes('404')));await b.close()})();

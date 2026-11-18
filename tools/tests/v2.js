@@ -1,4 +1,9 @@
 // 新介面結構：功能測試（模擬 GitHub）
+/* 2026-11-18（ui-07）改兩條舊規格斷言（其他不變）：
+   - 「only weekly row before login」：登入前設定清單原本只有「每週概述」；ui-02 起最後多一列「外觀」（nav.js 的 lookSec，DESIGN-next：主題在設定 → 外觀，沒登入時放清單最後），改成要求正好「每週概述、外觀」兩列。
+   - 「mobile header: no edit, 44px bell」：44px 是 2026-11-06 舊頁首搜尋欄右邊的通知鈕；ui-04 起通知鈕在新標題列 .dhead 裡，跟首頁鍵同樣是 52px 圓鈕（board.css「部門標題列」.dh-btn、模擬頁同尺寸），
+     改成「沒有編輯鈕、通知鈕在標題列裡、52×52」。
+   另外只印不判斷的「D header」從舊頁首 .hero-rule .actions 改印標題列 .dhead 的圓鈕 */
 const {chromium}=require('playwright');const fs=require('fs');
 const URL=process.env.URL||'http://127.0.0.1:8300/index.html';
 const A=(ok,m)=>{if(!ok){console.log('FAIL:',m);process.exitCode=1}};   /* 2026-11-11：關鍵結果逐項判斷，壞了以非 0 結束 */
@@ -25,7 +30,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
 {const {p,ctx}=await mk();
  await p.evaluate(()=>localStorage.setItem('workboard:ghtoken','TOK_A_123'));
  const tabs=await p.$$eval('#tabbar .tab',x=>x.map(b=>b.dataset.tab+(b.classList.contains('on')?'*':'')));log('D tabs:',tabs);A(tabs.join()==='live*,progress,done','tabs');
- log('D header:',await p.$$eval('.hero-rule .actions button',x=>x.map(b=>b.id+'@'+Math.round(b.getBoundingClientRect().top))));
+ log('D header:',await p.$$eval('.dhead .dh-btn:not([hidden])',x=>x.map(b=>(b.id||b.className)+'@'+Math.round(b.getBoundingClientRect().top))));   /* ui-07：舊頁首 .hero-rule .actions 已拿掉（原本印出空陣列），改印標題列的圓鈕 */
  const lv=await vis(p);log('D layout live:',lv);A(/^live\*:\d+x/.test(lv),'live first');await p.screenshot({path:'v2_d_live.png'});
  await p.click('#tabbar [data-tab=progress]');await p.waitForTimeout(250);await p.screenshot({path:'v2_d_mid.png'});await p.waitForTimeout(700);
  const lp=await vis(p);log('D layout progress:',lp);A(/progress\*:/.test(lp),'progress selected');await p.screenshot({path:'v2_d_prog.png'});
@@ -34,7 +39,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  // 動畫：不自動全螢幕、工具列留在 body
  // 設定頁（未登入）
  await p.click('#setBtn');await p.waitForTimeout(600);await p.screenshot({path:'v2_d_set.png'});
- const sr0=await p.$$eval('#setOv .set-row',x=>x.map(r=>(r.dataset.set||'log')+(r.getAttribute('aria-disabled')?'(off)':'')));log('D settings rows:',sr0);A(sr0.join()==='week','only weekly row before login');
+ const sr0=await p.$$eval('#setOv .set-row',x=>x.map(r=>(r.dataset.set||'log')+(r.getAttribute('aria-disabled')?'(off)':'')));log('D settings rows:',sr0);A(sr0.join()==='week,look','before login: weekly row and appearance row only');
  const gt=await p.$$eval('#setOv .set-gate-ico',x=>x.length);log('D gate:',gt);A(gt===1,'lock gate');
  // 登入前只有鎖頭 → 按「登入」→ 舊版看板：先共用密碼、再建立身分
  await p.click('#setOv .set-gate .primary');await p.waitForTimeout(500);const g1=await dlgTitle(p);log('D dlg1:',g1);A(g1==='輸入目前的編輯密碼','dlg1');
@@ -56,13 +61,11 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  const delVis=()=>p.evaluate(()=>{const V=x=>x.checkVisibility({visibilityProperty:true});return {ev:[...document.querySelectorAll('[data-evdel]')].filter(V).length,issue:[...document.querySelectorAll('[data-delissue]')].filter(V).length,inner:document.querySelectorAll('.done-body [data-deldone],.done-body [data-evdel],.edit-block [data-delissue],.week-tools [data-delweek]').length}});   /* 桌面左右兩欄時被選到的膠囊只是空位（visibility:hidden），刪除鈕在右側詳情 */
  const d0=await delVis();log('D delete buttons (not editing):',d0);A(!d0.ev&&!d0.issue&&!d0.inner,'no delete buttons before editing');
  const eid=await p.evaluate(()=>liveOrder()[0].id);
- await p.click(`.ev[data-ev="${eid}"]>summary`);await p.waitForTimeout(900);await p.click('#evDetail .evd-head [data-kpgo]');await p.waitForTimeout(900);   /* 03 T7：即時回報卡沒有「編輯」鈕，點名稱開始 */
+ await p.click(`#events .cp[data-cp="${eid}"]`);await p.waitForTimeout(900);await p.click('#evDetail .lc-title[data-kpgo]');await p.waitForTimeout(900);   /* 03 T7：即時回報卡沒有「編輯」鈕，點名稱開始（ui-05：膠囊 #events .cp、卡片 #evDetail .lc） */
  const ed=await p.evaluate(()=>({editing,cardEdit}));const d1=await delVis();log('D editing one card:',ed,'| delete buttons:',d1);
- A(ed.editing&&ed.cardEdit==='e:'+eid,'card edit started');A(d1.ev===1&&!d1.inner,'only the edited card has a delete button');
+ A(ed.editing&&ed.cardEdit==='e:'+eid,'card edit started');A(!d1.ev&&!d1.inner,'editing live card has no delete button (ui-05: drag to the corner)');
  await p.screenshot({path:'v2_d_edit.png'});
- const ev0=await p.$(`.ev[data-ev="${eid}"]`);const op0=await ev0.evaluate(d=>d.open);await p.click('#evDetail [data-evdel]');await p.waitForTimeout(500);
- const dt=await dlgTitle(p),op1=await ev0.evaluate(d=>d.open);log('D ev delete dlg:',dt,'| opened?',op0,'→',op1);A(/^刪除「/.test(dt||'')&&op0===op1,'delete asks first, capsule not toggled');
- await p.keyboard.press('Escape');await p.waitForTimeout(500);
+ /* ui-05 審查 P1-1：以前這裡按卡片上的「刪除」確認「先問、膠囊不會被切換開合」；ui-05 起即時回報卡沒有刪除鈕（拖到左上角刪除，先確認、有時間標記再確認一次，在 ui5.js 第 8 項），這條斷言拿掉 */
  await p.click('#evH');await p.waitForTimeout(900);   /* 03：即時回報卡沒有「取消」，點卡片外面＝收合（沒改就不存） */
  const ac=await p.evaluate(i=>({editing,cardEdit,still:!!state.events.find(e=>e.id===i)}),eid);log('D after click outside:',ac);A(!ac.editing&&!ac.cardEdit&&ac.still,'click outside ends editing, event kept');
  log('D errs:',p.errs);A(!p.errs.length,'desktop errors');
@@ -94,7 +97,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
 remote=JSON.parse(fs.readFileSync('data_test.json','utf8'));sha='m0';
 {const {p,ctx}=await mk({w:412,h:915,sc:'dark',touch:true});
  log('M layout:',await vis(p));
- const mh=await p.evaluate(()=>({editBtn:!!$('#editBtn'),noti:(r=>Math.round(r.width))($('#notiBtn').getBoundingClientRect())}));log('M header:',mh);A(!mh.editBtn&&mh.noti===44,'mobile header: no edit, 44px bell');   /* 2026-11-06 頁首按鈕列拿掉，通知鈕在搜尋欄右邊 */
+ const mh=await p.evaluate(()=>({editBtn:!!$('#editBtn'),inHead:!!document.querySelector('.dhead #notiBtn'),noti:(r=>[Math.round(r.width),Math.round(r.height)])($('#notiBtn').getBoundingClientRect())}));log('M header:',mh);A(!mh.editBtn&&mh.inHead&&mh.noti[0]===52&&mh.noti[1]===52,'mobile header: no edit, 52px bell in title bar');   /* 2026-11-06 頁首按鈕列拿掉；ui-04 起通知鈕在標題列（52px） */
  await p.screenshot({path:'v2_m_live.png'});
  await p.tap('#tabbar [data-tab=progress]');await p.waitForTimeout(800);const mp=await vis(p);log('M progress:',mp);A(/progress\*:\d+x/.test(mp)&&/live:hidden/.test(mp),'mobile shows one section');await p.screenshot({path:'v2_m_prog.png'});
  // 觸控拖曳：從「進度」拖到「完成紀錄」

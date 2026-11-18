@@ -1,12 +1,13 @@
 /* 核心｜底部工具列、設定頁、拉到底回彈、工具列依背景反轉 */
 const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 /* ---------- 底部工具列（手機）／左側細欄（桌面 900px 以上） ----------
-   材質：毛玻璃 .glass（util.js 的 glassify，跟對話框同一套）；選取鏡片是實心膠囊（文字色），鏡片底下的圖示反白。
+   材質：平面色塊 .glass（util.js 的 glassify；board.css「平面色塊」「底部工具列」段）；選取鏡片是主要動作的實心膠囊（--pri），鏡片底下的圖示用 --pri-ink。
    按鈕機制照 Convx（Kyant backdrop catalog 的 LiquidBottomTabs／DampedDragAnimation／InteractiveHighlight／LiquidButton），手機與桌面同一套，
    差別只在方向（手機水平、桌面直立）：
-     - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），整條列跟著偏最多 4px；放開吸到最近的分頁
-     - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿主軸拉伸；整條列沿長邊放大 16px、分頁內容放大 1.2；
-       鏡片位置一圈白光（彈簧 .5／300）
+     - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），拖過兩端時整條列跟著偏最多 4px；放開吸到最近的分頁
+     - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿移動方向拉伸（最多兩成）、垂直方向略縮；
+       整條列沿長邊放大 16px、鏡片那一格的內容放大 1.2（--ts，board.css 只套在 .lit 那一格）；
+       鏡片位置一圈白光（彈簧 .5／300；2026-11-17 起材質只有平面，白光不畫，--hp 照樣寫但沒有樣式用到）
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
    設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
 let setOpen=false;
@@ -15,11 +16,6 @@ const TABS=()=>[["live","即時回報","live"],["progress","進度","progress"],
 const tbActive=()=>setOpen?"":curSec;
 const RAIL_MQ=matchMedia("(min-width:900px)");
 const isRail=()=>RAIL_MQ.matches;
-/* 彈簧（跟 Compose 的 spring(dampingRatio, stiffness) 一樣，質量 1） */
-const spring=(x,z,k)=>({x,v:0,t:x,z,k});
-function sprStep(s,dt){const c=2*s.z*Math.sqrt(s.k),n=4,h=dt/n;for(let i=0;i<n;i++){s.v+=(-s.k*(s.x-s.t)-c*s.v)*h;s.x+=s.v*h}}
-const sprDone=(s,e)=>Math.abs(s.x-s.t)<e&&Math.abs(s.v)<e*20;
-const sprSnap=(s,x)=>{s.x=s.t=x;s.v=0};
 const PRESSED=78/56;
 const lens={
   val:spring(0,1,1000),     /* 鏡片位置（第幾個分頁，可以有小數） */
@@ -48,13 +44,14 @@ function tbFrame(){
   const cs=tabCenters();if(!cs.length||!cs[0].x&&!cs[0].y)return;
   /* 手機沿 x、桌面沿 y；其他都一樣 */
   const rail=isRail(),ax=rail?"y":"x",n=cs.length,p=lens.press.x,pos=interp(cs,lens.val.x,ax),len=(rail?main.offsetHeight:main.offsetWidth)||1;
-  const v=lens.vel.x/10,ma=lens.sx.x/(1-clampV(v*.75,-.2,.2)),cr=lens.sy.x*(1-clampV(v*.25,-.2,.2));   /* 主軸、側軸的縮放 */
+  /* 主軸、側軸的縮放：移動時依速度沿移動方向拉伸（最多兩成，往哪邊移都一樣），垂直方向略縮（DESIGN-next 第五節「彈簧與回彈」） */
+  const v=Math.abs(lens.vel.x)/10,ma=lens.sx.x*(1+Math.min(.2,v*.75)),cr=lens.sy.x*(1-Math.min(.2,v*.25));
   if(rail){el.style.top="";el.style.transform=`translate(0,${(pos-el.offsetHeight/2).toFixed(2)}px) scale(${cr.toFixed(4)},${ma.toFixed(4)})`}
   else{el.style.top=cs[0].top+"px";el.style.transform=`translate(${(pos-el.offsetWidth/2).toFixed(2)}px,0) scale(${ma.toFixed(4)},${cr.toFixed(4)})`}
   /* 鏡片底下那一格的圖示反白（跟著鏡片走，不是跟著選取狀態） */
   const lit=el.classList.contains("off")?-1:Math.round(clampV(lens.val.x,0,n-1));
   tabEls().forEach((b,i)=>b.classList.toggle("lit",i===lit));
-  /* 整條列：拖曳時跟著偏最多 4px（EaseOut），按下時沿長邊放大 16px */
+  /* 整條列：拖過兩端時跟著偏最多 4px（EaseOut；lens.off＝超出兩端的距離），按下時沿長邊放大 16px */
   const fr=clampV(lens.off.x/len,-1,1),ease=1-Math.pow(1-Math.abs(fr),2),po=4*Math.sign(fr)*ease;
   main.style.transform=po?`translate${rail?"Y":"X"}(${po.toFixed(2)}px)`:"";main.style.scale=p>.0005?(1+16/len*p).toFixed(4):"";
   tb.querySelector(".tb-tabs").style.setProperty("--ts",(1+.2*p).toFixed(4));
@@ -105,10 +102,23 @@ function renderTabbar(){
   const act=tbActive();
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
+  Anim.toggle(g,!roView);   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
   requestAnimationFrame(()=>lensTo(act));
-  tbContrastSoon();
+  fabSync();
 }
-function tabGo(k){if(setOpen)closeSettings();if(notiOpen)closeNoti();setSection(k)}
+/* ---------- 新增即時回報的浮動圓鈕（DESIGN-next 第六節「部門內」） ----------
+   右下角 60 的圓鈕（主要動作色、加號）；手機在工具列上方。只在即時回報分頁、可以編輯（不是唯讀、不是唯讀檢視）、沒有卡片在編輯或打開、沒有在搜尋時出現。
+   id 沿用 #addEvent：點了做原本「+ 新增即時回報」的同一件事（events.js 的主點擊監聽）。設定、通知疊層蓋在它上面（z-index 比疊層低） */
+const liveCardOpen=()=>!!lvOpen||(CFG.mergeDone&&!!dnOpen);   /* 即時回報的卡片打開（live.js）；會長室、秘書處併進來的完成紀錄打開也算 */
+function fabSync(){
+  let fb=$("#addEvent");
+  if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
+  const on=secTab("live")&&curSec==="live"&&!notiOpen&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
+  Anim.toggle(fb,on);
+  /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
+  document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
+}
+function tabGo(k){if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
 function setupTabbar(tb){
   const main=tb.querySelector(".tb-main"),gear=tb.querySelector(".tb-gear"),lensEl=tb.querySelector(".tb-lens");
   /* 毛玻璃：分頁列、設定鍵各一塊（桌面也一樣，分頁列直立） */
@@ -123,7 +133,7 @@ function setupTabbar(tb){
     const rail=isRail(),ax=rail?"y":"x",r=main.getBoundingClientRect();
     const slot=cs.length>1?Math.abs(cs[1][ax]-cs[0][ax]):(rail?main.offsetHeight:main.offsetWidth);
     const lp=interp(cs,lens.val.x,ax);if(Math.abs(at(e)-(rail?r.top:r.left)-lp)>slot/2)return;
-    lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now()};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
+    lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now(),raw:lens.val.x};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
     try{main.setPointerCapture(e.pointerId)}catch(_){}
     tb.classList.add("dragging");lensPress();lens.hl.t=reduceMotion()?0:1;tbKick();
   });
@@ -131,7 +141,7 @@ function setupTabbar(tb){
     const d=lens.drag;if(!d||e.pointerId!==d.id)return;
     if(e.pointerType==="mouse"&&e.buttons===0){dragEnd();return}
     const c=at(e),dx=c-d.x;d.x=c;if(!dx)return;if(Math.abs(c-lastX)>2||d.moved)d.moved=true;
-    sprSnap(lens.val,clampV(lens.val.x+dx/d.slot,0,d.n-1));sprSnap(lens.off,lens.off.x+dx);
+    d.raw+=dx/d.slot;sprSnap(lens.val,clampV(d.raw,0,d.n-1));sprSnap(lens.off,(d.raw-lens.val.x)*d.slot);   /* 拖過兩端：鏡片停在端點，超出的部分讓整條列跟著偏 */
     const now=performance.now(),dt=Math.max(8,now-lastT)/1000;sprSnap(lens.vel,(lens.val.x-lastV)/dt/Math.max(1,d.n-1));lastV=lens.val.x;lastT=now;d.t=now;lastX=c;
     const near=Math.round(lens.val.x);tabEls().forEach((b,i)=>b.classList.toggle("hov",i===near));
     tbKick();
@@ -142,6 +152,7 @@ function setupTabbar(tb){
     const i=Math.round(clampV(lens.val.x,0,d.n-1)),k=tabEls()[i]&&tabEls()[i].dataset.tab;
     lens.vel.t=lens.vel.x;lens.off.t=0;lens.hl.t=0;lens.val.t=i;lensRelease();tbKick();
     if(d.moved&&k&&k!==tbActive())setTimeout(()=>tabGo(k),60);
+    else if(!d.moved&&k&&notiOpen)setTimeout(()=>tabGo(k),60);   /* 通知與行事曆那一頁：按鏡片那一格（指標被整列接走，click 不會落在分頁上）＝回到原分頁 */
   }
   main.addEventListener("pointerup",dragEnd);main.addEventListener("pointercancel",dragEnd);
   /* 觸控時瀏覽器會先把指標鎖在按下的那顆按鈕；改鎖到整列時，那顆按鈕送出的 lostpointercapture 會冒泡上來，不能當成放開 */
@@ -156,8 +167,9 @@ function setupTabbar(tb){
   gear.addEventListener("pointermove",e=>{const g=gearSt;if(g.down!==e.pointerId)return;sprSnap(g.ox,e.clientX-g.x0);sprSnap(g.oy,e.clientY-g.y0);tbKick()});
   const gearUp=e=>{const g=gearSt;if(g.down===false||e&&e.pointerId!==undefined&&e.pointerId!==g.down)return;g.down=false;g.p.t=0;g.ox.t=0;g.oy.t=0;tbKick()};
   gear.addEventListener("pointerup",gearUp);gear.addEventListener("pointercancel",gearUp);addEventListener("pointerup",gearUp);addEventListener("blur",()=>gearUp());
-  const relayout=()=>{lensTo(tbActive(),true);tbContrastSoon()};
-  RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;[main,gear].forEach(n=>n.classList.remove("on-light","on-dark"));requestAnimationFrame(relayout)});
+  if(window.ResizeObserver)new ResizeObserver(()=>tbFrame()).observe(main);   /* 列的寬度變了（設定鍵出現／消失、字型載入）：鏡片照新的位置重畫 */
+  const relayout=()=>lensTo(tbActive(),true);
+  RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;requestAnimationFrame(relayout)});
   addEventListener("resize",()=>lensTo(tbActive(),true));
   document.fonts?.ready.then(()=>lensTo(tbActive(),true));
 }
@@ -166,7 +178,10 @@ document.addEventListener("click",e=>{
   /* 用滑鼠／手指點的：先放掉焦點，關掉對話框後才不會在按鈕上留下焦點框 */
   const tbBtn=t.closest("#tabbar button");if(tbBtn&&e.detail>0)tbBtn.blur();
   const tab=t.closest("#tabbar .tab");if(tab){tabGo(tab.dataset.tab);return}
-  if(t.closest("#setBtn")){if(notiOpen)closeNoti(true);setOpen?closeSettings():openSettings();return}
+  if(t.closest("#setBtn")){
+    /* 通知頁開著：把它那一筆瀏覽紀錄直接換成設定（Back.replace），不先 history.back() 再推一筆——非同步的退一筆會跟設定推的那筆打架，紀錄變 null、系統返回直接離站（ui-06 審查 P2-7） */
+    if(notiOpen&&!setOpen){Back.replace("noti","settings",i=>closeSettings(i));closeNoti(true)}
+    setOpen?closeSettings():openSettings();return}
 },true);
 
 /* ---------- 設定頁 ---------- */
@@ -179,6 +194,8 @@ const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div>
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 /* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
 const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
+/* 「外觀」：firestore 模式登入後在「帳號」合併頁裡；其他情況（舊的看板登入、沒登入、唯讀）是設定清單最後一列 */
+const lookSec=()=>setSec(setRow("look","sliders","外觀"));
 const weekSub=()=>state.weeks.length?`最新一份 ${fmt([...state.weeks].map(w=>w.date).sort().pop())}`:"還沒有週報";
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
@@ -186,8 +203,8 @@ function settingsInner(){
   if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
   if(!loggedIn())return setSec(setRow("week","doc","每週概述",weekSub()))+(boardLocked()
     ?(storeLocked()?`<div class="set-gate"><b>暫停編輯</b><p class="sub">${STORE_NOTE[storeSource()]}</p></div>`:`<div class="set-gate"><b>這是唯讀版</b><p class="sub">定型版沒有設定可以調整。</p></div>`)
-    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec();
-  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec();
+    :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><p class="sub">選擇身分、輸入個人密碼</p><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec()+lookSec();
+  if(readOnly())return setSec(setRow("week","doc","每週概述",weekSub())+setRow("log","history","編輯紀錄"))+devSec()+lookSec();
   const rem=remRead(),remName=rem&&(state.members.find(m=>m.id===rem.id)||{}).name,t=termCfg();
   return setSec(setRow("report","doc","報告",weekSub())+setRow("log","history","編輯紀錄"))+
     setSec(setRow("title","edit","看板名稱",state.title)+
@@ -196,22 +213,22 @@ function settingsInner(){
       (termOwn()?setRow("term","calendar","學年與開學日",`${t.yearLabel||"學年未設定"}${({up:"・上學期",down:"・下學期"}[t.semester]||"")} · ${t.termStart?fmt(t.termStart)+" 開學":"開學日未設定"}`):""))+
     setSec(setRow("backup","download","備份")+
       setRow("device","device","這台裝置",remName?`記住：${remName}`:"沒有記住身分"))+
-    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"");
+    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
-/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
+/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（深淺色規則見 board.css「學生會 logo」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
 function settingsHTML(){
-  return `<div class="anim-top set-top">${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>
+  return `<div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>
   <div class="set-body"><div class="set-scroll"><div class="set-inner"></div></div><div class="set-pane" hidden></div></div>`;
 }
 /* 鎖頭：鎖扣反覆打開、落下，落下時鎖身輕輕一震 */
 function gateAnim(){
-  const sh=$("#setOv .gate-shackle"),bd=$("#setOv .gate-body");if(!sh||reduceMotion())return;
+  const sh=$("#setOv .gate-shackle"),bd=$("#setOv .gate-body");if(!sh||reduceMotion()||sh.getAnimations().length)return;   /* 原位更新後還是同一個鎖頭：正在播就不再疊一份 */
   const o={duration:2600,iterations:Infinity};
   sh.animate([{transform:"none",offset:0,easing:"cubic-bezier(.3,0,.2,1)"},{transform:"translateY(-8px)",offset:.24},{transform:"translateY(-8px)",offset:.56,easing:"cubic-bezier(.5,0,.8,.4)"},{transform:"translateY(1px)",offset:.68},{transform:"none",offset:.76},{transform:"none",offset:1}],o);
   bd.animate([{transform:"none",offset:0},{transform:"none",offset:.67},{transform:"translateY(1.5px)",offset:.71},{transform:"none",offset:.8},{transform:"none",offset:1}],o);
 }
-function renderSettings(){const el=$("#setOv .set-inner");if(el&&setOpen){const flip=Anim.capture();el.innerHTML=settingsInner();weekDotSync();gateAnim();flowWatch();Anim.play(flip)}}   /* 列有增減（登入前後、標籤數）時照動畫規則 2 滑動／淡入 */
+function renderSettings(){const el=$("#setOv .set-inner");if(el&&setOpen){const flip=Anim.capture();morphTo(el,settingsInner());weekDotSync();gateAnim();flowWatch();Anim.play(flip)}}   /* 列有增減（登入前後、標籤數）時照動畫規則 2 滑動／淡入 */
 async function openSettings(){
   let ov=$("#setOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="set-ov" id="setOv" role="dialog" aria-modal="true" aria-label="設定" hidden>${settingsHTML().replace('<div class="set-inner">','<div class="set-inner" data-flip="set">')}</div>`);ov=$("#setOv");
@@ -248,7 +265,7 @@ function setPaneHost(){if(weekPaneEnd)return null;   /* 每週概述開著：生
 let subOpen=false;
 function subEl(){
   let s=$("#setSub");if(s)return s;
-  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="anim-top set-top">${SET_LOGO()}<div class="anim-ctl"><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev")}返回</button></div></div><div class="set-sub-body"></div></div>`);
+  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev")}返回</button></div></div><div class="set-sub-body"></div></div>`);
   $("#subBack").onclick=()=>paneDismiss();return $("#setSub");
 }
 async function subRun(fn){
@@ -330,12 +347,12 @@ function forgetDevice(){remClear();if(!editing){meId="";sessionPw="";sharedPwSes
    - act（直接執行的，例如匯出備份、忘記這台裝置）：合併頁留著，執行完更新文字。
    返回（子頁的「返回」、系統返回、Esc）一次退一層：先退出功能回到合併頁，再退才離開（paneDismiss）。 */
 let hubNow=null;
-function hubRun(title,rows,foot=()=>""){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟） */
+function hubRun(title,rows,foot=()=>"",mount){   /* foot：清單下面的內容（「這台裝置」的加入主畫面步驟、外觀）；mount(box)：每次畫完之後（外觀的分段切換） */
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();box.innerHTML=`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`;weekDotSync()};
+    const draw=()=>{list=rows();morphTo(box,`<b class="set-hub-t">${title}</b>${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.sub,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
     const me=hubNow={inFlow:false,end(){if(hubNow===me)hubNow=null;box.remove();res()}};
     draw();
     box.addEventListener("click",async e=>{
@@ -363,6 +380,8 @@ const SET_HUBS={
     return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",sub:"",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",sub:n?`目前記住：${n}`:"這台裝置沒有記住任何身分",off:!n,act:()=>forgetDevice()}])]},
     ()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""),
+  /* 外觀：沒有「帳號」合併頁時（舊的看板登入、沒登入、唯讀）的入口，內容跟帳號裡的外觀同一份（lookHTML） */
+  look:()=>hubRun("外觀",()=>[],()=>lookHTML(false),lookMount),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",sub:(state.yearLabel||"未設定")+({up:"・上學期",down:"・下學期"}[state.semester]||""),flow:()=>editBoardInfo("year")},
@@ -391,7 +410,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」「外觀」不用登入；帳號、會長室管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);
@@ -432,41 +451,3 @@ function elastic(sc,inner){
   sc.addEventListener("touchend",up);sc.addEventListener("touchcancel",up);
 }
 elastic($("#pageMain"),document.querySelector("#pageMain .wrap"));
-
-/* ---------- 工具列文字依背後顏色自動反轉 ---------- */
-function lumUnder(x,y){
-  for(const el of document.elementsFromPoint(x,y)){
-    if(el.closest("#tabbar,#splash")||el.classList.contains("dlg-ghost-bd"))continue;   /* 開場畫面（白底）蓋在上面時不算，看的是底下的看板 */
-    for(let n=el;n&&n.nodeType===1;n=n.parentElement){
-      const m=(getComputedStyle(n).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
-      if(m.length>=3&&(m.length<4||m[3]>.45))return (0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
-    }
-    break;
-  }
-  const m=(getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g)||[0,0,0]).map(Number);return (0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
-}
-let tbCR=0;
-/* 取樣要量版面（elementsFromPoint＋getComputedStyle），放在展開收合動畫進行中會讓動畫卡一下：
-   等畫面上沒有展開收合動畫、瀏覽器閒下來再做 */
-const idle=window.requestIdleCallback||(f=>setTimeout(f,60));
-function tbContrastSoon(){
-  if(tbCR)return;
-  tbCR=1;const go=()=>{if(document.querySelector(".animating"))return setTimeout(go,120);idle(()=>{tbCR=0;tbContrast()},{timeout:300})};
-  requestAnimationFrame(go);
-}
-/* 主列和設定鈕各自判斷（桌面主列是直的，取樣點改成上下排）；多點取樣＋遲滯，避免邊界附近來回閃 */
-function tbContrast(){
-  const tb=$("#tabbar");if(!tb)return;const rail=isRail();
-  tb.querySelectorAll(".tb-main,.tb-gear").forEach(el=>{
-    const r=el.getBoundingClientRect();if(!r.width)return;
-    const g=el.classList.contains("tb-gear"),fx=g||rail?[.3,.5,.7]:[.1,.3,.5,.7,.9],fy=rail&&!g?[.1,.3,.5,.7,.9]:[.3,.5,.7];
-    const ls=[];fx.forEach(a=>fy.forEach(b=>ls.push(lumUnder(r.left+r.width*a,r.top+r.height*b))));
-    const light=ls.filter(v=>v>.6).length/ls.length,dark=ls.filter(v=>v<.4).length/ls.length;
-    if(light>=.7){el.classList.add("on-light");el.classList.remove("on-dark")}
-    else if(dark>=.6){el.classList.add("on-dark");el.classList.remove("on-light")}
-  });
-}
-document.addEventListener("scroll",tbContrastSoon,{capture:true,passive:true});
-addEventListener("resize",tbContrastSoon);
-document.addEventListener("toggle",tbContrastSoon,true);
-document.addEventListener("click",()=>setTimeout(tbContrastSoon,450),true);

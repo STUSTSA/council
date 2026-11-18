@@ -17,14 +17,14 @@
      out＝減速（進場、移動）｜in＝加速（退場）｜spring＝略帶回彈（彈出、放下）
    分段切換：用 LiquidSeg（本檔最後），跟底部工具列同一套鏡片物理與外觀。
    減少動態（prefers-reduced-motion）時全部直接跳到結果。
-   不做的情況：膠囊正在展開收合（motion-busy）、左右兩欄正在開合（mdBusy）、拖曳排序中、分頁在背景、開頁進場中。 */
+   不做的情況：膠囊正在展開收合（motion-busy）、拖曳中（ev-drag-on）、分頁在背景、開頁進場中。 */
 const MO={fast:160,base:280,slow:460,layout:560,out:"cubic-bezier(.2,.9,.25,1)",in:"cubic-bezier(.4,0,1,1)",spring:"cubic-bezier(.3,1.3,.5,1)"};
 const Anim=(()=>{
   const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
   const KEY_ATTRS=["ev","done","issue","fw","week","set","fk"];
   const ITEM_SEL=KEY_ATTRS.map(a=>`[data-${a}]`).join(",");
   const keyOf=el=>{for(const a of KEY_ATTRS){const v=el.dataset[a];if(v!=null&&v!=="")return a+":"+v}return null};
-  const off=()=>reduced()||document.hidden||document.documentElement.matches(".motion-busy,.ev-drag-on")||(typeof mdBusy!=="undefined"&&mdBusy)||document.body.matches(".intro");
+  const off=()=>reduced()||document.hidden||document.documentElement.matches(".motion-busy,.ev-drag-on")||document.body.matches(".intro");
   /* 容器裡「最外層」的項目（項目裡面再包項目的不算，例如完成紀錄膠囊同時有 data-done 與 data-ev） */
   function items(box){return [...box.querySelectorAll(ITEM_SEL)].filter(el=>{const p=el.parentElement&&el.parentElement.closest(ITEM_SEL);return !p||!box.contains(p)})}
   /* render 前：記下每個 data-flip 容器裡項目的位置 */
@@ -57,7 +57,7 @@ const Anim=(()=>{
     });
   }
   /* 上下層：移動中的項目暫時浮到上面（移動越遠越上面） */
-  function lift(el,z){el.style.zIndex=String(2+Math.min(6,Math.round(z/80)));   /* 最多 8：只在同一區裡排上下，不會蓋過疊層頁（設定 38、通知 37） */el.style.position=getComputedStyle(el).position==="static"?"relative":el.style.position}
+  function lift(el,z){el.style.zIndex=String(2+Math.min(6,Math.round(z/80)));   /* 最多 8：只在同一區裡排上下，不會蓋過疊層頁（設定 38） */el.style.position=getComputedStyle(el).position==="static"?"relative":el.style.position}
   function drop(el){el.style.zIndex="";if(el.style.position==="relative")el.style.position=""}
   /* 消失的項目：在原位放一個分身淡出縮小（分身不能點、沒有 id） */
   function ghost(r,src){
@@ -88,19 +88,33 @@ const Anim=(()=>{
   /* 顯示／隱藏（hidden 屬性）也有過渡 */
   async function show(el,kind="rise"){if(!el)return;el.hidden=false;return enter(el,kind)}
   async function hide(el,kind="fade"){if(!el||el.hidden)return;await leave(el,kind);el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}
+  /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播。
+     一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉 */
+  function toggle(el,on){
+    if(!el)return;on=!!on;if(el._tgl===on)return;const first=el._tgl===undefined;el._tgl=on;
+    el.getAnimations().forEach(a=>a.cancel());el.inert=!on;
+    if(on){el.hidden=false;if(!first)enter(el,"pop");return}
+    if(first||el.hidden||reduced()){el.hidden=true;return}
+    leave(el,"pop").then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
+  }
   /* 燈號擴散（CSS 動畫 ping）：重畫後新的燈號會從頭播，跟原本的節奏對不上、看起來像跳一下。
      把每個 ping 動畫的起點都對齊到頁面時間軸 0，重畫前後相位一樣，所有燈號也同步 */
   function syncPings(){if(reduced())return;try{document.getAnimations().forEach(x=>{if(x.animationName==="ping"&&x.startTime!==0&&x.playState==="running")x.startTime=0})}catch(_){}}
-  return {capture,play,enter,leave,swap,show,hide,lift,drop,syncPings};
+  return {capture,play,enter,leave,swap,show,hide,toggle,lift,drop,syncPings};
 })();
 
+/* 彈簧（跟 Compose 的 spring(dampingRatio, stiffness) 一樣，質量 1）：LiquidSeg 與工具列（nav.js）共用；ui-07 從 nav.js 搬來，主頁不載入 nav.js 也能用分段切換 */
+const spring=(x,z,k)=>({x,v:0,t:x,z,k});
+function sprStep(s,dt){const c=2*s.z*Math.sqrt(s.k),n=4,h=dt/n;for(let i=0;i<n;i++){s.v+=(-s.k*(s.x-s.t)-c*s.v)*h;s.x+=s.v*h}}
+const sprDone=(s,e)=>Math.abs(s.x-s.t)<e&&Math.abs(s.v)<e*20;
+const sprSnap=(s,x)=>{s.x=s.t=x;s.v=0};
 /* ---------- 液態分段切換 LiquidSeg（2026-11-05） ----------
    跟底部工具列（nav.js）同一套：毛玻璃底（.glass）、實心鏡片、鏡片底下那一格反白（.lit，跟著鏡片走不是跟著選取）。
    物理參數照工具列（Convx）：按下鏡片放大 78/56（主軸 .6／250、側軸 .7／250）、移動時依速度沿主軸拉伸、
    整列按下時放大、拖曳時整列跟著偏最多 4px、白光（--hp／--hx）；只有按在鏡片那一格才能拖，放開吸到最近的一格；
    點別格＝按下 → 移過去 → 接近目標或 400ms 後放開。
    用法：new LiquidSeg(box,{onPick:k=>…})；box 裡放 <span class="lseg-lens"> 和一排 button[data-k]（role="tab"）；
-   程式改選取用 seg.set(k)（instant＝不播動畫）。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在 nav.js。 */
+   程式改選取用 seg.set(k)（instant＝不播動畫）；這排會被移除時呼叫 seg.destroy()。只有橫向（要直向時照 nav.js 的 isRail 加）。spring／sprStep 在本檔上面。 */
 class LiquidSeg{
   constructor(box,{onPick}={}){
     this.box=box;this.onPick=onPick;this.lensEl=box.querySelector(".lseg-lens");
@@ -108,8 +122,10 @@ class LiquidSeg{
     this.drag=null;this.raf=0;this.last=0;this.releasing=false;this.releaseAt=0;this.cur=0;this.suppress=false;
     glassify(box);this.bind();
     const on=this.btns().findIndex(b=>b.getAttribute("aria-selected")==="true");this.set(on<0?0:on,true);
-    addEventListener("resize",()=>this.set(this.cur,true));document.fonts?.ready.then(()=>this.set(this.cur,true));
+    this.onResize=()=>this.set(this.cur,true);addEventListener("resize",this.onResize);document.fonts?.ready.then(()=>{if(!this.dead)this.set(this.cur,true)});
   }
+  /* 拆掉：這排會被移除時（例如公共版行事曆 calUnmount）解除視窗的 resize 監聽、停掉動畫；box 自己身上的監聽跟著 box 一起回收 */
+  destroy(){this.dead=true;removeEventListener("resize",this.onResize);if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
   btns(){return [...this.box.querySelectorAll("[data-k]")]}
   geo(){const bs=this.btns();return bs.map(b=>({x:b.offsetLeft+b.offsetWidth/2,w:b.offsetWidth,k:b.dataset.k}))}
   set(i,instant){

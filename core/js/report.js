@@ -236,7 +236,7 @@ async function reportDialog(){
 function openReport(from,to,doc){
   closeReport(true);rptRange={from,to};rptDoc=doc||null;const L=doc?doc.label:"工作報告";
   document.body.insertAdjacentHTML("beforeend",`<div class="rpt-ov" id="rptOv" role="dialog" aria-modal="true" aria-label="${L}預覽">
-    <div class="anim-top rpt-bar"><div class="anim-title"><span class="anim-k">${doc?doc.k:"REPORT"}</span><b>${L}預覽</b><span class="sub rpt-hint">文字都可以直接點開修改・每一張紙就是 PDF 的一頁・空白的圖塊與章節不會印出來・不會存進看板</span><span class="rpt-pages num" id="rptPages" aria-live="polite"></span></div>
+    <div class="anim-top rpt-bar" data-fx-keep><div class="anim-title"><span class="anim-k">${doc?doc.k:"REPORT"}</span><b>${L}預覽</b><span class="sub rpt-hint">文字都可以直接點開修改・每一張紙就是 PDF 的一頁・空白的圖塊與章節不會印出來・不會存進看板</span><span class="rpt-pages num" id="rptPages" aria-live="polite"></span></div>
       <div class="anim-ctl"><button type="button" id="rptAdd">＋ 章節</button><button type="button" class="primary" id="rptPrint">${ico("download")}存成 PDF</button><button type="button" id="rptClose" aria-label="關閉${L}">${ico("close")}關閉</button></div></div>
     <div class="rpt-scroll"><div class="rpt-fit"><article class="rpt-paper" spellcheck="false">${doc?doc.html:rptHTML(rptData(from,to))}</article></div></div></div>`);
   const ov=$("#rptOv");rptOpen=true;document.body.classList.add("rpt-open");

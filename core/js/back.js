@@ -1,5 +1,5 @@
 /* 核心｜返回：系統返回鍵／返回手勢
-   - 打開一層（每週概述、設定、通知、編輯紀錄、工作報告）時推一筆瀏覽紀錄：按返回／系統返回手勢先關掉最上面那層，不會直接離開網站。
+   - 打開一層（每週概述、設定、通知與行事曆那一頁、編輯紀錄、工作報告）時推一筆瀏覽紀錄：按返回／系統返回手勢先關掉最上面那層，不會直接離開網站。
    - 關的時候播的是各層自己的關閉動畫（換頁動畫 core/js/pagefx.js：這一層往後退、底下那層從後面浮上來）。
    - 瀏覽器自己做了返回動畫（iOS Safari 邊緣滑動等，popstate 的 hasUAVisualTransition）就直接關，不再播一次。
    - 2026-11-05 使用者決定拿掉「預測返回」（手指往右拖、這一層縮小右移）與它的收尾動畫，程式已刪除。 */
@@ -32,7 +32,7 @@ const Back=(()=>{
   return {opened,closed,replace,home};
 })();
 /* 換頁動畫（pagefx.js）的「底下那一頁」：最上面還開著的全畫面層（skip 以外），沒有就是看板本身（#pager，含每週概述） */
-function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv","#notiOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}
+function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}
 /* 各層打開時登記：close(instant) 關掉那一層 */
 Back.layers={
   settings:()=>Back.opened("settings",i=>closeSettings(i)),
