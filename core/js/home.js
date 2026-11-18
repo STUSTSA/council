@@ -279,7 +279,8 @@
       else if(!LK.ed&&b)b.remove()});
     dk.classList.toggle("ed",LK.ed);
     dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc");
-    if(show){const n=DKN.get(show);if(n&&dkIn.classList.contains("sc")){const a=n.offsetLeft,b=a+n.offsetWidth;if(a<dkIn.scrollLeft)dkIn.scrollLeft=a-8;else if(b>dkIn.scrollLeft+dkIn.clientWidth)dkIn.scrollLeft=b-dkIn.clientWidth+8}}
+    /* 放不下時盡量捲到最後（輸入框、「+」都看得到），但 show 那一個（返回鍵、剛加的連結）不能捲出左邊 */
+    if(show){const n=DKN.get(show);if(n&&dkIn.classList.contains("sc"))dkIn.scrollLeft=Math.min(n.offsetLeft-8,dkIn.scrollWidth-dkIn.clientWidth)}
     if(!R)return;
     /* 底板兩半：中線不動，各自從原本的邊滑到新的邊 */
     const pr=dk.getBoundingClientRect(),dx=(pr.width-w0)/2;
@@ -297,7 +298,7 @@
     if(LK.ed===on)return;const had=dk.contains(document.activeElement);
     LK.ed=on;tipHide();
     if(!on){const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
-    dkPaint(true,on?"form":"add");
+    dkPaint(true,on?"back":"add");
     if(on){const u=$id("hmLkU");(u||DKN.get("back")).focus({preventScroll:true})}
     else if(had)(dkIn.contains(DKN.get("add"))?DKN.get("add"):$id("hmPub")).focus({preventScroll:true});
   }

@@ -188,8 +188,8 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     await p.hover('.hm-dk-in>.hm-lk .hm-lkc').catch(()=>{});await p.waitForTimeout(260);
     ok(await p.evaluate(()=>{const t=document.getElementById('hmTip');return !t||getComputedStyle(t).display==='none'||+getComputedStyle(t).opacity===0}),'手機（沒有 hover）：不浮出名稱膠囊');
     await p.tap('.hm-dk-in>.hm-lkadd');await p.waitForTimeout(700);
-    const r=await p.evaluate(()=>{const i=document.getElementById('hmDkIn'),u=document.getElementById('hmLkU').getBoundingClientRect();return {sc:i.classList.contains('sc'),ov:getComputedStyle(i).overflowX,sw:document.documentElement.scrollWidth,vis:u.left>=0&&u.left<innerWidth,fs:getComputedStyle(document.getElementById('hmLkU')).fontSize}});
-    ok(r.sc&&r.ov==='auto'&&r.sw<=412&&r.vis,`手機編輯中放不下：下排自己橫捲、捲到輸入框、整頁不橫捲（${r.ov} ${r.sw}）`);
+    const r=await p.evaluate(()=>{const i=document.getElementById('hmDkIn'),u=document.getElementById('hmLkU').getBoundingClientRect(),k=document.querySelector('.hm-lkb').getBoundingClientRect(),c=i.getBoundingClientRect();return {sc:i.classList.contains('sc'),ov:getComputedStyle(i).overflowX,sw:document.documentElement.scrollWidth,vis:k.left>=c.left&&u.left>k.left&&u.right<=c.right,fs:getComputedStyle(document.getElementById('hmLkU')).fontSize}});
+    ok(r.sc&&r.ov==='auto'&&r.sw<=412&&r.vis,`手機編輯中放不下：下排自己橫捲、捲到返回鍵與輸入框都看得到、整頁不橫捲（${r.ov} ${r.sw}）`);
     ok(r.fs==='16px','手機輸入框 16px（iPhone 聚焦時不放大整頁）');
     await addLk(p,'phone.example','');await p.waitForTimeout(600);
     const kp=await p.evaluate(()=>[...window.__kp]);ok(kp.every(k=>ALLOWED.has(k)),'手機下排動畫只動 transform／opacity（不動 height、width）：'+kp.join());

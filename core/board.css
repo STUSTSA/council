@@ -1349,7 +1349,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .hm-stage{flex:1;margin-top:0}
   .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0}
   .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
-  .hm-lkf input{font-size:16px}   /* iPhone：16px 以下聚焦時會整頁放大 */
+  .hm-lkf input{width:88px;font-size:16px}   /* iPhone：16px 以下聚焦時會整頁放大；寬度讓返回鍵到「加入」在 412 寬放得下 */
+  .hm-lkf .hm-lku{width:140px}
 }
 
 /* 進部門、回主頁的過場（home.js 的 tileExpand／walFlip／hmCollapse；DESIGN-next 第五節「整頁過場」）：都是蓋在畫面上的分身，只動 transform／opacity。
