@@ -10,6 +10,7 @@
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
+const SW_SRC=require('fs').readFileSync(require('path').join(__dirname,'../../sw.js'),'utf8'),SW_CACHE=(SW_SRC.match(/const CACHE="([^"]+)"/)||[])[1];   /* 快取名稱照 sw.js（換版本時測試不用跟著改） */
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 const XSS='<img src=x onerror="window.__xss=1">';
 /* 攔 Element.animate：記下每一組 keyframes 用到的屬性（主頁的程式動畫只能動 transform／opacity） */
@@ -226,8 +227,8 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const p=await ctx.newPage();await p.goto(U+'home.html');
     const want=['core/js/home.js','core/theme.css','core/js/theme.js','core/js/pagefx.js','dept/icons/dept-secretariat.svg','dept/icons/dept-works.svg'];
     /* waitForFunction 不等 Promise，自己輪詢：Service Worker 裝好、接手、收完 precache 訊息 */
-    const miss=()=>p.evaluate(async w=>{if(!(await navigator.serviceWorker.getRegistration()))return w;const c=await caches.open('board-cache-v1'),o=[];
-      for(const u of w)if(!(await c.match(new URL(u,location.href).href,{ignoreSearch:true})))o.push(u);return o},want).catch(e=>['?'+e.message]);
+    const miss=()=>p.evaluate(async([w,cn])=>{if(!(await navigator.serviceWorker.getRegistration()))return w;const c=await caches.open(cn),o=[];
+      for(const u of w)if(!(await c.match(new URL(u,location.href).href,{ignoreSearch:true})))o.push(u);return o},[want,SW_CACHE]).catch(e=>['?'+e.message]);
     let m=want;for(let i=0;i<30&&m.length;i++){await p.waitForTimeout(300);m=await miss()}
     const got=!m.length;
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
