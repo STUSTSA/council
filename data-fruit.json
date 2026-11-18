@@ -1,15 +1,15 @@
 {
- "schemaVersion": 13,
+ "schemaVersion": 14,
  "id": "board-fruit",
  "title": "水果部工作進度",
  "members": [],
  "issues": [],
  "events": [],
  "weeks": [],
- "savedAt": "2026-11-09 02:15",
+ "savedAt": "2026-11-18 22:49",
  "sync": {
-  "owner": "linkmasterking",
-  "repo": "-",
+  "owner": "stustsa",
+  "repo": "council",
   "branch": "main",
   "path": "data-fruit.json",
   "tokenAll": {
@@ -17,6 +17,6 @@
    "i": "O2Kev3fyzYV0N7C7",
    "c": "aN2uc+MrRSeLAx6OmD6FxQRVtbxQap15uH+/7IuBBWF5wBCp0pB+eP97mjNih4iaU/RZIvdA0hSLmNorwfw+yIXYWcbPX3FZAmkDIJoN8vwAiCO5sTsn9DfMIn4Qj5TOpGrfJQKdW9cQX7lapA=="
   },
-  "resetAt": "2026-11-09 02:15"
+  "resetAt": "2026-11-18 22:49"
  }
 }
