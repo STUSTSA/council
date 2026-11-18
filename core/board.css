@@ -1290,12 +1290,49 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-wc .hm-nm{font-size:20px}
 .hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
 .hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}
-/* 下排：寬度跟著內容、以整個畫面寬置中（不是以主頁的內容區：左右安全區不一樣時也在正中間）；浮在上面（帶陰影）。
-   .hm-dock＝跟畫面一樣寬的一條（左右用負邊距抵掉 .hm 的內距，本身不接點擊），.hm-dk＝真正的膠囊，在那一條的正中間 */
-.hm-dock{flex:none;display:flex;justify-content:center;margin:clamp(14px,4vh,40px) calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));pointer-events:none}
-.hm-dk{position:relative;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:8px;border-radius:999px;background:var(--blk);box-shadow:0 12px 30px -8px var(--wal-sh);pointer-events:auto}
+/* 下排（home.js 的 dkPaint）：寬度跟著內容、以整個畫面寬置中（不是以主頁的內容區：左右安全區不一樣時也在正中間）；浮在上面（帶陰影）。
+   .hm-dock＝跟畫面一樣寬的一條（左右用負邊距抵掉 .hm 的內距，本身不接點擊；左右超出畫面的底板分身在這裡裁掉），.hm-dk＝膠囊，在那一條的正中間。
+   內容：全會行事曆圓鈕（主要動作色）、細線、個人常用連結（網站圖示，載不到是網域第一個字母）、最後「+」；編輯中「+」換成返回鍵、網址、名稱、加入，連結右上角紅色 ×。
+   底板＝左右兩半（.hm-dk-bg，各自從膠囊的一邊延伸到中線、在中線裁掉；裡面那條很長的膠囊帶陰影）：寬度改變時兩半各自用 transform 滑到新的邊（中線不動），
+   不動 width。內容放不下（手機、編輯中）時 .hm-dk-in 自己橫捲（.sc），放得下時不裁切（滑動中的按鈕不會被切掉） */
+.hm-dock{flex:none;display:flex;justify-content:center;margin:clamp(14px,4vh,40px) calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));overflow-x:clip;pointer-events:none}
+.hm-dk{position:relative;display:flex;max-width:calc(100% - 32px);pointer-events:auto}
+.hm-dk-bg{position:absolute;top:-48px;bottom:-48px;overflow:hidden;pointer-events:none}
+.hm-dk-l{left:-100vw;right:50%}
+.hm-dk-r{left:50%;right:-100vw}
+.hm-dk-bg>span{position:absolute;top:48px;bottom:48px;border-radius:999px;background:var(--blk);box-shadow:0 12px 30px -8px var(--wal-sh)}
+.hm-dk-l>span{left:100vw;right:-100vw}
+.hm-dk-r>span{left:-100vw;right:100vw}
+.hm-dk-in{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:8px;border-radius:999px;scrollbar-width:none}
+.hm-dk-in.sc{overflow-x:auto;overscroll-behavior-x:contain}
+.hm-dk-in::-webkit-scrollbar{display:none}
+.hm-dk-in>*{flex:none}
 .hm-pub{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink)}
 .hm-pub .ico{width:20px;height:20px}
+.hm-dv{width:1px;height:22px;background:var(--hair)}
+.hm-lk{position:relative;display:flex}
+.hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:var(--r-md);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--mo-spring)}
+@media (hover:hover){.hm-lkc:hover{transform:scale(1.05)}}
+.hm-lkc:active{transform:scale(.96)}
+.hm-lkl{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:14px;font-weight:700;line-height:1}
+.hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}
+.hm-lk.ico .hm-lkl{display:none}
+.hm-lk.ico .hm-lki{position:static;opacity:1}
+.hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */
+.hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:#fff}
+.hm-lkx .ico{width:11px;height:11px}
+.hm-lkadd{display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
+.hm-lkadd .ico{width:18px;height:18px}
+.hm-lkb{display:grid;place-items:center;width:40px;height:40px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--bg);color:var(--ink)}
+.hm-lkb .ico{width:17px;height:17px}
+.hm-lkf{display:flex;align-items:center;gap:8px}
+.hm-lkf input{width:110px;height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--bg);font-size:14px}
+.hm-lkf .hm-lku{width:190px}
+.hm-lkf .primary{min-height:36px;padding:0 16px;font-size:14px}
+/* 連結名稱的小膠囊（#hmTip，放在 body 下，不會被下排裁到）：桌面滑鼠停在連結上時浮在圖示上方，淡入 fast；手機（沒有 hover）不出現 */
+.hm-tip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,80vw);padding:5px 11px;border-radius:999px;background:var(--ink);color:var(--blk);font-size:12.5px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
+.hm-tip.on{opacity:1}
+@media (hover:none){.hm-tip{display:none}}
 /* 疊層（全會行事曆、外觀）：主頁上蓋一整層，內容最寬 760、自己捲動；右上關閉鈕 */
 .hm-ly{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:calc(18px + env(safe-area-inset-top)) max(clamp(16px,4vw,56px),env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(clamp(16px,4vw,56px),env(safe-area-inset-left))}
 .hm-ly[hidden]{display:none}
@@ -1311,7 +1348,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
   .hm-round{width:48px;height:48px}
   .hm-stage{flex:1;margin-top:0}
   .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0}
-  .hm-dk{box-shadow:0 -14px 30px -6px var(--wal-sh)}
+  .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
+  .hm-lkf input{font-size:16px}   /* iPhone：16px 以下聚焦時會整頁放大 */
 }
 
 /* 進部門、回主頁的過場（home.js 的 tileExpand／walFlip／hmCollapse；DESIGN-next 第五節「整頁過場」）：都是蓋在畫面上的分身，只動 transform／opacity。

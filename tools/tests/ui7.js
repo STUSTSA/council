@@ -3,7 +3,7 @@
    1. 桌面 1300：只有左上標誌、時間、設定、色塊、下排（沒有工具列、通知）；九張色塊（英文小標、名稱、標誌）；焦點框只用 transform 滑到焦點那張；方向鍵、滾輪、點擊換焦點；到兩端頂一下
    2. 部門標誌：九個 dept/icons/dept-代號.svg 都載得到，色塊裡放的是同一份 SVG（零件 dg- class）；部門標題列用自己的標誌
    3. 手機 412：卡片堆露出 196／60、焦點卡與下一張留 10、退後的縮 5%（量 transform）；手指往上滑 140px 換下一張；點露出的那一條叫到焦點；點焦點卡進入
-   4. 下排置中、只有全會行事曆圓鈕、帶陰影；打開公共版行事曆（全部／活動／會議，沒有今日／明日、逾期），Esc、返回鍵、關閉鈕關；反覆開關 resize 監聽不累積；設定鈕打開外觀
+   4. 下排置中、全會行事曆圓鈕、帶陰影（ui-08 起有個人常用連結與「+」，在 ui8home.js 測）；打開公共版行事曆（全部／活動／會議，沒有今日／明日、逾期），Esc、返回鍵、關閉鈕關；反覆開關 resize 監聽不累積；設定鈕打開外觀
    5. 開場：小人先滑入、標誌再上移、字由左到右揭開（各動畫的延遲順序），播完收掉（現有流程沒有開場登入鈕）；關掉動態直接是結果
    6. 進部門過場（桌面鋪滿、手機翻面）與看板到達的底板：Element.animate 的 keyframes 只有 transform／opacity；交接 pfx-burst 用完就刪；回主頁焦點是那個部門
    7. 進行中的張數（資料檔讀一次）；跳脫（部門名含 <img onerror>）；頁面沒有 title 屬性；412 沒有橫捲；深色左邊小人只留線稿
@@ -65,7 +65,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     /* ui-08：下排＝跟畫面一樣寬的一條（#hmDock）裡置中的膠囊（#hmDk），陰影在膠囊上；個人常用連結的「+」與連結在 ui8home.js 測 */
     const dk=await p.evaluate(()=>{const d=document.getElementById('hmDk'),r=d.getBoundingClientRect();return {c:r.left+r.width/2,btn:d.querySelectorAll('button:not(.hm-lkadd),a').length,pub:!!d.querySelector('.hm-pub[aria-label="全會行事曆"]'),sh:getComputedStyle(d).boxShadow,
       bg:getComputedStyle(d.querySelector('.hm-pub')).backgroundColor,pri:getComputedStyle(document.documentElement).getPropertyValue('--pri').trim()}});
-    ok(Math.abs(dk.c-650)<2&&dk.btn===1&&dk.pub&&dk.sh!=='none',`下排置中、只有全會行事曆圓鈕、帶陰影（${dk.c} ${dk.btn}）`);
+    ok(Math.abs(dk.c-650)<2&&dk.btn===1&&dk.pub&&dk.sh!=='none',`下排置中、全會行事曆圓鈕（主要動作色）、帶陰影（${dk.c} ${dk.btn}；個人常用連結與「+」在 ui8home.js）`);
     const hl=await p.evaluate(()=>history.length);
     await p.click('#hmPub');await p.waitForTimeout(700);
     const cal=await p.evaluate(()=>{const l=document.getElementById('hmCal');return {vis:!!l&&!l.hidden,pub:!!l.querySelector('.cal.pub'),modes:[...l.querySelectorAll('.cal-seg [data-k]')].map(x=>x.textContent).join(),
