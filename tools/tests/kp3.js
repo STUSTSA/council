@@ -80,7 +80,9 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
   const line=(p,id,n)=>`${S(p,id)} .kp-lines:not(.kp-frees) .kp-line:nth-child(${n})`;
   const setType=async(p,id,n,k)=>{await p.click(`${line(p,id,n)} .kp-type .csel-btn`);await p.waitForTimeout(300);await p.click(`${line(p,id,n)} .csel-opt[data-v="${k}"]`);await p.waitForTimeout(400)};
   /* 新卡片：桌面＝「+ 新增即時回報」直接在右側原位編輯（名稱）；手機＝小表單 */
-  const newCard=async(p,name)=>{
+  /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收合打開的卡片 */
+  const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});openEv.clear();openDone.clear();selEv=null;render()}).then(()=>p.waitForTimeout(400));
+  const newCard=async(p,name)=>{await liveTop(p);
     if(md(p)){await p.click('#addEvent');await p.waitForTimeout(900);await p.fill('#evDetail [data-kptitle]',name);await outside(p)}
     else{await p.click('#addEvent');await p.waitForSelector('#dlg[open]');await p.fill('#dlgForm [name="name"]',name);await p.click('#dlg [data-act="ok"]');await settled(p)}
     const id=await p.evaluate(n=>(state.events.find(e=>e.name===n)||{}).id,name);await show(p,id);return id};

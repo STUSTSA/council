@@ -88,10 +88,19 @@ const Anim=(()=>{
   /* 顯示／隱藏（hidden 屬性）也有過渡 */
   async function show(el,kind="rise"){if(!el)return;el.hidden=false;return enter(el,kind)}
   async function hide(el,kind="fade"){if(!el||el.hidden)return;await leave(el,kind);el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}
+  /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播。
+     一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉 */
+  function toggle(el,on){
+    if(!el)return;on=!!on;if(el._tgl===on)return;const first=el._tgl===undefined;el._tgl=on;
+    el.getAnimations().forEach(a=>a.cancel());el.inert=!on;
+    if(on){el.hidden=false;if(!first)enter(el,"pop");return}
+    if(first||el.hidden||reduced()){el.hidden=true;return}
+    leave(el,"pop").then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
+  }
   /* 燈號擴散（CSS 動畫 ping）：重畫後新的燈號會從頭播，跟原本的節奏對不上、看起來像跳一下。
      把每個 ping 動畫的起點都對齊到頁面時間軸 0，重畫前後相位一樣，所有燈號也同步 */
   function syncPings(){if(reduced())return;try{document.getAnimations().forEach(x=>{if(x.animationName==="ping"&&x.startTime!==0&&x.playState==="running")x.startTime=0})}catch(_){}}
-  return {capture,play,enter,leave,swap,show,hide,lift,drop,syncPings};
+  return {capture,play,enter,leave,swap,show,hide,toggle,lift,drop,syncPings};
 })();
 
 /* ---------- 液態分段切換 LiquidSeg（2026-11-05） ----------

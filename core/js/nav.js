@@ -4,8 +4,9 @@ const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==
    材質：平面色塊 .glass（util.js 的 glassify；board.css「平面色塊」「底部工具列」段）；選取鏡片是主要動作的實心膠囊（--pri），鏡片底下的圖示用 --pri-ink。
    按鈕機制照 Convx（Kyant backdrop catalog 的 LiquidBottomTabs／DampedDragAnimation／InteractiveHighlight／LiquidButton），手機與桌面同一套，
    差別只在方向（手機水平、桌面直立）：
-     - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），整條列跟著偏最多 4px；放開吸到最近的分頁
-     - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿主軸拉伸；整條列沿長邊放大 16px、分頁內容放大 1.2；
+     - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），拖過兩端時整條列跟著偏最多 4px；放開吸到最近的分頁
+     - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿移動方向拉伸（最多兩成）、垂直方向略縮；
+       整條列沿長邊放大 16px、鏡片那一格的內容放大 1.2（--ts，board.css 只套在 .lit 那一格）；
        鏡片位置一圈白光（彈簧 .5／300；2026-11-17 起材質只有平面，白光不畫，--hp 照樣寫但沒有樣式用到）
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
    設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
@@ -48,13 +49,14 @@ function tbFrame(){
   const cs=tabCenters();if(!cs.length||!cs[0].x&&!cs[0].y)return;
   /* 手機沿 x、桌面沿 y；其他都一樣 */
   const rail=isRail(),ax=rail?"y":"x",n=cs.length,p=lens.press.x,pos=interp(cs,lens.val.x,ax),len=(rail?main.offsetHeight:main.offsetWidth)||1;
-  const v=lens.vel.x/10,ma=lens.sx.x/(1-clampV(v*.75,-.2,.2)),cr=lens.sy.x*(1-clampV(v*.25,-.2,.2));   /* 主軸、側軸的縮放 */
+  /* 主軸、側軸的縮放：移動時依速度沿移動方向拉伸（最多兩成，往哪邊移都一樣），垂直方向略縮（DESIGN-next 第五節「彈簧與回彈」） */
+  const v=Math.abs(lens.vel.x)/10,ma=lens.sx.x*(1+Math.min(.2,v*.75)),cr=lens.sy.x*(1-Math.min(.2,v*.25));
   if(rail){el.style.top="";el.style.transform=`translate(0,${(pos-el.offsetHeight/2).toFixed(2)}px) scale(${cr.toFixed(4)},${ma.toFixed(4)})`}
   else{el.style.top=cs[0].top+"px";el.style.transform=`translate(${(pos-el.offsetWidth/2).toFixed(2)}px,0) scale(${ma.toFixed(4)},${cr.toFixed(4)})`}
   /* 鏡片底下那一格的圖示反白（跟著鏡片走，不是跟著選取狀態） */
   const lit=el.classList.contains("off")?-1:Math.round(clampV(lens.val.x,0,n-1));
   tabEls().forEach((b,i)=>b.classList.toggle("lit",i===lit));
-  /* 整條列：拖曳時跟著偏最多 4px（EaseOut），按下時沿長邊放大 16px */
+  /* 整條列：拖過兩端時跟著偏最多 4px（EaseOut；lens.off＝超出兩端的距離），按下時沿長邊放大 16px */
   const fr=clampV(lens.off.x/len,-1,1),ease=1-Math.pow(1-Math.abs(fr),2),po=4*Math.sign(fr)*ease;
   main.style.transform=po?`translate${rail?"Y":"X"}(${po.toFixed(2)}px)`:"";main.style.scale=p>.0005?(1+16/len*p).toFixed(4):"";
   tb.querySelector(".tb-tabs").style.setProperty("--ts",(1+.2*p).toFixed(4));
@@ -105,7 +107,23 @@ function renderTabbar(){
   const act=tbActive();
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
+  Anim.toggle(g,!roView);   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
   requestAnimationFrame(()=>lensTo(act));
+  fabSync();
+}
+/* ---------- 新增即時回報的浮動圓鈕（DESIGN-next 第六節「部門內」） ----------
+   右下角 60 的圓鈕（主要動作色、加號）；手機在工具列上方。只在即時回報分頁、可以編輯（不是唯讀、不是唯讀檢視）、沒有卡片在編輯或打開、沒有在搜尋時出現。
+   id 沿用 #addEvent：點了做原本「+ 新增即時回報」的同一件事（events.js 的主點擊監聽）。設定、通知疊層蓋在它上面（z-index 比疊層低） */
+/* 會長室、秘書處併進來的完成紀錄：只算目前還是完成狀態、還在的那幾筆（移回即時回報或刪掉之後 openDone 可能還留著舊的 id） */
+const doneOpenNow=()=>[...openDone].some(id=>state.events.some(e=>e.id===id&&e.doneAt)||state.issues.some(i=>i.id===id&&i.doneAt));
+const liveCardOpen=()=>state.events.some(e=>!e.doneAt&&openEv.has(e.id))||(mdOn("live")&&!!selEv)||(CFG.mergeDone&&doneOpenNow());
+function fabSync(){
+  let fb=$("#addEvent");
+  if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
+  const on=secTab("live")&&curSec==="live"&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
+  Anim.toggle(fb,on);
+  /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
+  document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
 function tabGo(k){if(setOpen)closeSettings();if(notiOpen)closeNoti();setSection(k)}
 function setupTabbar(tb){
@@ -122,7 +140,7 @@ function setupTabbar(tb){
     const rail=isRail(),ax=rail?"y":"x",r=main.getBoundingClientRect();
     const slot=cs.length>1?Math.abs(cs[1][ax]-cs[0][ax]):(rail?main.offsetHeight:main.offsetWidth);
     const lp=interp(cs,lens.val.x,ax);if(Math.abs(at(e)-(rail?r.top:r.left)-lp)>slot/2)return;
-    lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now()};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
+    lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now(),raw:lens.val.x};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
     try{main.setPointerCapture(e.pointerId)}catch(_){}
     tb.classList.add("dragging");lensPress();lens.hl.t=reduceMotion()?0:1;tbKick();
   });
@@ -130,7 +148,7 @@ function setupTabbar(tb){
     const d=lens.drag;if(!d||e.pointerId!==d.id)return;
     if(e.pointerType==="mouse"&&e.buttons===0){dragEnd();return}
     const c=at(e),dx=c-d.x;d.x=c;if(!dx)return;if(Math.abs(c-lastX)>2||d.moved)d.moved=true;
-    sprSnap(lens.val,clampV(lens.val.x+dx/d.slot,0,d.n-1));sprSnap(lens.off,lens.off.x+dx);
+    d.raw+=dx/d.slot;sprSnap(lens.val,clampV(d.raw,0,d.n-1));sprSnap(lens.off,(d.raw-lens.val.x)*d.slot);   /* 拖過兩端：鏡片停在端點，超出的部分讓整條列跟著偏 */
     const now=performance.now(),dt=Math.max(8,now-lastT)/1000;sprSnap(lens.vel,(lens.val.x-lastV)/dt/Math.max(1,d.n-1));lastV=lens.val.x;lastT=now;d.t=now;lastX=c;
     const near=Math.round(lens.val.x);tabEls().forEach((b,i)=>b.classList.toggle("hov",i===near));
     tbKick();
@@ -155,6 +173,7 @@ function setupTabbar(tb){
   gear.addEventListener("pointermove",e=>{const g=gearSt;if(g.down!==e.pointerId)return;sprSnap(g.ox,e.clientX-g.x0);sprSnap(g.oy,e.clientY-g.y0);tbKick()});
   const gearUp=e=>{const g=gearSt;if(g.down===false||e&&e.pointerId!==undefined&&e.pointerId!==g.down)return;g.down=false;g.p.t=0;g.ox.t=0;g.oy.t=0;tbKick()};
   gear.addEventListener("pointerup",gearUp);gear.addEventListener("pointercancel",gearUp);addEventListener("pointerup",gearUp);addEventListener("blur",()=>gearUp());
+  if(window.ResizeObserver)new ResizeObserver(()=>tbFrame()).observe(main);   /* 列的寬度變了（設定鍵出現／消失、字型載入）：鏡片照新的位置重畫 */
   const relayout=()=>lensTo(tbActive(),true);
   RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;requestAnimationFrame(relayout)});
   addEventListener("resize",()=>lensTo(tbActive(),true));
@@ -222,7 +241,7 @@ document.addEventListener("click",e=>{
   const p=e.target.closest("[data-look-pal]");if(p){UI.set({pal:p.dataset.lookPal});return}
   if(e.target.closest("[data-look-snd]"))UI.set({sound:!UI.get().sound});
 });
-/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（頁首同一個，深淺色規則見 board.css「頁首」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
+/* 設定頁（與手機子頁）的標題列：左邊學生會 logo（深淺色規則見 board.css「學生會 logo」段），右邊關閉／返回。只是圖，點了沒有作用（2026-11-06 使用者） */
 const SET_LOGO=()=>`<span class="set-logo">${suLogoMono("南臺科大學生會")}</span>`;
 function settingsHTML(){
   return `<div class="anim-top set-top" data-fx-keep>${SET_LOGO()}<div class="anim-ctl"><button type="button" id="setClose" aria-label="關閉設定">${ico("close")}關閉</button></div></div>

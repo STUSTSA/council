@@ -106,7 +106,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
   await p.evaluate(()=>{selEv=null;render()});await p.waitForTimeout(500);
 
   /* 4. 換分頁：頁首同一個節點、不參加進場動畫；5. 進場動畫的目標沒有 SVG 或圖示零件 */
-  {await p.evaluate(()=>{document.querySelector('.hero').__m=1;window.__an=[]});
+  {await p.evaluate(()=>{document.querySelector('.dhead').__m=1;window.__an=[]});
     const seq=[['tab','progress'],['tab','done'],['set'],['sub'],['unsub'],['unset'],['noti'],['unnoti'],['tab','live']];
     let topSame=true,setTopKept=true;
     for(const s of seq){
@@ -118,9 +118,9 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
       if(s[0]==='noti')await p.click('#notiBtn');
       if(s[0]==='unnoti')await p.click('#notiClose');
       await p.waitForTimeout(1300);
-      if(!(await p.evaluate(()=>document.querySelector('.hero').__m===1)))topSame=false;
+      if(!(await p.evaluate(()=>document.querySelector('.dhead').__m===1)))topSame=false;
     }
-    const r=await p.evaluate(()=>{const top=[...document.querySelectorAll('.hero,#setOv .set-top,#setSub .set-top,#notiOv .anim-top')];
+    const r=await p.evaluate(()=>{const top=[...document.querySelectorAll('.dhead,#setOv .set-top,#setSub .set-top,#notiOv .anim-top')];
       const hit=window.__an.filter(x=>x.in&&top.some(t=>t.contains(x.el)));
       const svg=window.__an.filter(x=>x.in&&(x.el instanceof SVGElement||x.el.closest('svg,.ico,.logo')));
       return {n:window.__an.filter(x=>x.in).length,top:hit.map(x=>x.el.className&&x.el.className.baseVal!==undefined?x.el.className.baseVal:x.el.className),svg:svg.map(x=>x.el.tagName+'.'+(x.el.getAttribute('class')||'')),cur:curSec}});

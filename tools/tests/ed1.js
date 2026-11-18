@@ -6,7 +6,7 @@
    之後一直通過，但因為只印不判斷，壞了也看不出來），改成每一步都判斷、最後印「全部通過」並用結束碼表示結果；沒改就點外面不寫 commit 兩種寬度都測 */
 const c=require('./common');(async()=>{
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(v)passes++;else fails++};
-const vis=(p,sel)=>p.evaluate(s=>[...document.querySelectorAll(s)].filter(e=>e.offsetParent!==null&&getComputedStyle(e).display!=="none").length,sel);
+const vis=(p,sel)=>p.evaluate(s=>[...document.querySelectorAll(s)].filter(e=>(e.offsetParent!==null||getComputedStyle(e).position==="fixed"&&e.checkVisibility())&&getComputedStyle(e).display!=="none").length,sel);   /* ui-04：新增即時回報是浮動圓鈕（position:fixed，offsetParent 一定是 null），固定定位的看 checkVisibility */
 const S=p=>p.evaluate(()=>({editing,cardEdit,dirty,bars:document.querySelectorAll('.card-edbar').length,secEdit:[...document.querySelectorAll('.sec-edit')].map(e=>e.dataset.edbox)}));
 for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login,st}=await c.setup();   /* 每種寬度都從沒有身分的資料開始 */
   const p=await mk(w,860,'dark',touch);await p.waitForFunction(()=>!document.getElementById('splash'),null,{timeout:8000}).catch(()=>{});

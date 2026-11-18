@@ -28,7 +28,19 @@ function months(){const r=viewRange(),out=[],d=pd(r.start+"-01"),end=pd(r.end+"-
 let cardEdit="";
 const cardEd=(t,id)=>editing&&cardEdit===`${t}:${id}`;
 const secEd=k=>editing&&cardEdit==="s:"+k;
-const canEdit=()=>loggedIn()&&!readOnly();
+/* 唯讀檢視（DESIGN-next 第十四節）：可編輯的單位按標題列的眼睛鈕，看沒有權限的人看到的樣子。只是這個畫面的切換（不存、不影響資料與權限）；
+   開著的時候 canEdit 為假（編輯鈕、新增、拖曳、勾選都沒有），標「唯讀」，通知鈕與設定鍵不出現。
+   deptCan＝可編輯的單位（登入、看板沒有被鎖、不是不能寫的託管版；離線暫時不能存不算）；deptRO＝要標「唯讀」：沒有編輯權限的單位（boardLocked）或唯讀檢視中。
+   GitHub 模式還沒登入的人不算沒有權限（登入就能編輯），不標唯讀 */
+let roView=false;
+const deptCan=()=>loggedIn()&&!boardLocked()&&!(HOSTED&&!canWrite);
+const deptRO=()=>boardLocked()||roView;
+const canEdit=()=>loggedIn()&&!readOnly()&&!roView;
+document.addEventListener("click",e=>{if(!e.target.closest||!e.target.closest("#peekBtn"))return;
+  if(editing||!deptCan())return;   /* 編輯中不切換（先存好或取消） */
+  roView=!roView;render()});
+/* 從瀏覽紀錄回來（bfcache）：唯讀檢視重設為關（跟重新開頁一樣） */
+addEventListener("pageshow",e=>{if(e.persisted&&roView){roView=false;render()}});
 const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-edit-btn" data-edit="${esc(key)}">${ico("edit")}編輯</button>`;
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */
@@ -36,6 +48,7 @@ const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcanc
    秘書處會議編輯寫別的部門（還在 GitHub），firestore 模式不開放 */
 const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
 async function startEdit(key,then){
+  if(roView)return false;   /* 唯讀檢視中不開始編輯（圓鈕、編輯鈕正在消失的途中也一樣） */
   if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;
   morph(()=>{editing=true;cardEdit=key;dirty=false;evFld=null;ifFld=null;kpSt=null;kpTp=null;snapshot=JSON.stringify(state);keepIds=new Set(state.issues.filter(i=>!i.doneAt).map(i=>i.id));if(then)then();
     /* 即時回報卡（進行中、不是秘書處的會議卡）：原位編輯器，記下開始前的內容（新增的卡片＝null） */
@@ -93,43 +106,47 @@ function render(){
   Anim.play(flip);Anim.syncPings();
 }
 
-/* ---------- 區塊切換：底部工具列的三個分頁 ----------
-   手機：一次只顯示一區（預設即時回報）；桌面：全部顯示，選到的區塊放大移到最上面，其他區塊排在下面 */
+/* ---------- 區塊切換：工具列的分頁 ----------
+   手機、桌面都一次只顯示一區（預設第一個分頁）；換分頁的動畫見下面的 setSection */
 const SECS=["live","progress","done","ext"].filter(secTab);
 let curSec=(SECS.includes(appStartSec)&&appStartSec)||SECS[0]||"live",secTok=0;   /* appStartSec：app.js 留下的初始區塊（現在都是空的，從第一個區塊開始） */
 const isPhone=()=>matchMedia("(max-width:640px)").matches;
 function renderSections(){document.querySelectorAll(".layout>.sgroup").forEach(g=>g.classList.toggle("cur",g.dataset.sec===curSec));
   /* 切換區塊時，個別進度／完成紀錄要不要改成左右兩欄跟著變 */
   if(mdOn("live")!==mdLast.live)renderEvents();if(mdOn("done")!==mdLast.done)renderDone()}
-/* 桌面（1000px 以上）、區塊被選到放大成全寬時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
+/* 桌面（1000px 以上）、在那一區時：清單在左、詳情在右（即時回報、完成紀錄；進度改成甘特圖／詳情切換，見 views.js 的 progShow） */
 const MD_MQ=matchMedia("(min-width:1000px)");
 const mdOn=sec=>MD_MQ.matches&&curSec===sec;
 let progOpen=null,selDone=null,selEv=null;const mdLast={};
 MD_MQ.addEventListener("change",()=>render());
+/* 換分頁（DESIGN-next 第一節「部門內一次只顯示一區」、第五節「部門內換分頁」）：手機、桌面都一次只顯示一區。
+   舊內容往一邊退、新內容從另一邊進，方向跟工具列一致：桌面（左側直排）上下、900px 以下（底部橫排）左右；往工具列後面的分頁＝舊的往上／左退、新的從下／右進，往前反過來。
+   舊區塊留成一層（.sg-out：原地絕對定位、不能點）淡出退開，結束後拿掉；新區塊裡的每一塊（面板）帶柔回彈滑進來，每塊錯開 30ms。
+   標題列、搜尋列、工具列不動（只有鏡片滑過去）。只動 transform／opacity；關掉動態、背景分頁、instant 時直接換 */
+const SEC_IN="cubic-bezier(.25,1.12,.4,1)";
+function secFxStop(groups){groups.forEach(g=>{g.getAnimations().forEach(a=>a.cancel());[...g.children].forEach(c=>c.getAnimations().forEach(a=>{if(a.id==="sec-in")a.cancel()}));
+  if(g.classList.contains("sg-out")){g.classList.remove("sg-out");g.style.top=g.style.left=g.style.width="";g.inert=false}})}
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
   const tok=++secTok,prev=curSec,lay=document.querySelector(".layout"),sc=$("#pageMain");
   const groups=[...lay.querySelectorAll(":scope>.sgroup")],out=groups.find(g=>g.dataset.sec===prev),inn=groups.find(g=>g.dataset.sec===k);
   /* 區塊頂端已經捲到畫面外時，捲回來讓新區塊從頭看 */
   const toTop=()=>{const d=lay.getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d};
-  curSec=k;renderTabbar();
-  groups.forEach(g=>g.getAnimations().forEach(a=>a.cancel()));
-  if(instant||reduceMotion()){renderSections();layoutAll();toTop();return}
-  if(isPhone()){
-    /* 手機：舊區塊淡出，新區塊由下往上淡入 */
-    const show=()=>{if(tok!==secTok)return;renderSections();layoutAll();toTop();inn.animate([{opacity:0,transform:"translateY(14px)"},{opacity:1,transform:"none"}],{duration:340,easing:"cubic-bezier(.2,.9,.25,1)"})};
-    if(out&&out.offsetParent){const a=out.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-8px)"}],{duration:140,easing:"cubic-bezier(.4,0,1,1)",fill:"forwards"});a.onfinish=()=>{show();a.cancel()}}
-    else show();
-    return;
-  }
-  /* 桌面：FLIP——選到的區塊從原本的位置放大彈到最上面，其他區塊滑到新位置 */
-  const first=new Map(groups.map(g=>[g,g.getBoundingClientRect()]));
+  const ord=TABS().map(t=>t[0]),dir=ord.indexOf(k)>=ord.indexOf(prev)?1:-1;
+  curSec=k;if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
+  secFxStop(groups);
+  const r0=out&&out.offsetParent?out.getBoundingClientRect():null;
   renderSections();layoutAll();toTop();
-  groups.forEach(g=>{
-    const a=first.get(g),b=g.getBoundingClientRect();if(!a.width||!b.width)return;
-    const s=a.width/b.width,dx=a.left-b.left,dy=a.top-b.top;if(Math.abs(dx)<1&&Math.abs(dy)<1&&Math.abs(s-1)<.01)return;
-    const sel=g===inn;g.style.zIndex=sel?"2":"1";
-    g.animate([{transformOrigin:"0 0",transform:`translate(${dx}px,${dy}px) scale(${s})`},{transformOrigin:"0 0",transform:"none"}],   /* 變暗由 CSS（.sgroup:not(.cur)）漸變 */
-      {duration:sel?620:480,easing:sel?"cubic-bezier(.2,.9,.25,1.1)":"cubic-bezier(.2,.9,.25,1)"}).onfinish=()=>{g.style.zIndex=""};
+  if(instant||reduceMotion()||document.hidden||!r0||!inn)return;
+  const [dx,dy]=isRail()?[0,48*dir]:[60*dir,0],lr=lay.getBoundingClientRect();
+  /* 舊的：原地留一層，往反方向退出去 */
+  out.classList.add("sg-out");out.inert=true;
+  Object.assign(out.style,{top:(r0.top-lr.top)+"px",left:(r0.left-lr.left)+"px",width:r0.width+"px"});
+  out.animate([{opacity:1,transform:"none"},{opacity:0,transform:`translate(${-dx}px,${-dy}px)`}],{duration:MO.base,easing:MO.in,fill:"forwards"})
+    .finished.catch(()=>{}).then(()=>{if(tok===secTok)secFxStop([out])});
+  /* 新的：一塊一塊從另一邊滑進來（淡入的終點是元件自己的透明度） */
+  [...inn.children].filter(el=>el.offsetParent).slice(0,16).forEach((el,i)=>{
+    el.animate([{opacity:0},{}],{id:"sec-in",duration:180,delay:i*30,easing:"ease-out",fill:"backwards"});
+    el.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:"none"}],{id:"sec-in",duration:MO.layout,delay:i*30,easing:SEC_IN,fill:"backwards"});
   });
 }
