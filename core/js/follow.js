@@ -33,13 +33,13 @@ function fwBody(f,d){
   if(f.kind==="live"||(f.kind==="done"&&d.events.some(e=>e.id===f.ref))){
     const e=d.events.find(x=>x.id===f.ref);if(!e)return miss("（找不到）");
     const st=e.doneAt?"":evStatus(e);
-    return {title:evName(e),dot:st||"done",html:`<p class="fw-meta">${e.doneAt?`已完成 ${fmt(e.doneAt)}`:EV_ST[st]}${e.round>1&&!e.doneAt?` · 第 ${e.round} 段`:""}${e.touchedAt?` · 最後更新 ${fmt(e.touchedAt).slice(5)}`:""}</p>${e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:""}`};
+    return {title:evName(e),dot:st||"done",html:`<p class="fw-meta">${e.doneAt?`已完成 ${esc(fmt(e.doneAt))}`:EV_ST[st]}${e.round>1&&!e.doneAt?` · 第 ${e.round} 段`:""}${e.touchedAt?` · 最後更新 ${esc(fmt(e.touchedAt).slice(5))}`:""}</p>${e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:""}`};
   }
   if(f.kind==="issue"||f.kind==="done"){
     const i=d.issues.find(x=>x.id===f.ref);if(!i)return miss("（找不到）");
     const mk=sortedMarkers(i)[0];
-    return {title:i.title,dot:i.doneAt?"done":"issue",html:`<p class="fw-meta">${i.doneAt?`已結案 ${fmt(i.doneAt)}`:`${esc(i.tags[i.cur]||"")}${i.tags[i.cur]?" · ":""}${schedLabel(i)}`}</p>
-      ${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?fmt(mk.date).slice(5)+" ":""}${esc(mk.text)}</p>`:""}`};
+    return {title:i.title,dot:i.doneAt?"done":"issue",html:`<p class="fw-meta">${i.doneAt?`已結案 ${esc(fmt(i.doneAt))}`:`${esc(i.tags[i.cur]||"")}${i.tags[i.cur]?" · ":""}${schedLabel(i)}`}</p>
+      ${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?esc(fmt(mk.date).slice(5))+" ":""}${esc(mk.text)}</p>`:""}`};
   }
   if(f.kind==="week"){
     const ws=[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)),w=f.ref==="latest"?ws[0]:ws.find(x=>x.id===f.ref);
@@ -92,7 +92,7 @@ if(CFG.follow){
    state.docs[]＝{id,name,url}。平常是一排膠囊按鈕（點了用新分頁打開）；按這區的「編輯」後每個按鈕旁邊有修改、上下移、刪除，下面「+ 新增文件」。
    新增、修改用對話框（名稱、網址；沒寫 http 的自動補 https://），按這張卡片的「儲存」才上傳。網址存在公開的資料檔，任何人都看得到 */
 const docsEd=()=>editing&&cardEdit==="s:docs";
-const docURL=u=>{u=String(u||"").trim();if(!u)return "";return /^[a-z][a-z0-9+.-]*:/i.test(u)?u:"https://"+u};
+const docURL=u=>{u=String(u||"").trim();return u?safeUrl(u):""};   /* 只收 http(s)，其他（javascript:、data: 等）變成 https:// 開頭的無效網址（util.js 的 safeUrl） */
 function renderDocs(){
   const p=$("#docsPanel");if(!p)return;p.hidden=!CFG.follow;if(!CFG.follow)return;
   const ds=state.docs||[],ed=docsEd();
