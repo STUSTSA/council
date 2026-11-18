@@ -1050,7 +1050,10 @@ a.link:active{transform:scale(.96)}
 .danger-btn{color:var(--warn)}
 dialog{background:var(--pop);color:var(--ink);width:min(440px,94vw);padding:18px;border-radius:var(--r-lg);border:0;box-shadow:var(--pop-sh)}   /* 對話框＝彈出層：平面色塊＋柔和陰影 */
 dialog.wide{width:min(720px,94vw)}
-dialog::backdrop{background:color-mix(in srgb,var(--bg) 78%,transparent)}
+/* 遮罩＝底色 --bg 的 78%（所有對話框共用這一條，#dlg 不另寫）。
+   例外：舊瀏覽器 ::backdrop 不繼承變數的後備——Safari 17.4 以前 ::backdrop 拿不到自訂屬性（var 失效、遮罩變透明），16.2 以前不支援 color-mix：
+   先寫一個不用變數的值（米黃淺色 --bg #f5f0e1 的 78%），支援的瀏覽器由下一個宣告蓋過；var 也帶同一個後備值 */
+dialog::backdrop{background:rgba(245,240,225,.78);background:color-mix(in srgb,var(--bg,#f5f0e1) 78%,transparent)}
 .swatches{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .swatches button{width:30px;height:30px;min-height:0;padding:0;border-radius:50%}
 .swatches button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
@@ -1076,7 +1079,7 @@ dialog#dlg{border:0;border-radius:var(--r-lg);color:var(--ink)}
 .dlg-ghost{border:0;border-radius:var(--r-lg);color:var(--ink);animation:none;pointer-events:none;display:block}
 dialog#dlg.glass{position:fixed;background:var(--pop);box-shadow:var(--pop-sh)}
 dialog#dlg[open]{animation:dlgIn .4s cubic-bezier(.2,.9,.25,1.12)}
-dialog#dlg[open]::backdrop{background:color-mix(in srgb,var(--bg) 78%,transparent);animation:fade .3s ease}
+dialog#dlg[open]::backdrop{animation:fade .3s ease}
 .dlg-ghost-bd{position:fixed;inset:0;z-index:2147482999;background:color-mix(in srgb,var(--bg) 78%,transparent);pointer-events:none}
 .fld{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 /* 數字的上下按鈕（dialog.js 的 type:"stepper"，例如學年）：不用打字、不跳鍵盤；數字換的時候往按的方向滾一下 */
