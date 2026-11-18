@@ -4,6 +4,7 @@
    - 手機（640px 以下）：錢包式卡片堆（見下面 WAL）。
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
+   - 下排：全會行事曆圓鈕、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
@@ -153,7 +154,7 @@
      看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
      減少動態時直接換頁、不交接 */
   function hmEnter(i){
-    const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";
+    const d=D[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
@@ -218,6 +219,130 @@
     if(document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   });
 
+  /* ---------- 下排：全會行事曆圓鈕、個人常用連結（DESIGN-next 第六節「下排」，ui-08） ----------
+     連結只存在這台裝置這個瀏覽器：localStorage「stustsa-links」＝[{u:網址, n:名稱}]（最多 LK_MAX 個；名稱可空＝顯示網域；最長 LK_NAME 字）。
+     不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
+     網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
+     圖示只向那個網站自己要 /favicon.ico（不經過第三方的圖示服務、不帶 referrer），載不到顯示網域第一個字母。
+     「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
+     寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
+     桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
+  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
+  const lkCut=s=>[...String(s==null?"":s).trim()].slice(0,LK_NAME).join("");
+  function lkUrl(raw){
+    let s=String(raw==null?"":raw).trim();if(!s||s.length>2000)return null;
+    if(!/^https?:\/\//i.test(s)){if(/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s))return null;s="https://"+s}   /* 「example.com:8080」的冒號後面是數字＝連接埠，不是協定 */
+    let u;try{u=new URL(s)}catch(_){return null}
+    return (u.protocol==="http:"||u.protocol==="https:")&&u.hostname&&!u.username&&!u.password?u.href:null;
+  }
+  const lkHost=u=>new URL(u).hostname.replace(/^www\./,"");
+  let lkSeq=0;const lkKey=()=>"l"+(++lkSeq);   /* 畫面用的代號（同一個網址加兩次也分得開），不存 */
+  function lkRead(){
+    let a;try{a=JSON.parse(localStorage.getItem(LK_KEY)||"[]")}catch(_){a=[]}
+    const out=[];if(!Array.isArray(a))return out;
+    for(const x of a){if(out.length>=LK_MAX)break;const u=x&&typeof x==="object"&&lkUrl(x.u);if(u)out.push({u,n:typeof x.n==="string"?lkCut(x.n):"",k:lkKey()})}
+    return out;
+  }
+  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n})=>({u,n}))))}catch(_){}}
+  const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
+  DKN.set("pub",$id("hmPub"));
+  function lkNode(x){
+    const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
+    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true">${esc(h.charAt(0).toUpperCase())}</b></a>`;
+    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
+    img.addEventListener("load",()=>{if(img.naturalWidth)w.classList.add("ico");else img.remove()},{once:true});
+    img.addEventListener("error",()=>img.remove(),{once:true});
+    img.src=new URL(x.u).origin+"/favicon.ico";w.firstElementChild.append(img);
+    return w;
+  }
+  function dkNode(k){
+    let n=DKN.get(k);if(n)return n;
+    const x=LK.list.find(l=>l.k===k);
+    if(x)n=lkNode(x);
+    else{n=document.createElement(k==="dv"?"i":k==="form"?"span":"button");n.dataset.k=k;
+      if(k==="dv"){n.className="hm-dv";n.setAttribute("aria-hidden","true")}
+      else if(k==="add"){n.type="button";n.className="hm-lkadd";n.setAttribute("aria-label","編輯常用連結");n.innerHTML=ico("plus")}
+      else if(k==="back"){n.type="button";n.className="hm-lkb";n.setAttribute("aria-label","結束編輯");n.innerHTML=ico("back")}
+      else{n.className="hm-lkf";n.innerHTML=`<input class="hm-lku" id="hmLkU" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="https://" aria-label="網址"><input class="hm-lkn" id="hmLkN" type="text" autocomplete="off" maxlength="${LK_NAME}" enterkeyhint="done" placeholder="名稱" aria-label="名稱"><button type="button" class="primary hm-lkok">加入</button>`}}
+    DKN.set(k,n);return n;
+  }
+  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub","dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
+  /* 畫下排：沿用節點（照代號），只增減有變的；anim＝寬度與位置用動畫滑過去，show＝這一個要捲進可見範圍（手機、編輯中放不下時） */
+  function dkPaint(anim,show){
+    const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
+    if(R){w0=dk.getBoundingClientRect().width;[...dkIn.children].forEach(c=>r0.set(c.dataset.k,c.getBoundingClientRect()))}
+    const gone=[...dkIn.children].filter(c=>!keys.includes(c.dataset.k));
+    gone.forEach(c=>{c.remove();if(c.classList.contains("hm-lk"))DKN.delete(c.dataset.k)});
+    let at=dkIn.firstElementChild;keys.forEach(k=>{const n=dkNode(k);if(n===at)at=at.nextElementSibling;else dkIn.insertBefore(n,at)});   /* 只插入新的，沒動的節點不搬（焦點、動畫都留著） */
+    LK.list.forEach(x=>{const n=DKN.get(x.k),b=n.querySelector(".hm-lkx");
+      if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}
+      else if(!LK.ed&&b)b.remove()});
+    dk.classList.toggle("ed",LK.ed);
+    dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc");
+    /* 放不下時盡量捲到最後（輸入框、「+」都看得到），但 show 那一個（返回鍵、剛加的連結）不能捲出左邊 */
+    if(show){const n=DKN.get(show);if(n&&dkIn.classList.contains("sc"))dkIn.scrollLeft=Math.min(n.offsetLeft-8,dkIn.scrollWidth-dkIn.clientWidth)}
+    if(!R)return;
+    /* 底板兩半：中線不動，各自從原本的邊滑到新的邊 */
+    const pr=dk.getBoundingClientRect(),dx=(pr.width-w0)/2;
+    if(Math.abs(dx)>.5)dkBg.forEach((s,i)=>s.animate([{transform:`translateX(${(i?-dx:dx).toFixed(1)}px)`},{transform:"none"}],{duration:MO.layout,easing:SOFT}));
+    keys.forEach(k=>{const n=DKN.get(k),a=r0.get(k);
+      if(!a){n.animate([{opacity:0,transform:"scale(.6)"},{opacity:1,transform:"none"}],{duration:MO.base+40,delay:60,easing:POP,fill:"backwards"});return}
+      const b=n.getBoundingClientRect(),d=a.left-b.left;if(Math.abs(d)>.5)n.animate([{transform:`translateX(${d.toFixed(1)}px)`},{transform:"none"}],{duration:MO.layout,easing:SOFT})});
+    /* 拿掉的：留分身在原本的位置淡出縮小 */
+    gone.forEach(c=>{const a=r0.get(c.dataset.k);if(!a)return;const g=c.cloneNode(true);g.querySelectorAll("[id]").forEach(x=>x.removeAttribute("id"));g.removeAttribute("data-k");g.inert=true;g.setAttribute("aria-hidden","true");
+      g.style.cssText=`position:absolute;left:${(a.left-pr.left).toFixed(1)}px;top:${(a.top-pr.top).toFixed(1)}px;width:${a.width}px;height:${a.height}px;margin:0;pointer-events:none`;
+      dk.append(g);g.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(.6)"}],{duration:MO.base,easing:MO.in,fill:"forwards"}).finished.catch(()=>{}).then(()=>g.remove())});
+  }
+  function nope(el){el.setAttribute("aria-invalid","true");if(!reduceMotion())el.animate([{transform:"none"},{transform:"translateX(-6px)"},{transform:"translateX(5px)"},{transform:"translateX(-3px)"},{transform:"none"}],{duration:MO.slow,easing:"ease-out"})}
+  function lkEdit(on){
+    if(LK.ed===on)return;const had=dk.contains(document.activeElement);
+    LK.ed=on;tipHide();
+    if(!on){const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
+    dkPaint(true,on?"back":"add");
+    if(on){const u=$id("hmLkU");(u||DKN.get("back")).focus({preventScroll:true})}
+    else if(had)(dkIn.contains(DKN.get("add"))?DKN.get("add"):$id("hmPub")).focus({preventScroll:true});
+  }
+  function lkAdd(){
+    const ui=$id("hmLkU"),ni=$id("hmLkN");if(!ui||LK.list.length>=LK_MAX)return;
+    const u=lkUrl(ui.value);if(!u){nope(ui);ui.focus({preventScroll:true});return}
+    const x={u,n:lkCut(ni.value),k:lkKey()};LK.list.push(x);lkWrite();
+    ui.value="";ni.value="";ui.removeAttribute("aria-invalid");
+    dkPaint(true,x.k);
+    const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
+  }
+  function lkDel(k){
+    const i=LK.list.findIndex(x=>x.k===k);if(i<0)return;LK.list.splice(i,1);lkWrite();dkPaint(true);
+    const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
+  }
+  dk.addEventListener("click",e=>{
+    const t=e.target.closest&&e.target.closest("button");if(!t||!dk.contains(t))return;
+    if(t.classList.contains("hm-lkadd"))lkEdit(true);
+    else if(t.classList.contains("hm-lkb"))lkEdit(false);
+    else if(t.classList.contains("hm-lkok"))lkAdd();
+    else if(t.classList.contains("hm-lkx"))lkDel(t.closest(".hm-lk").dataset.k);
+  });
+  dk.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches(".hm-lkf input")&&!e.isComposing){e.preventDefault();lkAdd()}});
+  dk.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".hm-lku"))e.target.removeAttribute("aria-invalid")});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});
+  document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk")))lkEdit(false)},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
+  addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換 */
+    if(LK.ed)return;const old=LK.list.map(x=>x.u+"\n"+x.n).join("\n"),nx=lkRead();if(nx.map(x=>x.u+"\n"+x.n).join("\n")===old)return;
+    LK.list.forEach(x=>DKN.delete(x.k));[...dkIn.querySelectorAll(".hm-lk")].forEach(n=>n.remove());LK.list=nx;dkPaint(false)});
+  /* 名稱的小膠囊：只給有滑鼠的桌面（hover），圖示上方置中；換到別的連結時原地換字與位置，移開淡出 */
+  const HOVER=matchMedia("(hover:hover) and (pointer:fine)");let tip=null;
+  function tipShow(a){
+    const w=a.closest(".hm-lk");if(!w||!HOVER.matches||LK.ed)return;
+    if(!tip){tip=document.createElement("div");tip.className="hm-tip";tip.id="hmTip";tip.setAttribute("aria-hidden","true");document.body.append(tip)}
+    const r=a.getBoundingClientRect();tip.textContent=w.dataset.nm;
+    tip.style.transform=`translate(${(r.left+r.width/2).toFixed(1)}px,${(r.top-8).toFixed(1)}px) translate(-50%,-100%)`;tip.classList.add("on");
+  }
+  function tipHide(){if(tip)tip.classList.remove("on")}
+  dk.addEventListener("pointerover",e=>{if(e.pointerType!=="mouse")return;const a=e.target.closest&&e.target.closest(".hm-lkc");if(a)tipShow(a)});
+  dk.addEventListener("pointerout",e=>{const a=e.target.closest&&e.target.closest(".hm-lkc");if(a&&!a.contains(e.relatedTarget))tipHide()});
+  dk.addEventListener("click",tipHide);dkIn.addEventListener("scroll",tipHide,{passive:true});
+  addEventListener("resize",()=>{tipHide();dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc")});
+  dkPaint(false);
+
   /* ---------- 疊層：全會行事曆（下排圓鈕）、外觀（設定鈕） ----------
      在主頁上蓋一層畫面；打開推一筆瀏覽紀錄，關閉鈕、Esc、系統返回鍵都關掉（關閉鈕與 Esc 走 history.back，由 popstate 真的關）。
      全會行事曆＝notify.js 的公共版 calMount(host)（全部／活動／會議，沒有今日／明日與逾期），關掉時 calUnmount(host) 拆掉
@@ -225,7 +350,7 @@
   const LYS={},LBL={cal:"全會行事曆",look:"外觀"};let LY=null;
   function hmLayerOpen(){return !!LY}
   function layerOpen(kind,opener){
-    if(LY)return;
+    if(LY)return;lkEdit(false);
     let L=LYS[kind];
     if(!L){
       const el=document.createElement("div");el.className="hm-ly";el.id=kind==="cal"?"hmCal":"hmLook";el.hidden=true;
