@@ -1,5 +1,5 @@
 /* pv1：開通部門（provision.js）與新的登入提示、錯誤視窗。固定 8300 埠。
-   網站用 https://linkmasterking.github.io/-/ 這個網址打開（route 轉到本機 8300），這樣沒有資料檔的新部門也會照正式網站的方式連雲端；
+   網站用 github.io 網址打開（預設 https://linkmasterking.github.io/-/，可用環境變數 SITE 換，例如 SITE=https://stustsa.github.io/council/；route 轉到本機 8300），這樣沒有資料檔的新部門也會照正式網站的方式連雲端；
    GitHub API 用一個假的檔案庫模擬（GET 回檔案或 404、PUT 檢查 sha）。網站上的 data-*.json 一律當成不存在（各部門的資料只從假的檔案庫讀）。
    2026-11-11 改寫成現在的流程（2026-11-06 起「開通部門」＋初始密碼改成「全會密碼」＋自動開通，登入改從設定頁鎖頭）：
    A：有權杖的後台管理員在權益部登入（個人密碼太短：紅字、不關）→ 網站管理 → 全會密碼（太短：紅字、不關）→ 行銷部新建空白看板、活動部只補上傳權限（身分不動）。
@@ -12,12 +12,13 @@ const {chromium}=require('playwright');const fs=require('fs');
 const store={'data.json':JSON.parse(fs.readFileSync(__dirname+'/data_test.json','utf8')),'data-events.json':{schemaVersion:9,id:'board-events',title:'活動部工作進度',members:[{id:'mx',name:'法屎',role:'admin',kdf:'a:b',createdAt:''}],issues:[],events:[],weeks:[]}};
 delete store['data.json'].sync;
 const sha={};let n=0;Object.keys(store).forEach(k=>sha[k]='s'+(n++));const commits=[];
-const SITE='https://linkmasterking.github.io/-/';
+const SITE=process.env.SITE||'https://linkmasterking.github.io/-/';
+const REPO=(u=>{const x=new URL(u);return x.hostname.split('.')[0]+'/'+x.pathname.split('/').filter(Boolean)[0]})(SITE),apiHits=[];
 const mk=async(w)=>{const ctx=await b.newContext({viewport:{width:w,height:900},serviceWorkers:'block'});
   await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
   await ctx.route(SITE+'**',async r=>{const u=r.request().url().replace(SITE,'http://127.0.0.1:8300/');const res=await r.fetch({url:u});return r.fulfill({response:res})});
-  await ctx.route(/linkmasterking\.github\.io\/-\/data-.*\.json/,r=>r.fulfill({status:404,body:''}));   /* 後註冊的 route 先處理：放在轉到本機那條之後 */
-  await ctx.route('https://api.github.com/**',async r=>{const q=r.request(),u=q.url();if(u.includes('/commits'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
+  await ctx.route(u=>u.href.startsWith(SITE)&&/\/data-[^/]*\.json$/.test(u.pathname),r=>r.fulfill({status:404,body:''}));   /* 後註冊的 route 先處理：放在轉到本機那條之後；網址跟著 SITE */
+  await ctx.route('https://api.github.com/**',async r=>{const q=r.request(),u=q.url();apiHits.push(u);if(u.includes('/commits'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
     const path=decodeURIComponent(u.split('/contents/')[1].split('?')[0]);
     if(q.method()==='GET'){if(!store[path])return r.fulfill({status:404,body:'{}'});return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha:sha[path],content:Buffer.from(JSON.stringify(store[path])).toString('base64')})})}
     const bd=JSON.parse(q.postData());if(store[path]&&bd.sha!==sha[path])return r.fulfill({status:409,body:'{}'});
@@ -113,5 +114,6 @@ ok(!(await p.$('#dlgForm input[name=token]')),'D 一般成員沒有貼權杖的�
 await p.click('#dlgForm [data-act=delete]');await W();ok(await p.evaluate(async()=>!!(await window.__ps)),'D 按「只存在這台裝置」照樣存在本機');
 ok(!store['data-finance.json'],'D 財務部沒有寫進雲端');
 ok(!p.errs.length,'D 沒有錯誤 '+p.errs.join('|'));
+ok(apiHits.length&&apiHits.every(u=>u.startsWith('https://api.github.com/repos/'+REPO+'/')),'GitHub API 都打到 '+REPO+'（'+apiHits.length+' 次）');
 console.log('commits:',commits.join(' / '));
 await b.close();process.exit(bad?1:0)})();
