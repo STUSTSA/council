@@ -19,13 +19,20 @@ function suLogoH(cls){
   return `<svg class="${cls}" viewBox="${VX} ${VY} ${VW} ${VH}" role="img" aria-label="南臺科大學生會 STUSTSA"><g class="su-emb"><path class="su-y" d="${dy}"/><path class="su-b" d="${db}"/></g>${SU_LOGO.g.map(g=>`<path class="${g[4]==="#0a5baa"?"su-t":"su-k"}" d="${g[5]}"/>`).join("")}</svg>`;
 }
 /* ---------- 開場（DESIGN-next 第五節「開場」，ui-07） ----------
-   兩個小人從兩側滑入 → 扣上（黃的從左推過來，力道往右）→ 標誌上移，STUSTSA 與「南臺科大學生會」由左到右逐字揭開。
+   兩個小人從兩側滑入 → 扣上（黃的從左推過來，力道往右）→ 標誌上移 → 標誌離開字的位置之後，STUSTSA 與「南臺科大學生會」才由左到右逐字揭開
+   （字一出現就不會跟小人重疊，tools/tests/ui8home.js 逐格檢查）。
    版面照模擬頁：340×336 的框，小人在上（寬 152.57）、兩行字在下（縮成 .907，字寬約為小人的 2.1 倍）；標誌大小同時看畫面寬與高（高最多四成，splash.css）。
    深色時左邊小人只留線稿（splash.css「學生會標誌」段，跟主頁左上同一組 class）。
-   一律 Web Animations、只動 transform／opacity：每個字是自己的一個窗（.sp-gw，overflow:hidden）裡的小 svg，
-   窗從左邊往右移進來、裡面的字同時往反方向移，兩個加起來字只往右滑一小段（模擬頁的 26），窗的左緣卻從字的左邊掃到右邊＝由左到右揭開（不用 clip-path）。
+   一律 Web Animations、只動 transform／opacity：每個字是自己的一個窗（.sp-gw，overflow:hidden）裡的小 svg，等於模擬頁的
+   clip-path inset(0 100% 0 0)→0 加 translateX(-26)→0：字本身只往右滑 26 個單位；窗一開始整個在字的左邊（窗的右緣＝字的左緣，什麼都看不到），
+   往右移進來，窗的右緣由左到右掃過字＝揭開。窗的位移＝字的位移－裡面的字相對窗的位移（一開始 100%、最後 0），所以裡面的字往左。
+   （ui-07 版窗一開始只退 100%、少退了 26：還沒開始揭就露出每個字左邊 26 個單位的淡字，揭的時候像從右往左補，ui-08 修正）
    現有流程沒有登入鈕在開場上（登入在設定裡），開場播完直接收掉，到主頁或看板。減少動態時不動，直接是完成的樣子 */
 const SP_BOX=[340,336],SP_EMB=[68.7,-43.2],SP_TXT=[-174.1,160.6,.907];
+/* 每個字的 [開始, 長度]（毫秒）：模擬頁的時間整組往後挪 SP_WAIT，第一個字在標誌上移（760 起、560 長）過了一半多才開始——那時小人已經離開字的那一列 */
+const SP_WAIT=240;
+/* 窗一開始的右緣再往左多退 SP_GAP 個單位（字本身照樣只滑 26）：剛好貼齊時字的左緣會因為反鋸齒露出一條淡淡的細線 */
+const SP_GAP=2;
 const SP_T=[[840,420],[900,360],[950,520],[1030,380],[1080,560],[1170,400],[1220,480],[960,460],[1030,380],[1080,540],[1160,400],[1220,500],[1290,380],[1360,460]];
 function splashPlay(){
   const sp=document.getElementById("splash");if(!sp||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
@@ -35,10 +42,10 @@ function splashPlay(){
   b.animate([{transform:"translateX(120px)",opacity:0},{opacity:1,offset:.3},{transform:"translateX(-3px)",offset:.56},{transform:"translateX(11px)",offset:.7},{transform:"none",opacity:1}],{duration:620,delay:140,easing:"cubic-bezier(.2,.8,.2,1)",fill:"backwards"});
   /* 3：標誌上移讓位（從框的中間往上，70 個單位＝小人高的 39.9%） */
   emb.animate([{transform:`translateY(${(70/SU_LOGO.emb[3]*100).toFixed(1)}%)`},{transform:"none"}],{duration:560,delay:760,easing:"cubic-bezier(.3,1.2,.4,1)",fill:"backwards"});
-  /* 字：每個字各自的時間（左邊的先開始），窗往右、字往左，加起來字往右滑 26 個單位 */
-  sp.querySelectorAll(".sp-gw").forEach((w,i)=>{const [d,t]=SP_T[i]||[1200,400],gw=SU_LOGO.g[i][2],E={duration:t,delay:d,easing:"cubic-bezier(.16,1,.3,1)",fill:"backwards"};
-    w.animate([{transform:"translateX(-100%)"},{transform:"none"}],E);
-    w.firstElementChild.animate([{transform:`translateX(${((1-26/gw)*100).toFixed(2)}%)`,opacity:.15},{transform:"none",opacity:1}],E)});
+  /* 字：每個字各自的時間（左邊的先開始，整組等標誌讓開），窗從字的左邊外面往右移進來、裡面的字相對窗從 100% 回到 0，加起來字往右滑 26 個單位 */
+  sp.querySelectorAll(".sp-gw").forEach((w,i)=>{const [d,t]=SP_T[i]||[1200,400],gw=SU_LOGO.g[i][2],E={duration:t,delay:d+SP_WAIT,easing:"cubic-bezier(.16,1,.3,1)",fill:"backwards"};
+    w.animate([{transform:`translateX(${(-100-(26+SP_GAP)/gw*100).toFixed(2)}%)`},{transform:"none"}],E);
+    w.firstElementChild.animate([{transform:`translateX(${(100+SP_GAP/gw*100).toFixed(2)}%)`,opacity:.15},{transform:"none",opacity:1}],E)});
 }
 function mountSplash(){
   let inSite=!!document.documentElement.dataset.hmBack;   /* 主頁：系統返回鍵從部門回來（home.html 開頭） */

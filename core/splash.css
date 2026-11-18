@@ -6,7 +6,7 @@
 .sp-logo{position:relative;width:min(212px,70vw,calc(40dvh * 340 / 336));aspect-ratio:340/336}
 @media (max-width:640px){.sp-logo{width:min(202px,54vw,calc(34dvh * 340 / 336))}}
 .sp-emb,.sp-gw{position:absolute;display:block}
-.sp-gw{overflow:hidden}   /* 字的窗：窗往右移進來、字往左，窗的左緣由左到右掃過去＝揭開 */
+.sp-gw{overflow:hidden}   /* 字的窗：一開始整個在字的左邊外面，往右移進來、裡面的字相對往左，窗的右緣由左到右掃過字＝揭開（splash.js） */
 .sp-emb svg,.sp-gw svg{display:block;width:100%;height:100%;overflow:visible}
 .sp-gw svg{will-change:transform,opacity}
 .sp-emb path{will-change:transform,opacity}
