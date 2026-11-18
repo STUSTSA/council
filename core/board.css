@@ -1495,6 +1495,8 @@ dialog#dlg:has(.csel.open){overflow:visible}
    淺色／深色＝液態分段切換（.lseg，樣式在「液態分段切換」段）；主題按鈕一格一格，每顆帶自己的 data-pal，
    所以按鈕裡的 --bg、--blk、--pri、--acc、--ink、--hair 是那一組主題的顏色（三顆圓＝色塊、主要動作、選中）；選到的加粗框；最下面音效開關（.sw，樣式在「秘書處會議編輯的授權」段） */
 .look{display:grid;gap:16px}
+/* 設定頁的面板裡（帳號、外觀）：整組外觀是一塊平面色塊（DESIGN-next 第三節，模擬頁帳號頁的外觀框）；主題按鈕底色是各自主題的 --bg，跟色塊分得開 */
+.set-hub>.look{padding:18px 20px 14px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .set-hub>.set-list+.look{margin-top:12px}
 .look-t{font-size:16px;font-weight:700;letter-spacing:.08em}
 .look-mode{justify-self:start}

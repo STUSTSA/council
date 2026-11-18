@@ -19,7 +19,7 @@ console.log('mid-drag transform',await p.evaluate(()=>$('#setOv').style.transfor
 await tp('touchEnd',260);await p.waitForTimeout(900);console.log('after gesture（停用，set 應為 true）',await st(),await p.evaluate(()=>$('#setOv').style.transform));
 // cancel gesture short（設定還開著，不用再打開）
 await tp('touchStart',5);for(let x=20;x<=60;x+=20){await tp('touchMove',x);await p.waitForTimeout(40)}await p.waitForTimeout(200);await tp('touchEnd',60);await p.waitForTimeout(700);console.log('short drag keeps',await st());
-await p.click('#setClose');await p.waitForTimeout(600);
+await p.click('#setBtn');   /* ui-08：設定頁沒有「關閉」，再按設定鍵＝關閉 */await p.waitForTimeout(600);
 // gesture on main（停用，應該留在 index.html）
 await tp('touchStart',5);for(let x=20;x<=300;x+=20){await tp('touchMove',x);await p.waitForTimeout(16)}await tp('touchEnd',300);await p.waitForTimeout(2000);console.log('main gesture ->',p.url());
 // logo link

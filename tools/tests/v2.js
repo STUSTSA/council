@@ -53,7 +53,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  const nr=await p.$$eval('#setOv .set-row',x=>x.length);log('D rows after login:',nr);A(nr>1,'rows after login');
  // 看板日期已拿掉（schemaVersion 8）：大日期＝上次儲存日期，設定頁沒有這一列
  log('D no date row:',!(await p.$('#setOv [data-set=date]')),'| 頁首沒有大日期（2026-11-05 精簡）:',await p.evaluate(()=>!$('#bigDate')));
- await p.click('#setClose');await p.waitForTimeout(400);
+ await p.click('#setBtn');   /* ui-08：設定頁沒有「關閉」，再按設定鍵＝關閉 */await p.waitForTimeout(400);
 // 2026-11-06 單卡編輯：頁首沒有「編輯」，登入後卡片自己的「編輯」出現（body.authed）；一次只編一張（render.js 的 cardEdit）
  const au=await p.evaluate(()=>({editBtn:!!$('#editBtn'),authed:document.body.classList.contains('authed'),loggedIn:loggedIn(),editing,dlg:$('#dlg').open,cardBtns:document.querySelectorAll('.card-edit-btn').length}));
  log('D logged in:',au);A(!au.editBtn&&au.authed&&au.loggedIn&&!au.editing&&!au.dlg&&au.cardBtns>0,'logged in, no header edit, card edit buttons');

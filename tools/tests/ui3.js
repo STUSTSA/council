@@ -114,21 +114,21 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     let topSame=true,setTopKept=true;
     for(const s of seq){
       if(s[0]==='tab')await p.click(`#tabbar .tab[data-tab="${s[1]}"]`);
-      if(s[0]==='set'){await p.click('#setBtn');await p.waitForTimeout(1200);await p.evaluate(()=>{document.querySelector('#setOv .set-top').__m=1})}
+      if(s[0]==='set'){await p.click('#setBtn');await p.waitForTimeout(1200);setTopKept=await p.evaluate(()=>!document.querySelector('#setOv .set-top,#setOv .anim-top'))}   /* ui-08：設定頁沒有標題列（DESIGN-next 第十二節），改成確認標題列不存在 */
       if(s[0]==='sub'){await p.click('#setOv [data-set="look"]')}
       if(s[0]==='unsub'){await p.evaluate(()=>paneClose())}
-      if(s[0]==='unset'){setTopKept=await p.evaluate(()=>document.querySelector('#setOv .set-top').__m===1);await p.click('#setBtn')}
+      if(s[0]==='unset'){setTopKept=setTopKept&&await p.evaluate(()=>!document.querySelector('#setOv .set-top,#setOv .anim-top'));await p.click('#setBtn')}
       if(s[0]==='noti')await p.click('#notiBtn');
       if(s[0]==='unnoti')await p.click('#notiBtn');   /* ui-06：通知是部門內的一頁，再按通知鈕回原分頁（沒有關閉鈕） */
       await p.waitForTimeout(1300);
       if(!(await p.evaluate(()=>document.querySelector('.dhead').__m===1)))topSame=false;
     }
-    const r=await p.evaluate(()=>{const top=[...document.querySelectorAll('.dhead,#setOv .set-top,#setSub .set-top')];
+    const r=await p.evaluate(()=>{const top=[...document.querySelectorAll('.dhead,#setSub .set-sub-top')];
       const hit=window.__an.filter(x=>x.in&&top.some(t=>t.contains(x.el)));
       const svg=window.__an.filter(x=>x.in&&(x.el instanceof SVGElement||x.el.closest('svg,.ico,.logo')));
       return {n:window.__an.filter(x=>x.in).length,top:hit.map(x=>x.el.className&&x.el.className.baseVal!==undefined?x.el.className.baseVal:x.el.className),svg:svg.map(x=>x.el.tagName+'.'+(x.el.getAttribute('class')||'')),cur:curSec}});
     ok(topSame,'換分頁、進出設定與通知：頁首一直是同一個節點');
-    ok(setTopKept,'設定頁的標題列在進出外觀子頁時是同一個節點');
+    ok(setTopKept,'設定頁沒有標題列（ui-08：沒有 logo 與關閉，進出都用設定鍵），進出外觀子頁時也沒有');
     ok(r.n>0&&!r.top.length,`頁首與設定、通知的標題列不參加進場動畫（進場 ${r.n} 次，挑到標題列 ${r.top.length}：${r.top.join(',')}）`);
     ok(!r.svg.length,`進場動畫的目標裡沒有 SVG 或圖示零件（${r.svg.join(',')||'無'}）`);
     ok(r.cur==='live','回到即時回報');}
