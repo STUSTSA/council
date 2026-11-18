@@ -8,6 +8,8 @@
    6. 進部門過場（桌面鋪滿、手機翻面）與看板到達的底板：Element.animate 的 keyframes 只有 transform／opacity；交接 pfx-burst 用完就刪；回主頁焦點是那個部門
    7. 進行中的張數（資料檔讀一次）；跳脫（部門名含 <img onerror>）；頁面沒有 title 屬性；412 沒有橫捲；深色左邊小人只留線稿
    9. sw.js：快取版本 v3、NO_CACHE 也排除 data-部門.json、安裝清單含新介面新增的檔；只開看板時主頁的檔已在離線備份、資料檔不存
+      安裝清單含 index.html、home.html 載入的每個本地 CSS／JS（跟網頁同步，漏加會被測出來）
+  10. 只開過主頁就離線：再開部門看板畫得出來、沒有 pageerror；activate 只刪自己的舊版本（board-cache-*），同網域其他快取不動
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
@@ -246,6 +248,13 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const need=['./','index.html','home.html','core/theme.css','core/js/theme.js','core/js/live.js','core/js/morph.js','core/js/sfx.js','core/js/home.js',...DEPTS.map(d=>`dept/icons/dept-${d}.svg`)];
     const lack=need.filter(u=>!sw.SHELL.includes(u)),gone=sw.SHELL.filter(u=>u!=='./'&&!fs.existsSync(path.join(__dirname,'../..',u)));
     ok(!lack.length&&!gone.length,'安裝清單含網頁與新介面新增的檔、每個都存在：'+(lack.length?'缺 '+lack.join():'')+(gone.length?'不存在 '+gone.join():'')+(lack.length||gone.length?'':sw.SHELL.length+' 個'));
+    /* 安裝清單跟網頁同步：index.html、home.html 用 <link rel="stylesheet">／<script src> 載入的每個本地檔都要在 SHELL 裡（只開過主頁就離線時看板才畫得出來） */
+    const refs=f=>{const h=fs.readFileSync(path.join(__dirname,'../..',f),'utf8'),o=[];
+      for(const m of h.matchAll(/<link\b[^>]*>/g))if(/rel="stylesheet"/.test(m[0])){const u=(m[0].match(/href="([^"]+)"/)||[])[1];if(u)o.push(u)}
+      for(const m of h.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g))o.push(m[1]);
+      return o.filter(u=>!/^(https?:)?\/\//.test(u)).map(u=>u.split(/[?#]/)[0])};
+    const pg=[...new Set([...refs('index.html'),...refs('home.html')])],lack2=pg.filter(u=>!sw.SHELL.includes(u));
+    ok(pg.length>=30&&!lack2.length,`安裝清單含 index.html、home.html 載入的每個本地 CSS／JS（${pg.length} 個）`+(lack2.length?'：缺 '+lack2.join():''));
     const ctx=await b.newContext({viewport:{width:1300,height:860}});await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
     const p=await ctx.newPage();await p.goto(U+'index.html');
     const want=['core/js/home.js','dept/icons/dept-works.svg','dept/icons/dept-rights.svg','core/js/live.js','core/theme.css'];
@@ -254,6 +263,25 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     let r=null;for(let i=0;i<30;i++){await p.waitForTimeout(300);r=await look();if(r&&!r.miss.length)break}
     await p.evaluate(()=>Promise.all(['data.json','data-finance.json'].map(u=>fetch(u,{cache:'no-cache'}).catch(()=>{}))));await p.waitForTimeout(600);r=await look()||r;
     ok(r&&!r.miss.length&&!r.data.length,'只打開看板：主頁的 home.js、部門標誌已在離線備份，data.json、data-finance.json 不存：'+JSON.stringify(r));
+    await ctx.close()}
+
+  /* 10 sw.js（ui-07）：App 打開的是主頁。只開過主頁（沒開過看板）就離線，再點部門：看板要用的 CSS／JS 已在安裝清單裡，看板畫得出來。
+     同一個 context 先放 other-cache（同網域其他 repo 的快取）與 board-cache-v1（自己的舊版本）：activate 後只刪自己的舊版本 */
+  {const ctx=await b.newContext({viewport:{width:1300,height:860}});await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
+    const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));
+    await p.goto(U+'docs/');   /* 不註冊 Service Worker 的頁（目錄清單），先建好兩個快取 */
+    await p.evaluate(async()=>{await (await caches.open('other-cache')).put('/x-other',new Response('x'));await (await caches.open('board-cache-v1')).put('/x-old',new Response('x'))});
+    await p.goto(U+'home.html');
+    const st=()=>p.evaluate(async cn=>{const r=await navigator.serviceWorker.getRegistration();if(!r||!r.active||!navigator.serviceWorker.controller)return null;
+      const c=await caches.open(cn),n=['core/board.css','core/splash.css','core/js/boot.js','core/js/render.js','core/js/views.js','dept/config.js'];let m=0;for(const u of n)if(await c.match(new URL(u,location.href).href,{ignoreSearch:true}))m++;
+      return {keys:await caches.keys(),all:m===n.length}},SW_CACHE).catch(()=>null);
+    let r=null;for(let i=0;i<40;i++){await p.waitForTimeout(300);r=await st();if(r&&r.all)break}
+    ok(!!r&&r.keys.includes('other-cache')&&!r.keys.includes('board-cache-v1')&&r.keys.includes(SW_CACHE),'activate 只刪自己的舊版本：other-cache 還在、board-cache-v1 刪掉：'+JSON.stringify(r&&r.keys));
+    ok(!!r&&r.all,'只開過主頁：看板的 board.css、splash.css、boot.js 等已在離線備份');
+    await ctx.setOffline(true);p.errs=[];
+    await p.goto(U+'index.html?d=finance').catch(e=>p.errs.push('goto '+e.message));await p.waitForTimeout(3500);
+    const bd=await p.evaluate(()=>{const t=document.getElementById('tabbar');return {js:typeof render==='function',tab:!!t,css:t?getComputedStyle(t).position:'',txt:document.body.innerText.trim().length}}).catch(e=>({err:e.message}));
+    ok(bd.js&&bd.tab&&bd.css==='fixed'&&bd.txt>0&&!p.errs.length,'離線開部門：看板畫得出來、沒有 pageerror：'+JSON.stringify(bd)+(p.errs.length?' '+p.errs.join(' | '):''));
     await ctx.close()}
 
   await b.close();console.log(`\n${passes} 通過、${fails} 失敗`);process.exit(fails?1:0)})();
