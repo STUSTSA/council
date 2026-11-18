@@ -129,8 +129,9 @@ function suLogoColor(label){
   /* 頁首 logo：所有部門都放學生會 logo（標誌＋STUSTSA＋南臺科大學生會，見 suLogoMono），淺色彩色、深色單色線稿跟著文字色 */
   const box=document.querySelector(".logo-box");
   if(box&&!box.firstElementChild)box.innerHTML=suLogoMono(CFG.brand||"南臺科大學生會");
-  /* 部門主色 → CSS 變數（只覆寫設定檔有給的值） */
-  const c=CFG.colors||{},map={accentLight:"--accent-light",accentDark:"--accent-dark",ok:"--ok",neon:"--neon",okDot:"--ok-dot"};
+  /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
+     設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light */
+  const c=CFG.colors||{},map={accentLight:"--accent-light",accentDark:"--accent-dark"};
   const vars=Object.keys(map).filter(k=>c[k]).map(k=>`${map[k]}:${c[k]}`).join(";");
   if(vars&&!document.getElementById("dept-theme")){const st=document.createElement("style");st.id="dept-theme";st.textContent=`:root{${vars}}`;document.head.append(st)}
   /* 部門專用的分頁（CFG.ext）與完成紀錄併進即時回報（CFG.mergeDone），見 dept/config.js。

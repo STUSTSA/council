@@ -1,29 +1,27 @@
 /* 開頁的學生會進場畫面（core/js/splash.js）：看板 index.html 與總覽 home.html 共用（2026-11-06 從 board.css 拆出來） */
-/* 跟著深淺色（2026-11-06 起；以前一律白底）：淺色＝白底彩色 logo、深色＝黑底單色 logo（標誌兩塊與字都是 #f1f1f4，藍色那塊外框描一圈黑當分隔縫 .sp-gap）。
-   顏色寫死（不用變數）：開場時看板的色彩變數可能還沒套好。整個學生會 logo（splash.js 的 SU_LOGO），每個字是自己的小 svg、用 % 定位在 .sp-logo 裡；
+/* 跟著主題與深淺色（core/theme.css 的變數；theme.js 在 <head> 就設好，開場時已經套好）：底色 --bg；淺色＝彩色 logo、深色＝單色 logo（標誌兩塊與字都是 --ink，藍色那塊外框描一圈底色當分隔縫 .sp-gap）。
+   整個學生會 logo（splash.js 的 SU_LOGO），每個字是自己的小 svg、用 % 定位在 .sp-logo 裡；
    動畫由 splash.js 的 splashPlay 用 Web Animations 做（只動 transform／opacity），這裡只負責版面 */
-.splash{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:#fff}
+.splash{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:var(--bg)}
 .sp-logo{position:relative;width:min(560px,78vw);aspect-ratio:547/186}
 .sp-grp,.sp-clip,.sp-txt{position:absolute;inset:0}
 .sp-grp,.sp-g{will-change:transform}
 .sp-clip{clip-path:inset(-20% -5% -20% var(--cut))}   /* 從標誌右緣切開：還在標誌範圍裡的字看不到（不會從眼睛的洞、黃藍之間的縫透出來），像從標誌後面出來 */
 .sp-grp svg{position:absolute;display:block;overflow:visible}
 .sp-emb path{will-change:transform,opacity}
-.sp-gap{fill:none;stroke:#000;stroke-width:4;stroke-linejoin:round;display:none}
+.sp-gap{fill:none;stroke:var(--bg);stroke-width:4;stroke-linejoin:round;display:none}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .splash{background:#000}
-  :root:not([data-theme="light"]) .splash path:not(.sp-gap){fill:#f1f1f4}
-  :root:not([data-theme="light"]) .sp-gap{display:inline}
+  :root:not([data-theme]) .splash path:not(.sp-gap){fill:var(--ink)}
+  :root:not([data-theme]) .sp-gap{display:inline}
 }
-:root[data-theme="dark"] .splash{background:#000}
-:root[data-theme="dark"] .splash path:not(.sp-gap){fill:#f1f1f4}
+:root[data-theme="dark"] .splash path:not(.sp-gap){fill:var(--ink)}
 :root[data-theme="dark"] .sp-gap{display:inline}
-/* 深色模式的標誌用單色線稿（splash.js 的 SU_LINE）：淺色時藏起來；深色時藏起彩色兩塊、顯示線稿（白色，黑底） */
+/* 深色模式的標誌用單色線稿（splash.js 的 SU_LINE）：淺色時藏起來；深色時藏起彩色兩塊、顯示線稿（文字色） */
 .sp-line{display:none;transform-box:fill-box;transform-origin:center}
-.sp-line path{fill:#f1f1f4}
+.sp-line path{fill:var(--ink)}
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]) .sp-line{display:inline}
-  :root:not([data-theme="light"]) :is(.sp-y,.sp-b){display:none}
+  :root:not([data-theme]) .sp-line{display:inline}
+  :root:not([data-theme]) :is(.sp-y,.sp-b){display:none}
 }
 :root[data-theme="dark"] .sp-line{display:inline}
 :root[data-theme="dark"] :is(.sp-y,.sp-b){display:none}

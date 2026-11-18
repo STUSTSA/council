@@ -17,7 +17,8 @@ const R=p=>p.waitForTimeout(400);
  const sts=await p.$$eval('#events .ev',x=>Object.fromEntries(x.map(e=>[e.querySelector('b').textContent,e.dataset.st+':'+getComputedStyle(e).backgroundColor])));
  console.log('statuses',JSON.stringify(sts));
  ok(/^stall/.test(sts['狀態測試紅'])&&/^go/.test(sts['狀態測試橘（補更新）'])&&/^go/.test(sts['狀態測試橘（完成一段）'])&&/^ok/.test(sts['狀態測試綠（期限後新增）']),'狀態：紅＝沒有進度、橘＝補更新／完成一段、綠＝期限後新增');
- ok(Object.values(sts).every(v=>v.endsWith('rgb(255, 255, 255)')),'收合的膠囊一律白底');
+ const blk=await p.evaluate(()=>{const d=document.createElement('i');d.style.background='var(--blk)';document.body.append(d);const c=getComputedStyle(d).backgroundColor;d.remove();return c});   /* ui-02：膠囊是主題的色塊 --blk（以前一律白底） */
+ ok(Object.values(sts).every(v=>v.endsWith(blk)),'收合的膠囊一律是主題的色塊（--blk）');
  await p.screenshot({path:'ev_d_light.png'});
  await login(p);await p.evaluate(()=>setSection('live',{instant:true}));await R(p);
  /* 展開「停車場公告：」→ 點一行開始原位編輯（03 T7 起沒有「編輯」鈕） */

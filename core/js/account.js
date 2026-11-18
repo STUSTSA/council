@@ -100,9 +100,9 @@ function acctGateHTML(){
 }
 function acctSettingsInner(){
   const wk=setRow("week","doc","每週概述",weekSub());
-  if(!FB_ON)return setSec(wk);
-  if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`;
-  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec();
+  if(!FB_ON)return setSec(wk)+lookSec();
+  if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
+  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
   const u=acct.user,name=acct.names[u.uid]||u.name||u.email;
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、看板名稱（管理員以上）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec((fsAdmin()?setRow("title","edit","看板名稱",state.title):"")
@@ -150,7 +150,7 @@ function acctPanel(title,draw){
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
-/* ---------- 帳號（自己）：名稱、申請編輯權限、我的申請、登出 ---------- */
+/* ---------- 帳號（自己）：名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
 async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
@@ -161,7 +161,7 @@ async function acctHub(){
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}`,sub:`待審 · ${hm(q.createdAt)} · 撤回`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
-    {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}]);
+    {k:"out",ic:"close",t:"登出",sub:"",act:acctSignOut}],()=>lookHTML(true),lookMount);
 }
 async function acctRename(){
   const A=await acctLoad(),cur=acct.names[acct.user.uid]||acct.user.name||"";
