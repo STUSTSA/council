@@ -178,15 +178,17 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.equal(rep.pending.length, 1);
     assert.match(rep.pending[0], /^follow:president→rights__/);
   });
-  it('權益部單獨匯入：報告 42 張卡片、42 個第 1 版、多行 20 張逐字還原；其他部門的文件沒有被動到', async () => {
-    const s = one('rights');
+  // release-03：筆數改成從資料檔直接數（main 上的權益部資料會一直增加；寫死 42／20 會在資料變多時誤報）。至少要有多行卡片，逐字還原才有測到
+  it('權益部單獨匯入：報告的卡片、第 1 版、多行逐字還原＝資料檔直接數的筆數；其他部門的文件沒有被動到', async () => {
+    const s = one('rights'), ev = s.files[0].state.events, nCards = ev.length, nMulti = ev.filter(e => String(e.desc || '').includes('\n')).length;
+    assert.ok(nCards > 0 && nMulti > 0);
     await runImport(sdb(), FV, TS, s, { batch: 'd-rights', uid: SU });
     const rep = await deptReport(sdb(), s, 'rights');
     assert.ok(rep.ok, JSON.stringify(rep));
     const row = k => rep.rows.find(x => x.key === k);
-    assert.equal(row('cards').firestore, 42);
-    assert.equal(row('versions').firestore, 42);
-    assert.equal(row('multiline').firestore, 20);
+    assert.equal(row('cards').firestore, nCards);
+    assert.equal(row('versions').firestore, nCards);
+    assert.equal(row('multiline').firestore, nMulti);
     assert.equal(await count('cards', 'events'), 0);
     assert.ok((await deptReport(sdb(), one('president'), 'president')).pending.length === 0, '權益部匯入後，會長室的追蹤指得到');
   });
@@ -337,5 +339,28 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     for (const p of [join(other, 'export.json'), join(root, 'docs', 'data.json'), join(root, 'backup-data.json'), join(other, 'repo', 'exports', 'x.json')])
       assert.equal(blockedOut(p, root), null, `不該擋 ${p}`);
     assert.equal(readFileSync(join(root, 'data-fruit.json'), 'utf8'), '{}');
+  });
+});
+
+// release-03 檢查 C：舊網站（schemaVersion 13 的程式）只會改 desc。核取行攤平成「☑ 」「☐ 」開頭的文字，被改了文字或新加時，
+// 網頁（blocksFromDesc）與遷移（toDocs 沒有 blocks 的卡片）都還原成核取行，攤平回去跟原本的 desc 逐字相同
+describe('release-03 核取行從 desc 還原', () => {
+  it('網頁重建與遷移：開頭 ☑／☐ 的行是核取行，其他純文字；攤平回去逐字相同', () => {
+    const desc = '☑ 做完（舊網站改過）\n☐ 還沒\n普通的一行\n☑沒有空白不算';
+    const b = MAP.blocksFromDesc(desc, []);
+    assert.deepEqual(b.map(x => [x.text, x.check]), [['做完（舊網站改過）', true], ['還沒', false], ['普通的一行', null], ['☑沒有空白不算', null]]);
+    assert.equal(MAP.descOf(b), desc);
+    const r = MAP.toDocs('rights', { schemaVersion: 13, events: [{ id: 'e1', name: 'x', desc, times: [] }], issues: [], weeks: [], labels: [], members: [] }, { batch: 'b', uid: 'u' });
+    const c = r.docs.find(d => d.kind === 'cards').data;
+    assert.deepEqual(c.blocks.check, [true, false, null, null]);
+    assert.deepEqual(c.blocks.id, ['rights__e1_L0', 'rights__e1_L1', 'rights__e1_L2', 'rights__e1_L3']);
+    assert.equal(MAP.descOf(MAP.fromFsBlocks('rights', c.blocks)), desc);
+    assert.equal(c.legacyDesc, desc);
+  });
+  it('新程式存的檔案被舊網站改了核取行的文字：沒改的行沿用（ID、勾選），改過的還原成核取行', () => {
+    const old = [{ id: 'a', text: '第一行', check: true, timeId: null }, { id: 'b', text: '第二行', check: null, timeId: null }];
+    const b = MAP.blocksOf({ blocks: old, desc: '☑ 第一行（改）\n第二行', times: [] });
+    assert.deepEqual(b.map(x => [x.text, x.check]), [['第一行（改）', true], ['第二行', null]]);
+    assert.equal(b[1].id, 'b');
   });
 });

@@ -4,7 +4,7 @@
 這兩份是從 claude.ai 對話交接過來的。裡面提到「交接包、zip、免資料夾、flat.py、上傳」的地方，都以這份 CLAUDE.md 為準（見「交付方式」）。
 
 ## 這是什麼
-- 南臺科大學生會各部門的工作看板。靜態前端（HTML／CSS／一般 script）放在 GitHub Pages：https://linkmasterking.github.io/-/
+- 南臺科大學生會各部門的工作看板，靜態前端（HTML／CSS／一般 script）放在 GitHub Pages：https://stustsa.github.io/council/（repo STUSTSA/council；2026-11 從 linkmasterking/- 移轉）
 - 改版中（已核准的架構，見 `docs/architecture/`）：登入與資料改用 Firebase（Authentication、Cloud Firestore、Security Rules），Spark 免費方案。授權一律由 Security Rules 判斷，前端只負責顯示。切換完成前，各部門仍讀寫 GitHub 上的 `data*.json`。
 - 使用者是權益部幹部，用繁體中文溝通。回覆一律繁體中文，不要 emoji。
 
