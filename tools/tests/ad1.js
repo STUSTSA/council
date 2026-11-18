@@ -3,19 +3,21 @@
    點了照原本行為（桌面左右兩欄＝開始編輯一筆空白的並選到、手機＝開對話框）。固定 8300 埠
    2026-11-11 改寫：2026-11-06 單卡編輯後新增鈕是 .auth-only（登入、沒有在編輯時才出現），不再是「編輯中」才出現；改用 common.js 登入與模擬 GitHub
    2026-11-17（ui-05 審查 P1-1）：膠囊從 #events .events>.ev 換成 #events .cp、打開的那張 selEv → lvOpen；手機點新增改成開全螢幕的空白卡片（ui-05 規格，以前是對話框）。
-   「登入後在膠囊格最後、自己一行靠左、低調小字」測的是 ui-04 以前的規格（ui-04 起新增鈕是右下角浮動圓鈕 .fab），ui-04 就已失敗、跟 ui-05 無關，維持原樣 */
+   2026-11-18（ui-07）：「登入後在膠囊格最後、自己一行靠左、低調小字」測的是 ui-04 以前的規格（ui-04 起新增鈕是右下角浮動圓鈕 #addEvent.fab，DESIGN-next 第六節「新增即時回報」），
+   改成「登入後是右下角浮動圓鈕」：fixed、不在清單裡、aria-label、60×60、靠右；桌面離底 40 以內、手機在工具列上方。
+   「看得到」改看 hidden／display／尺寸（fixed 元素的 offsetParent 一律是 null，原本的判斷會讓「沒登入不顯示」「編輯中藏起來」空轉通過）。其他斷言不變 */
 const c=require('./common');
 (async()=>{let bad=0;const ok=(x,m)=>{console.log((x?'OK  ':'FAIL')+' '+m);if(!x)bad++};
 for(const [w,h,sc,tag] of [[1300,860,'dark','d'],[1300,860,'light','dl'],[412,900,'dark','m']]){
 const {b,mk,login}=await c.setup();   /* 每種都從沒有身分的資料開始 */
 const p=await mk(w,h,sc,false);await p.waitForFunction(()=>!document.body.classList.contains('intro'));await p.waitForTimeout(600);
-const m=()=>p.evaluate(()=>{const a=$('#addEvent'),e=document.querySelector('#events .cp:not(.sel)'),r=x=>{const q=x.getBoundingClientRect();return [Math.round(q.width),Math.round(q.height)]};
-  const g=a.parentElement.getBoundingClientRect(),q=a.getBoundingClientRect(),capBottom=Math.max(...[...document.querySelectorAll('#events .cp')].map(x=>x.getBoundingClientRect().bottom));
-  return {inGrid:a.parentElement.className,shown:a.offsetParent!==null,add:r(a),cap:r(e),lastCell:a.parentElement.lastElementChild===a,ownRow:q.top>=capBottom-1,left:Math.round(q.left-g.left),font:getComputedStyle(a).fontSize}});
+const m=()=>p.evaluate(()=>{const a=$('#addEvent'),q=a.getBoundingClientRect(),cs=getComputedStyle(a),tb=document.querySelector('#tabbar').getBoundingClientRect();
+  return {shown:!a.hidden&&cs.display!=='none'&&q.width>0,add:[Math.round(q.width),Math.round(q.height)],pos:cs.position,inList:!!a.closest('#events,#livePanel'),lbl:a.getAttribute('aria-label'),
+    r:Math.round(innerWidth-q.right),b:Math.round(innerHeight-q.bottom),aboveBar:q.bottom<=tb.top}});
 const v0=await m();console.log(tag,'logged out',JSON.stringify(v0));ok(!v0.shown,tag+' 沒登入不顯示');
 await login(p);await p.waitForTimeout(500);
 const v1=await m();console.log(tag,'logged in',JSON.stringify(v1));
-ok(v1.shown&&v1.inGrid==='events'&&v1.lastCell&&v1.ownRow&&v1.left===0&&v1.add[1]<v1.cap[1]&&v1.add[0]<v1.cap[0]&&v1.font==='13px',tag+' 登入後在膠囊格最後、自己一行靠左、低調小字');
+ok(v1.shown&&v1.pos==='fixed'&&!v1.inList&&v1.lbl==='新增即時回報'&&v1.add[0]===60&&v1.add[1]===60&&v1.r<80&&(w>=1000?v1.b<=40:v1.aboveBar),tag+(w>=1000?' 登入後是右下角浮動圓鈕（60×60、不在清單裡）':' 登入後是浮動圓鈕、在工具列上方'));   /* ui-04 起（以前是膠囊格最後的小字） */
 await p.locator('#livePanel').screenshot({path:`ad_${tag}.png`});
 /* 有一張在編輯時藏起來 */
 const id=await p.evaluate(()=>liveOrder()[0].id);await p.evaluate(i=>startEdit('e:'+i),id);await p.waitForTimeout(700);

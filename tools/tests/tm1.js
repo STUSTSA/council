@@ -1,7 +1,10 @@
 /* 學年、開學日、甘特圖預設學期跟著秘書處（2026-11-06，state.js 的 termCfg）：
-   1. 權益部讀到秘書處的資料檔（模擬網站上的 data-secretariat.json）→ termCfg 用秘書處的值、搜尋提示的週次跟著算、甘特圖預設學期跟著。
+   1. 權益部讀到秘書處的資料檔（模擬網站上的 data-secretariat.json）→ termCfg 用秘書處的值、甘特圖預設學期跟著。
    2. 秘書處的檔案不存在 → 用權益部自己的值。
-   3. 秘書處登入後設定頁有「學年與開學日」，其他部門沒有。固定 8300 埠 */
+   3. 秘書處登入後設定頁有「學年與開學日」，其他部門沒有。固定 8300 埠
+   2026-11-18（ui-07）：刪掉「search placeholder week follows termCfg」——它讀舊頁首 .hero-search 提示字裡的週次（2026-11-06「搜尋 權益部 第N週」），
+   新搜尋列 #boardQ 的提示字只有「搜尋」（前後端交接-next.md 第九節），週次也不再顯示在任何地方（ui-04 已刪掉 views.js 的 termWeek，見交接說明一百零二節清理報告），
+   測的是已不存在的舊規格。termCfg 跟著秘書處／退回自己的值仍由 cfg、gTermNow（甘特圖預設學期）兩條判斷。週次的計算、ph 欄位一起拿掉，其他斷言不變 */
 const c=require('./common');const A=(ok,m)=>{if(!ok){console.log('FAIL:',m);process.exitCode=1}};   /* 2026-11-11：逐項判斷 */
 (async()=>{
 const sec={schemaVersion:10,id:'secretariat',savedAt:'2099-01-01 00:00',title:'秘書處',yearLabel:'120學年',termStart:'2026-10-05',semester:'down',issues:[],events:[],weeks:[],members:[]};
@@ -10,9 +13,8 @@ const run=async(have)=>{c.q='';const p=await mk(1300,820,'light',false);
   if(have)await p.route('http://127.0.0.1:8300/data-secretariat.json*',r=>r.fulfill({contentType:'application/json',body:JSON.stringify(sec)}));
   else await p.route('http://127.0.0.1:8300/data-secretariat.json*',r=>r.fulfill({status:404,body:''}));
   await p.reload();await p.waitForTimeout(2200);
-  const v=await p.evaluate(()=>({cfg:termCfg(),own:[state.yearLabel,state.termStart,state.semester],ph:(document.querySelector('.hero-search input')||{}).placeholder,seg:gTermNow(),wk:(()=>{const d=(Date.parse(today())-Date.parse(termCfg().termStart))/864e5;return d<0?'開學前':'第'+(Math.floor(d/7)+1)+'週'})()}));console.log(have?'with secretariat:':'without:',JSON.stringify(v));
+  const v=await p.evaluate(()=>({cfg:termCfg(),own:[state.yearLabel,state.termStart,state.semester],seg:gTermNow()}));console.log(have?'with secretariat:':'without:',JSON.stringify(v));
   if(have)A(v.cfg.yearLabel==='120學年'&&v.cfg.termStart==='2026-10-05'&&v.seg==='down','termCfg follows secretariat');else A(v.cfg.yearLabel===v.own[0]&&v.cfg.termStart===v.own[1]&&v.seg===(v.own[2]||'all'),'termCfg falls back to own values');
-  A(v.ph.endsWith(v.wk),'search placeholder week follows termCfg ('+v.wk+')');
   if(have){await login(p);await p.click('#setBtn');await p.waitForTimeout(900);   /* 第二次的資料已經有身分了，只看讀值 */
   const rw=await p.evaluate(()=>[...document.querySelectorAll('#setOv .set-inner .set-row')].map(r=>r.dataset.set));console.log(' rows:',JSON.stringify(rw));A(rw.length>1&&!rw.includes('term'),'rights has no term row')}
   const er=p.errs.filter(x=>have||!/status of 404/.test(x));console.log(' errs',JSON.stringify(p.errs));A(!er.length,'errors');   /* 沒有秘書處檔案那次是故意回 404 */await p.context().close()};
