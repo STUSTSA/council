@@ -550,7 +550,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .evf-when{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
 .evf-when input[type=date]{width:auto}
 .evf-when input:not([type]){width:72px}
-.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blk) 35%,transparent)}
+.evf-sw{flex:none;width:24px;height:24px;min-height:0;padding:0;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 28%,transparent)}   /* 色票外框：字色 --ink 的 28%（淺色＝深框、深色＝淺框），跟底色（--blk）分得開；深色色票在深色模式也看得見 */
 .evf-place{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .evf-place input{flex:1 1 180px}
 .place-quick{display:flex;flex-wrap:wrap;gap:4px}
