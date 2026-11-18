@@ -40,15 +40,19 @@ function glassify(el){if(el)el.classList.add("glass")}
 
 /* Service Worker（sw.js）：只在正式網址（https／localhost）且頁面有 manifest 時註冊。看板（pwa.js）與主頁（home.js）共用。
    sw.js 是網路優先＋執行期快取：第一次打開時 Service Worker 還沒接手，這一頁已經載入的檔案不會自己進離線備份，
-   所以註冊好了把這一頁用到的同站檔案（載入紀錄、圖示、manifest，加上 extra：之後才會讀的檔，例如主頁的部門標誌）交給它收進去（precache 訊息） */
+   所以註冊好了把這一頁用到的同站檔案（這一頁本身、載入紀錄、圖示、manifest，加上 extra：之後才會讀的檔，例如主頁的部門標誌）交給它收進去（precache 訊息）。
+   新版 sw.js 換手時（快取版本換新、舊的快取被刪）再送一次給新的，不然上線後第一次打開送出的清單會跟著舊快取一起被刪（release-03，main 的 pwa.js／home.html 搬到這裡） */
 function swReg(extra){
   if(!("serviceWorker" in navigator)||!document.querySelector('link[rel="manifest"]')||!(location.protocol==="https:"||/^(localhost|127\.0\.0\.1)$/.test(location.hostname)))return;
-  const go=()=>navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>{
-    const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
-    const urls=[new URL("./",location.href).href,...performance.getEntriesByType("resource").map(e=>e.name),
+  const same=u=>{try{return new URL(u,location.href).origin===location.origin}catch(_){return false}};
+  const send=w=>{if(!w)return;
+    const urls=[new URL("./",location.href).href,location.href,...performance.getEntriesByType("resource").map(e=>e.name),
       ...[...document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="manifest"]')].map(l=>l.href),...(extra||[]).map(u=>new URL(u,location.href).href)]
       .filter(same).map(u=>u.split("#")[0].split("?")[0]);
-    reg.active&&reg.active.postMessage({type:"precache",urls:[...new Set(urls)]});
-  }).catch(()=>{});
+    w.postMessage({type:"precache",urls:[...new Set(urls)]})};
+  const go=()=>{
+    navigator.serviceWorker.register("sw.js").then(()=>navigator.serviceWorker.ready).then(reg=>send(reg.active)).catch(()=>{});
+    navigator.serviceWorker.addEventListener("controllerchange",()=>send(navigator.serviceWorker.controller));
+  };
   if(document.readyState==="complete")go();else addEventListener("load",go,{once:true});
 }
