@@ -2,7 +2,7 @@
 
 function defaultRange(){const d=new Date();return{start:ym(new Date(d.getFullYear(),d.getMonth()-1,1)),end:ym(new Date(d.getFullYear(),d.getMonth()+4,1))}}
 /* ---------- 資料版本與自動遷移 ---------- */
-const SCHEMA_VERSION=13;
+const SCHEMA_VERSION=14;
 let MIGRATE_NOTE={staffDropped:0};   /* 這次讀進來時遷移掉的東西（只給畫面提示，不存進資料） */
 const MIGRATIONS={
   /* v2 → v3：結構不變，只是開始記錄 schemaVersion（拆檔版） */
@@ -43,10 +43,22 @@ const MIGRATIONS={
   11:s=>{s.docs=s.docs||[];return s},
   /* v12 → v13（2026-11-06 秘書處會議紀錄）：minutes[]＝寫回各部門時記下的修改（meeting.js 的 mtRecord），只有秘書處會有內容；舊資料補空陣列 */
   12:s=>{s.minutes=s.minutes||[];return s},
+  /* v13 → v14（03 逐行內容）：即時回報加 blocks[]＝{id,text,check:null|false|true,timeId:null|時間標記 id}（store-map.js 的 blocksOf）；
+     舊卡片每一行變成一個純文字行，desc 照舊保留（改成由 blocks 衍生，核取攤成「☑ 」「☐ 」開頭的文字）。
+     normalize 每次讀進來都會再對齊一次（舊網站或會議編輯只改了 desc 時照 desc 重建、能對上的行沿用），所以這裡跟 normalize 是同一件事。
+     舊網站（schemaVersion 13）會把 blocks 當成多餘欄位忽略、照常讀 desc；備份與回復匯出一律標 13（save.js 的 exportBackup） */
+  13:s=>{(s.events||[]).forEach(evBlocksFix);return s},
 };
+/* 一張即時回報的 blocks 與 desc 對齊（normalize、遷移、只改了 desc 的寫入都用這個） */
+function evBlocksFix(e){e.blocks=StoreMap.blocksOf(e);e.desc=StoreMap.descOf(e.blocks);return e}
+/* 只給一段文字（新增即時回報的小表單、完成這一段、會議編輯的說明欄）：照文字重建 blocks，跟原本某一行相同的沿用那一行 */
+function evSetDesc(e,text){e.desc=String(text||"");return evBlocksFix(e)}
+/* 超連結的顏色只能是 #rrggbb（畫面放進 style；不合格的換成預設色，03 審查 P1-1；store-map.js 讀 Firestore 時也清一次） */
+function linksFix(l){(l=Array.isArray(l)?l.filter(x=>x&&typeof x==="object"):[]).forEach(x=>{x.color=cssColor(x.color)});return l}
 function migrate(s){
   let v=+s.schemaVersion||+s.v||2;if(v<2)v=2;
   if(v>SCHEMA_VERSION){s._newer=true;return s}   /* 比這個程式還新的資料：不動它 */
+  delete s._newer;   /* 舊網站讀到比它新的資料時會加這個記號、存回資料檔；這裡讀得懂，拿掉（release-03 檢查 C） */
   while(v<SCHEMA_VERSION){s=(MIGRATIONS[v]||(x=>x))(s);v++}
   s.schemaVersion=SCHEMA_VERSION;return s;
 }
@@ -60,10 +72,10 @@ let termSrc=null;
 function termCfg(){const s=(!termOwn()&&termSrc)||state;return {yearLabel:s.yearLabel||"",termStart:s.termStart||"",semester:["up","down"].includes(s.semester)?s.semester:""}}
 function normalize(s){
   s=migrate(s||{});if(!s.id)s.id=CFG.boardId;
-  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=e.links||[];e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report});
+  s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=linksFix(e.links);e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
   s.weeks=s.weeks||[];s.issues=s.issues||[];s.events=s.events||[];s.reportBase=s.reportBase||null;if(s.yearLabel===undefined)s.yearLabel=CFG.term.label;if(s.termStart===undefined)s.termStart=CFG.term.start;s.range=s.range||defaultRange();s.title=s.title||CFG.title;
-  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=i.links||[];i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
-    i.markers.forEach(m=>{if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
+  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=linksFix(i.links);i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
+    i.markers.forEach(m=>{if(m.color!=null&&cssColor(m.color,"")!==m.color)m.color=MARK_COLORS[0];if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
   return s;
 }
 

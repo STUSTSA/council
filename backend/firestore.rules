@@ -1,0 +1,830 @@
+rules_version = '2';
+// 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D、03 修正）
+// 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
+// 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、L-01～L-11、X-01～X-10、M-01～M-07、遷移）。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===================== 共用函式 =====================
+    function doc(col, id)   { return /databases/$(database)/documents/$(col)/$(id); }
+    // 只接受 Google 登入且信箱已驗證（避免日後主控台多開其他登入方式時意外放行）
+    function signedIn()     { return request.auth != null
+                                && request.auth.token.firebase.sign_in_provider == 'google.com'
+                                && request.auth.token.email_verified == true; }
+    function me()           { return request.auth.uid; }
+    function hasRole()      { return signedIn() && exists(doc('roles', me())); }
+    function role()         { return get(doc('roles', me())).data; }
+    // L1 內部看板（02A 定案，取代 01A-R 的已授權檢視者）：任何已登入的 Google 帳號都能唯讀，不需審核。
+    // 秘書處點名名單（attendance*、meetingMinutes）與會長私人行程（busyBlocks、bookings）不適用，各自另有限制。
+    function internalReader() { return signedIn(); }
+    function isSuper()      { return hasRole() && role().get('super', false) == true; }
+    function deptRole(d)    { return hasRole() ? role().get('depts', {}).get(d, null) : null; }
+    function isEditor(d)    { return d is string && deptRole(d) in ['admin', 'editor']; }
+    function isAdmin(d)     { return d is string && deptRole(d) == 'admin'; }
+    function deptWriter(d)  { return isEditor(d) || isSuper(); }
+    function deptIds()      { return ['rights', 'president', 'secretariat', 'marketing', 'finance',
+                                      'events', 'affairs', 'pr', 'works', 'fruit']; }
+    function d()            { return request.resource.data; }
+    function stamped()      { return d().updatedAt == request.time && d().updatedBy == me(); }
+    function unchanged(keys){ return !d().diff(resource.data).affectedKeys().hasAny(keys); }
+    function onlyChanged(keys) { return d().diff(resource.data).affectedKeys().hasOnly(keys); }
+    function revNext()      { return d().rev == resource.data.rev + 1; }
+    // 02D 審查（P0）：看板內容的文件 ID 只能是英數、底線、連字號（1～120 字）。網頁讀回來時會拿掉部門前綴、把 ID 放進畫面的屬性，
+    // 不限制的話，有部門角色的人用 SDK 建一份 ID 帶引號或 < 的文件，就能在別人（含總管理員）的畫面上執行程式（permissions.md 第 5.1e 節）
+    function safeId(x)      { return x is string && x.matches('^[A-Za-z0-9_-]{1,120}$'); }
+    // 03：卡片（與版本）的逐行內容 blocks（data-model.md 第 3 節）。四個一樣長的陣列（第 n 行＝四個陣列的第 n 個）：
+    //   id[]＝行 ID（safeId、不重複）；text[]＝文字（每行最多 1000 字、不能有換行）；check[]＝null（純文字）／false／true（核取）；
+    //   time[]＝null 或這張卡片 timeIds 裡的時間事件 ID（時間＋核取）。最多 50 行（store-map.js 的 BLK_MAX、TXT_MAX 同數字）。
+    // 不用「每行一個物件的陣列」：規則沒有迴圈，逐行檢查的運算式數量跟行數成正比，十行就超過每個請求 1000 個運算式的上限（模擬器實測）；
+    // 平行陣列可以用 join／matches／hasOnly／hasAll 整欄一次檢查，跟行數無關
+    function blocksOk(b, t) {
+      let n = b.id.size();
+      let tt = b.time.removeAll([null]);
+      // 「接起來再切開＝原本的陣列」：每個元素都是字串、而且不含分隔字元（id 不含空白、文字不含換行）；結尾補一個 '.' 免得切開時丟掉結尾的空字串
+      return b is map && b.keys().hasOnly(['id', 'text', 'check', 'time']) && b.keys().hasAll(['id', 'text', 'check', 'time'])
+        && b.id is list && b.text is list && b.check is list && b.time is list && t is list
+        && n <= 50 && b.text.size() == n && b.check.size() == n && b.time.size() == n
+        && b.check.hasOnly([null, true, false])
+        && (n == 0 || ((b.id.join(' ') + ' .').split(' ') == b.id.concat(['.'])
+            && b.id.toSet().size() == n
+            && b.id.join(' ').matches('^[A-Za-z0-9_-]{1,120}( [A-Za-z0-9_-]{1,120})*$')
+            && (b.text.join('\n') + '\n.').split('\n') == b.text.concat(['.'])
+            && b.text.join('\n').matches('^[^\n]{0,1000}(\n[^\n]{0,1000})*$')))
+        && (tt.size() == 0 || ((tt.join(' ') + ' .').split(' ') == tt.concat(['.'])
+            && tt.join(' ').matches('^[A-Za-z0-9_-]{1,120}( [A-Za-z0-9_-]{1,120})*$')
+            && t.hasAll(tt)));
+    }
+    // 03 審查（P1-1）：卡片的超連結 links 最多 10 個（store-map.js 的 LNK_MAX），每個是 map、color 只能是 #rrggbb。
+    // 畫面把顏色放進 style="--c:…"，esc 擋不住「red;position:fixed;background:url(…)」這種用分號接新宣告的字串（畫面另有 util.js 的 cssColor）。
+    // 規則沒有迴圈：用固定索引逐個檢查；名稱、網址的內容不檢查（畫面一律跳脫、網址經過 safeUrl）。
+    // 每個索引寫得越短越好（運算式上限）：元素不是 map、沒有 color、color 不是字串時 l[i].color.matches 會出錯＝拒絕，不另外寫 is map／is string。
+    // 遷移匯入（importCreate）最吃運算式：模擬器實測固定索引 18 個（＋50 行＋時間事件）仍可寫、22 個超過每個請求 1000 個運算式的上限；
+    // 一般編輯的餘裕更多。正式環境的上限是否跟模擬器一樣〔待驗證〕
+    function linkOk(l, i)  { return l.size() <= i || l[i].color.matches('^#[0-9A-Fa-f]{6}$'); }
+    function linksOk(l) {
+      return l is list && l.size() <= 10
+        && linkOk(l, 0) && linkOk(l, 1) && linkOk(l, 2) && linkOk(l, 3) && linkOk(l, 4)
+        && linkOk(l, 5) && linkOk(l, 6) && linkOk(l, 7) && linkOk(l, 8) && linkOk(l, 9);
+    }
+    // 稽核鏈：同一批寫入裡必須新建 auditLogs/{col}_{id}_{rev}
+    function auditAfter(col, id, rev) { return existsAfter(doc('auditLogs', col + '_' + id + '_' + string(rev))); }
+    // 遷移：總管理員＋running 的批次（migration.md 第 3 節）
+    // 02D D-d：議題、週報、標籤的刪除＝部門管理員（自己部門）或總管理員，同一批新建一筆刪除紀錄
+    // auditLogs/{集合}_{ID}_delete_{被刪文件 updatedAt 的毫秒}（ID 由被刪的那一版決定：不能略過、不能拿舊紀錄充數，同 ID 重建再刪也不撞號）
+    function delLogRef(col, id) { return doc('auditLogs', col + '_' + id + '_delete_' + string(resource.data.updatedAt.toMillis())); }
+    function delLogged(col, id) { return (isAdmin(resource.data.deptId) || isSuper())
+                                    && !exists(delLogRef(col, id)) && existsAfter(delLogRef(col, id)); }
+    // 遷移失敗回復（01B R1，rollbackImport）：總管理員刪這個批次匯入、匯入後沒被改過、批次已是 rollingBack 的文件，不另寫刪除紀錄（批次本身有稽核鏈）。
+    // 沒被改過＝議題 rev 還是 1；週報、標籤最後寫入的人還是開始這個批次的人（同 run.js 的 rollbackImport；02D 審查 P2-2）
+    function importRollback(col) {
+      let m = get(doc('migrations', resource.data.get('importBatch', '-'))).data;
+      return isSuper() && resource.data.get('importBatch', null) is string && m.status == 'rollingBack'
+        && (col == 'issues' ? resource.data.get('rev', 0) == 1 : resource.data.get('updatedBy', '') == m.startedBy);
+    }
+    // 新建時帶 importBatch 只能走遷移（不然編輯者可以自己標成「匯入的」，回復時就能不留紀錄被刪掉；02D 審查 P2-2）
+    function importTagOk()  { return !d().keys().hasAny(['importBatch']) || importing(); }
+    function importing()    { return isSuper() && d().get('importBatch', null) is string
+                                && get(doc('migrations', d().importBatch)).data.status == 'running'; }
+
+    // ===================== L0 公開 =====================
+    match /departments/{id} {
+      allow get, list: if true;
+      allow create, update: if isSuper() && id in deptIds()
+        && d().keys().hasOnly(['name', 'short', 'order', 'color', 'icon', 'active', 'updatedAt', 'updatedBy'])
+        && d().name is string && d().order is int && d().active is bool && stamped();
+      allow delete: if isSuper();
+    }
+    match /org/{id} {
+      allow get, list: if true;
+      allow create, update: if isSuper() && id == 'config'
+        && d().keys().hasOnly(['yearLabel', 'termStart', 'semester', 'updatedAt', 'updatedBy'])
+        && d().semester in ['up', 'down', ''] && stamped();
+      allow delete: if false;
+    }
+
+    // ===================== 使用者 =====================
+    match /users/{uid} {
+      allow get:  if signedIn() && (uid == me() || isSuper());
+      allow list: if isSuper();
+      allow create: if signedIn() && uid == me()
+        && d().keys().hasOnly(['email', 'createdAt', 'lastLoginAt'])
+        && d().email == request.auth.token.email
+        && d().createdAt == request.time && d().lastLoginAt == request.time;
+      allow update: if signedIn() && uid == me() && onlyChanged(['lastLoginAt']) && d().lastLoginAt == request.time;
+      allow delete: if false;
+    }
+    // 03 F3 專員名單：同部門有角色的人（編輯者、管理員）互相看得到「誰在這個部門」。只有 deptId、uid 與時間，沒有信箱、角色等級、其他部門；
+    // 名字照舊從 profiles 讀。ID＝{部門}__{uid}。別部門的成員、沒有角色的登入者、未登入都讀不到。
+    // 寫：本人（自己真的有這個部門的角色時）或總管理員建立；刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
+    match /deptMembers/{id} {
+      function rosterRole(u, dept) { return getAfter(doc('roles', u)).data.get('depts', {}).get(dept, null); }
+      function mine() { return signedIn() && id.split('__').size() == 2 && id.split('__')[1] == me(); }   // 自己那一份（不論存不存在：登入時先查有沒有再補）
+      allow get: if mine() || isSuper() || isEditor(resource.data.deptId);
+      allow list: if isSuper() || isEditor(resource.data.deptId);
+      allow create: if signedIn() && d().keys().hasOnly(['deptId', 'uid', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
+        && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
+        && (d().uid == me() || isSuper())
+        && rosterRole(d().uid, d().deptId) in ['admin', 'editor'];
+      allow update: if false;
+      allow delete: if signedIn() && (isSuper() || resource.data.uid == me()
+        || (isEditor(resource.data.deptId) && !(rosterRole(resource.data.uid, resource.data.deptId) in ['admin', 'editor'])));
+    }
+    match /profiles/{uid} {
+      allow get, list: if internalReader() || (signedIn() && uid == me());
+      allow create, update: if signedIn() && (uid == me() || (isSuper() && resource != null))
+        && d().keys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+        && d().displayName is string && d().displayName.size() >= 1 && d().displayName.size() <= 40
+        && d().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // ===================== 邀請（invitations-roles-audit.md 第 2、4 節） =====================
+    match /invitations/{h} {
+      allow get:  if isSuper() || (signedIn() && resource.data.status == 'active');
+      allow list: if isSuper();
+      allow delete: if false;
+
+      function roleOk() {                                                        // 02A：沒有 viewer 邀請（登入就能讀）
+        return d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()
+            && exists(doc('departments', d().deptId));
+      }
+      allow create: if isSuper()                                                  // D3：只有會長室發邀請
+        && h.matches('^[0-9a-f]{64}$')
+        && d().keys().hasOnly(['deptId', 'role', 'legacyRef', 'boundEmail', 'note', 'status', 'rev',
+                               'createdBy', 'createdAt', 'expiresAt', 'updatedAt', 'updatedBy'])
+        && d().status == 'active' && d().rev == 1
+        && roleOk()
+        && d().createdBy == me() && d().createdAt == request.time && stamped()
+        && d().expiresAt is timestamp
+        && d().expiresAt > request.time && d().expiresAt <= request.time + duration.value(10, 'm')   // D13
+        && auditAfter('invitations', h, 1);
+
+      allow update: if revNext() && auditAfter('invitations', h, d().rev) && (redeem() || revoke());
+
+      function redeem() {
+        return signedIn()
+          && resource.data.status == 'active' && resource.data.expiresAt > request.time
+          && onlyChanged(['status', 'usedBy', 'usedAt', 'token', 'rev', 'updatedAt', 'updatedBy']) && stamped()
+          && d().status == 'used' && d().usedBy == me() && d().usedAt == request.time
+          && d().token is string
+          && hashing.sha256(d().token).toHexString().lower() == h                 // P4：toHexString() 是大寫
+          && (resource.data.get('boundEmail', null) == null || resource.data.boundEmail == request.auth.token.email)
+          && getAfter(doc('roles', me())).data.lastRef == h
+          && (resource.data.get('legacyRef', null) == null
+              || getAfter(doc('legacyIdentities', resource.data.legacyRef)).data.claimedBy == me());
+      }
+      function revoke() {
+        return isSuper() && resource.data.status == 'active'
+          && onlyChanged(['status', 'revokedBy', 'revokedAt', 'rev', 'updatedAt', 'updatedBy']) && stamped()
+          && d().status == 'revoked' && d().revokedBy == me() && d().revokedAt == request.time;
+      }
+    }
+
+    // ===================== 角色 =====================
+    match /roles/{uid} {
+      function roleKeys()  { return ['super', 'depts', 'rev', 'lastVia', 'lastRef', 'updatedAt', 'updatedBy']; }
+      function oldSuper()  { return resource == null ? false : resource.data.get('super', false); }
+      function oldDepts()  { return resource == null ? {} : resource.data.get('depts', {}); }
+      function deptsDelta() { return d().depts.diff(oldDepts()); }
+      function onlyDeptAdded(dept, r) {
+        return deptsDelta().addedKeys() == [dept].toSet() && deptsDelta().changedKeys().size() == 0
+            && deptsDelta().removedKeys().size() == 0 && d().depts[dept] == r;
+      }
+      function onlyDeptSet(dept, r) {                                             // 核准申請：新增或改成申請的角色
+        return deptsDelta().affectedKeys() == [dept].toSet() && d().depts[dept] == r;
+      }
+      function baseShape() {
+        return d().keys().hasOnly(roleKeys()) && d().depts is map
+          && d().depts.keys().hasOnly(deptIds()) && d().depts.values().hasOnly(['admin', 'editor'])
+          && d().get('super', false) is bool
+          && d().lastRef is string;
+      }
+
+      // ---- 核銷邀請：本人，邀請在同一批從 active 變成 used ----
+      function inv()      { return get(doc('invitations', d().lastRef)).data; }       // 批次前
+      function invAfter() { return getAfter(doc('invitations', d().lastRef)).data; }  // 批次後
+      function viaInvite() {
+        return uid == me() && d().lastVia == 'invite' && stamped()
+          && inv().status == 'active' && invAfter().status == 'used' && invAfter().usedBy == me();
+      }
+      function inviteGrant() {
+        return d().get('super', false) == oldSuper()
+          && onlyDeptAdded(inv().deptId, inv().role);                             // 已在該部門有角色就不能核銷
+      }
+
+      // ---- 總管理員：manual／request／revoke ----
+      function superWrite() {
+        return isSuper() && stamped()
+          && d().lastVia in ['request', 'manual', 'revoke']
+          && (uid != me() || d().get('super', false) == oldSuper())               // 不能動自己的 super
+          && (d().lastVia != 'request' || viaRequest())
+          && (d().lastVia != 'revoke'  || onlyRemoves());
+      }
+      // 核准申請＝同一批把申請從 pending 改成 approved，角色變更只包含申請的那一項
+      function viaRequest() {
+        let rb = get(doc('roleRequests', d().lastRef)).data;                      // 批次前
+        let ra = getAfter(doc('roleRequests', d().lastRef)).data;                 // 批次後
+        return rb.status == 'pending' && ra.status == 'approved' && ra.decidedBy == me()
+          && rb.uid == uid
+          && d().get('super', false) == oldSuper()
+          && onlyDeptSet(rb.deptId, rb.role);
+      }
+      // 撤權只能拿掉部門或把 super 改成 false；降級 admin → editor 走 manual
+      function onlyRemoves() {
+        return deptsDelta().addedKeys().size() == 0 && deptsDelta().changedKeys().size() == 0
+          && (d().get('super', false) == false || oldSuper() == true);
+      }
+
+      allow get:  if signedIn() && (uid == me() || isSuper());
+      allow list: if isSuper();
+      allow delete: if false;
+      allow create: if d().rev == 1 && baseShape() && auditAfter('roles', uid, 1)
+        && ((viaInvite() && inviteGrant()) || superWrite());
+      allow update: if revNext() && baseShape() && auditAfter('roles', uid, d().rev)
+        && ((viaInvite() && inviteGrant()) || superWrite());
+    }
+
+    // ===================== 權限申請 =====================
+    match /roleRequests/{id} {
+      allow get:  if signedIn() && (resource.data.uid == me() || isSuper());
+      allow list: if isSuper() || (signedIn() && resource.data.uid == me());
+      // 02B：ID 一定是 SDK 產生的 20 碼英數字（ID 會出現在會長室的畫面上，不接受自訂 ID）；
+      // 舊身分只能是同一個部門、而且存在的那一筆（核准時會替申請人認領）
+      function legacyOk() {
+        return !d().keys().hasAny(['legacyRef'])
+          || (d().legacyRef is string && d().legacyRef.matches(d().deptId + '__[A-Za-z0-9_-]{1,80}')
+              && exists(doc('legacyIdentities', d().legacyRef)));
+      }
+      allow create: if signedIn() && d().uid == me() && d().status == 'pending' && d().rev == 1
+        && id.matches('^[A-Za-z0-9]{20}$')
+        && d().keys().hasOnly(['uid', 'deptId', 'role', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy'])
+        && d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()   // 02A：不再申請檢視資格
+        && exists(doc('departments', d().deptId)) && legacyOk()
+        && (!d().keys().hasAny(['note']) || (d().note is string && d().note.size() <= 200))
+        && d().createdAt == request.time && stamped() && auditAfter('roleRequests', id, 1);
+      allow update: if revNext() && auditAfter('roleRequests', id, d().rev) && stamped() && (
+          (resource.data.uid == me() && resource.data.status == 'pending' && d().status == 'cancelled'
+             && onlyChanged(['status', 'rev', 'updatedAt', 'updatedBy']))
+       || (isSuper() && resource.data.status == 'pending' && d().status == 'rejected'
+             && d().decidedBy == me() && d().decidedAt == request.time
+             && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy']))
+       // 核准一定要同一批把角色寫進 roles，而且 roles 的來源指向這筆申請（防「已核准但沒角色」與重放）
+       || (isSuper() && resource.data.status == 'pending' && d().status == 'approved'
+             && d().decidedBy == me() && d().decidedAt == request.time
+             && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy'])
+             && getAfter(doc('roles', resource.data.uid)).data.lastVia == 'request'
+             && getAfter(doc('roles', resource.data.uid)).data.lastRef == id
+             && getAfter(doc('roles', resource.data.uid)).data.updatedAt == request.time) );
+      allow delete: if false;
+    }
+
+    // ===================== 稽核紀錄（只能新增，任何人都不能改、刪） =====================
+    match /auditLogs/{aid} {
+      function a()      { return request.resource.data; }
+      function target() { return getAfter(doc(a().col, a().docId)).data; }
+      function before() { return get(doc(a().col, a().docId)).data; }
+      function rolesOk() {
+        return a().after == { 'super': target().get('super', false), 'depts': target().depts }
+          && (a().rev == 1 ? a().before == {}
+                           : a().before == { 'super': before().get('super', false),
+                                             'depts': before().get('depts', {}) });
+      }
+      function statusOk() {                                                       // 有 status 的集合
+        return a().after is map && a().after.status == target().status
+          && (a().rev == 1 ? a().before == {} : (a().before is map && a().before.status == before().status));
+      }
+      // 受 rev 鏈保護的文件：ID＝{col}_{docId}_{rev}
+      function chainOk() {
+        return a().col in ['roles', 'invitations', 'roleRequests', 'grants', 'legacyIdentities',
+                           'bookings', 'deptSettings', 'migrations']
+          && aid == a().col + '_' + a().docId + '_' + string(a().rev)
+          && target().rev == a().rev && target().updatedBy == me()
+          && (a().col != 'roles' || (rolesOk() && a().action == target().lastVia && a().ref == target().lastRef))
+          && (!(a().col in ['invitations', 'roleRequests', 'bookings', 'migrations']) || statusOk());
+      }
+      // 02B 卡片刪除紀錄：只能在「開始永久刪除」那一批建立（卡片批次前 open／done、批次後 purging、deletedBy＝自己、
+      // deletedAt＝這次寫入），內容＝卡片的標題、部門、狀態與版本號。ID＝cards_{卡片ID}_purge_{ref}，ref＝卡片的 purgeLog
+      // （每次刪除不同的亂數，同一個卡片 ID 刪掉又重建再刪也不會撞號）。卡片永久刪除後只剩這一筆
+      function cardPurgeOk() {
+        let c0 = get(doc('cards', a().docId)).data;
+        let c1 = getAfter(doc('cards', a().docId)).data;
+        return a().col == 'cards' && a().action == 'purge'
+          && a().ref is string && a().ref.matches('^[A-Za-z0-9]{8,40}$')
+          && aid == 'cards_' + a().docId + '_purge_' + a().ref
+          && c0.state in ['open', 'done'] && c1.state == 'purging'
+          && c1.get('purgeLog', null) == a().ref
+          && c1.deletedBy == me() && c1.deletedAt == request.time
+          && a().rev == c0.version
+          && a().before == { 'title': c0.title, 'deptId': c0.deptId, 'state': c0.state }
+          && a().after == { 'state': 'purging' };
+      }
+      // 02D D-d 議題、週報、標籤的刪除紀錄：只能在刪掉那份文件的同一批建立（批次後不存在），寫的人是部門管理員或總管理員，
+      // 內容＝被刪的那一版：標題（議題 title、週報 date、標籤 name）、部門、rev（週報與標籤沒有 rev＝0）。ID 見上面的 delLogRef
+      function delTitle(x) { return a().col == 'issues' ? x.title : (a().col == 'weeks' ? x.date : x.name); }
+      function deleteOk() {
+        let x0 = get(doc(a().col, a().docId)).data;
+        return a().col in ['issues', 'weeks', 'labels'] && a().action == 'delete'
+          && aid == a().col + '_' + a().docId + '_delete_' + string(x0.updatedAt.toMillis())
+          && !existsAfter(doc(a().col, a().docId))
+          && (isAdmin(x0.deptId) || isSuper())
+          && a().rev == x0.get('rev', 0)
+          && a().before == { 'title': delTitle(x0), 'deptId': x0.deptId }
+          && a().after == {} && a().ref == '';
+      }
+      allow get, list: if isSuper();
+      allow update, delete: if false;
+      allow create: if signedIn()
+        && a().keys().hasOnly(['col', 'docId', 'rev', 'action', 'actor', 'at', 'before', 'after', 'ref'])
+        && a().docId is string && a().rev is int
+        && a().actor == me() && a().at == request.time
+        && (chainOk() || (a().col == 'cards' && cardPurgeOk()) || (a().col in ['issues', 'weeks', 'labels'] && deleteOk()));
+    }
+
+    // ===================== 舊身分（決定 A4） =====================
+    match /legacyIdentities/{ref} {
+      allow get, list: if internalReader();
+      allow create: if isSuper()
+        && d().keys().hasOnly(['deptId', 'name', 'oldRole', 'createdAt', 'claimedBy', 'claimedAt', 'rev', 'updatedAt', 'updatedBy'])
+        && d().rev == 1 && d().claimedBy == null && stamped() && auditAfter('legacyIdentities', ref, 1);
+      allow update: if revNext() && auditAfter('legacyIdentities', ref, d().rev) && stamped()
+        && onlyChanged(['claimedBy', 'claimedAt', 'rev', 'updatedAt', 'updatedBy'])
+        && d().claimedAt == request.time
+        && ( (resource.data.claimedBy == null && d().claimedBy == me()
+              && getAfter(doc('invitations', getAfter(doc('roles', me())).data.lastRef)).data.legacyRef == ref
+              && getAfter(doc('invitations', getAfter(doc('roles', me())).data.lastRef)).data.usedBy == me())
+          || isSuper() );                                                          // 核准申請時認領、或修正錯誤認領
+      allow delete: if isSuper();
+    }
+
+    // ===================== 部門設定 =====================
+    match /deptSettings/{deptId} {
+      function shape() {
+        return d().keys().hasOnly(['title', 'range', 'reportBase', 'follows', 'docs', 'rev', 'updatedAt', 'updatedBy'])
+          && d().title is string;
+      }
+      allow get, list: if internalReader();
+      allow create: if isSuper() && deptId in deptIds() && shape() && d().rev == 1 && stamped()
+        && auditAfter('deptSettings', deptId, 1);
+      allow update: if (isAdmin(deptId) || isSuper()) && shape() && revNext() && stamped()
+        && auditAfter('deptSettings', deptId, d().rev);
+      allow delete: if isSuper();
+    }
+
+    // ===================== 即時回報卡片（permissions.md 第 5.1 節） =====================
+    // 02A：刪除＝永久刪除，卡片連同全部版本與時間事件一起移除；不做軟刪除、不能復原。
+    // 規則沒有迴圈、整批讀取有上限，所以永久刪除分成三步（一張卡片版本少時可以全部放同一批）：
+    //   ① 開始：open／done → purging，同一批寫刪除紀錄（02B）。不可逆；之後只有部門編輯者以上與總管理員讀得到（給前端接續清除）。
+    //   ② 清除（可以多批）：時間事件——卡片的 timeIds 列出它全部的時間事件（建立事件時規則要求列在裡面），
+    //      從 timeIds 拿掉一個 ID 時，那份事件必須同一批刪掉；版本——由新往舊刪（刪第 v 版時第 v+1 版必須已經不在），
+    //      所以剩下的版本永遠是 1～k。
+    //   ③ 刪卡片：timeIds 必須是空的、第 1 版必須已經不在 ⇒ 版本與時間事件都沒有殘留。
+    match /cards/{id} {
+      function cardKeys() {
+        return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report',
+                'state', 'doneAt', 'deletedAt', 'deletedBy', 'order', 'round', 'roundAt', 'touched', 'touchedAt',
+                'fromEv', 'version', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'legacyDesc', 'importBatch', 'purgeLog'];
+      }
+      function cardShape() {
+        return d().keys().hasOnly(cardKeys())
+          && d().keys().hasAll(['deptId', 'title', 'blocks', 'state', 'version', 'report', 'updatedAt', 'updatedBy'])
+          && d().deptId in deptIds() && d().title is string && d().title.size() <= 500
+          && (d().blocks is map || d().blocks is list) && d().state in ['open', 'done', 'purging']   // list＝02D 遷移的舊格式（沒改內容時照留）
+          && d().version is int && d().report is bool
+          && d().get('timeIds', []) is list;
+      }
+      function verDoc()   { return /databases/$(database)/documents/cards/$(id)/versions/$(string(d().version)); }
+      function verGone(n) { return !existsAfter(/databases/$(database)/documents/cards/$(id)/versions/$(string(n))); }
+      // 版本一定要「在這一批新建」，不接受已存在的舊版本（C-12）
+      function verAfter() { return !exists(verDoc()) && existsAfter(verDoc()); }
+      function live()     { return resource.data.state in ['open', 'done']; }
+      function stateMove() {
+        let o = resource.data.state;
+        let n = d().state;
+        return (o == n && unchanged(['doneAt', 'deletedAt', 'deletedBy']))
+          || (o == 'open' && n == 'done' && d().doneAt == request.time)
+          || (o == 'done' && n == 'open' && d().doneAt == null);
+      }
+      // 從 timeIds 拿掉的時間事件必須同一批刪掉（不留沒有卡片追蹤的事件）。規則沒有迴圈：一批最多拿掉 3 個
+      function evDoc(x)    { return doc('events', x); }
+      function dropped()   { return resource.data.get('timeIds', []).removeAll(d().get('timeIds', [])); }
+      function droppedGone() {
+        let x = dropped();
+        return x.size() == 0
+          || (x.size() <= 3 && !existsAfter(evDoc(x[0]))
+              && (x.size() < 2 || !existsAfter(evDoc(x[1]))) && (x.size() < 3 || !existsAfter(evDoc(x[2]))));
+      }
+      function onlyShrinks() { return resource.data.get('timeIds', []).hasAll(d().get('timeIds', [])) && droppedGone(); }
+
+      function editorEdit()  { return live() && deptWriter(resource.data.deptId) && stamped() && unchanged(['purgeLog'])
+                                 && d().version == resource.data.version + 1 && verAfter() && stateMove() && droppedGone(); }
+      // 秘書處會議編輯：報告事項、授權未到期、只改內容
+      function meetingEdit() { return live() && isEditor('secretariat') && resource.data.report == true
+                                 && get(doc('grants', 'meetingEdit')).data.until > request.time
+                                 && onlyChanged(['title', 'blocks', 'timeIds', 'version', 'updatedAt', 'updatedBy'])
+                                 && stamped() && d().version == resource.data.version + 1 && verAfter() && droppedGone(); }
+      function reorder()     { return live() && deptWriter(resource.data.deptId)
+                                 && onlyChanged(['order', 'updatedAt', 'updatedBy']) && stamped(); }
+      // 永久刪除 ①：開始。刪除權限＝該部門編輯者以上、總管理員。
+      // 02B：同一批一定要新建刪除紀錄 auditLogs/cards_{id}_purge_{purgeLog}（誰、何時、標題；不能略過、不能沿用舊的）；
+      // 為了讓整批讀取留在上限內，開始那一批不刪時間事件（02A 原本可以先刪 3 個），時間事件全部在 ② 清除
+      function purgeLogNew() {
+        let p = doc('auditLogs', 'cards_' + id + '_purge_' + d().purgeLog);
+        return d().purgeLog is string && d().purgeLog.matches('^[A-Za-z0-9]{8,40}$') && !exists(p) && existsAfter(p);
+      }
+      function purgeStart()  { return live() && deptWriter(resource.data.deptId) && d().state == 'purging'
+                                 && onlyChanged(['state', 'deletedAt', 'deletedBy', 'purgeLog', 'updatedAt', 'updatedBy'])
+                                 && d().deletedAt == request.time && d().deletedBy == me() && stamped() && purgeLogNew(); }
+      // 永久刪除 ②：清除時間事件（版本的清除在 versions 的 delete 規則）
+      function purgeSweep()  { return resource.data.state == 'purging' && d().state == 'purging' && deptWriter(resource.data.deptId)
+                                 && onlyChanged(['timeIds', 'updatedAt', 'updatedBy']) && stamped() && onlyShrinks(); }
+      // 永久刪除 ③：沒有任何時間事件與版本留下才能刪卡片
+      function purgeFinish() { return resource.data.state == 'purging' && deptWriter(resource.data.deptId)
+                                 && resource.data.get('timeIds', []).size() == 0 && verGone(1); }
+      // 遷移失敗回復（01B R1）：批次 rollingBack、匯入後沒被改過、第 1 版同批刪；它的時間事件由總管理員接著刪
+      function rollbackDelete() { return isSuper() && resource.data.get('importBatch', null) is string && resource.data.version == 1
+                                    && get(doc('migrations', resource.data.importBatch)).data.status == 'rollingBack' && verGone(1); }
+      function normalCreate() {
+        return deptWriter(d().deptId) && !d().keys().hasAny(['importBatch', 'legacyDesc'])
+          && d().state == 'open' && d().version == 1
+          && d().createdBy == me() && d().createdAt == request.time && stamped();
+      }
+      function importCreate() {                                                   // 遷移：帶舊時間、createdBy 'legacy:import'
+        return importing() && d().state in ['open', 'done'] && d().version == 1
+          && d().createdBy == 'legacy:import' && (d().createdAt == null || d().createdAt is timestamp)
+          && stamped();
+      }
+
+      allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
+      allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
+      // 03：blocks 每一行的形狀（blocksOk）。修改時 blocks、timeIds 都沒變（只換順序）不再檢查；永久刪除中（purging）也不檢查
+      // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）。超連結（linksOk）：新建一定檢查；修改時 links 有變才檢查（舊卡片沒改超連結照常能存）
+      allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', [])) && linksOk(d().get('links', []))
+        && !d().keys().hasAny(['purgeLog']) && (normalCreate() || importCreate()) && verAfter();
+      allow update: if cardShape() && (d().state == 'purging' || unchanged(['blocks', 'timeIds']) || blocksOk(d().blocks, d().get('timeIds', [])))
+        && (unchanged(['links']) || linksOk(d().get('links', [])))
+        && unchanged(['deptId', 'createdAt', 'createdBy', 'importBatch', 'legacyDesc'])
+        && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
+      allow delete: if purgeFinish() || rollbackDelete();
+
+      // 版本歷史：子集合，讀取條件跟母卡片相同；只能隨卡片新增；只能隨永久刪除由新往舊刪
+      match /versions/{v} {
+        function cardRef()   { return doc('cards', id); }
+        function card()      { return get(cardRef()).data; }
+        function cardAfter() { return getAfter(cardRef()).data; }
+        function nv()        { return request.resource.data; }
+        function sameAsCard() {
+          return nv().keys().hasOnly(['cardId', 'deptId', 'version', 'title', 'blocks', 'times', 'state', 'by', 'at', 'imported', 'importBatch'])
+            && nv().cardId == id && v == string(nv().version)
+            && cardAfter().state in ['open', 'done']
+            && cardAfter().version == nv().version
+            && nv().deptId == cardAfter().deptId
+            && nv().title  == cardAfter().title
+            && nv().blocks == cardAfter().blocks
+            && blocksOk(nv().blocks, cardAfter().get('timeIds', []))
+            && nv().state  == cardAfter().state
+            && nv().by == me() && nv().by == cardAfter().updatedBy
+            && nv().at == request.time && nv().at == cardAfter().updatedAt;
+        }
+        // 遷移產生的第 1 版：總管理員、卡片在同一批以 running 批次新建
+        function importVersion() {
+          return nv().imported == true && nv().version == 1 && isSuper() && !exists(cardRef())
+            && cardAfter().get('importBatch', null) is string && nv().get('importBatch', null) == cardAfter().importBatch
+            && get(doc('migrations', cardAfter().importBatch)).data.status == 'running';
+        }
+        allow get, list: if isSuper()
+          || (internalReader() && exists(cardRef())
+              && (card().state != 'purging' || isEditor(card().deptId)));
+        allow create: if signedIn() && sameAsCard()
+          && ((nv().imported == false && !nv().keys().hasAny(['importBatch'])) || importVersion());
+        allow update: if false;
+        // 版本不能修改；不能單獨刪除（含總管理員）。只有母卡片在批次後是 purging、或在這一批被刪掉時才能刪
+        // （卡片規則保證只有 purging 的卡片或遷移失敗回復能刪），刪的人要有該部門的刪除權限，
+        // 而且由新往舊刪：第 v+1 版在批次後必須不存在。
+        allow delete: if deptWriter(resource.data.deptId)
+          && (existsAfter(cardRef()) ? cardAfter().state == 'purging' : exists(cardRef()))
+          && !existsAfter(/databases/$(database)/documents/cards/$(id)/versions/$(string(int(v) + 1)));
+      }
+    }
+
+    // 跨卡片查詢（會長室編輯量 Q9）：只開放給總管理員與該部門編輯者
+    match /{path=**}/versions/{v} {
+      allow list: if isSuper() || isEditor(resource.data.deptId);
+    }
+
+    // ===================== 母議題、週報、標籤 =====================
+    match /issues/{id} {
+      function shape() {
+        return d().keys().hasOnly(['deptId', 'title', 'cur', 'start', 'end', 'startAt', 'endAt', 'note', 'tags', 'labels',
+                                   'links', 'staff', 'markers', 'doneAt', 'order', 'rev', 'updatedAt', 'updatedBy', 'importBatch'])
+          && d().deptId in deptIds() && d().title is string;
+      }
+      allow get, list: if internalReader();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped() && importTagOk();
+      allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
+      allow delete: if delLogged('issues', id) || importRollback('issues');
+    }
+    match /weeks/{id} {
+      function shape() {
+        return d().keys().hasOnly(['deptId', 'date', 'text', 'auto', 'createdAt', 'updatedAt', 'updatedBy', 'importBatch'])
+          && d().deptId in deptIds() && d().text is string;
+      }
+      allow get, list: if internalReader();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped() && importTagOk();
+      allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'createdAt', 'importBatch']) && stamped();
+      allow delete: if delLogged('weeks', id) || importRollback('weeks');
+    }
+    match /labels/{id} {
+      function shape() {
+        return d().keys().hasOnly(['deptId', 'kind', 'name', 'updatedAt', 'updatedBy', 'importBatch'])
+          && d().deptId in deptIds() && d().name is string;
+      }
+      allow get, list: if internalReader();
+      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped() && importTagOk();
+      allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && stamped();
+      allow delete: if delLogged('labels', id) || importRollback('labels');
+    }
+
+    // ===================== 時間事件（permissions.md 第 5.2 節） =====================
+    match /events/{id} {
+      function eventKeys() {
+        return ['deptId', 'cardId', 'blockId', 'label', 'start', 'end', 'startRaw', 'endRaw', 'allDay', 'place',
+                'toIssue', 'scope', 'visibility', 'title', 'summary', 'rev', 'updatedAt', 'updatedBy', 'importBatch'];
+      }
+      function eventShape() {
+        return d().keys().hasOnly(eventKeys())
+          && d().keys().hasAll(['deptId', 'start', 'end', 'allDay', 'scope', 'visibility', 'rev', 'updatedAt', 'updatedBy'])
+          && d().deptId in deptIds() && d().start is timestamp && d().end is timestamp && d().end >= d().start
+          && d().allDay is bool
+          && d().scope in ['dept', 'all-activity', 'all-meeting'] && d().visibility in ['internal', 'public']
+          && (d().get('blockId', null) == null || safeId(d().blockId));   // 03：指向卡片的一行（行 ID）；規則只檢查形狀
+      }
+      // 公開事件整份對外公開：只能有公開欄位，不放卡片內文
+      function publicShape() {
+        return d().keys().hasOnly(['deptId', 'title', 'summary', 'start', 'end', 'allDay', 'place', 'scope', 'visibility',
+                                   'rev', 'updatedAt', 'updatedBy'])
+          && d().title is string;
+      }
+      function scopeOk() { return d().scope == (resource == null ? 'dept' : resource.data.scope)
+                               || d().scope == 'dept'
+                               || (d().scope == 'all-activity' && isEditor('events'))
+                               || (d().scope == 'all-meeting'  && isEditor('secretariat'))
+                               || isSuper(); }
+      function visOk()   { return d().visibility == 'internal'
+                               || ((isEditor('events') || isSuper()) && publicShape()); }   // D4
+      // 02A：屬於卡片的時間事件一定要列在批次後母卡片的 timeIds（永久刪除時靠它確認全部刪光）、
+      // 跟卡片同部門、卡片不在刪除中
+      function cardRef() { return doc('cards', d().cardId); }
+      function cardOk()  { return d().get('cardId', null) == null
+                               || (d().cardId is string && existsAfter(cardRef())
+                                   && getAfter(cardRef()).data.deptId == d().deptId
+                                   && getAfter(cardRef()).data.state in ['open', 'done']
+                                   && id in getAfter(cardRef()).data.get('timeIds', [])); }
+      function meetingEditOfReportedCard() {
+        return isEditor('secretariat') && resource.data.get('cardId', null) is string
+          && get(doc('cards', resource.data.cardId)).data.report == true
+          && get(doc('grants', 'meetingEdit')).data.until > request.time
+          && onlyChanged(['label', 'start', 'end', 'startRaw', 'endRaw', 'allDay', 'place', 'toIssue', 'rev', 'updatedAt', 'updatedBy']);
+      }
+      // 刪除（該部門編輯者以上）：屬於卡片的事件只能 (a) 隨永久刪除（母卡片批次後是 purging，或在這一批被刪掉），
+      // 或 (b) 編輯卡片時同批從 timeIds 拿掉；不屬於卡片的事件只有總管理員能刪（03 再定）。
+      function evCard()   { return doc('cards', resource.data.cardId); }
+      function withCard() {
+        return resource.data.get('cardId', null) is string && deptWriter(resource.data.deptId)
+          && (existsAfter(evCard())
+                ? (getAfter(evCard()).data.state == 'purging' || !(id in getAfter(evCard()).data.get('timeIds', [])))
+                : exists(evCard()));
+      }
+
+      allow get, list: if resource.data.visibility == 'public' || internalReader();
+      allow create: if safeId(id) && deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
+        && d().rev == 1 && stamped();
+      allow update: if eventShape() && unchanged(['deptId', 'cardId', 'importBatch']) && stamped() && revNext() && (
+             (deptWriter(resource.data.deptId) && scopeOk() && visOk() && cardOk())
+          || (isEditor('events')      && onlyChanged(['scope', 'rev', 'updatedAt', 'updatedBy'])
+                                      && d().scope in ['dept', 'all-activity'])
+          || (isEditor('secretariat') && onlyChanged(['scope', 'rev', 'updatedAt', 'updatedBy'])
+                                      && d().scope in ['dept', 'all-meeting'])
+          || meetingEditOfReportedCard() );
+      allow delete: if isSuper() || withCard();
+    }
+
+    // ===================== 秘書處會議編輯授權 =====================
+    match /grants/{gid} {
+      allow get, list: if internalReader();
+      allow create, update: if isSuper() && gid == 'meetingEdit'
+        && d().keys().hasOnly(['until', 'by', 'at', 'rev', 'updatedAt', 'updatedBy'])
+        && d().until is timestamp && d().until <= request.time + duration.value(7, 'd')
+        && (resource == null ? d().rev == 1 : revNext())
+        && stamped() && auditAfter('grants', gid, d().rev);
+      allow delete: if false;
+    }
+
+    // ===================== L3 秘書處授權 =====================
+    match /meetingMinutes/{date} {
+      allow read, create, update: if isEditor('secretariat') || isSuper();
+      allow delete: if isSuper();
+    }
+    match /attendanceMembers/{id} {
+      allow read, create, update: if isEditor('secretariat') || isSuper();
+      allow delete: if isSuper();
+    }
+    match /attendanceSessions/{id} {
+      allow read, create, update: if isEditor('secretariat') || isSuper();
+      allow delete: if isSuper();
+    }
+    match /attendanceRecords/{id} {
+      allow read, create, update: if isEditor('secretariat') || isSuper();
+      allow delete: if isSuper();
+    }
+
+    // ===================== 遷移批次 =====================
+    match /migrations/{batch} {
+      allow get, list: if isSuper();
+      allow create: if isSuper()
+        && d().keys().hasOnly(['status', 'sourceCommit', 'fileHashes', 'counts', 'report', 'startedBy', 'startedAt',
+                               'finishedAt', 'rev', 'updatedAt', 'updatedBy'])
+        && d().status == 'running' && d().rev == 1
+        && d().startedBy == me() && d().startedAt == request.time && stamped()
+        && auditAfter('migrations', batch, 1);
+      // 狀態：running →（running｜done｜failed｜rollingBack）；failed → rollingBack；rollingBack → rolledBack。
+      // done 之後不能再寫入、也不能回復；只有 running 能用來寫入（importing()），只有 rollingBack 能刪遷移版本。
+      allow update: if isSuper()
+        && ( (resource.data.status == 'running' && d().status in ['running', 'done', 'failed', 'rollingBack'])
+          || (resource.data.status == 'failed' && d().status == 'rollingBack')
+          || (resource.data.status == 'rollingBack' && d().status == 'rolledBack') )
+        && unchanged(['startedBy', 'startedAt']) && revNext() && stamped()
+        && auditAfter('migrations', batch, d().rev);
+      allow delete: if false;
+    }
+
+    // ===================== 會長預約（booking.md） =====================
+    function cal(o)       { return get(doc('calendars', o)).data; }
+    function isManager(o) { return signedIn() && o is string && exists(doc('calendars', o)) && me() in cal(o).managers; }
+    function slotDoc(o, i){ return doc('slots', o + '_' + string(i)); }
+    // D6：有部門角色的人才能申請
+    function hasDeptRole(){ return hasRole() && role().get('depts', {}).size() > 0; }
+
+    match /calendars/{ownerId} {
+      allow get, list: if internalReader();
+      allow create, update: if isSuper()
+        && d().keys().hasOnly(['name', 'managers', 'gridMin', 'maxSlots', 'horizonDays', 'maxPendingPerUser', 'rev', 'updatedAt', 'updatedBy'])
+        && d().managers is list && stamped();
+      allow delete: if false;
+    }
+    match /openWindows/{wid} {
+      function aligned() { return d().start.toMillis() % 1800000 == 0 && d().end.toMillis() % 1800000 == 0 && d().start < d().end; }
+      allow get, list: if internalReader();
+      allow create, update: if (isManager(d().ownerId) || isSuper())
+        && d().keys().hasOnly(['ownerId', 'start', 'end', 'updatedAt', 'updatedBy'])
+        && (resource == null || d().ownerId == resource.data.ownerId)
+        && d().start is timestamp && d().end is timestamp && aligned() && stamped();
+      allow delete: if isManager(resource.data.ownerId) || isSuper();
+    }
+
+    match /slots/{sid} {
+      function s() { return request.resource.data; }
+      allow get, list: if internalReader();
+      allow update: if false;                                                     // P1：同一格只能建立一次
+      allow create: if signedIn()
+        && s().keys().hasOnly(['ownerId', 'idx', 'ref'])
+        && s().idx is int && s().ref is string
+        && sid == s().ownerId + '_' + string(s().idx)
+        && ( bookingCovers() || busyCovers() );
+      function bookingCovers() {
+        let b = getAfter(doc('bookings', s().ref)).data;
+        return b.requester == me() && b.ownerId == s().ownerId && b.status == 'pending'
+            && s().idx >= b.startSlot && s().idx < b.startSlot + b.slotCount;
+      }
+      function busyCovers() {
+        let x = getAfter(doc('busyBlocks', s().ref)).data;
+        return isManager(s().ownerId) && x.ownerId == s().ownerId && x.status == 'active'
+            && s().idx >= x.startSlot && s().idx < x.startSlot + x.slotCount;
+      }
+      // 刪鎖只看「擁有者在批次後是否已經釋放」，不看誰在刪
+      function r() { return resource.data; }
+      function covers(x) { return x.ownerId == r().ownerId && r().idx >= x.startSlot && r().idx < x.startSlot + x.slotCount; }
+      function bookingReleased() {
+        return existsAfter(doc('bookings', r().ref))
+            && covers(getAfter(doc('bookings', r().ref)).data)
+            && getAfter(doc('bookings', r().ref)).data.status in ['rejected', 'cancelled'];
+      }
+      function busyReleased() {
+        return !existsAfter(doc('bookings', r().ref))
+            && existsAfter(doc('busyBlocks', r().ref))
+            && covers(getAfter(doc('busyBlocks', r().ref)).data)
+            && getAfter(doc('busyBlocks', r().ref)).data.status == 'released';
+      }
+      function orphan() {                                                         // 只會因主控台誤刪出現
+        return isManager(r().ownerId)
+            && !existsAfter(doc('bookings', r().ref)) && !existsAfter(doc('busyBlocks', r().ref));
+      }
+      allow delete: if signedIn() && (bookingReleased() || busyReleased() || orphan());
+    }
+
+    match /busyBlocks/{xid} {
+      function x() { return request.resource.data; }
+      function claimed(i) { return getAfter(slotDoc(x().ownerId, i)).data.ref == xid; }
+      function claimsAll() {
+        let s = x().startSlot;
+        let n = x().slotCount;
+        return claimed(s) && (n < 2 || claimed(s + 1)) && (n < 3 || claimed(s + 2)) && (n < 4 || claimed(s + 3));
+      }
+      function released() {
+        let s = resource.data.startSlot;
+        let n = resource.data.slotCount;
+        let o = resource.data.ownerId;
+        return !existsAfter(slotDoc(o, s)) && (n < 2 || !existsAfter(slotDoc(o, s + 1)))
+            && (n < 3 || !existsAfter(slotDoc(o, s + 2))) && (n < 4 || !existsAfter(slotDoc(o, s + 3)));
+      }
+      allow get, list: if isManager(resource.data.ownerId);
+      allow delete: if false;                                                     // 釋放一定走 status → released
+      allow create: if isManager(x().ownerId)
+        && x().keys().hasOnly(['ownerId', 'title', 'start', 'end', 'startSlot', 'slotCount', 'status', 'rev',
+                               'createdAt', 'updatedAt', 'updatedBy'])
+        && x().status == 'active' && x().rev == 1
+        && x().startSlot is int && x().slotCount is int && x().slotCount >= 1 && x().slotCount <= 4
+        && x().start.toMillis() == x().startSlot * 1800000
+        && x().end.toMillis()   == (x().startSlot + x().slotCount) * 1800000
+        && x().createdAt == request.time && stamped()
+        && claimsAll();
+      allow update: if isManager(resource.data.ownerId) && revNext() && stamped()
+        && unchanged(['ownerId', 'start', 'end', 'startSlot', 'slotCount', 'createdAt'])
+        && ( (resource.data.status == 'active' && x().status == 'active' && onlyChanged(['title', 'rev', 'updatedAt', 'updatedBy']))
+          || (resource.data.status == 'active' && x().status == 'released' && released()) );
+    }
+
+    match /bookings/{bid} {
+      function b() { return request.resource.data; }
+      function claimed(i) { return getAfter(slotDoc(b().ownerId, i)).data.ref == bid; }
+      function claimsAll() {                                                      // 規則沒有迴圈：上限 4 格就展開 4 次
+        let s = b().startSlot;
+        let n = b().slotCount;
+        return claimed(s) && (n < 2 || claimed(s + 1)) && (n < 3 || claimed(s + 2)) && (n < 4 || claimed(s + 3));
+      }
+      function released() {
+        let s = resource.data.startSlot;
+        let n = resource.data.slotCount;
+        let o = resource.data.ownerId;
+        return !existsAfter(slotDoc(o, s)) && (n < 2 || !existsAfter(slotDoc(o, s + 1)))
+            && (n < 3 || !existsAfter(slotDoc(o, s + 2))) && (n < 4 || !existsAfter(slotDoc(o, s + 3)));
+      }
+      function inWindow() {
+        let w = get(doc('openWindows', b().windowId)).data;
+        return w.ownerId == b().ownerId && w.start <= b().start && b().end <= w.end;
+      }
+      allow get, list: if signedIn() && (resource.data.requester == me() || isManager(resource.data.ownerId));
+      allow delete: if false;
+
+      allow create: if hasDeptRole() && b().requester == me() && b().status == 'pending' && b().rev == 1
+        && b().keys().hasOnly(['ownerId', 'requester', 'windowId', 'startSlot', 'slotCount', 'start', 'end', 'topic', 'note',
+                               'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy', 'decidedBy'])
+        && b().startSlot is int && b().slotCount is int && b().slotCount >= 1 && b().slotCount <= 4
+        && b().start.toMillis() == b().startSlot * 1800000                       // 對齊格線
+        && b().end.toMillis()   == (b().startSlot + b().slotCount) * 1800000
+        && b().start > request.time && b().start < request.time + duration.value(60, 'd')
+        && inWindow()
+        && claimsAll()
+        && getAfter(doc('bookingQuota', b().ownerId + '_' + me())).data.pending <= 3    // D6：每人最多 3 筆
+        && b().createdAt == request.time && stamped()
+        && auditAfter('bookings', bid, 1);
+
+      allow update: if revNext() && stamped() && auditAfter('bookings', bid, b().rev)
+        && unchanged(['ownerId', 'requester', 'windowId', 'startSlot', 'slotCount', 'start', 'end', 'createdAt'])
+        && ( (isManager(resource.data.ownerId) && resource.data.status == 'pending' && b().status == 'approved'
+                && onlyChanged(['status', 'decidedBy', 'rev', 'updatedAt', 'updatedBy']) && b().decidedBy == me())
+          || (isManager(resource.data.ownerId) && resource.data.status in ['pending', 'approved']
+                && b().status == 'rejected' && released()
+                && onlyChanged(['status', 'decidedBy', 'rev', 'updatedAt', 'updatedBy']) && b().decidedBy == me())
+          || (resource.data.requester == me() && resource.data.status in ['pending', 'approved']
+                && b().status == 'cancelled' && released()
+                && onlyChanged(['status', 'rev', 'updatedAt', 'updatedBy'])) );
+    }
+
+    // 每人每個行事曆「未釋放的預約數」：只能隨預約一起 +1／−1（不是安全邊界，只防佔位）
+    match /bookingQuota/{qid} {
+      function q() { return request.resource.data; }
+      function bk()      { return get(doc('bookings', q().lastRef)).data; }
+      function bkAfter() { return getAfter(doc('bookings', q().lastRef)).data; }
+      function shape() { return q().keys().hasOnly(['ownerId', 'uid', 'pending', 'lastRef'])
+                           && qid == q().ownerId + '_' + q().uid && q().pending is int && q().pending >= 0; }
+      // +1：同一批新建了自己的 pending 預約
+      function added()   { return q().uid == me() && !exists(doc('bookings', q().lastRef))
+                             && bkAfter().requester == me() && bkAfter().ownerId == q().ownerId && bkAfter().status == 'pending'; }
+      // −1：同一批把這個人的預約從 pending／approved 改成 rejected／cancelled
+      function removed() { return bk().requester == q().uid && bk().ownerId == q().ownerId && bk().status in ['pending', 'approved']
+                             && bkAfter().status in ['rejected', 'cancelled']; }
+      allow get, list: if signedIn() && (resource.data.uid == me() || isManager(resource.data.ownerId));
+      allow create: if signedIn() && shape() && q().pending == 1 && added();
+      allow update: if signedIn() && shape() && unchanged(['ownerId', 'uid'])
+        && ( (q().pending == resource.data.pending + 1 && added())
+          || (q().pending == resource.data.pending - 1 && removed()) );
+      allow delete: if false;
+    }
+
+    // ===================== 其他：預設拒絕 =====================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
