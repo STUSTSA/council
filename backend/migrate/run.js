@@ -101,7 +101,7 @@ export async function rollbackImport(db, FV, batch, uid, { log = () => {} } = {}
   return { deleted, kept };
 }
 
-// ---------- 驗證 V1～V6（邏輯在 migrate-core.js；這裡加上與預期筆數的差異、內容雜湊） ----------
+// ---------- 驗證 V1～V4、V6（V5＝重跑一次，看第二次的寫入數與雜湊；邏輯在 migrate-core.js；這裡加上與預期筆數的差異、內容雜湊） ----------
 export async function verify(db, src, p, opt = {}) {
   const out = await CORE.verify(nodeIO(db), src, p, opt);
   const dept = opt.dept === undefined ? src.only : opt.dept;
@@ -112,7 +112,7 @@ export async function verify(db, src, p, opt = {}) {
 }
 
 // ---------- 02D：逐部門的筆數報告（upgrade-plan.md 第 6.5 節「看報告」） ----------
-// 左邊直接從資料檔數（不經過對照程式），右邊是 Firestore 裡這個部門的文件；任何一列不同或 V1～V6 任一項失敗＝不通過。
+// 左邊直接從資料檔數（不經過對照程式），右邊是 Firestore 裡這個部門的文件；任何一列不同或 V1～V4、V6 任一項失敗＝不通過。
 // 只在匯入後、開放編輯前看（開始編輯後卡片、時間標記的數量本來就會變）。版本只數遷移產生的第 1 版。
 export const REPORT_ROWS = CORE.REPORT_ROWS;
 export const sourceCounts = CORE.sourceCounts;
@@ -126,7 +126,7 @@ export function formatReport(r) {
     `${padTo('項目', w)}資料檔  Firestore  結果`,
     ...r.rows.map(x => `${padTo(x.label, w)}${String(x.source).padStart(6)}  ${String(x.firestore).padStart(9)}  ${x.ok ? '相同' : '不同'}`),
     ...r.verify.map(i => `${i.ok ? '通過' : '失敗'} ${i.id} ${i.msg}`),
-    r.ok ? '結果：通過（每一列相同、V1～V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列、超過上限的卡片）'].join('\n');
+    r.ok ? '結果：通過（每一列相同、V1～V4、V6 都通過）' : '結果：不通過（看上面標「不同」或「失敗」的列、超過上限的卡片）'].join('\n');
 }
 
 // ---------- 02D：回復用的匯出（upgrade-plan.md 第 6.6 節第 2 列） ----------

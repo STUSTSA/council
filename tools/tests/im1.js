@@ -2,7 +2,7 @@
    用 Auth 模擬器＋Firestore 模擬器、正式規則。網站設定成 github.io 的 repo（dept/config.js 的 data.owner／repo 換成測試值），
    GitHub API 用 route 回應：最新 commit＝固定的 SHA、檔案內容＝repo 裡的資料檔（只讀）。
    1. 凍結中的部門（水果部）：未登入看到「暫停編輯」＋登入；一般登入者、部門管理員沒有會長室管理
-   2. 總管理員：會長室管理 → 匯入 → 水果部 → 筆數報告每一列相同、V1～V6 通過、結果通過；commit SHA 與 SHA-256 跟資料檔一樣；批次 done
+   2. 總管理員：會長室管理 → 匯入 → 水果部 → 筆數報告每一列相同、V1～V4、V6 通過、結果通過；commit SHA 與 SHA-256 跟資料檔一樣；批次 done
    3. 再匯入一次：寫入 0、衝突 0，水果部的文件前後完全相同（重跑結果不變）
    4. 權益部（資料最多）從頁面匯入：通過；命令列的 deptReport 也通過
    5. 不是總管理員：直接呼叫匯入被規則拒絕（沒有寫進任何東西）；讀不到資料檔時顯示錯誤、不寫入
@@ -107,7 +107,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   ok(t1.includes(`test-owner/test-repo@main · commit ${SHA.slice(0,12)}`)&&t1.includes(fileSha('data-fruit.json')),'水果部：報告上的 repo＠分支是 dept/config.js 設定的（不是資料檔裡的 sync）、commit 是最新的、SHA-256＝資料檔的雜湊');
   {const rows=await su.evaluate(()=>[...document.querySelectorAll('.acct-panel .imp-tbl tbody tr')].map(r=>[...r.cells].map(c=>c.textContent)));
     ok(rows.length===9&&rows.every(r=>r[3]==='相同'&&r[1]===r[2]),`水果部：筆數報告 9 列都相同（${rows.map(r=>r[0]+r[1]).join('、')}）`);}
-  ok(['V1','V2','V3','V4','V6'].every(v=>t1.includes(v))&&!t1.includes('失敗\nV'),'水果部：V1～V6 通過');
+  ok(['V1','V2','V3','V4','V6'].every(v=>t1.includes(v))&&!t1.includes('失敗\nV'),'水果部：V1～V4、V6 通過');
   ok(su.siteReads.length===reads0&&gh.files.includes('data-fruit.json'),'匯入讀的是 GitHub 那個 commit 的資料檔（沒有讀網站上的檔案）');
   ok(su.puts.length===0,'沒有寫 GitHub');
   const mig=await q(async d=>(await d.collection('migrations').get()).docs.map(x=>({id:x.id,...x.data()})));

@@ -102,7 +102,7 @@ const t0=Date.now();
     const rep=await mig.deptReport(sdb,src,X);
     await mig.finishImport(sdb,FV,`sw-${X}`,'su',rep.ok?'done':'failed',{written:r.written});
     const rows=rep.rows.filter(x=>x.source).map(x=>`${x.label} ${x.firestore}`).join('、')||'只有部門設定';
-    ok(rep.ok&&!r.conflicts.length,`${X}：匯入後筆數報告每一列相同、V1～V6 通過（${rows}）`);
+    ok(rep.ok&&!r.conflicts.length,`${X}：匯入後筆數報告每一列相同、V1～V4、V6 通過（${rows}）`);
     const afterImport=await others(X);
     const p=await open(X,[X]);const uid=await signIn(p,`ed-${X}`);await setRole(uid,{[X]:'editor'});
     ok(await until(()=>p.evaluate(()=>!boardLocked())),`${X}：切成 firestore、編輯者登入後可以編輯`);
