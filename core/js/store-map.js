@@ -38,6 +38,47 @@
   const clean = o => { Object.keys(o).forEach(k => o[k] === undefined && delete o[k]); return o; };
   const copy = v => v == null ? v : JSON.parse(JSON.stringify(v));
 
+  /* ===== 日期、時刻與型別的整理（讀進畫面前的共同入口） =====
+     日期只收 "YYYY-MM-DD"、月份只收 "YYYY-MM"、時刻只收 "YYYY-MM-DD" 或 "YYYY-MM-DD[T 空白]HH:MM[:SS]"（跟 parseTaipei 同一組格式；規則 firestore.rules 的 dayStr／whenStr 也是）。
+     tidy(s)：把一份部門資料（schemaVersion 13／14 的形狀）裡不合格式的日期、時刻換成空值，該是陣列、字串、數字的欄位型別不對就換成空的；
+     合格的值與沒填的欄位（null、沒有這個欄位）原樣不動，所以正常的資料讀進來、存回去都不會變。
+     兩個地方呼叫：toState（Firestore 讀回來）與 state.js 的 normalize（資料檔、本機暫存、匯入備份），畫面上用到的資料一定經過這裡。 */
+  const DAY = /^\d{4}-\d{2}-\d{2}$/, MONTH = /^\d{4}-\d{2}$/, WHEN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?)?$/;
+  const isDay = v => typeof v === "string" && DAY.test(v);
+  const isWhen = v => typeof v === "string" && WHEN.test(v);
+  function tidy(s) {
+    if (!s || typeof s !== "object") return s;
+    const fix = (o, k, ok, bad) => { if (o[k] != null && !ok(o[k])) o[k] = bad; };                     /* 有值而且不合格才換 */
+    const text = (o, k) => { if (o[k] != null && typeof o[k] !== "string") o[k] = typeof o[k] === "number" ? String(o[k]) : ""; };
+    const rows = (o, k) => { if (o[k] != null) o[k] = Array.isArray(o[k]) ? o[k].filter(x => x && typeof x === "object" && !Array.isArray(x)) : []; return o[k] || []; };
+    const texts = (o, k) => { if (o[k] != null) o[k] = Array.isArray(o[k]) ? o[k].filter(x => typeof x === "string") : []; };
+    rows(s, "weeks").forEach(w => { fix(w, "date", isDay, ""); text(w, "text"); });
+    rows(s, "issues").forEach(i => {
+      text(i, "title"); text(i, "note"); fix(i, "start", isDay, ""); fix(i, "end", isDay, ""); fix(i, "doneAt", isWhen, null);
+      fix(i, "cur", v => typeof v === "number" && Number.isFinite(v), 0);
+      texts(i, "tags"); texts(i, "staff"); texts(i, "labels");
+      rows(i, "markers").forEach(m => { fix(m, "date", isDay, ""); text(m, "text"); text(m, "stage"); });
+    });
+    rows(s, "events").forEach(e => {
+      text(e, "name"); text(e, "desc"); fix(e, "createdAt", isWhen, ""); fix(e, "doneAt", isWhen, null);
+      fix(e, "roundAt", isWhen, ""); fix(e, "touchedAt", isWhen, "");
+      if (e.touched != null) e.touched = Array.isArray(e.touched) ? e.touched.filter(isDay) : [];
+      texts(e, "staff"); texts(e, "labels");
+      rows(e, "times").forEach(t => { fix(t, "start", isWhen, ""); fix(t, "end", isWhen, ""); text(t, "label"); text(t, "place"); });
+    });
+    rows(s, "labels").forEach(l => { text(l, "name"); text(l, "kind"); });
+    rows(s, "docs").forEach(d => { text(d, "name"); text(d, "url"); });
+    rows(s, "follows"); rows(s, "members"); rows(s, "minutes");
+    if (s.range != null && !(typeof s.range === "object" && typeof s.range.start === "string" && MONTH.test(s.range.start)
+      && typeof s.range.end === "string" && MONTH.test(s.range.end))) delete s.range;                 /* normalize 會補預設範圍 */
+    if (s.reportBase != null) {
+      if (typeof s.reportBase !== "object" || Array.isArray(s.reportBase)) s.reportBase = null;
+      else { fix(s.reportBase, "date", isDay, ""); if (s.reportBase.issues != null && (typeof s.reportBase.issues !== "object" || Array.isArray(s.reportBase.issues))) s.reportBase.issues = {}; }
+    }
+    fix(s, "termStart", isDay, "");
+    return s;
+  }
+
   /* ===== 卡片的逐行內容（03） =====
      畫面上（state、GitHub 模式的資料檔）：ev.blocks＝[{id, text, check, timeId}]，每一行三種之一：
        純文字（check null）、核取（check false／true）、時間＋核取（check＋timeId 指向這張卡片的一個時間標記 times[].id）。
@@ -219,9 +260,11 @@
     const st = src.settings || {};
     s.title = st.title || s.title || "";
     if (st.range) s.range = copy(st.range);
-    s.reportBase = st.reportBase ? { date: st.reportBase.date, issues: Object.fromEntries(Object.entries(st.reportBase.issues || {}).map(([k, v]) => [oid(dept, k), copy(v)])) } : null;
-    s.docs = copy(st.docs || []);
-    s.follows = (st.follows || []).map(f => ({ ...copy(f), ref: oid(f.dept, f.ref) }));
+    const rbi = st.reportBase && st.reportBase.issues;
+    s.reportBase = st.reportBase && typeof st.reportBase === "object" ? { date: st.reportBase.date,
+      issues: Object.fromEntries(Object.entries(rbi && typeof rbi === "object" && !Array.isArray(rbi) ? rbi : {}).map(([k, v]) => [oid(dept, k), copy(v)])) } : null;
+    s.docs = copy(Array.isArray(st.docs) ? st.docs : []);
+    s.follows = (Array.isArray(st.follows) ? st.follows : []).filter(f => f && typeof f === "object").map(f => ({ ...copy(f), ref: oid(f.dept, f.ref) }));
     if (src.org) { s.yearLabel = src.org.yearLabel; s.termStart = src.org.termStart; s.semester = src.org.semester; }
     s.meetGrant = null;
     if (src.grant && src.grant.until) s.meetGrant = { date: fmtTaipei(src.grant.until.__ts - 86400000, true), by: src.grant.by || "",
@@ -229,27 +272,29 @@
     s.members = (src.legacy || []).filter(m => m.deptId === dept).map(m => ({ id: oid(dept, m.id), name: m.name, role: m.oldRole, createdAt: m.createdAt }));
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
+    const arr = v => Array.isArray(v) ? v : [], objs = v => arr(v).filter(x => x && typeof x === "object");   /* 型別不對的欄位當成空的 */
     s.issues = (src.issues || []).slice().sort(byOrder).map(i => clean({ id: oid(dept, i.id), title: i.title, cur: i.cur, start: i.start, end: i.end,
-      note: i.note, tags: copy(i.tags || []), labels: (i.labels || []).map(x => oid(dept, x)), links: linksIn(i.links),
-      staff: (i.staff || []).map(x => fromStaff(dept, x)), doneAt: i.doneAt || null,
-      markers: (i.markers || []).map(m => clean({ ...copy(m), color: HEX.test(m.color) ? m.color : undefined, evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
+      note: i.note, tags: copy(arr(i.tags)), labels: arr(i.labels).map(x => oid(dept, x)), links: linksIn(i.links),
+      staff: arr(i.staff).map(x => fromStaff(dept, x)), doneAt: i.doneAt || null,
+      markers: objs(i.markers).map(m => clean({ ...copy(m), color: HEX.test(m.color) ? m.color : undefined, evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
     s.weeks = (src.weeks || []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)).map(w => clean({ id: oid(dept, w.id), date: w.date, text: w.text, auto: w.auto || undefined }));
     const evByCard = {};
     (src.events || []).forEach(e => { if (e.cardId) (evByCard[e.cardId] = evByCard[e.cardId] || []).push(e); });
     s.events = (src.cards || []).filter(c => c.state === "open" || c.state === "done").sort(byOrder).map(c => {
-      const ev = evByCard[c.id] || [], order = c.timeIds || [];
+      const ev = evByCard[c.id] || [], order = arr(c.timeIds);
       ev.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
       /* 03：逐行內容原樣帶進畫面（timeId 拿掉部門前綴）；desc 由 blocks 衍生（舊網站、回復匯出讀的是 desc） */
       const blocks = fromFsBlocks(dept, c.blocks);
       return clean({ id: oid(dept, c.id), name: c.title, desc: descOf(blocks), blocks,
-        issueId: c.issueId ? oid(dept, c.issueId) : null, staff: (c.staff || []).map(x => fromStaff(dept, x)),
-        labels: (c.labels || []).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report,
-        times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: e.startRaw || fmtTaipei(e.start.__ts, e.allDay),
-          end: e.endRaw != null ? e.endRaw : fmtTaipei(e.end.__ts, e.allDay), place: e.place || "", toIssue: !!e.toIssue })),
+        issueId: c.issueId ? oid(dept, c.issueId) : null, staff: arr(c.staff).map(x => fromStaff(dept, x)),
+        labels: arr(c.labels).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report,
+        /* 原本輸入的時間文字（startRaw／endRaw）合格式才用，否則照時間戳記排出來；endRaw 空字串＝沒有結束時間 */
+        times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: isWhen(e.startRaw) ? e.startRaw : fmtTaipei(e.start.__ts, e.allDay),
+          end: e.endRaw === "" || isWhen(e.endRaw) ? e.endRaw : fmtTaipei(e.end.__ts, e.allDay), place: e.place || "", toIssue: !!e.toIssue })),
         createdAt: c.createdAt ? strOf(c.createdAt) : undefined, doneAt: c.state === "done" ? strOf(c.doneAt) : null,
         round: c.round, roundAt: c.roundAt, touched: copy(c.touched), touchedAt: c.touchedAt, fromEv: c.fromEv ? oid(dept, c.fromEv) : undefined });
     });
-    return s;
+    return tidy(s);
   }
 
   /* ===== 畫面 → 文件內容（02D：網頁在 firestore 模式的寫入，core/js/store-write.js） =====
@@ -319,7 +364,7 @@
   const plain = v => Array.isArray(v) ? v.map(plain) : v && typeof v === "object"
     ? (typeof v.toMillis === "function" ? { __ts: v.toMillis() } : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, plain(x)]))) : v;
 
-  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, LNK_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks };
+  const api = { parseTaipei, fmtTaipei, toDocs, toState, desired, nid, oid, plain, SAFE_ID, BLK_MAX, TXT_MAX, LNK_MAX, descOf, lineOf, blocksOf, blocksFromDesc, fromFsBlocks, tidy, isDay, isWhen };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.StoreMap = api;
 })(typeof window !== "undefined" ? window : globalThis);
