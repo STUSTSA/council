@@ -27,11 +27,21 @@ function fieldHTML(x){
 /* 對話框開在哪裡：設定頁桌面版有右側面板時，一般表單畫在面板裡（非強制回應）；
    modal＝確認、輸入密碼這類要打斷操作的（沒有欄位，或只有密碼欄），一律跳出 */
 const dlgHost=modal=>!modal&&typeof setPaneHost==="function"&&setPaneHost();   /* 會畫在哪個面板裡（沒有＝跳出） */
-function dlgOpen(modal){
-  if($("#dlg")._fadeEnd)$("#dlg")._fadeEnd();   /* 上一個面板表單還在淡出：先關完 */
-  const d=$("#dlg"),host=dlgHost(modal);
+/* drop＝這次打開的表單被別的表單換掉時怎麼結束（ask 傳「照取消的值 null 結束」）。
+   上一個表單還沒送出結果就被換掉（還在淡出、離開面板時剛收掉）：先照取消結束它；它晚到的 close 事件由 ask 的 onclose 擋掉（新表單已經開著），不會落到新表單上 */
+function dlgOpen(modal,drop){
+  const d=$("#dlg"),prev=d._drop;d._drop=drop||null;
+  if(d._fadeEnd)d._fadeEnd();   /* 上一個面板表單還在淡出：先關完 */
+  if(prev&&prev!==drop)prev();
+  const host=dlgHost(modal);
   if(host){d.classList.add("in-pane");if(d.parentNode!==host)host.append(d);d.show()}
   else{d.classList.remove("in-pane");if(d.parentNode!==document.body)document.body.append(d);d.showModal()}
+}
+/* 面板裡開著的表單當成取消收掉：離開那個面板時（nav.js 的 paneDismiss；account.js 的 acctPanel 疊一層或收掉時），表單不留在別的頁面。
+   先送 cancel（身分與專員、標籤這種整頁就是 #dlg 的自己攔下來，照「完成」處理），沒被攔就關掉：ask 照取消的值（null）結束、不送出 */
+function dlgPaneCancel(){
+  const d=$("#dlg");if(!d||!d.open||!d.classList.contains("in-pane"))return;
+  const ev=new Event("cancel",{cancelable:true});d.dispatchEvent(ev);if(!ev.defaultPrevented)d.close();
 }
 /* ask(標題, 欄位, 選項)：
    note＝標題下面的使用提示（一般文字，可以多行）；
@@ -62,8 +72,10 @@ function ask(title,fields,{danger,wide,alt,note,validate}={}){
     f.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>b.dataset.act==="ok"?ok():d.close(b.dataset.act));
     f.onsubmit=ev=>{ev.preventDefault();if(!fields.length&&danger)d.close("delete");else ok()};
     f.onkeydown=ev=>{if(ev.key==="Enter"&&!ev.isComposing&&ev.target.tagName==="INPUT"&&ev.target.type!=="color"&&ev.target.type!=="checkbox"){ev.preventDefault();ok()}};
-    d.onclose=()=>{const v=d.returnValue;if(v==="ok")res(collect());else res(v==="delete"?"delete":v==="alt"?"alt":null)};
-    d.returnValue="";dlgOpen(modal);(f.querySelector("textarea")||f.querySelector("input"))?.focus();
+    let done=false;const fin=v=>{if(done)return;done=true;if(d._drop===drop)d._drop=null;res(v)},drop=()=>fin(null);
+    d.onclose=()=>{if(d.open)return;   /* 上一個表單晚到的 close 事件（這個表單已經開著）：不算 */
+      const v=d.returnValue;fin(v==="ok"?collect():v==="delete"?"delete":v==="alt"?"alt":null)};
+    d.returnValue="";dlgOpen(modal,drop);(f.querySelector("textarea")||f.querySelector("input"))?.focus();
   });
 }
 const markerFields=(m,it)=>[

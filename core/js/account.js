@@ -122,7 +122,9 @@ document.addEventListener("click",async e=>{
 
 /* ---------- 面板（畫在設定頁右側面板／手機子頁，跟合併頁同一個位置）----------
    面板可以疊（人員 → 某人的權限歷史）：只顯示最上面那一層。acctPanelEnd(all)：nav.js 的 paneDismiss 呼叫，
-   返回、Esc 一次收一層；換項目、關設定（all）全部收掉 */
+   返回、Esc 一次收一層；換項目、關設定（all）全部收掉。
+   面板裡按鈕打開的表單（產生 QR、授予權限、新增部門）畫在同一個位置（#dlg 接在面板後面）：最上面那層換掉（疊一層、收掉）時一律當成取消收掉
+   （dialog.js 的 dlgPaneCancel），不會接在別的面板或合併頁下面、也不會被按到「確定」（ui-10） */
 const acctPanels=[];
 let acctPanelEnd=null;
 const acctPanelSync=()=>{acctPanelEnd=acctPanels.length?all=>(all?[...acctPanels].reverse():[acctPanels[acctPanels.length-1]]).forEach(p=>p.end()):null};
@@ -131,12 +133,12 @@ function acctPanel(title,draw){
     const host=setPaneHost();if(!host)return res();
     const prev=acctPanels[acctPanels.length-1],depth=acctPanels.length;
     const box=document.createElement("div");box.className="set-hub acct-panel";
-    if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
+    dlgPaneCancel();if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
     let alive=true;const timers=[],ends=[];
     const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},onEnd(fn){ends.push(fn)},
       head:(extra="")=>`${panelHead(title)}${extra}`,
       set html(h){morphTo(box,h)}};   /* 面板內容：原位更新（morph.js），QR 倒數、名單重畫時沒變的節點留著 */
-    p.end=()=>{if(!alive)return;alive=false;timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
+    p.end=()=>{if(!alive)return;alive=false;dlgPaneCancel();timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;
       if(depth)Back.closed("acct"+depth);acctPanelSync();res()};
     acctPanels.push(p);acctPanelSync();
