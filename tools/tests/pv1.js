@@ -18,6 +18,8 @@ const mk=async(w)=>{const ctx=await b.newContext({viewport:{width:w,height:900},
   await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
   await ctx.route(SITE+'**',async r=>{const u=r.request().url().replace(SITE,'http://127.0.0.1:8300/');const res=await r.fetch({url:u});return r.fulfill({response:res})});
   await ctx.route(u=>u.href.startsWith(SITE)&&/\/data-[^/]*\.json$/.test(u.pathname),r=>r.fulfill({status:404,body:''}));   /* 後註冊的 route 先處理：放在轉到本機那條之後；網址跟著 SITE */
+  await ctx.route(u=>u.href.startsWith(SITE)&&/\/dept\/config\.js$/.test(u.pathname),async r=>{const res=await r.fetch({url:r.request().url().replace(SITE,'http://127.0.0.1:8300/')});   /* 每個部門都當成 github（同 common.js；水果部實測時在正式設定裡是 firestore，開通會跳過它） */
+    r.fulfill({response:res,body:(await res.text()).replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1')})});
   await ctx.route('https://api.github.com/**',async r=>{const q=r.request(),u=q.url();apiHits.push(u);if(u.includes('/commits'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
     const path=decodeURIComponent(u.split('/contents/')[1].split('?')[0]);
     if(q.method()==='GET'){if(!store[path])return r.fulfill({status:404,body:'{}'});return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha:sha[path],content:Buffer.from(JSON.stringify(store[path])).toString('base64')})})}
