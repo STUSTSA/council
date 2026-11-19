@@ -245,7 +245,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     await dlgSet(u2,{dept:'works',role:'admin',note:''});await dlgAct(u2,'ok');
     ok(await until(()=>u2.evaluate(()=>{const e=document.querySelector('#dlgForm .dlg-err');return !!e&&!e.hidden&&e.textContent.includes('這個部門已經有一筆待審的申請')})),'04 申請：同一個部門待審中再送，視窗裡提示、不送出');
     await dlgAct(u2,'cancel');
-    ok(sent()===n0+1&&(await read(`roleRequests/${u2Uid}_works`)).rev===1,'04 申請：沒有多送一筆');
+    {let docs=[];await admin(async d=>{docs=(await d.collection('roleRequests').where('uid','==',u2Uid).get()).docs.map(x=>x.id+':'+x.data().rev)});
+      ok(docs.length===2&&docs.includes(`${u2Uid}_works:1`),`04 申請：沒有多送一筆（${docs.length} 份）`)}
     /* 總管理員的清單讀出來之後，申請被改過（等同撤回後換一個角色再申請）：核准不生效、清單更新成新的內容 */
     await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);
     await hub(boss,'requests');
