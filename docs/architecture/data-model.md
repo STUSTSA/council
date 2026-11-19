@@ -8,6 +8,7 @@
 |---|---|
 | 文件 ID | 遷移來的資料用 `{deptId}__{舊ID}`（決定性，重跑覆寫同一份）。02D：看板（`firestore` 模式）新建的卡片、時間事件、議題、週報、標籤也用 `{deptId}__{畫面上的 ID}`（畫面上的 ID 是 `uid()` 產生的隨機字串；讀回來拿掉前綴，畫面上的 ID 不變）。邀請、申請等其他新資料用 SDK 產生的隨機 ID |
 | 時間 | 一律存 Firestore `Timestamp`。使用者輸入的日期時間以 `Asia/Taipei` 解讀（台灣沒有日光節約時間）。只有日期的欄位另存 `allDay: true` |
+| 日期、時刻的文字欄位 | 保留使用者原本輸入的文字的欄位（議題的 `start`／`end`／`doneAt`、處理紀錄的 `date`、週報的 `date`、時間標記的 `startRaw`／`endRaw`、卡片的 `roundAt`／`touchedAt`／`touched[]`）只有三種格式：日期 `YYYY-MM-DD`、月份 `YYYY-MM`（`range`）、時刻 `YYYY-MM-DD` 或 `YYYY-MM-DD[T 或空白]HH:MM[:SS]`。規則（04，permissions.md 第 5.1i 節）與網頁讀取（`store-map.js` 的 `tidy`）都照這一組 |
 | 伺服器時間 | `createdAt`、`updatedAt`、稽核時間用 `serverTimestamp()`，規則要求 `== request.time`〔已驗證 P5〕 |
 | 操作者 | `createdBy`、`updatedBy` 存 UID，規則要求 `== request.auth.uid`。畫面上的名字從 `profiles` 查，不在每份文件重複存信箱 |
 | 版本號 | 受保護的文件有 `rev`（整數，每次寫入加 1），與稽核紀錄鏈結，見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 3 節 |
@@ -50,7 +51,7 @@
 本人建立與更新（只能改 `lastLoginAt`）。**信箱只放這裡**，不出現在其他 L1 可讀的文件。
 
 ### `profiles/{uid}`：L1 讀、本人寫
-`displayName`（1～40 字）、`photoURL`、`updatedAt`。卡片的負責人、版本歷史的修改者都用這裡的名字顯示。
+`displayName`（1～40 字）、`photoURL`（null 或 https 網址，最多 500 字；04）、`updatedAt`。卡片的負責人、版本歷史的修改者都用這裡的名字顯示。
 
 ### `roles/{uid}`：本人讀自己、L4 讀全部；寫入見 [invitations-roles-audit.md](invitations-roles-audit.md)
 | 欄位 | 型別 | 說明 |
@@ -71,7 +72,8 @@
 - 誰讀：`isEditor(deptId) || isSuper()`，查詢一定要帶 `deptId ==`；自己那一份（ID 結尾是自己的 uid）不論存不存在都可以 `get`（登入時先查有沒有再補）。別部門的成員、沒有角色的登入者、未登入都讀不到（rules-03-roster M-01～M-07）。
 - 已知限制：名單跟角色在不同的寫入裡對齊（不是同一批），撤權後如果對齊那一批沒寫成，被撤的人會留在名單上直到總管理員下次打開「人員」；只影響同部門的人看到的名字，不影響任何權限（權限只看 `roles`）。
 
-### `roleRequests/{id}`：本人與 L4
+### `roleRequests/{uid}_{deptId}`：本人與 L4
+04 起每人每個部門一份（[invitations-roles-audit.md](invitations-roles-audit.md) 第 9.7 節）；04 之前的文件 ID 是 SDK 亂數，照舊讀得到、能決定。
 `uid`、`deptId`、`role`（`admin`｜`editor`；02A 拿掉 `viewer`）、`note`、`legacyRef`（選填，要認領的舊身分）、`status`（`pending`｜`approved`｜`rejected`｜`cancelled`）、`createdAt`、`decidedBy`、`decidedAt`、`rev`。
 
 ### `invitations/{sha256(token) 小寫十六進位}`：L4 讀寫；核銷者只能 `get`

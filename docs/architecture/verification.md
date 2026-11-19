@@ -205,3 +205,18 @@
 | 預覽 `prev03.js` | 18 項全過（每個修正 commit 前都重建預覽檔並跑過） |
 | 測試是否真的會抓到錯 | P0-1 的新測試用 `babf1bf` 的 `events.js` 跑：kp2、kp1 都失敗（存成 `["L0","☐ 買水",null,null]`）；P1-1 的新測試用 `babf1bf` 的 `views.js`／`state.js` 跑：kp2 失敗（連結變成 position:fixed 蓋住整頁，後面的點擊逾時）；P1-2 修改前 dirty 一直是 false、不會跳 beforeunload |
 | 已知限制（permissions.md 第 5.1f 節） | 議題的超連結、註記的顏色與位置規則不檢查（畫面擋、讀取時清理）；`blocks` 只檢查形狀不檢查語意（前端 `cleanBlocks` 修正） |
+
+## 12. 04 實測結果（2026-11-19，Firestore＋Auth 模擬器，規則 `backend/firestore.rules` SHA-256 `fc5b6746…`）
+
+04＝欄位的型別、格式與長度、稽核紀錄欄位限制、權限申請每人每個部門一份（[permissions.md](permissions.md) 第 5.1i 節、[invitations-roles-audit.md](invitations-roles-audit.md) 第 9.7 節）。
+
+| 項目 | 結果 |
+|---|---|
+| `cd backend && npm test` | 199／199 通過（04 之前 182＋`rules-04.test.js` 17）。申請相關的既有測試（`rules-02b` R-01～R-03、`rules-invites`）的文件 ID 改成新格式，斷言不變 |
+| `npm run test:web` | （這個 commit 提交時還在跑，結果補在下一個 commit） |
+| github 模式的 Playwright（8300 的暫存複本） | （這個 commit 提交時還在跑，結果補在下一個 commit） |
+| 現有資料檔 | 十個 `data*.json`（只讀）在模擬器匯入＋往返比對（`npm run migrate:roundtrip`）：十個部門都相同。`store-map.js` 的 `tidy` 對十個資料檔、`data_test.json`、`data_v5.json`：整理後一字不變 |
+| 運算式上限（模擬器；量法＝在規則後面加「簡單條件」直到失敗，滿載卡片：50 行 × 1000 字、10 個超連結、3 個時間、8 天更新紀錄） | 卡片的規則：一般新建還能加約 25 個、遷移匯入約 8 個——04 前後相同（卡片的規則沒有增加）。版本的規則：04 之前一般新建約 50、匯入約 30；04 之後約 30、約 12。滿載卡片的修改（編輯者、總管理員；改內容、改超連結、拿掉 0～3 個時間）04 前後都通過 |
+| 已知限制（04 之前就有） | 滿載卡片在秘書處會議編輯裡同時拿掉 1 個以上的時間標記：卡片的規則超過運算式上限（04 前後相同；只改內容通過） |
+| 測試是否真的會抓到錯 | （這個 commit 提交時還在跑，結果補在下一個 commit） |
+| 仍待開發專案實測 | 正式環境的運算式上限（`docs/Google登入上線準備.md` 第 1.6 節 H-8）；04 沒有增加規則的文件讀取次數 |

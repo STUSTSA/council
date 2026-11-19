@@ -59,7 +59,7 @@ R＝讀、C＝新增、U＝修改、D＝硬刪；「部門」＝文件的 `deptI
 | `profiles/{uid}` | | R；本人 CU | 同左 | 同左 | RU | |
 | `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 只有部門與 uid（專員名單），名字從 `profiles`；見第 5.1h 節 |
 | `roles/{uid}` | | 本人 R；核銷邀請時本人 CU | 同左 | 同左 | RCU（不能動自己的 `super`） | 見 [invitations-roles-audit.md](invitations-roles-audit.md) |
-| `roleRequests` | | 本人 RC、本人撤回（只能申請部門的 `admin`／`editor`） | 同左 | 同左 | RU（核准要同批改 `roles`） | |
+| `roleRequests` | | 本人 RC、本人撤回、再申請（只能申請部門的 `admin`／`editor`；04：每人每個部門一份） | 同左 | 同左 | RU（核准要同批改 `roles`） | |
 | `invitations` | | 知道權杖者 get；核銷 U | 同左 | 同左（D3 開放則可對自己部門 C） | RCU | 不能 list |
 | `legacyIdentities` | | R；核銷認領 U | 同左 | 同左 | RCU | |
 | `auditLogs` | | 只能隨受保護的寫入一起 C | 同左（＋開始永久刪除卡片時 C 刪除紀錄） | 同左（＋刪議題、週報、標籤時 C 刪除紀錄） | R | 任何人都不能 U、D；卡片刪除紀錄見第 5.1c 節（02B）；議題、週報、標籤的刪除紀錄見第 5.1g 節（02D D-d） |
@@ -320,6 +320,33 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 
 網頁測試：`tools/tests/dv1.js`（登入補名單、編輯者的專員選項、別部門與沒有角色的人讀不到、撤權後對齊、打開人員清掉過期的）。
 
+### 5.1i 04 欄位的型別、格式與長度（`backend/tests/rules-04.test.js`）
+
+01B～03 的規則只檢查「誰能寫」與少數欄位的形狀，其他欄位的型別、格式、長度沒有限制。04 補上（規則函式 `kept`、`dayStr`、`whenStr`、`monthStr`、`short`、`textList`、`dayList`）：
+
+- **格式**：日期 `YYYY-MM-DD`、月份 `YYYY-MM`、時刻 `YYYY-MM-DD` 或 `YYYY-MM-DD[T 或空白]HH:MM[:SS]`。跟網頁（`store-map.js` 的 `isDay`／`isWhen`）、遷移（`parseTaipei`）同一組。
+- **新建一律檢查；修改時欄位沒變不重新檢查**（`kept(k)`）：04 之前寫入的文件照常能改其他欄位，不合格的欄位只能改成合格的。不需要遷移。
+- **規則沒有迴圈**：字串陣列用「接起來再切開＝原本的陣列」整欄檢查（`textList`、`dayList`，同 `blocksOk`）；陣列裡是物件的欄位（議題的處理紀錄 `markers`、超連結 `links`、版本的 `times`、部門設定的 `docs`／`follows`）只檢查是陣列與筆數，內容由網頁讀進來時整理（`store-map.js` 的 `tidy`）。
+
+| 集合 | 檢查 |
+|---|---|
+| `issues` | `title` ≤ 500 字；`start`／`end`＝日期或空字串；`doneAt`＝null 或時刻；`startAt`／`endAt`＝時間戳記或 null；`cur`、`order`＝數字；`note` ≤ 20000 字；`tags`（≤ 50 個、合計 ≤ 5000 字）、`labels`、`staff`（各 ≤ 100 個、合計 ≤ 15000 字）是字串陣列；`links` ≤ 50 個；`markers` ≤ 300 筆 |
+| `weeks` | `date`＝日期或空字串；`text` ≤ 50000 字；`auto`＝布林 |
+| `labels` | `name` ≤ 200 字；`kind` ≤ 20 字 |
+| `events` | `startRaw`＝空字串或時刻；`endRaw`＝null、空字串或時刻；`label`、`place` ≤ 500 字；`toIssue`＝布林；`title` ≤ 500 字；`summary` ≤ 5000 字 |
+| `cards`（在版本的規則檢查，見下） | `staff`＋`labels`＋`timeIds` 都是字串陣列，合計 ≤ 250 個、≤ 30000 字；`touched`＝日期陣列（≤ 20）；`roundAt`、`touchedAt`＝沒有、null、空字串或時刻；`issueId`、`fromEv`＝null 或 ≤ 130 字；`order`、`round`＝數字；`doneAt`、`deletedAt`＝時間戳記或 null；`deletedBy`＝null 或 ≤ 130 字 |
+| `cards/{id}/versions` | `times` 是陣列、≤ 100 筆 |
+| `deptSettings` | `title` ≤ 200 字；`range`＝null 或 `{start, end}` 兩個月份；`reportBase`＝null 或 `{date, issues}`（`date` 是日期或空字串、`issues` 是 map、≤ 500 筆）；`follows` ≤ 100 筆；`docs` ≤ 50 筆 |
+| `profiles` | `photoURL`＝沒有、null 或 https 網址（≤ 500 字、只收可見的 ASCII 字元） |
+| `auditLogs` | `action`＝一個英文單字（≤ 20 字）；`ref`＝字串（≤ 200 字）；有狀態的集合（`invitations`、`roleRequests`、`bookings`、`migrations`）`before`／`after` 只能是 `{}` 或 `{status}`；`grants`、`legacyIdentities`、`deptSettings` 的 `before` 是 `{}`、`after` 是 `{}` 或部門設定的 `{fields: [這次改了哪些設定欄位]}`。`roles`、卡片刪除、議題／週報／標籤刪除的內容原本就要逐欄相等 |
+| `roleRequests` | 每人每個部門一份，見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 9.7 節 |
+
+**卡片的檢查放在版本的規則**（`versions` 的 `cardFieldsOk(cardAfter())`）：卡片自己的規則（`cardShape`＋`blocksOk`＋`linksOk`）已經接近每份文件 1000 個運算式的上限——模擬器實測，滿載的卡片（50 行、10 個超連結）遷移匯入時只剩大約 8 個簡單條件的餘裕，直接加在卡片上會讓匯入失敗。新建卡片、改內容（`editorEdit`、`meetingEdit`）、遷移匯入都一定同批新建一個版本（`verAfter`），所以這些欄位每次變動都會經過版本的規則；只換順序、永久刪除不建版本，那幾步也改不到這些欄位（`onlyChanged`）。版本的規則加完之後的餘裕（同一種量法）：一般新建約 30、遷移匯入約 12。正式環境的上限是否跟模擬器一樣仍是〔待驗證〕（[verification.md](verification.md)）。
+
+已知限制（04 之前就有，沒有在這次處理）：滿載的卡片在秘書處會議編輯裡同時拿掉時間標記，卡片的規則會超過運算式上限（只改內容可以；部門編輯者、總管理員拿掉 3 個時間都可以）。記在 [README.md](README.md) 的待辦。
+
+測試（`rules-04.test.js`，17 項）：F-01～F-04 議題、週報、標籤；F-05 時間標記；F-06～F-08 卡片與版本（含滿載卡片的新建、匯入、修改不超過上限）；F-09 部門設定；A-01～A-03 稽核紀錄；U-01 個人資料；Q-01～Q-04 權限申請。每一組都有「04 之前的文件照常能改其他欄位」。
+
 ### 5.2 時間事件
 
 ```
@@ -352,10 +379,10 @@ match /events/{id} {
 
 | 集合 | 規則重點 |
 |---|---|
-| `deptSettings` | `isAdmin(deptId) \|\| isSuper()`；`rev` 加 1 |
-| `issues`、`weeks`、`labels` | 同卡片的部門檢查、`deptId` 不能改、`stamped()`；不產生版本；刪除見第 5.1f 節 |
+| `deptSettings` | `isAdmin(deptId) \|\| isSuper()`；`rev` 加 1；欄位的型別與長度見第 5.1i 節 |
+| `issues`、`weeks`、`labels` | 同卡片的部門檢查、`deptId` 不能改、`stamped()`；不產生版本；刪除見第 5.1f 節；欄位的型別、格式與長度見第 5.1i 節 |
 | `users/{uid}` | `uid == me()`；`email == request.auth.token.email`；之後只能改 `lastLoginAt` |
-| `profiles/{uid}` | `uid == me()`；`displayName` 是 1～40 字的字串 |
+| `profiles/{uid}` | `uid == me()`；`displayName` 是 1～40 字的字串；`photoURL` 是 null 或 https 網址（04，第 5.1i 節） |
 | `grants/meetingEdit` | 只有 `isSuper()`；`until` 不超過現在＋7 天；`rev` 加 1 且要有稽核紀錄（見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 3 節） |
 | `meetingMinutes`、`attendance*` | `isEditor('secretariat') \|\| isSuper()` |
 | 其他沒列到的路徑 | 預設拒絕：`match /{document=**} { allow read, write: if false; }` |

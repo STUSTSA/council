@@ -165,7 +165,7 @@ match /roles/{uid} {
   }
 }
 
-// ---------- 權限申請 ----------
+// ---------- 權限申請 ----------（設計稿；04 起每人每個部門一份、文件 ID＝{UID}_{部門}，見第 9.7 節，實際規則以 backend/firestore.rules 為準）
 match /roleRequests/{id} {
   allow get:  if signedIn() && (resource.data.uid == me() || isSuper());
   allow list: if isSuper() || (signedIn() && resource.data.uid == me());
@@ -423,3 +423,19 @@ match /legacyIdentities/{ref} {
 | 核准申請 | 申請帶舊身分而且還沒人認領時，同一批替申請人認領（規則允許總管理員認領）；已經是同一個角色就不能核准（規則的 `onlyDeptSet` 會拒） |
 | 人員 | 列出全部 `roles`（被撤光的人顯示「唯讀」，可以再授予）；授予權限可以選任何登入過的帳號（`users`） |
 | 彈出視窗被擋 | 改用 `signInWithRedirect`。`authDomain` 是 `firebaseapp.com`、網站在 `github.io`，部分瀏覽器（Safari 等擋第三方儲存）轉址登入可能失敗，02 實機驗證（待辦） |
+
+### 9.7 04：權限申請每人每個部門一份（2026-11-19）
+
+01B～03 的申請文件 ID 是 SDK 的亂數，同一個人對同一個部門可以有多筆。04 改成：
+
+| 項目 | 做法 |
+|---|---|
+| 文件 ID | `{自己的 UID}_{部門}`，規則檢查 `id == me() + '_' + deptId`（兩段都由規則決定，不接受自訂；取代 02B 的「SDK 的 20 碼英數字」） |
+| 待審中再送 | 同一份文件已經存在而且是 `pending`：規則拒絕（沒有 `pending → pending` 的修改）；畫面在送出前就提示「這個部門已經有一筆待審的申請」 |
+| 再申請（reopen） | 撤回、被拒絕、已核准之後，本人把同一份改回 `pending`：`rev` 加 1、同批稽核、`createdAt` 重設成這次的時間、角色／備註／舊身分照新建的規則重新檢查、`uid`／`deptId` 不能改、上一輪的 `decidedBy`／`decidedAt` 不留（歷次的狀態變化在稽核鏈 `auditLogs/roleRequests_{ID}_{rev}`） |
+| 核准、拒絕、撤回 | 不變（核准仍要同批寫 `roles`、`lastRef` 指向這份申請；批次前必須是 `pending`，所以舊的核准不能重放） |
+| 核准、拒絕的是畫面上那一版 | 同一份申請可以撤回後再申請（角色、備註可能不同），所以畫面把清單上那一筆的 `rev` 一起交給 `requestApprove`／`requestDecide`，交易裡讀到的 `rev` 不同就不寫入、提示「這筆申請剛被改過，請再看一次」並重讀清單 |
+| 04 之前的申請（亂數 ID） | 照常撤回、拒絕、核准；不能改回 `pending`。同一個人同一個部門若還有一筆亂數 ID 的待審，畫面不會再送新的 |
+| 稽核紀錄的欄位 | 動作是一個英文單字、`ref` 是字串（≤ 200 字）、前後內容只能是 `{status}`（[permissions.md](permissions.md) 第 5.1i 節） |
+
+讀取次數沒有增加（沒有新增集合或鎖文件）。程式：`core/js/fb-account.js` 的 `requestCreate`、`requestApprove`、`requestDecide`，`core/js/account.js` 的 `acctRequest` 與申請面板。測試：`backend/tests/rules-04.test.js` Q-01～Q-04、`rules-02b.test.js` R-01～R-03、`rules-invites.test.js`（申請相關的文件 ID 改成新格式）。
