@@ -62,7 +62,7 @@ const t0=Date.now();
     if(X!=='secretariat')for(const s of (await d.collection('org').get()).docs)out[`org/${s.id}`]=s.data();
   });return {n:Object.keys(out).length,h:sha(stable(out))}};
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const errs=[],puts=[];
   /* fsDepts：切成 firestore 的部門；repo：github 模式要不要有雲端設定（回復演練用；GitHub API 一律 route） */
   const open=async(dept,fsDepts,{repo=false,gh=null}={})=>{

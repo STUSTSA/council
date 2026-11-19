@@ -44,7 +44,7 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     await d.doc('org/config').update({yearLabel:'FS 學年'})});
   const mk=file('data-marketing.json'),rt=file('data-events.json');   /* rt＝還在 GitHub 的活動部 */
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const open=async(dept,fsDepts,{signin}={})=>{
     const ctx=await b.newContext({viewport:{width:1000,height:850},serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));

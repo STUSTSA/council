@@ -42,7 +42,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     return {n:Object.keys(out).length,h:crypto.createHash('sha256').update(stable(out)).digest('hex')}};
   const fileSha=f=>crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT,f))).digest('hex');
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const gh={commits:0,files:[]};
   const open=async(dept,{frozen=['fruit'],ghFail=false}={})=>{
     const ctx=await b.newContext({viewport:{width:1000,height:850},serviceWorkers:'block'});
