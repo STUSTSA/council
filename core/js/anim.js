@@ -18,7 +18,8 @@
    分段切換：用 LiquidSeg（本檔最後），跟底部工具列同一套鏡片物理與外觀。
    減少動態（prefers-reduced-motion）時全部直接跳到結果。
    不做的情況：膠囊正在展開收合（motion-busy）、拖曳中（ev-drag-on）、分頁在背景、開頁進場中。 */
-const MO={fast:160,base:280,slow:460,layout:560,out:"cubic-bezier(.2,.9,.25,1)",in:"cubic-bezier(.4,0,1,1)",spring:"cubic-bezier(.3,1.3,.5,1)"};
+const MO={fast:160,base:280,slow:460,layout:560,out:"cubic-bezier(.2,.9,.25,1)",in:"cubic-bezier(.4,0,1,1)",spring:"cubic-bezier(.3,1.3,.5,1)",
+  soft:"cubic-bezier(.25,1.12,.4,1)"};   /* soft＝柔回彈（DESIGN-next 第五節：版面的位移、長高、依序浮現；ui-09 主頁下排回來時用） */
 const Anim=(()=>{
   const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
   const KEY_ATTRS=["ev","done","issue","fw","week","set","fk"];

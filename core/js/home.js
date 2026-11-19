@@ -159,7 +159,17 @@
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
+    dockMove(false);   /* 下排跟主頁其他東西一起退場（桌面、手機都是） */
     if(k==="flip")walFlip(WAL.els[i],go);else tileExpand(stage.querySelector(`.hm-tile[data-i="${i}"]`),go);
+  }
+  /* 下排（.hm-dock）的退場與回來（DESIGN-next 第五節「整頁過場」；ui-09 O）：進部門＝往下沉並淡出（MO.base、出場曲線，停在退場後的樣子直到換頁）；
+     回主頁＝從底部浮回來（柔回彈）。只動 transform／opacity；關掉動態時不動 */
+  function dockMove(back){
+    const x=document.querySelector(".hm-dock");if(!x||reduceMotion())return;
+    x.getAnimations().forEach(a=>{if(a.id==="dock")a.cancel()});
+    const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"",up={transform:"translateY(0)"+B,opacity:1},down={transform:"translateY(32px)"+B,opacity:0};
+    const a=back?x.animate([down,up],{duration:MO.layout,easing:MO.soft,fill:"backwards"}):x.animate([up,down],{duration:MO.base,easing:MO.out,fill:"forwards"});a.id="dock";
+    if(back){x.dataset.fxOwn="";a.finished.catch(()=>{}).then(()=>{delete x.dataset.fxOwn})}   /* 回來時整頁浮上來（pagefx.js）不再挑它，柔回彈不被蓋掉 */
   }
   /* 鋪滿畫面的那一張：從色塊的位置與圓角放大到蓋住整個畫面（往外多放一圈，放大後的圓角落在畫面外，不用動圓角） */
   function cover(r,rad){
@@ -189,7 +199,7 @@
     WAL.els.forEach(o=>{if(o===el)return;const b=o.getBoundingClientRect(),up=b.top<r.top,base=o.style.transform||"none",op=getComputedStyle(o).opacity;
       o.animate([{transform:base,opacity:op},{offset:.22,transform:`translate(0,${up?10:-10}px) `+base,opacity:op},{transform:`translate(${R(110).toFixed(0)}px,${((up?-1:1)*(Hh*.6+Math.random()*140)).toFixed(0)}px) rotate(${R(16).toFixed(1)}deg) `+base,opacity:0}],
         {duration:460,delay:Math.min(90,Math.abs(b.top-r.top)*.18),easing:"cubic-bezier(.4,0,.75,.5)",fill:"forwards"})});
-    document.querySelectorAll(".hm-top,.hm-dock").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
+    document.querySelectorAll(".hm-top").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
       x.animate([{opacity:1,transform:"translate(0,0)"+B},{opacity:0,transform:`translate(${R(26).toFixed(0)}px,${(-14+R(16)).toFixed(0)}px) scale(.94)`+B}],{duration:300,delay:Math.random()*90,easing:MO.in,fill:"forwards"})});
     const w=document.createElement("div"),ff=el.cloneNode(true),fb=document.createElement("div"),lg=el.querySelector(".hm-lg svg");
     w.className="hm-flw";w.setAttribute("aria-hidden","true");fb.className="hm-fb";ff.className="hm-wc hm-ff";ff.removeAttribute("aria-current");ff.removeAttribute("href");
@@ -208,7 +218,7 @@
     const t=H.mode==="wal"?WAL.els[H.i]:stage.querySelector(".hm-tile.on");if(!t)return;
     const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*(r.width/t.offsetWidth)||18,o=fxEl("hm-fx",r,rad),c=cover(r,rad);
     o.style.transform=c;document.documentElement.append(o);
-    PageFx.onArrive(()=>{const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
+    PageFx.onArrive(()=>{dockMove(true);const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
       o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:640,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
   }
   /* 從看板按返回回到快取的這一頁（bfcache）：把進部門時留下的狀態清掉（分身、飛走的卡片、淡掉的東西），再收回那一張 */
