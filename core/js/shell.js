@@ -8,7 +8,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
            換分頁、進出設定與通知都是同一個節點（data-fx-keep，不參加進場動畫）；顯示哪些鈕由 views.js 的 renderHero 決定 -->
       <header class="dhead" data-fx-keep>
         <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>
-        <img class="dh-logo" alt="" width="46" height="46">
+        <span class="dh-logo" aria-hidden="true"></span>
         <div class="dh-name"><span class="dh-en" id="dhEn"></span><b id="dhName"></b></div>
         <span class="dh-ro" id="dhRo" hidden>唯讀</span>
         <span class="dh-st"><span class="sr-only" id="saveInfo" role="status"></span></span>
@@ -128,7 +128,8 @@ function suLogoColor(label){
   const nm=document.getElementById("dhName"),en=document.getElementById("dhEn");
   if(nm)nm.textContent=CFG.dept.name||"";
   if(en){en.textContent=DEPT_EN[CFG.deptId]||"";en.hidden=!en.textContent}
-  const lg=document.querySelector(".dhead .dh-logo");if(lg)lg.src=deptLogo(CFG.deptId);
+  /* 部門標誌放進頁面（不用 <img>）：深色時標誌裡的藍改成白、秘書處的白色零件跟著標題列的底色，都要 CSS 吃得到（board.css「部門標誌」段） */
+  const lg=document.querySelector(".dhead .dh-logo");if(lg)PageFx.svg(deptLogo(CFG.deptId)).then(s=>{if(s&&!lg.firstChild)lg.append(s)});
   const q=document.getElementById("boardQ");if(q)q.setAttribute("aria-label","搜尋"+(CFG.dept.name||""));
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
      設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light（accentDark 沒有樣式用到，不再寫入） */

@@ -154,6 +154,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn[hidden]{display:none}
 .dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
+.dh-logo svg{display:block;width:100%;height:100%;overflow:visible}
 .dh-name{display:grid;min-width:0;line-height:1.15}
 .dh-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;margin-bottom:2px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dh-en[hidden]{display:none}
@@ -1380,14 +1381,17 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-fbl{position:absolute;display:block;overflow:visible}
 
 /* ===== 部門標誌（dept/icons/dept-代號.svg；主頁色塊、卡片堆的 .hm-lg 裡；DESIGN-next 第五節「部門標誌」） =====
-   藍 #0a5baa、黃 #f0bc23（與行銷部的橘）寫在檔案裡，不跟主題變；只有秘書處的白色零件（.dg-w）跟著所在底板的底色：
-   色塊、卡片、桌面鋪滿的分身、看板開頁的色塊底板＝--blk；手機翻面的部門底板、看板開頁的翻面底板＝--bg（交接前後同色，深色時沒有白塊）。
+   藍 #0a5baa、黃 #f0bc23（與行銷部的橘）寫在檔案裡，不跟主題變；深色模式時藍（.dg-b）改成白 #fff，黃、橘不變（DESIGN-next 第二節，DievE 11/16 定、11/19 確認）。
+   原本就是白色的零件（秘書處的 .dg-w）跟著所在底板的底色，才分得出來：
+   色塊、卡片、桌面鋪滿的分身、看板開頁的色塊底板＝--blk；手機翻面的部門底板、看板開頁的翻面底板、部門標題列（.dh-logo）＝--bg（交接前後同色，深色時沒有白塊）。
+   標誌出現的地方一律把檔案放進頁面（不用 <img>），這幾條才吃得到。
    被選到時（.on：桌面焦點那張 .hm-tile、手機焦點卡 .hm-wc）小人做一次動作。零件之間的白縫是畫在鄰居身上的缺口，所以零件只往「離開鄰居」的方向動，
    或原地縮小再回來，不壓進鄰居；要一起動的零件在檔案裡包成 .dg-ga／.dg-gb，整個小人是 .dg-all。只動 transform。
    class 一律 dg- 開頭，不跟版面的 class 共用（進場動畫只挑版面上的區塊，不會挑到零件） */
 .hm-lg .dg{display:block;width:100%;height:100%;overflow:visible}
 :is(.hm-lg,.hm-fxl,.pfx-cover[data-k="tile"]) .dg-w{fill:var(--blk)}
-:is(.hm-fb,.pfx-cover[data-k="flip"]) .dg-w{fill:var(--bg)}
+:is(.hm-fb,.pfx-cover[data-k="flip"],.dh-logo) .dg-w{fill:var(--bg)}
+[data-theme="dark"] .dg-b{fill:#fff}
 .dg :is(path,rect,g){transform-box:fill-box;transform-origin:50% 100%}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-all{animation:dg-hop .6s both}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-ga{animation:dg-crown .8s .05s both}
