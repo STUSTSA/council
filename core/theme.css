@@ -5,7 +5,10 @@
    色碼照規格表一字不差；改色碼要先改規格。
    --ok-ink（綠底 --ok 上的字：甘特圖「今天」、狀態「進行中」「完成」、「已複製」）不在規格表裡，是照各組的 --ok 算出來的（ui-08 審查）：
    淺色＝該組的 --ink，對 --ok 不到 4.5:1 的（米黃、霧藍、爐火、柔光）把 --ink 往黑加深到剛好過 4.5:1；深色＝該組的 --bg。 */
-[data-pal]{--blk-sh:none}   /* 色塊與膠囊的陰影：只有柔光主題有值 */
+/* 色塊與膠囊的陰影 --blk-sh：只有柔光主題有值。
+   --sh-pad＝這個陰影往外畫出去的距離（位移＋模糊＋擴散，取上下左右最大的一邊）：捲動容器用它留出陰影需要的內距、再用負邊距抵掉（board.css「設定頁」段），
+   不然 overflow 會把陰影切成直線；沒有陰影的主題是 0，版面完全不變。柔光：淺色 7+16＝23、深色 7+16＝23，取 24px（深淺共用，下面柔光那一行設） */
+:root,[data-pal]{--blk-sh:none;--sh-pad:0px}
 /* 浮在內容上面的東西的陰影（主頁手機卡片堆、主頁下排；board.css「主頁」段）：淺色＝文字色 13%（米黃就是原本的 rgba(10,42,77,.13)），深色＝半透明黑 */
 :root{color-scheme:light;--wal-sh:color-mix(in srgb,var(--ink) 13%,transparent)}
 :root[data-theme="dark"]{color-scheme:dark;--wal-sh:rgba(0,0,0,.62)}
@@ -31,7 +34,7 @@
 [data-pal="pastel"]{--bg:#f6f5fa;--blk:#fff;--blk2:#d8dfe9;--ink:#212121;--muted:#6c6f78;--hair:#e1e2ea;--acc:#eff0a3;--acc-ink:#212121;--acc2:#212121;--acc2-ink:#fff;--pri:#212121;--pri-ink:#fff;--ok:#5f9b6b;--late:#d8412f;--ok-ink:#212121}
 [data-theme="dark"][data-pal="pastel"],[data-theme="dark"] [data-pal="pastel"]{--bg:#111113;--blk:#1b1b1f;--blk2:#292c33;--ink:#f6f5fa;--muted:#9a9ca6;--hair:#2d2f37;--acc:#eff0a3;--acc-ink:#1a1a1a;--acc2:#f6f5fa;--acc2-ink:#111113;--pri:#f6f5fa;--pri-ink:#1b1b1f;--ok:#8fcf9a;--late:#ff6a58;--ok-ink:#111113}
 /* 柔光（neu） */
-[data-pal="neu"]{--bg:#ececee;--blk:#f1f1f3;--blk2:#e2e2e6;--ink:#37373b;--muted:#85858c;--hair:#dcdce1;--acc:#ffc94d;--acc-ink:#3a2a00;--acc2:#ff9f43;--acc2-ink:#fff;--pri:#ffc94d;--pri-ink:#3a2a00;--ok:#2f9d62;--late:#d8412f;--ok-ink:#212123;--blk-sh:7px 7px 16px rgba(120,120,135,.22), -7px -7px 16px rgba(255,255,255,.95)}
+[data-pal="neu"]{--bg:#ececee;--blk:#f1f1f3;--blk2:#e2e2e6;--ink:#37373b;--muted:#85858c;--hair:#dcdce1;--acc:#ffc94d;--acc-ink:#3a2a00;--acc2:#ff9f43;--acc2-ink:#fff;--pri:#ffc94d;--pri-ink:#3a2a00;--ok:#2f9d62;--late:#d8412f;--ok-ink:#212123;--blk-sh:7px 7px 16px rgba(120,120,135,.22), -7px -7px 16px rgba(255,255,255,.95);--sh-pad:24px}
 [data-theme="dark"][data-pal="neu"],[data-theme="dark"] [data-pal="neu"]{--bg:#232429;--blk:#27282e;--blk2:#31333a;--ink:#ececf0;--muted:#9698a2;--hair:#34363e;--acc:#ffc94d;--acc-ink:#2a1e00;--acc2:#ff9f43;--acc2-ink:#1c1c20;--pri:#ffc94d;--pri-ink:#2a1e00;--ok:#58d48c;--late:#ff6a58;--ok-ink:#232429;--blk-sh:7px 7px 16px rgba(0,0,0,.42), -6px -6px 14px rgba(255,255,255,.045)}
 /* 暖陽（sun） */
 [data-pal="sun"]{--bg:#efedea;--blk:#fff;--blk2:#e3ded7;--ink:#1f1f1f;--muted:#7d7466;--hair:#dedad3;--acc:#fdb92e;--acc-ink:#1f1f1f;--acc2:#7a4a3e;--acc2-ink:#fff;--pri:#fdb92e;--pri-ink:#1f1f1f;--ok:#7f9a34;--late:#d8412f;--ok-ink:#1f1f1f}
