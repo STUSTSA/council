@@ -91,7 +91,7 @@ const ymdOff=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.getFullYea
     /* 4. + 議題 */
     await p.evaluate(()=>{state=normalize(JSON.parse(window.__keep));render()});await open(null);
     const n0=await p.evaluate(()=>state.issues.length),c0=st.commits.length;
-    ok(await vis(p,'#addIssue')&&(await p.textContent('#addIssue')).trim()==='+ 議題',tag+'甘特圖下面有「+ 議題」');
+    ok(await vis(p,'#addIssue')&&(await p.textContent('#addIssue')).trim()==='議題'&&await p.evaluate(()=>!!$('#addIssue .ico')&&!!$('#addIssue').closest('.panel-head')),tag+'標題列有「+ 議題」（ui-09 起是加號圖示＋「議題」的實心膠囊，在標題列）');
     await p.click('#addIssue');await p.waitForTimeout(900);
     {const r=await p.evaluate(()=>{const a=document.activeElement;return {inp:!!a&&a.matches('#cardDetail .card-head input[data-iname]'),all:a&&a.selectionStart===0&&a.selectionEnd===a.value.length&&a.value.length>0,dlg:$('#dlg').open,fields:!!document.querySelector('#cardDetail .evfs')}});
       ok(r.inp&&r.all&&!r.dlg&&!r.fields,tag+`新增後焦點在名稱上（整段選取）、不開對話框、不是整張卡片的編輯（${JSON.stringify(r)}）`);}

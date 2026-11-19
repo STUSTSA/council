@@ -8,14 +8,16 @@ function selfDoc(){
 /* persistErr：GitHub 模式最後一次儲存失敗的原因（跟提示訊息同一句；不含權杖等機密）。即時回報卡的儲存回饋接在「儲存失敗：」後面（live.js 的 kpSave）；firestore 模式的原因在 store.js 的 fsLastErr */
 let persistErr="";
 /* 儲存的結果也決定音效（sfx.js 的 Sfx.result：成功＝確認，失敗＝否定） */
-async function persist(msg){const ok=await persistTo(msg);Sfx.result(ok);return ok}
-async function persistTo(msg){
+/* o.quiet（即時回報卡片的原位編輯器，ui-09）：成功時不跳提示（卡片上自己有「已儲存」，跟 firestore 模式的 fsPersist quiet 同義）；失敗照舊提示 */
+async function persist(msg,o={}){const ok=await persistTo(msg,o);Sfx.result(ok);return ok}
+async function persistTo(msg,o={}){
+  const done=t=>{if(!o.quiet)toast(t);return true};
   persistErr="";
   if(fsMode())return fsPersist(msg);   /* 02D：firestore 模式寫進新資料庫（store.js） */
   const fail=m=>{persistErr=m;toast(m);return false};
   if(storeLocked())return fail(STORE_NOTE[storeSource()]);   /* 搬家中或已搬到新資料庫：不寫資料檔（store.js） */
   if(artifactNS){
-    try{await artifactNS.publish(selfDoc());toast(msg||"已發布，所有人都會看到最新版");return true}
+    try{await artifactNS.publish(selfDoc());return done(msg||"已發布，所有人都會看到最新版")}
     catch(e){
       const c=e&&e.code;
       if(c==="conflict")return fail("剛剛有人更新了看板，已載入最新版本");
@@ -27,9 +29,9 @@ async function persistTo(msg){
     try{localStorage.setItem(KEY,JSON.stringify(state))}catch(_){}
     const r=await cloudPush();renderHeader();
     if(!r.ok)return fail(r.msg);
-    toast(msg||"已儲存並同步到雲端，其他人約 1 分鐘內會看到");return true;
+    return done(msg||"已儲存並同步到雲端，其他人約 1 分鐘內會看到");
   }
-  try{localStorage.setItem(KEY,JSON.stringify(state));localOK=true;toast(msg||"已儲存並定型");return true}catch(e){localOK=false;return fail("這個瀏覽器無法保存，請按「匯出備份」")}
+  try{localStorage.setItem(KEY,JSON.stringify(state));localOK=true;return done(msg||"已儲存並定型")}catch(e){localOK=false;return fail("這個瀏覽器無法保存，請按「匯出備份」")}
 }
 function save(){
   state.savedAt=nowStr();if(meName())state.savedBy=meName();

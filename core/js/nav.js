@@ -215,7 +215,18 @@ function settingsInner(){
       setRow("device","device","這台裝置"))+
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
-/* 設定頁沒有標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
+/* 設定是部門內的一頁（DESIGN-next 第六節「部門內」、第十二節；ui-09）：部門標題列（同一個節點，data-fx-keep）留在畫面上，設定清單、桌面右側面板、手機子頁都從標題列下緣開始蓋。
+   打開時頁面捲回頂端（跟換分頁一樣，render.js 的 secSwap），底下的頁面鎖住不捲（board.css body.set-open）；--set-top＝標題列下緣，視窗大小變了重量 */
+function setTopSync(){const h=$(".dhead"),b=h&&!h.hidden?Math.max(0,Math.round(h.getBoundingClientRect().bottom)):0;document.documentElement.style.setProperty("--set-top",b+"px")}
+addEventListener("resize",()=>{if(setOpen)setTopSync()});
+/* 設定開著時按標題列的首頁鍵（ui-09 審查）：先把設定收起來——面板裡改到一半的（標籤、人員）照「離開這一頁」存——等存完才離開看板；
+   直接換頁的話沒存的會不見。捕獲階段攔下，pagefx.js 的站內換頁不會先動手 */
+document.addEventListener("click",async e=>{
+  const a=e.target.closest&&e.target.closest(".dhead .dh-home");if(!a||!setOpen||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  e.preventDefault();e.stopPropagation();const job=paneJob;closeSettings(true);
+  if(job)await job;PageFx.leave(a.href);
+},true);
+/* 設定頁沒有自己的標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
    所以 #setOv 不設 aria-modal：設成強制回應的話，報讀器會把外面的工具列（唯一的關閉控制）當成不可用（ui-08 審查） */
 function settingsHTML(){
   return `<div class="set-body"><div class="set-scroll"><div class="set-inner"></div></div><div class="set-pane" hidden></div></div>`;
@@ -235,6 +246,7 @@ async function openSettings(){
   if(setOpen)return;
   if(!loggedIn()&&remRead())await remLogin();   /* 這台裝置記住了身分：直接進去，不顯示鎖頭 */
   const from=pageUnder(ov);PageFx.settle(ov);
+  const pm=$("#pageMain");if(pm)pm.scrollTop=0;setTopSync();   /* 設定是部門內的一頁：標題列留在畫面上（捲回頂端），設定從標題列下緣開始蓋 */
   setOpen=true;ov.getAnimations().forEach(a=>a.cancel());ov.hidden=false;Back.layers.settings();   /* 關閉動畫還沒播完又打開：先停掉 */document.body.classList.add("set-open");renderSettings();renderTabbar();
   PageFx.swap(from,ov);   /* 換頁動畫：底下那頁往後退、設定從後面浮上來 */
 }
@@ -351,7 +363,7 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();morphTo(box,`<b class="set-hub-t">${title}</b>${head()}${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
+    const draw=()=>{list=rows();morphTo(box,`${panelHead(title)}${head()}${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
     const me=hubNow={inFlow:false,draw,end(){if(hubNow===me)hubNow=null;box.remove();res()}};   /* draw：資料變了（帳號、角色，account.js 的 acctChanged）時原位重畫 */
     draw();
     box.addEventListener("click",async e=>{
@@ -366,6 +378,10 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
     });
   });
 }
+/* 合併頁最上面的狀態塊（ui-09）：設定列上不放目前的值（DievE 11/16 定），進到合併頁時最上面一塊寫目前的狀態（「標題＋值」，跟帳號頁的名稱塊同一種樣式 .acct-me）。
+   rows＝[[標題, 值], …]，一律跳脫 */
+const hubSt=rows=>rows.length?`<div class="acct-me">${rows.map(([k,v])=>`<div class="acct-person"><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join("")}</div>`:"";
+const remName=()=>{const rem=remRead();return rem&&(state.members.find(m=>m.id===rem.id)||{}).name||""};
 const SET_HUBS={
   /* 報告：每週概述（在同一個面板打開，返回回到這一頁；weekly.js 的 weekPane）與工作報告 */
   report:()=>hubRun("報告",()=>[
@@ -375,24 +391,26 @@ const SET_HUBS={
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
-  device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
+  device:()=>hubRun("這台裝置",()=>{const n=remName();
     return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",off:!n,act:()=>forgetDevice()}])]},
-    {foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
+    {head:()=>devForget()?hubSt([["記住的身分",remName()||"沒有記住身分"]]):"",   /* GitHub 模式：這台裝置記住了誰（忘記之後即時改） */
+     foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
   /* 外觀：沒有「帳號」合併頁時（舊的看板登入、沒登入、唯讀）的入口，內容跟帳號裡的外觀同一份（lookHTML） */
   look:()=>hubRun("外觀",()=>[],{foot:()=>lookHTML(false),mount:lookMount}),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",flow:()=>editBoardInfo("year")},
     {k:"term",ic:"flag",t:"開學日",flow:()=>editBoardInfo("term")}]),
-  /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列 */
+  /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列。
+     ui-09 N：「分享預覽」拿掉（主頁與看板的分享預覽統一寫在 index.html、home.html，要改就直接改 HTML；以前這裡會用 GitHub API 把 index.html 改回各部門自己的標題） */
   site:()=>hubRun("網站管理",()=>[
     {k:"cloud",ic:"cloud",t:"雲端同步",
       flow:async()=>{const before=JSON.stringify(state);const ok=await cloudSettings();if(ok&&!editing&&JSON.stringify(state)!==before)await settingSave(()=>{},"雲端設定已更新");else render()}},
-    {k:"share",ic:"share",t:"分享預覽",flow:()=>shareSettings()},
     /* 全會密碼與自動開通、重置測試部門（provision.js） */
     ...(cloudOn()&&ghToken()?[{k:"allpw",ic:"people",t:"全會密碼",flow:()=>allPwSet()},
-      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])]),
+      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])],
+    {head:()=>{const c=cloudCfg();return hubSt([["雲端同步",cloudOn()?`${c.owner}/${c.repo}・${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定"]])}}),   /* 雲端同步的 repo 與這台裝置的權杖狀態（改完設定回到這一頁時重畫） */
 };
 /* 有下一層的項目（桌面版放右側面板、手機進子頁） */
 const SET_FLOWS={

@@ -3,7 +3,7 @@
    追蹤是整區「編輯」（"s:follow"）＋區塊的「儲存」；網站上的 data-*.json 一律當成不存在（真的資料檔有身分、全會密碼，會改變登入流程）
    2026-11-17（ui-05 審查 P1-1）：即時回報改新入口（膠囊 .cp、lvOpen、再點同一顆收回；新增卡片名稱 Enter 加一行、Esc 存檔）。
    2026-11-18（ui-07）：「rights default」那條原本要求 .logo-box 裡有 svg（2026-11-06 的玻璃頁首，ui-04 起拿掉），改成新標題列：
-   部門標誌 .dhead .dh-logo 是 dept/icons/dept-rights.svg 且載得到、部門名 #dhName＝權益部；「不分欄、沒有追蹤區、存 data.json」不變。
+   部門標誌 .dhead .dh-logo 裡放的是 dept/icons/dept-rights.svg 的 SVG（ui-09 起放進頁面，不是 <img>）、部門名 #dhName＝權益部；「不分欄、沒有追蹤區、存 data.json」不變。
    財務部那行只印的 .logo-text b（舊頁首）改印 #dhName。其他斷言不變 */
 const {chromium}=require('playwright');const fs=require('fs');const A=(ok,m)=>{if(!ok){console.log('FAIL:',m);process.exitCode=1}};(async()=>{const b=await chromium.launch();
 const files={'data.json':JSON.parse(fs.readFileSync('data_v5.json','utf8'))},shas={},commits=[];
@@ -23,7 +23,7 @@ return p};
 const login=async p=>{await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#setOv .set-gate .primary');await p.waitForTimeout(400);await p.fill('#dlgForm input[name=pw]','0000');await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(400);
  await p.fill('#dlgForm input[name=name]','測試').catch(()=>{});await p.fill('#dlgForm input[name=p1]','password-long-1').catch(()=>{});await p.fill('#dlgForm input[name=p2]','password-long-1').catch(()=>{});await p.click('#dlgForm [data-act=ok]').catch(()=>{});await p.waitForTimeout(1500);await (async()=>{for(let i=0;i<4;i++){await p.waitForTimeout(500);const t=await p.$eval('#dlg[open] #dlgForm>b',b=>b.textContent).catch(()=>'');if(/共用密碼太短|沒有連上雲端/.test(t))await p.click('#dlgForm [data-act=cancel]').catch(()=>{})}})();await p.evaluate(()=>{if(setOpen)closeSettings(true)});await p.waitForTimeout(300);A(await p.evaluate(()=>loggedIn()),'logged in');};   /* 2026-11-05：建立第一個身分後，共用密碼 0000 會請管理員換（team.js 的 sharedPwFix），測試先取消 */
 // rights default
-let p=await mk('');const r0=await p.evaluate(()=>[CFG.deptId,state.title,(i=>!!i&&/dept\/icons\/dept-rights\.svg$/.test(i.getAttribute('src')||'')&&i.complete&&i.naturalWidth>0&&$('#dhName').textContent==='權益部')(document.querySelector('.dhead .dh-logo')),$('#liveMD').classList.contains('split'),$('#followPanel').hidden,cloudCfg().path]);console.log('rights',r0);
+let p=await mk('');const r0=await p.evaluate(()=>[CFG.deptId,state.title,(i=>!!i&&(i.querySelector('svg.dg')||{dataset:{}}).dataset.d==='rights'&&$('#dhName').textContent==='權益部')(document.querySelector('.dhead .dh-logo')),$('#liveMD').classList.contains('split'),$('#followPanel').hidden,cloudCfg().path]);console.log('rights',r0);
 A(r0[0]==='rights'&&r0[2]&&!r0[3]&&r0[4]&&r0[5]==='data.json','rights default: own logo and name in header, not split, no follow panel');
 /* ui-05：膠囊是 #events .cp、打開的那張是 lvOpen；寬螢幕（容器 980 以上）右邊是卡片，再點一次同一顆膠囊＝收回（ui-05 審查 P1-1，以前是 .events>.ev summary、selEv、右側的「收起」） */
 const e2=await p.evaluate(()=>liveOrder()[1].id);

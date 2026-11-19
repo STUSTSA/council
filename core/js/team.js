@@ -64,7 +64,7 @@ async function unlockEdit(){
   for(;;){
     const opts=state.members.map(m=>[m.id,m.name+(m.role==="admin"?"（管理員）":"")]);
     const v=await ask("選擇編輯身分",[{name:"who",label:"我是",type:"select",value:last||opts[0][0],options:opts},{name:"pw",label:"個人密碼",type:"password"},{name:"rem",label:"在這個裝置上記住密碼",type:"check"}],
-      {alt:"＋ 新增身分",note:"選自己的名字、輸入個人密碼。勾「記住密碼」之後，這台裝置就不用再輸入。\n還沒有身分的人按「＋ 新增身分」（要輸入部門共用密碼）。",
+      {alt:"＋ 新增身分",   /* ui-09：拿掉說明句（DESIGN-next 第一節：介面不放教學文字） */
        validate:async o=>{const m=state.members.find(x=>x.id===o.who);return m&&await kdfCheck(m.kdf,o.pw)?"":"個人密碼不正確。忘記的話請部門管理員刪掉你的身分，再用「＋ 新增身分」重新建立。"}});
     if(v===null)return false;
     if(v==="alt"){
@@ -93,8 +93,7 @@ function pwProblem(p1,p2,what){
 async function askNewPassword(title,extra=[],tail=[]){
   const named=extra.some(f=>f.name==="name");
   const v=await ask(title,[...extra,{name:"p1",label:`個人密碼（至少 ${MIN_PW} 碼）`,type:"password"},{name:"p2",label:"再輸入一次",type:"password"},...tail],
-    {note:`個人密碼只有你自己知道，之後換裝置就用它登入。登入時勾「記住密碼」，同一台裝置就不用再打。`,
-     validate:o=>{if(named){const n=(o.name||"").trim();if(!n)return "請填名字";if(state.members.some(m=>m.name===n))return "已經有同名的身分，請換一個名字（例如加上職稱）"}
+    {validate:o=>{if(named){const n=(o.name||"").trim();if(!n)return "請填名字";if(state.members.some(m=>m.name===n))return "已經有同名的身分，請換一個名字（例如加上職稱）"}
        return pwProblem(o.p1||"",o.p2||"","個人密碼")}});
   return !v||v==="alt"?null:v;
 }
@@ -152,7 +151,7 @@ function teamHTML(){
   const me=meMember(),adm=isAdmin();
   const rows=state.members.map(m=>`<li class="tm-row"><span class="tm-name">${esc(m.name)}</span>${m.role==="admin"?'<span class="tm-pill on">管理員</span>':""}${m.id===meId?'<span class="tm-pill">我</span>':""}
     <span class="tm-act">${m.id===meId?'<button type="button" class="icon" data-x="mypw">改個人密碼</button>':""}${adm?`<button type="button" class="icon" data-x="role" data-id="${esc(m.id)}">${m.role==="admin"?"取消管理員":"設為管理員"}</button><button type="button" class="icon danger" data-x="del" data-id="${esc(m.id)}">刪除</button>`:""}</span></li>`).join("");
-  return `<b>身分與專員</b>
+  return `${panelHead("身分與專員")}
   <section class="tm-sec"><div class="att-h">編輯身分${me?`（目前：${esc(me.name)}）`:""}</div><ul class="tm-list">${rows||'<li class="sub">還沒有身分</li>'}</ul>
     ${adm?'<div class="tm-tools"><button type="button" class="ghost" data-x="sharedpw">更改部門共用密碼</button></div>':""}</section>
   <div class="dlg-actions"><button type="button" class="primary" data-x="done">完成</button></div>`;
@@ -383,7 +382,7 @@ let logDone=null;
 function openLog(host){
   let ov=$("#logOv");
   if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="log-ov" id="logOv" role="dialog" aria-modal="true" aria-label="編輯紀錄" hidden>
-    <div class="anim-top" data-fx-keep><div class="anim-title"><span class="anim-k">HISTORY</span><b>編輯紀錄</b></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
+    <div class="anim-top" data-fx-keep><div class="anim-title"><b class="sec-h" data-en="HISTORY">編輯紀錄</b></div><div class="anim-ctl"><button type="button" id="logClose" aria-label="關閉編輯紀錄">${ico("close")}關閉</button></div></div>
     <div class="log-scroll"><div class="log-inner"><ol class="log-list" id="logList"></ol><p class="sub log-msg" id="logMsg"></p><button type="button" class="ghost log-more" id="logMore">載入更早的紀錄</button></div></div></div>`);
     ov=$("#logOv");$("#logClose").onclick=closeLog;elastic(ov.querySelector(".log-scroll"),ov.querySelector(".log-inner"));$("#logMore").onclick=loadLog;}
   Object.assign(logState,{page:0,done:false,busy:false,items:[]});Object.assign(fsLog,{vers:[],cur:null,audits:[]});

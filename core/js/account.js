@@ -134,7 +134,7 @@ function acctPanel(title,draw){
     if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
     let alive=true;const timers=[],ends=[];
     const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},onEnd(fn){ends.push(fn)},
-      head:(extra="")=>`<b class="set-hub-t">${esc(title)}</b>${extra}`,
+      head:(extra="")=>`${panelHead(title)}${extra}`,
       set html(h){morphTo(box,h)}};   /* 面板內容：原位更新（morph.js），QR 倒數、名單重畫時沒變的節點留著 */
     p.end=()=>{if(!alive)return;alive=false;timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;

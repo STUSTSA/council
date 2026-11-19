@@ -7,19 +7,19 @@
    H. 下排個人常用連結（只存這台裝置 localStorage「stustsa-links」）：「+」進入編輯、新增（Enter、「加入」）、名稱空的用網域、只收 http(s)
       （javascript:、data:、mailto:、ftp: 拒絕）、跳脫（名稱含 <img onerror> 不執行）、名稱 30 字、最多 12 個（滿了「+」不出現）、× 移除、
       Esc／點下排以外／返回鍵結束編輯、桌面滑鼠停在連結上浮出名稱膠囊（沒有 title）、手機不浮出、重新整理後保留、壞值不出錯、
-      新分頁 noopener noreferrer、圖示只向網站自己要 /favicon.ico（不帶 referrer），載不到顯示網域第一個字母、程式動畫只動 transform／opacity
+      新分頁 noopener noreferrer、圖示先向網站自己要 /favicon.ico（不帶 referrer），網站與 Google 圖示服務都載不到顯示網域第一個字母（Google 後援的細節在 ui9fav）、程式動畫只動 transform／opacity
    I. 下排以整個畫面寬置中：412、811、1300 寬，下排膠囊中心與 innerWidth/2 的差在 0.5px 以內（0、3、12 個連結）；左右安全區不一樣時也一樣
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
-const U='http://127.0.0.1:8300/',FAV_PORT=+U.match(/:(\d+)\//)[1]+7;   /* 圖示測試用的小伺服器（Playwright 攔截網路時 /favicon.ico 一律載入失敗，所以那一段不攔截、改連這個埠） */
+const U='http://127.0.0.1:8300/',FAV_PORT=+U.match(/:(\d+)\//)[1]+7;   /* 圖示那一段的假外部網路（fakenet.js）用的埠 */
 const HOOK=()=>{window.__kp=new Set();const o=Element.prototype.animate;Element.prototype.animate=function(k,t){try{(Array.isArray(k)?k:[k]).forEach(f=>Object.keys(f||{}).forEach(x=>window.__kp.add(x)))}catch(_){}return o.call(this,k,t)}};
 const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
 const XSS='<img src=x onerror="window.__xss=1">';
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 (async()=>{const b=await chromium.launch();
   const mk=async(w,h,o={})=>{const touch=w<700;const ctx=await b.newContext({viewport:{width:w,height:h},colorScheme:o.scheme||'light',hasTouch:touch,isMobile:touch,serviceWorkers:'block',reducedMotion:o.rm?'reduce':'no-preference'});
-    if(!o.noRoute){await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
-      await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort())}   /* 其他外部網址（連結的網站圖示）一律不連 */
+    await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));await ctx.route('https://api.github.com/**',r=>r.fulfill({status:404,body:'{}'}));
+    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/,r=>r.abort());   /* 其他外部網址（連結的網站圖示）一律不連 */
     if(o.links!==undefined)await ctx.addInitScript(v=>{if(!sessionStorage.getItem('__lk')){sessionStorage.setItem('__lk','1');localStorage.setItem('stustsa-links',typeof v==='string'?v:JSON.stringify(v))}},o.links);
     await ctx.addInitScript(HOOK);
     const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));p.ctx=ctx;return p};
@@ -147,7 +147,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     /* 重新整理後保留 */
     const before=JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]));await p.reload();await p.waitForTimeout(800);
     ok(JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]))===before,'重新整理後連結都還在、順序不變');
-    /* 圖示：只向網站自己要 /favicon.ico、不帶 referrer；載不到（這裡外部網路都擋掉）顯示網域第一個字母 */
+    /* 圖示：網站與 Google 圖示服務都載不到（這裡外部網路都擋掉；Playwright 攔截時 /favicon.ico 也一律中止）顯示網域第一個字母 */
     const fv=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({k:l.classList.contains('ico'),ch:getComputedStyle(l.querySelector('.hm-lkl')).display})));
     ok(fv.every(f=>!f.k&&f.ch!=='none'),'圖示載不到：顯示網域第一個字母');
     /* 別的分頁在這一頁編輯中改了清單（直接改 localStorage；編輯中這一頁不跟著換畫面）：這一頁再加、刪時先讀回最新的，不用舊清單整份蓋掉 */
@@ -166,21 +166,26 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
       ok(!d.links.some(l=>l.lbl==='第三')&&d.links.length===(await st(p)).length,'沒在編輯時收到別的分頁的修改：畫面跟著換')}
     ok(!p.errs.length,'桌面連結沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
-  {/* 圖示載得到：不攔截網路（Playwright 攔截時 /favicon.ico 一律失敗），連到測試自己開的小伺服器 */
-    const http=require('http'),zlib=require('zlib');
+  {/* 圖示載得到：Playwright 只要開了攔截（route），/favicon.ico 一律載入失敗，所以這一段不用 route，改用 fakenet.js——另開一個瀏覽器，
+     127.0.0.1 以外的網域都指到測試自己開的 https 小伺服器、拿掉 proxy，不會真的連出去（Google Fonts、Google 圖示服務都到不了外面），預期外的外部請求讓測試失敗。
+     連結用一般網域 ico.example（內網、本機網域本來就不要圖示）；「載不到＝首字母」與 Google 後援的細節在 ui9fav */
+    const zlib=require('zlib'),fakeNet=require('./fakenet.js');
     const png=(()=>{const crc=b=>{let c,t=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}let x=0xffffffff;for(const v of b)x=t[(x^v)&255]^(x>>>8);return (x^0xffffffff)>>>0};
       const ch=(ty,d)=>{const l=Buffer.alloc(4);l.writeUInt32BE(d.length);const td=Buffer.concat([Buffer.from(ty),d]);const c=Buffer.alloc(4);c.writeUInt32BE(crc(td));return Buffer.concat([l,td,c])};
       const ih=Buffer.alloc(13);ih.writeUInt32BE(16,0);ih.writeUInt32BE(16,4);ih[8]=8;ih[9]=2;const raw=Buffer.alloc(16*49);for(let y=0;y<16;y++)for(let x=0;x<16;x++){raw[y*49+1+x*3]=10;raw[y*49+2+x*3]=91;raw[y*49+3+x*3]=170}
       return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),ch('IHDR',ih),ch('IDAT',zlib.deflateSync(raw)),ch('IEND',Buffer.alloc(0))])})();
-    const seen=[];const srv=http.createServer((q,r)=>{seen.push({u:q.url,ref:q.headers.referer||''});if(q.url==='/favicon.ico'){r.writeHead(200,{'Content-Type':'image/png'});r.end(png)}else{r.writeHead(404);r.end()}});
-    await new Promise(r=>srv.listen(FAV_PORT,'127.0.0.1',r));
-    const p=await mk(1300,800,{noRoute:1,rm:1,links:[{u:`http://localhost:${FAV_PORT}/some/page`,n:'有圖示'},{u:`http://127.0.0.1:${FAV_PORT+1}/`,n:''}]});
+    const seen=[];const net=await fakeNet(FAV_PORT,(q,r,{host,ref})=>{if(host!=='ico.example')return false;seen.push({u:q.url,ref});
+      if(q.url==='/favicon.ico'){r.writeHead(200,{'Content-Type':'image/png'});r.end(png)}else{r.writeHead(404);r.end()}return true},/^ico\.example$/);
+    const b2=await chromium.launch(net.launch),ctx=await b2.newContext({viewport:{width:1300,height:800},serviceWorkers:'block',reducedMotion:'reduce',ignoreHTTPSErrors:true});
+    await ctx.addInitScript(v=>{if(!sessionStorage.getItem('__lk')){sessionStorage.setItem('__lk','1');localStorage.setItem('stustsa-links',JSON.stringify(v))}},[{u:'https://ico.example/some/page',n:'有圖示'}]);
+    const p=await ctx.newPage(),errs=[];p.on('pageerror',e=>errs.push(e.message));
     await p.goto(U+'home.html',{waitUntil:'domcontentloaded'});await p.waitForTimeout(1500);
     const r=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img');return {ico:l.classList.contains('ico'),src:i&&i.getAttribute('src'),rp:i&&i.referrerPolicy,ch:getComputedStyle(l.querySelector('.hm-lkl')).display,ltr:l.querySelector('.hm-lkl').textContent}}));
-    ok(r[0].ico&&r[0].src===`http://localhost:${FAV_PORT}/favicon.ico`&&r[0].rp==='no-referrer'&&r[0].ch==='none',`圖示：只向網站自己要 /favicon.ico（${r[0].src}）、不帶 referrer，載到就換掉字母`);
+    ok(r[0].ico&&r[0].src==='https://ico.example/favicon.ico'&&r[0].rp==='no-referrer'&&r[0].ch==='none',`圖示：先向網站自己要 /favicon.ico（${r[0].src}）、不帶 referrer，載到就換掉字母`);
     ok(seen.length===1&&seen[0].u==='/favicon.ico'&&!seen[0].ref,`網站只收到 /favicon.ico 一個請求、沒有 Referer（${JSON.stringify(seen)}）`);
-    ok(!r[1].ico&&!r[1].src&&r[1].ch!=='none'&&r[1].ltr==='1',`載不到：顯示網域第一個字母（${r[1].ltr}）`);
-    await p.ctx.close();srv.close()}
+    ok(!net.extra.length,`圖示那段沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
+    ok(!errs.length,'圖示那段沒有錯誤 '+errs.join(' | '));
+    await b2.close();net.close()}
   {/* 12 個上限 */
     const p=await mk(1300,800,{links:Array.from({length:11},(_,i)=>({u:`https://s${i}.example/`,n:`站${i}`}))});await p.goto(U+'home.html');await p.waitForTimeout(3600);
     await p.click('.hm-dk-in>.hm-lkadd');await p.waitForTimeout(100);await addLk(p,'last.example','第十二');await p.waitForTimeout(500);

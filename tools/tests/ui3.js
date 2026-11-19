@@ -147,9 +147,9 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(r.same,'外觀合併頁：換主題、重畫後分段切換與主題按鈕是同一個節點');
     await p.evaluate(()=>{UI.set({pal:'fin'})});await p.click('#setOv [data-set="labels"]');await p.waitForTimeout(1100);
     /* 標籤（對話框表單 #dlgForm 原位更新）：按 Enter 新增後輸入欄清空、游標留著，已有的列是同一個節點 */
-    r=await p.evaluate(()=>{const f=document.getElementById('dlgForm'),inp=f.querySelector('[data-newlbl]');if(!inp)return null;f.querySelectorAll('[data-lblname]').forEach(el=>el.__m=1);inp.__m=1;inp.focus();return state.labels.length});
+    r=await p.evaluate(()=>{const f=document.getElementById('dlgForm');f.querySelector('[data-x="open"]')?.click();const inp=f.querySelector('[data-newlbl]');if(!inp)return null;f.querySelectorAll('.lbl-tag').forEach(el=>el.__m=1);   /* ui-09：點虛線「+」才有輸入框；已有的標籤是 .lbl-tag */inp.__m=1;inp.focus();return state.labels.length});
     if(r!==null){await p.keyboard.type('ui3標籤');await p.keyboard.press('Enter');await p.waitForTimeout(300);
-      const s=await p.evaluate(()=>{const f=document.getElementById('dlgForm'),a=document.activeElement;return {n:state.labels.length,has:state.labels.some(l=>l.name==='ui3標籤'),v:a.value,same:a.__m===1,rows:[...f.querySelectorAll('[data-lblname]')].filter(el=>el.__m===1).length}});
+      const s=await p.evaluate(()=>{const f=document.getElementById('dlgForm'),a=document.activeElement;return {n:state.labels.length,has:state.labels.some(l=>l.name==='ui3標籤'),v:a.value,same:a.__m===1,rows:[...f.querySelectorAll('.lbl-tag')].filter(el=>el.__m===1).length}});
       ok(s.n===r+1&&s.has&&s.v===''&&s.same&&s.rows>=r,`標籤按 Enter 新增：多一個（${s.n}）、輸入欄清空且游標留著、原本的列是同一個節點（${s.rows}）`)}
     else ok(false,'標籤設定打不開');
     await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(300);
@@ -187,7 +187,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
      卡片堆飛出去時加的 go-l／go-r（ui-06 以前叫 go-yes／go-no）是執行時的 class，重畫不拿掉 */
   {await p.click('#setBtn');await p.waitForTimeout(1100);await p.click('#setOv [data-set="look"]');await p.waitForTimeout(1000);
     const r=await p.evaluate(()=>{const box=document.querySelector('#setOv .set-pane .set-hub'),sg=box.querySelector('.look-mode'),g0=sg.classList.contains('glass');
-      for(let i=0;i<2;i++){morphTo(box,'<b class="set-hub-t">外觀</b>'+lookHTML(false));lookMount(box)}
+      for(let i=0;i<2;i++){morphTo(box,panelHead('外觀')+lookHTML(false));lookMount(box)}
       const sg2=box.querySelector('.look-mode');
       const d=document.createElement('div');document.body.append(d);morphTo(d,'<div class="dk-card" data-dk="x">a</div>');d.firstChild.classList.add('go-l');morphTo(d,'<div class="dk-card" data-dk="x">b</div>');const gy=d.firstChild.classList.contains('go-l');d.remove();
       return {g0,same:sg2===sg,glass:sg2.classList.contains('glass'),gy}});

@@ -23,17 +23,19 @@ const PageFx=(()=>{
   /* 先藏起來（新頁還沒輪到它浮上來時）：只動透明度 */
   function hold(el){save(el);el.style.opacity="0"}
   /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊。
-     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico、.logo）與按鈕不往裡面拆，不會挑到圖形的零件。
-     標題列（data-fx-keep）是換畫面時沿用的節點：一直留在畫面上，不參加進場動畫；只有跨頁到達（all）時整頁一起浮上來 */
+     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico）與按鈕不往裡面拆，不會挑到圖形的零件。
+     標題列（data-fx-keep）是換畫面時沿用的節點：一直留在畫面上，不參加進場動畫；只有跨頁到達（all）時整頁一起浮上來。
+     本來就看不見的（opacity 0，例如還沒出現的提示膠囊 #toast）不挑：淡入的終點是元件自己的透明度（DESIGN-next 第五節），0 就沒有東西可浮上來
+     （ui-09 O：以前一律淡到 1，空的提示膠囊在部門頁底部正中閃出一顆深色小膠囊，動畫被別的換頁接手時還會一直留著） */
   function pieces(el,all){
     const H=innerHeight,W=innerWidth,out=[];
     const walk=(n,depth)=>{for(const c of n.children){
       if(out.length>=MAXP)return;
-      if(c.matches("script,style,template,link,[hidden]")||(!all&&c.matches("[data-fx-keep]")))continue;
-      const cs=getComputedStyle(c);if(cs.display==="none"||cs.visibility==="hidden")continue;
+      if(c.matches("script,style,template,link,[hidden],[data-fx-own]")||(!all&&c.matches("[data-fx-keep]")))continue;   /* data-fx-own：自己播進場的（主頁下排回來時，home.js 的 dockMove） */
+      const cs=getComputedStyle(c),op=+cs.opacity;if(cs.display==="none"||cs.visibility==="hidden"||!(op>0))continue;
       if(cs.display==="contents"){walk(c,depth);continue}
       const r=c.getBoundingClientRect();if(!(r.bottom>0&&r.top<H&&r.right>0&&r.left<W&&r.width>1&&r.height>1))continue;
-      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico,.logo"))walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
+      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico"))walk(c,depth+1);else out.push({el:c,r,op,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
     }};
     walk(el,0);return out;
   }
@@ -49,15 +51,17 @@ const PageFx=(()=>{
         {duration:(back?BOUT:OUT)+lag,easing:EASE_OUT,fill:"both",delay:0}));
     }else{
       const ps=pieces(el,all),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
-      ps.forEach(({el:p,r,base})=>{
+      ps.forEach(({el:p,r,op,base})=>{
         const B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
         /* rnd＝不規則浮現（手機從主頁翻進部門之後，DESIGN-next 第五節）：每一塊各自的延遲（0–320ms）、方向、距離與大小，不照順序 */
         if(rnd){const dl=lag+Math.random()*320,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
-          list.push(p.animate([{opacity:0},{opacity:1}],{duration:220,delay:dl,easing:"ease-out",fill:"both"}));
+          list.push(p.animate([{opacity:0},{opacity:op}],{duration:220,delay:dl,easing:"ease-out",fill:"both"}));
           list.push(p.animate([{transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})${B}`},{transform:`translate(0,0)${B}`}],{duration:560+Math.random()*160,delay:dl,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"both"}));return}
         const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread);
-        list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:1,offset:.4},{transform:`translateY(0)${B}`,opacity:1}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
+        list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:op,offset:.4},{transform:`translateY(0)${B}`,opacity:op}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
       });
+      /* 區塊的進場播完就拿掉（終點就是元件本來的樣子，拿掉看不出來）：不等整頁還原（reset 要看這次換頁還是不是它的主人，被別的換頁接手時不會做） */
+      list.forEach(a=>a.finished.then(()=>a.cancel(),()=>{}));
       if(fadeIn>0)list.push(el.animate([{opacity:0},{opacity:1,offset:Math.max(.02,fadeIn*dur/total)},{opacity:1}],{duration:total,easing:"linear",fill:"both"}));
     }
     anims.set(el,list);

@@ -430,7 +430,7 @@ async function kpSave(){
   kpSaving=true;
   morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;kpSt={id,st:"saving"};state.savedAt=nowStr();if(meName())state.savedBy=meName();render()});
   let ok=false;
-  try{ok=fsMode()?await fsPersist("",{quiet:true}):await persist()}catch(_){ok=false}
+  try{ok=fsMode()?await fsPersist("",{quiet:true}):await persist("",{quiet:true})}catch(_){ok=false}   /* 成功不跳提示（卡片上有「已儲存」） */
   if(fsMode())Sfx.result(ok);   /* github 模式的 persist 自己會響 */
   kpSaving=false;
   if(ok){const ev=state.events.find(e=>e.id===id);kpSt={id,st:"ok",before:undoable?draft.before:null,after:ev?JSON.stringify(ev):""};render();

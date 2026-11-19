@@ -19,6 +19,7 @@ function renderHero(){
   Anim.toggle(eye,deptCan());eye.setAttribute("aria-pressed",String(roView));eye.classList.toggle("on",roView);
   Anim.toggle(nb,!deptRO());
   if(notiOpen&&deptRO())closeNoti(true);   /* 通知與行事曆那一頁開著時變成唯讀（唯讀檢視、權限被撤）：直接回原分頁（notify.js） */
+  if(setOpen&&roView)closeSettings(true);   /* 設定開著時按眼睛鈕（ui-09 起設定是部門內的一頁，標題列按得到）：唯讀檢視沒有設定鍵，設定直接收起（面板裡改到一半的照離開處理） */
   hsBar();   /* 搜尋列（search.js）：只在即時回報、進度、完成紀錄三頁 */
   weekDotSync();
 }
@@ -248,7 +249,7 @@ function renderCards(){
   const b0=$("#cardDetail .sl"),was=b0&&b0.closest("[data-issue]").dataset.issue===(it&&it.id)?b0.dataset.p:"";
   morphTo($("#cardDetail"),it?cardHTML(it):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
   if(was!=="")slAnim($("#cardDetail .sl"),cssNum(was));   /* 同一個議題的時程變了（改了期間）：把手滑到新位置 */
-  $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
+  $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;$("#progPanel").classList.toggle("pv-on",!!it);   /* pv-on：議題詳情那一頁（標題列的分段切換與「+ 議題」藏起來，board.css「進度頁標題列」） */
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */
 let pvTok=0;

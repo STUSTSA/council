@@ -159,7 +159,17 @@
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
+    dockMove(false);   /* 下排跟主頁其他東西一起退場（桌面、手機都是） */
     if(k==="flip")walFlip(WAL.els[i],go);else tileExpand(stage.querySelector(`.hm-tile[data-i="${i}"]`),go);
+  }
+  /* 下排（.hm-dock）的退場與回來（DESIGN-next 第五節「整頁過場」；ui-09 O）：進部門＝往下沉並淡出（MO.base、出場曲線，停在退場後的樣子直到換頁）；
+     回主頁＝從底部浮回來（柔回彈）。只動 transform／opacity；關掉動態時不動 */
+  function dockMove(back){
+    const x=document.querySelector(".hm-dock");if(!x||reduceMotion())return;
+    x.getAnimations().forEach(a=>{if(a.id==="dock")a.cancel()});
+    const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"",up={transform:"translateY(0)"+B,opacity:1},down={transform:"translateY(32px)"+B,opacity:0};
+    const a=back?x.animate([down,up],{duration:MO.layout,easing:MO.soft,fill:"backwards"}):x.animate([up,down],{duration:MO.base,easing:MO.out,fill:"forwards"});a.id="dock";
+    if(back){x.dataset.fxOwn="";a.finished.catch(()=>{}).then(()=>{delete x.dataset.fxOwn})}   /* 回來時整頁浮上來（pagefx.js）不再挑它，柔回彈不被蓋掉 */
   }
   /* 鋪滿畫面的那一張：從色塊的位置與圓角放大到蓋住整個畫面（往外多放一圈，放大後的圓角落在畫面外，不用動圓角） */
   function cover(r,rad){
@@ -189,7 +199,7 @@
     WAL.els.forEach(o=>{if(o===el)return;const b=o.getBoundingClientRect(),up=b.top<r.top,base=o.style.transform||"none",op=getComputedStyle(o).opacity;
       o.animate([{transform:base,opacity:op},{offset:.22,transform:`translate(0,${up?10:-10}px) `+base,opacity:op},{transform:`translate(${R(110).toFixed(0)}px,${((up?-1:1)*(Hh*.6+Math.random()*140)).toFixed(0)}px) rotate(${R(16).toFixed(1)}deg) `+base,opacity:0}],
         {duration:460,delay:Math.min(90,Math.abs(b.top-r.top)*.18),easing:"cubic-bezier(.4,0,.75,.5)",fill:"forwards"})});
-    document.querySelectorAll(".hm-top,.hm-dock").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
+    document.querySelectorAll(".hm-top").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
       x.animate([{opacity:1,transform:"translate(0,0)"+B},{opacity:0,transform:`translate(${R(26).toFixed(0)}px,${(-14+R(16)).toFixed(0)}px) scale(.94)`+B}],{duration:300,delay:Math.random()*90,easing:MO.in,fill:"forwards"})});
     const w=document.createElement("div"),ff=el.cloneNode(true),fb=document.createElement("div"),lg=el.querySelector(".hm-lg svg");
     w.className="hm-flw";w.setAttribute("aria-hidden","true");fb.className="hm-fb";ff.className="hm-wc hm-ff";ff.removeAttribute("aria-current");ff.removeAttribute("href");
@@ -208,7 +218,7 @@
     const t=H.mode==="wal"?WAL.els[H.i]:stage.querySelector(".hm-tile.on");if(!t)return;
     const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*(r.width/t.offsetWidth)||18,o=fxEl("hm-fx",r,rad),c=cover(r,rad);
     o.style.transform=c;document.documentElement.append(o);
-    PageFx.onArrive(()=>{const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
+    PageFx.onArrive(()=>{dockMove(true);const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
       o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:640,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
   }
   /* 從看板按返回回到快取的這一頁（bfcache）：把進部門時留下的狀態清掉（分身、飛走的卡片、淡掉的東西），再收回那一張 */
@@ -224,7 +234,8 @@
      連結只存在這台裝置這個瀏覽器：localStorage「stustsa-links」＝[{u:網址, n:名稱}]（最多 LK_MAX 個；名稱可空＝顯示網域；最長 LK_NAME 字）。
      不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
      網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
-     圖示只向那個網站自己要 /favicon.ico（不經過第三方的圖示服務、不帶 referrer），載不到顯示網域第一個字母。
+     圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕；中文網域改用名稱第一個字，見 lkFirst）。不帶 referrer。
+     內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
@@ -258,13 +269,51 @@
   }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
   DKN.set("pub",$id("hmPub"));
+  /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
+     Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
+     （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零五。）
+     任何一步回寬或高 ≤ 2 的極小圖（1×1 透明佔位）也當成沒有，往下一步。
+     內網／本機網域（lkLan）兩步都不要：正式站是 https，向內網 http 要圖多半被擋，等於一定把內部名稱送給 Google。
+     連結在載入中被移除（節點不在畫面上了）：拿掉 src 停下來，不往下一步、不寫快取（dkPaint 移除時也先拿掉還沒載到的圖）。
+     結果只記在記憶體（LK_ICO：網站 origin → 載到的圖片網址，"" ＝兩邊都沒有），重畫、同網站的連結不重複要；不存 */
+  const LK_G="https://www.google.com/s2/favicons?domain=",LK_ICO=new Map();
+  /* IP（URL 解析後 IPv4 一定是四段數字、IPv6 用 [] 包起來）、localhost、沒有點的單段名、保留給內網的字尾；結尾的點先去掉 */
+  const lkLan=h=>{h=h.replace(/\.$/,"");return !h.includes(".")||h.startsWith("[")||/^\d+\.\d+\.\d+\.\d+$/.test(h)||/(^|\.)(localhost|local|internal|lan|home\.arpa)$/.test(h)};
+  function lkIco(w,u){
+    const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit===""||lkLan(p.hostname))return;
+    const srcs=hit?[hit]:[key+"/favicon.ico",LK_G+encodeURIComponent(p.hostname)+"&sz=64"];let i=0;
+    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
+    const dead=()=>{if(w.isConnected)return false;img.removeAttribute("src");img.remove();return true};
+    const next=()=>{if(dead())return;if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
+    img.addEventListener("load",()=>{if(dead())return;
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      if(iw<=2||ih<=2||srcs[i].startsWith(LK_G)&&iw<=16&&ih<=16){next();return}
+      if(!hit)LK_ICO.set(key,srcs[i]);w.classList.add("ico")});
+    img.addEventListener("error",next);
+    img.src=srcs[0];w.firstElementChild.append(img);
+  }
+  /* 首字（兩邊都沒有圖示、或內網網域時圓鈕上的字；ui-09 M2，DievE 11/19 定）：
+     平常＝去掉 www. 的網域第一個字母（大寫）。只有這個字母會是 punycode 的 x 時（去掉 www. 之後的網域開頭是「xn--」，
+     例如 例子.tw、中文.github.io）改用連結名稱的第一個字；只有後面幾段是中文（example.台灣、blog.例子.tw）首字母照樣取得到，維持網域首字母。
+     new URL() 會把網域照 IDNA 正規化：中文等正規化後仍不是 ASCII 的字變成 punycode「xn--」；全形英數、全形句點會先變成半形 ASCII，不產生 xn--，走英數那條。
+     名稱照字素切（Intl.Segmenter，沒有就 Array.from），emoji、組合字不切壞；照打的樣子，不轉大寫；開頭只由格式字元或空白組成的字素（零寬空格等）跳過。
+     沒取名稱時維持網域第一個字母（punycode 的 X；交接說明一百零五「中文網域的首字母」待決定）：名稱空的、跳過格式字元後沒有字、
+     或名稱本身就是這個網域（lkUrl 解得出網址、去掉 www. 與結尾點的 hostname 跟連結相同：例子.tw、www.例子.tw、https://例子.tw/、xn--fsqu00a.tw 都算） */
+  const lkSeg=typeof Intl==="object"&&typeof Intl.Segmenter==="function"?new Intl.Segmenter(undefined,{granularity:"grapheme"}):null;
+  const lkBlank=/^[\p{Cf}\p{Z}\s]+$/u;
+  const lkG1=s=>{for(const g of lkSeg?Array.from(lkSeg.segment(s),x=>x.segment):Array.from(s))if(!lkBlank.test(g))return g;return ""};
+  function lkFirst(x,h){
+    if(/^xn--/.test(h)&&x.n){
+      const bare=s=>s.replace(/\.$/,""),nu=lkUrl(x.n);
+      if(!nu||bare(lkHost(nu))!==bare(h)){const c=lkG1(x.n);if(c)return c}
+    }
+    return h.charAt(0).toUpperCase();
+  }
   function lkNode(x){
     const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
-    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true">${esc(h.charAt(0).toUpperCase())}</b></a>`;
-    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
-    img.addEventListener("load",()=>{if(img.naturalWidth)w.classList.add("ico");else img.remove()},{once:true});
-    img.addEventListener("error",()=>img.remove(),{once:true});
-    img.src=new URL(x.u).origin+"/favicon.ico";w.firstElementChild.append(img);
+    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true"></b></a>`;
+    w.querySelector(".hm-lkl").textContent=lkFirst(x,h);
+    lkIco(w,x.u);
     return w;
   }
   function dkNode(k){
@@ -284,7 +333,8 @@
     const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
     if(R){w0=dk.getBoundingClientRect().width;[...dkIn.children].forEach(c=>r0.set(c.dataset.k,c.getBoundingClientRect()))}
     const gone=[...dkIn.children].filter(c=>!keys.includes(c.dataset.k));
-    gone.forEach(c=>{c.remove();if(c.classList.contains("hm-lk"))DKN.delete(c.dataset.k)});
+    gone.forEach(c=>{c.remove();if(!c.classList.contains("hm-lk"))return;DKN.delete(c.dataset.k);
+      const i=c.classList.contains("ico")?null:c.querySelector(".hm-lki");if(i){i.removeAttribute("src");i.remove()}});   /* 還沒載到的圖示停掉（不往下一步問 Google，也不讓下面的分身再要一次） */
     let at=dkIn.firstElementChild;keys.forEach(k=>{const n=dkNode(k);if(n===at)at=at.nextElementSibling;else dkIn.insertBefore(n,at)});   /* 只插入新的，沒動的節點不搬（焦點、動畫都留著） */
     LK.list.forEach(x=>{const n=DKN.get(x.k),b=n.querySelector(".hm-lkx");
       if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close","solo")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}

@@ -69,7 +69,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const hl=await p.evaluate(()=>history.length);
     await p.click('#hmPub');await p.waitForTimeout(700);
     const cal=await p.evaluate(()=>{const l=document.getElementById('hmCal');return {vis:!!l&&!l.hidden,pub:!!l.querySelector('.cal.pub'),modes:[...l.querySelectorAll('.cal-seg [data-k]')].map(x=>x.textContent).join(),
-      noday:!l.querySelector('.nd-card,.nt-late,#notiDeck'),title:l.querySelector('.nt-h')?.textContent,hl:history.length,inert:document.getElementById('hm').inert}});
+      noday:!l.querySelector('.nd-card,.nt-late,#notiDeck'),title:l.querySelector('.sec-h')?.textContent,hl:history.length,inert:document.getElementById('hm').inert}});
     ok(cal.vis&&cal.pub&&cal.modes==='全部,活動,會議'&&cal.noday,`全會行事曆：公共版（${cal.modes}；${cal.title}），沒有今日／明日、逾期`);
     ok(cal.hl===hl+1&&cal.inert,'打開推一筆瀏覽紀錄、主頁 inert');
     await p.keyboard.press('Escape');await p.waitForTimeout(500);
@@ -238,11 +238,11 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
     await ctx.close()}
 
-  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v4（ui-08；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v5（ui-09；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
-    ok(sw.CACHE==='board-cache-v4'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v4（ui-08 改版要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
+    ok(sw.CACHE==='board-cache-v5'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v5（ui-09 改版要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
     const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
     ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
     const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];

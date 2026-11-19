@@ -137,8 +137,8 @@ const t0=Date.now();
     const o0=rich?await p.evaluate(()=>{const e=state.events.find(e=>e.times.length&&!e.doneAt);return e&&JSON.parse(JSON.stringify({id:e.id,desc:e.desc,touched:e.touched,touchedAt:e.touchedAt}))}):null;
     if(o0)await editCard(p,o0.id,ev=>{ev.desc=ev.desc+'\n（firestore 模式加的一行）'});await settled(p);
     const sid=await addCard(p,'SW 第二張卡片','');
-    await p.click('#setBtn');await p.waitForTimeout(700);await p.click('[data-set="labels"]');await p.waitForSelector('[data-newlbl="人"]',{timeout:8000});
-    await p.fill('[data-newlbl="人"]','SW 演練標籤');await p.click('[data-x="add"][data-k="人"]');await p.click('[data-x="done"]');await settled(p);
+    await p.click('#setBtn');await p.waitForTimeout(700);await p.click('[data-set="labels"]');await p.waitForSelector('[data-x="open"][data-k="人"]',{timeout:8000});
+    await p.click('[data-x="open"][data-k="人"]');await p.fill('[data-newlbl="人"]','SW 演練標籤');await p.press('[data-newlbl="人"]','Enter');await p.click('[data-set="labels"]');await settled(p);   /* ui-09：點虛線「+」、Enter 加入；再點一次「標籤」離開這一頁就存 */
     const lid=await p.evaluate(()=>(state.labels.find(l=>l.name==='SW 演練標籤')||{}).id);
     ok(!!lid&&!!sid&&(await read(`events/${D}__tsw1`))&&(await read(`cards/${D}__${fid}`)).version===2&&(!o0||(await read(`cards/${D}__${o0.id}`)).version>=2),
       `${D}：firestore 模式改說明${o0?'（含原本的卡片）':''}、加時間標記、新增卡片與標籤都寫進 Firestore`);

@@ -182,7 +182,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
 
   /* 6b. 公共版參數 */
   {await p.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="pubT"></div>');window.__pc=calMount($('#pubT'))});await p.waitForTimeout(400);
-    const r=await p.evaluate(()=>({pub:__pc.pub,modes:[...document.querySelectorAll('#pubT .cal-seg [data-k]')].map(x=>x.textContent).join(),h:$('#pubT .nt-h').textContent,foot:$('#pubT .pc-foot').textContent,
+    const r=await p.evaluate(()=>({pub:__pc.pub,modes:[...document.querySelectorAll('#pubT .cal-seg [data-k]')].map(x=>x.textContent).join(),h:$('#pubT .sec-h').textContent,foot:$('#pubT .pc-foot').textContent,
       extra:!!$('#pubT .nd-card,#pubT .dk-card,#pubT .cal-oth')}));
     ok(r.pub&&r.modes==='全部,活動,會議'&&/全會行事曆/.test(r.h)&&r.foot==='全會・學生會'&&!r.extra,`公共版：全部／活動／會議、沒有今日／明日與逾期（${r.modes}，${r.foot}）`);
     await p.click('#pubT .cal-seg [data-k="meet"]');await p.waitForTimeout(400);
@@ -292,15 +292,17 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await q.evaluate(()=>closeNoti(true));await q.waitForTimeout(300);
     const u=await q.evaluate(async()=>{let n=0;const add=window.addEventListener,rm=window.removeEventListener;
       window.addEventListener=function(t,...a){if(t==='resize')n++;return add.call(this,t,...a)};window.removeEventListener=function(t,...a){if(t==='resize')n--;return rm.call(this,t,...a)};
+      /* ui-09 起分段切換（LiquidSeg）用 ResizeObserver 看自己的大小、不掛視窗的 resize：還在看的 ResizeObserver 也算一個監聽，destroy 時 disconnect 才扣回 */
+      const RO=ResizeObserver.prototype,obs=RO.observe,dis=RO.disconnect;RO.observe=function(...a){if(!this.__u){this.__u=1;n++}return obs.apply(this,a)};RO.disconnect=function(){if(this.__u){this.__u=0;n--}return dis.call(this)};
       const c0=CALS.length;document.body.insertAdjacentHTML('beforeend','<div id="pubU"></div>');const h=$('#pubU');let peak=0;
       if(typeof calUnmount!=='function'){window.addEventListener=add;window.removeEventListener=rm;return {err:'沒有 calUnmount'}}
       for(let i=0;i<5;i++){const c=calMount(h);await new Promise(r=>setTimeout(r,60));peak=Math.max(peak,n);if(i===4){c.pop=true;calPaint(c)}calUnmount(h)}
       const esc=()=>{const ev=new KeyboardEvent('keydown',{key:'Escape',cancelable:true,bubbles:true});document.dispatchEvent(ev);return ev.defaultPrevented};
       const gone=esc();   /* 拆掉的（月份選單開著時拆的）不吃 Esc */
       const c=calMount(h);c.pop=true;calPaint(c);const live=esc();calUnmount(h);   /* 對照：還掛著、選單開著時 Esc 被它吃掉 */
-      window.addEventListener=add;window.removeEventListener=rm;h.remove();
+      window.addEventListener=add;window.removeEventListener=rm;RO.observe=obs;RO.disconnect=dis;h.remove();
       return {n,peak,cals:CALS.length===c0,cal:h._cal===undefined,esc:gone,live}});
-    ok(!u.err&&u.n===0&&u.peak>=1&&u.cals&&u.cal&&!u.esc&&u.live,`calMount→calUnmount 五次：resize 監聽淨增 ${u.n}（最多 ${u.peak}）、CALS 復原、拆掉的不吃 Esc（${JSON.stringify(u)}）`);
+    ok(!u.err&&u.n===0&&u.peak>=1&&u.cals&&u.cal&&!u.esc&&u.live,`calMount→calUnmount 五次：resize 監聽（含 ResizeObserver）淨增 ${u.n}（最多 ${u.peak}）、CALS 復原、拆掉的不吃 Esc（${JSON.stringify(u)}）`);
     ok(q.errs.length===0,`9c 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
     await q.close();}
   /* 9d. 未登入的公共版：Firestore 查詢帶 visibility=='public'（替身 Firebase 模組，記下查詢條件；不連任何真的專案）；登入後照舊用 scope */

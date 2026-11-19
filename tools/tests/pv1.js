@@ -74,7 +74,7 @@ ok(!p.errs.length,'B 沒有錯誤 '+p.errs.join('|'));await p.context().close();
 
 /* C：行銷部第二個人 */
 p=await mk(1300);await open(p,'?d=marketing');await gate(p);
-d=await dlg(p);ok(d&&d.t==='選擇編輯身分'&&/新增身分/.test(d.note),'C 選身分視窗有使用提示');
+d=await dlg(p);ok(d&&d.t==='選擇編輯身分'&&!d.note,'C 選身分視窗沒有使用提示（ui-09：登入流程的說明句拿掉）');
 await p.click('#dlgForm [data-act=alt]');await W();
 await p.fill('#dlgForm input[name=pw]','stust-init-2026');await okBtn(p);await p.waitForTimeout(1500);
 d=await dlg(p);ok(d&&/不正確/.test(d.err),'C 密碼錯：紅字');
