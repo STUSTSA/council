@@ -73,6 +73,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* 表單收掉了沒：#dlg 沒開、畫面上看不到它的任何一塊 */
   const formGone=p=>p.evaluate(()=>{const d=document.querySelector('#dlg');return !d.open&&!d.getClientRects().length});
   const lastAsk=p=>p.evaluate(()=>window.__ask[window.__ask.length-1]);
+  /* 面板收掉後有沒有白讀：替 BoardAccount 的讀取函式計次（window.__reads） */
+  const countReads=p=>p.evaluate(()=>{window.__reads={};const A=window.BoardAccount;['inviteList','rolesList','usersList','requestsPending'].forEach(k=>{const f=A[k];A[k]=(...x)=>{window.__reads[k]=(window.__reads[k]||0)+1;return f(...x)}})});
+  const reads=(p,k)=>p.evaluate(k=>(window.__reads||{})[k]||0,k);
   /* 一個節點中心點到的是不是它自己（沒被別的東西蓋住） */
   const onTop=(p,sel)=>p.evaluate(sel=>{const e=[...document.querySelectorAll(sel)].find(x=>x.getClientRects().length);if(!e)return false;e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),x=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!x&&e.contains(x)},sel);
 
@@ -100,9 +103,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await openSet(m);await row(m,'council');await hubGo(m,'invite');
   ok(await formOpen(m,'[data-new]','產生 QR'),'412：QR 邀請 →「產生 QR」表單畫在子頁裡');
   await cselCheck(m,'#dlgForm','412 產生 QR');
+  await countReads(m);
   /* A1 返回：回到會長室管理清單，表單收掉、照取消結束 */
   await m.click('#subBack');await m.waitForTimeout(900);
   {const a=await lastAsk(m);
+    ok(await reads(m,'inviteList')===0,`A 412 返回：取消的「產生 QR」沒有在面板收掉後重讀邀請清單（${await reads(m,'inviteList')} 次）`);
     ok(await formGone(m),'A 412 按「返回」回到會長室管理：「產生 QR」表單收掉（不留在清單下面）');
     ok(a&&a.t==='產生 QR'&&a.v===null,`A 412 返回：表單的 Promise 照取消結束（${JSON.stringify(a&&a.v)}）`);
     ok(await m.evaluate(()=>!!document.querySelector('#setSub .set-hub:not([hidden]) [data-hub="export"]')),'A 412 返回：回到會長室管理清單');
@@ -132,7 +137,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await m.evaluate(()=>{const f=document.querySelector('#dlgForm');f.querySelector('[name="uid"]').value='ben-uid';f.querySelector('[name="role"]').value='admin'});
   await m.evaluate(()=>document.querySelector('#dlg [data-act="ok"]').click());await m.waitForTimeout(60);
   ok(await m.evaluate(()=>{const x=document.querySelector('#dlg');return x.open&&!!x._fade}),'A 競態 (b) 412：按確定後還在淡出');
+  {const r0=await reads(m,'rolesList');
   await m.click('#subBack');await m.waitForTimeout(1500);
+  ok(await reads(m,'rolesList')===r0,`A 競態 (b) 412：面板收掉後才寫完，不再重讀人員（rolesList ${r0}→${await reads(m,'rolesList')}）`)}
   {const a=await lastAsk(m),r=await roleOf('ben-uid');
     ok(a&&a.t==='授予權限'&&a.v&&a.v.uid==='ben-uid'&&a.v.role==='admin',`A 競態 (b) 412：確定後淡出中按返回，表單照確定結束（${JSON.stringify(a&&a.v)}）`);
     ok(!!r&&r.rev===1&&JSON.stringify(r.depts)==='{"fruit":"admin"}',`A 競態 (b) 412：照確定寫入一筆角色（${JSON.stringify(r&&{depts:r.depts,rev:r.rev})}）`);
