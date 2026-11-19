@@ -1327,7 +1327,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--mo-spring)}
 @media (hover:hover){.hm-lkc:hover{transform:scale(1.05)}}
 .hm-lkc:active{transform:scale(.96)}
-.hm-lkl{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:1}   /* 首字母圓鈕：跟 .hm-pub、.hm-lkadd 同大小；顏色只用主題變數（深色、各主題跟著變），手機同尺寸 */
+.hm-lkl{display:block;width:44px;height:44px;border-radius:50%;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:44px;text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母圓鈕：跟 .hm-pub、.hm-lkadd 同大小；顏色只用主題變數（深色、各主題跟著變），手機同尺寸。字形置中：行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照 44px 行高置中（字框置中，大寫字會偏上一點） */
 .hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}
 .hm-lk.ico .hm-lkl{display:none}
 .hm-lk.ico .hm-lki{position:static;opacity:1}
