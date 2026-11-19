@@ -1113,7 +1113,9 @@ label.fld-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:
 dialog#dlg:has(.csel.open){overflow:visible}
 /* 放在設定頁右側面板裡（.in-pane，非強制回應）：不是浮起來的視窗，而是面板本身的內容 */
 dialog#dlg.in-pane{position:static;width:auto;max-width:640px;margin:0;padding:0;background:none;box-shadow:none;border-radius:0;animation:paneFormIn var(--mo-slow) var(--mo-out) both;overflow:visible}   /* 換項目時：舊表單往右淡出（dialog.js），新表單從右邊滑入淡入，不用跳出視窗那種放大回彈 */
-dialog#dlg.in-pane>form>*{animation:paneFormIn var(--mo-slow) var(--mo-out) both}
+/* 表單每一列錯開滑入：只補前段（backwards，等待的時候先藏著），播完就不留動畫值。
+   留著（both／forwards）的話每一列都各自成一個疊層，前面一列展開的自製下拉（.csel-list）會被後面的列、標籤、按鈕蓋住、點不到（ui-10 B） */
+dialog#dlg.in-pane>form>*{animation:paneFormIn var(--mo-slow) var(--mo-out) backwards}
 dialog#dlg.in-pane>form>:nth-child(2){animation-delay:40ms}
 dialog#dlg.in-pane>form>:nth-child(3){animation-delay:80ms}
 dialog#dlg.in-pane>form>:nth-child(n+4){animation-delay:120ms}
