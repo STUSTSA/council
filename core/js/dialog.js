@@ -27,20 +27,27 @@ function fieldHTML(x){
 /* 對話框開在哪裡：設定頁桌面版有右側面板時，一般表單畫在面板裡（非強制回應）；
    modal＝確認、輸入密碼這類要打斷操作的（沒有欄位，或只有密碼欄），一律跳出 */
 const dlgHost=modal=>!modal&&typeof setPaneHost==="function"&&setPaneHost();   /* 會畫在哪個面板裡（沒有＝跳出） */
-/* drop＝這次打開的表單被別的表單換掉時怎麼結束（ask 傳「照取消的值 null 結束」）。
-   上一個表單還沒送出結果就被換掉（還在淡出、離開面板時剛收掉）：先照取消結束它；它晚到的 close 事件由 ask 的 onclose 擋掉（新表單已經開著），不會落到新表單上 */
+/* drop＝這次打開的表單被別的表單換掉時怎麼結束（ask 傳自己的 drop：拿 #dlg 關閉的值來結束）。
+   上一個表單還沒送出結果就被換掉：還在淡出（已按確定、刪除…）＝先關完、照它第一次關閉的值結束；還開著＝returnValue 是空的，照取消（null）結束。
+   之後清掉 returnValue：新表單不沿用上一個表單的「ok」（ui-10 審查：否則新表單被不帶值的 close 關掉時會被當成送出）。
+   上一個表單晚到的 close 事件由 ask 的 onclose 擋掉（新表單已經開著），不會落到新表單上 */
 function dlgOpen(modal,drop){
   const d=$("#dlg"),prev=d._drop;d._drop=drop||null;
   if(d._fadeEnd)d._fadeEnd();   /* 上一個面板表單還在淡出：先關完 */
-  if(prev&&prev!==drop)prev();
+  if(prev&&prev!==drop)prev(d.returnValue);
+  d.returnValue="";
   const host=dlgHost(modal);
   if(host){d.classList.add("in-pane");if(d.parentNode!==host)host.append(d);d.show()}
   else{d.classList.remove("in-pane");if(d.parentNode!==document.body)document.body.append(d);d.showModal()}
 }
 /* 面板裡開著的表單當成取消收掉：離開那個面板時（nav.js 的 paneDismiss；account.js 的 acctPanel 疊一層或收掉時），表單不留在別的頁面。
-   先送 cancel（身分與專員、標籤這種整頁就是 #dlg 的自己攔下來，照「完成」處理），沒被攔就關掉：ask 照取消的值（null）結束、不送出 */
+   已經在淡出（按了確定、刪除…）＝第一次關閉的值算數：馬上關完、照那個值結束（確定就照確定送出，寫入可能在離開面板後才完成）。
+   還開著＝先把這個 ask 同步照取消（null）結束（非同步 validate 還在等也不會再送出），
+   再送 cancel（身分與專員、標籤這種整頁就是 #dlg 的自己攔下來，照「完成」處理），沒被攔就關掉 */
 function dlgPaneCancel(){
   const d=$("#dlg");if(!d||!d.open||!d.classList.contains("in-pane"))return;
+  if(d._fade){d._fadeEnd();d._drop?.(d.returnValue);return}
+  d._drop?.(null);
   const ev=new Event("cancel",{cancelable:true});d.dispatchEvent(ev);if(!ev.defaultPrevented)d.close();
 }
 /* ask(標題, 欄位, 選項)：
@@ -63,19 +70,23 @@ function ask(title,fields,{danger,wide,alt,note,validate}={}){
     /* no form submission: works inside sandboxed previews too */
     const collect=()=>{const o={},fd=new FormData(f);fd.forEach((val,k)=>o[k]=f.querySelector(`textarea[name="${k}"]`)?String(val).replace(/\s+$/,""):String(val).trim());fields.filter(x=>x.type==="multi"||x.type==="labels").forEach(x=>o[x.name]=fd.getAll(x.name).map(String));return o};
     /* 按「確定」：有 validate 就先檢查，錯了在視窗裡顯示紅字（每次重新顯示時輕輕晃一下），游標回到第一個輸入框 */
-    let busy=false;
-    const ok=async()=>{if(busy)return;
-      if(validate){busy=true;let m;try{m=await validate(collect())}finally{busy=false}
+    /* 送出的值在按「確定」、檢查通過的那一刻記下來（okv）：淡出中被換成別的表單時，#dlgForm 已經是新表單的欄位 */
+    let busy=false,okv=null;
+    const ok=async()=>{if(busy||done||d._fade)return;const o=collect();   /* 已經在淡出（按過確定、取消）：不再算一次 */
+      if(validate){busy=true;let m;try{m=await validate(o)}finally{busy=false}
+        if(done||d._drop!==drop||d._fade)return;   /* 檢查還在跑時這個表單已經結束或正在關（離開面板、取消、被別的表單換掉）：不送出、也不關掉別的表單 */
         if(m){Sfx.play("no");const e=f.querySelector(".dlg-err");e.textContent=m;e.hidden=false;if(!reduceMotion())e.animate([{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"none"}],{duration:240,easing:"ease-out"});
           f.querySelector("input:not([type=hidden]):not([type=checkbox])")?.focus();return}}
-      d.close("ok")};
+      okv=o;d.close("ok")};
     f.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>b.dataset.act==="ok"?ok():d.close(b.dataset.act));
     f.onsubmit=ev=>{ev.preventDefault();if(!fields.length&&danger)d.close("delete");else ok()};
     f.onkeydown=ev=>{if(ev.key==="Enter"&&!ev.isComposing&&ev.target.tagName==="INPUT"&&ev.target.type!=="color"&&ev.target.type!=="checkbox"){ev.preventDefault();ok()}};
-    let done=false;const fin=v=>{if(done)return;done=true;if(d._drop===drop)d._drop=null;res(v)},drop=()=>fin(null);
+    /* drop(關閉的值)：照 #dlg 關閉的值結束（"ok"＝按確定時記下的值）；被換掉、離開面板時由 dlgOpen／dlgPaneCancel 呼叫 */
+    let done=false;const fin=v=>{if(done)return;done=true;if(d._drop===drop)d._drop=null;res(v)},
+      drop=rv=>fin(rv==="ok"?okv:rv==="delete"?"delete":rv==="alt"?"alt":null);
     d.onclose=()=>{if(d.open)return;   /* 上一個表單晚到的 close 事件（這個表單已經開著）：不算 */
-      const v=d.returnValue;fin(v==="ok"?collect():v==="delete"?"delete":v==="alt"?"alt":null)};
-    d.returnValue="";dlgOpen(modal,drop);(f.querySelector("textarea")||f.querySelector("input"))?.focus();
+      drop(d.returnValue)};
+    dlgOpen(modal,drop);(f.querySelector("textarea")||f.querySelector("input"))?.focus();
   });
 }
 const markerFields=(m,it)=>[
@@ -147,11 +158,12 @@ document.addEventListener("keydown",e=>{
   const nativeClose=HTMLDialogElement.prototype.close;
   d.close=function(v){
     if(!this.open)return;
+    if(this._fade)return this._fadeEnd();   /* 已經在淡出（面板裡的表單按了確定、取消…）又被關：馬上關完，第一次關閉的值算數（後來不帶值或帶別的值都不改） */
     if(v==="ok"||v==="alt")Sfx.play("ok");else if(v==="cancel"||v==="delete")Sfx.play("no");   /* 確定＝確認音；取消、刪除＝否定音（其他程式關掉 #dlg 時不帶 v，不響） */
     if(this.classList.contains("in-pane")){
       /* 右側面板裡的表單：先在原地淡出、往右滑一點再關，避免內容一關就整片消失（面板接著自己收起）。
          淡出中又要打開（例如時間格式錯了重問）時，dlgOpen 會先把這次關完 */
-      if(reduceMotion()||this._fade)return nativeClose.call(this,v);
+      if(reduceMotion())return nativeClose.call(this,v);
       const a=this._fade=this.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateX(18px)"}],{duration:MO.fast+40,easing:MO.in,fill:"forwards"});
       this._fadeEnd=()=>{a.onfinish=null;a.cancel();this._fade=null;this._fadeEnd=null;nativeClose.call(this,v)};
       a.onfinish=this._fadeEnd;return;
