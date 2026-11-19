@@ -145,7 +145,7 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
 
   /* 9. 載入中刪掉連結：網站 1.5 秒後才回 404，期間刪掉；Google 不能收到、結果不能寫進快取 */
   {site.length=0;g.length=0;net.extra.length=0;
-    const p=await mk(1300,800,{links:[{u:'https://slow.example/',n:'慢站'}]});await p.goto(U+'home.html');
+    const p=await mk(1300,800,{links:[{u:'https://slow.example/',n:'慢站'}]});await p.goto(U+'home.html',{waitUntil:'domcontentloaded'});   /* load 事件會等圖片，要在圖片還沒回來時就動手 */
     const t0=Date.now();while(!site.some(x=>x.host==='slow.example')&&Date.now()-t0<5000)await p.waitForTimeout(50);
     const asked=site.some(x=>x.host==='slow.example'&&x.u==='/favicon.ico');
     await p.click('.hm-dk-in>.hm-lkadd');await p.click('.hm-lk[data-nm="慢站"] .hm-lkx');await p.waitForTimeout(2500);

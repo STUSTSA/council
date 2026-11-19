@@ -264,6 +264,7 @@
      （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零四。）
      任何一步回寬或高 ≤ 2 的極小圖（1×1 透明佔位）也當成沒有，往下一步。
      內網／本機網域（lkLan）兩步都不要：正式站是 https，向內網 http 要圖多半被擋，等於一定把內部名稱送給 Google。
+     連結在載入中被移除（節點不在畫面上了）：拿掉 src 停下來，不往下一步、不寫快取（dkPaint 移除時也先拿掉還沒載到的圖）。
      結果只記在記憶體（LK_ICO：網站 origin → 載到的圖片網址，"" ＝兩邊都沒有），重畫、同網站的連結不重複要；不存 */
   const LK_G="https://www.google.com/s2/favicons?domain=",LK_ICO=new Map();
   /* IP（URL 解析後 IPv4 一定是四段數字、IPv6 用 [] 包起來）、localhost、沒有點的單段名、保留給內網的字尾；結尾的點先去掉 */
@@ -272,8 +273,9 @@
     const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit===""||lkLan(p.hostname))return;
     const srcs=hit?[hit]:[key+"/favicon.ico",LK_G+encodeURIComponent(p.hostname)+"&sz=64"];let i=0;
     const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
-    const next=()=>{if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
-    img.addEventListener("load",()=>{
+    const dead=()=>{if(w.isConnected)return false;img.removeAttribute("src");img.remove();return true};
+    const next=()=>{if(dead())return;if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
+    img.addEventListener("load",()=>{if(dead())return;
       const iw=img.naturalWidth,ih=img.naturalHeight;
       if(iw<=2||ih<=2||srcs[i].startsWith(LK_G)&&iw<=16&&ih<=16){next();return}
       if(!hit)LK_ICO.set(key,srcs[i]);w.classList.add("ico")});
@@ -304,7 +306,8 @@
     const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
     if(R){w0=dk.getBoundingClientRect().width;[...dkIn.children].forEach(c=>r0.set(c.dataset.k,c.getBoundingClientRect()))}
     const gone=[...dkIn.children].filter(c=>!keys.includes(c.dataset.k));
-    gone.forEach(c=>{c.remove();if(c.classList.contains("hm-lk"))DKN.delete(c.dataset.k)});
+    gone.forEach(c=>{c.remove();if(!c.classList.contains("hm-lk"))return;DKN.delete(c.dataset.k);
+      const i=c.classList.contains("ico")?null:c.querySelector(".hm-lki");if(i){i.removeAttribute("src");i.remove()}});   /* 還沒載到的圖示停掉（不往下一步問 Google，也不讓下面的分身再要一次） */
     let at=dkIn.firstElementChild;keys.forEach(k=>{const n=dkNode(k);if(n===at)at=at.nextElementSibling;else dkIn.insertBefore(n,at)});   /* 只插入新的，沒動的節點不搬（焦點、動畫都留著） */
     LK.list.forEach(x=>{const n=DKN.get(x.k),b=n.querySelector(".hm-lkx");
       if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close","solo")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}
