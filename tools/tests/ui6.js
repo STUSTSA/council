@@ -175,7 +175,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
 
   /* 6b. 公共版參數 */
   {await p.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="pubT"></div>');window.__pc=calMount($('#pubT'))});await p.waitForTimeout(400);
-    const r=await p.evaluate(()=>({pub:__pc.pub,modes:[...document.querySelectorAll('#pubT .cal-seg [data-k]')].map(x=>x.textContent).join(),h:$('#pubT .nt-h').textContent,foot:$('#pubT .pc-foot').textContent,
+    const r=await p.evaluate(()=>({pub:__pc.pub,modes:[...document.querySelectorAll('#pubT .cal-seg [data-k]')].map(x=>x.textContent).join(),h:$('#pubT .sec-h').textContent,foot:$('#pubT .pc-foot').textContent,
       extra:!!$('#pubT .nd-card,#pubT .dk-card,#pubT .cal-oth')}));
     ok(r.pub&&r.modes==='全部,活動,會議'&&/全會行事曆/.test(r.h)&&r.foot==='全會・學生會'&&!r.extra,`公共版：全部／活動／會議、沒有今日／明日與逾期（${r.modes}，${r.foot}）`);
     await p.click('#pubT .cal-seg [data-k="meet"]');await p.waitForTimeout(400);

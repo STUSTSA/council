@@ -1,4 +1,17 @@
 /* 核心｜對話框 */
+/* ---------- 面板標題的英文小標（DESIGN-next 第四節「標題上方放很小、字距很疏的英文小標」；ui-09） ----------
+   設定頁的面板（合併頁、帳號與會長室管理的面板、畫在面板裡的表單、編輯紀錄、每週概述）標題上方放英文小標。
+   英文名寫在 data-en，由 board.css「區塊標題」段的 .sec-h::before 畫出來（標題元素的文字不變）。
+   模擬頁有的照模擬頁（REPORT、ACCOUNT、TAGS、HISTORY、BACKUP），其他是這次暫定的（交接說明一百零四「待決定」）；
+   「紀錄・某某」這種帶名字的標題看「・」前面那段。表上沒有的不放 */
+const PANEL_EN={"報告":"REPORTS","每週概述":"WEEKLY","工作報告":"REPORT","匯出工作報告":"REPORT","編輯紀錄":"HISTORY","看板名稱":"BOARD NAME",
+  "身分與專員":"MEMBERS","人員":"MEMBERS","標籤":"TAGS","學年與開學日":"TERM","學年":"ACADEMIC YEAR","開學日":"TERM START","備份":"BACKUP",
+  "這台裝置":"DEVICE","外觀":"APPEARANCE","網站管理":"SITE ADMIN","雲端同步設定（GitHub）":"CLOUD SYNC","分享預覽（貼連結到 LINE、IG、FB 時顯示）":"SHARE PREVIEW",
+  "帳號":"ACCOUNT","會長室管理":"COUNCIL ADMIN","名稱":"NAME","申請編輯權限":"REQUEST ACCESS","匯入":"IMPORT","QR 邀請":"QR INVITE","申請":"REQUESTS",
+  "紀錄":"AUDIT LOG","權限歷史":"ROLE HISTORY"};
+const panelEn=t=>PANEL_EN[t]||PANEL_EN[String(t).split("・")[0]]||"";
+/* 面板標題：<b class="sec-h" data-en="英文">中文</b>（標題文字一律在這裡跳脫） */
+const panelHead=t=>{const en=panelEn(t);return `<b class="sec-h"${en?` data-en="${esc(en)}"`:""}>${esc(t)}</b>`};
 /* ---------- dialog ---------- */
 function fieldHTML(x){
   if(x.type==="labels")return `<fieldset class="multi"><legend>${esc(x.label)}</legend>${labelPickerHTML(x.name,x.value)}</fieldset>`;
@@ -13,9 +26,10 @@ function fieldHTML(x){
 }
 /* 對話框開在哪裡：設定頁桌面版有右側面板時，一般表單畫在面板裡（非強制回應）；
    modal＝確認、輸入密碼這類要打斷操作的（沒有欄位，或只有密碼欄），一律跳出 */
+const dlgHost=modal=>!modal&&typeof setPaneHost==="function"&&setPaneHost();   /* 會畫在哪個面板裡（沒有＝跳出） */
 function dlgOpen(modal){
   if($("#dlg")._fadeEnd)$("#dlg")._fadeEnd();   /* 上一個面板表單還在淡出：先關完 */
-  const d=$("#dlg"),host=!modal&&typeof setPaneHost==="function"&&setPaneHost();
+  const d=$("#dlg"),host=dlgHost(modal);
   if(host){d.classList.add("in-pane");if(d.parentNode!==host)host.append(d);d.show()}
   else{d.classList.remove("in-pane");if(d.parentNode!==document.body)document.body.append(d);d.showModal()}
 }
@@ -24,9 +38,9 @@ function dlgOpen(modal){
    validate(值)＝按「確定」時先檢查，回傳錯誤文字就在視窗裡用紅字顯示、視窗不關（可以是 async）；回傳空值才關掉並回傳結果 */
 function ask(title,fields,{danger,wide,alt,note,validate}={}){
   return new Promise(res=>{
-    const d=$("#dlg"),f=$("#dlgForm");
+    const d=$("#dlg"),f=$("#dlgForm"),modal=!fields.length||fields.every(x=>x.type==="password"||x.type==="check");
     d.classList.toggle("wide",!!wide);
-    f.innerHTML=`<b>${esc(title)}</b>`+(note?`<p class="dlg-note">${esc(note).replace(/\n/g,"<br>")}</p>`:"")+`<p class="dlg-err" role="alert" hidden></p>`+fields.map(fieldHTML).join("")
+    f.innerHTML=(dlgHost(modal)?panelHead(title):`<b>${esc(title)}</b>`)   /* 畫在設定面板裡＝面板標題（英文小標＋標題） */+(note?`<p class="dlg-note">${esc(note).replace(/\n/g,"<br>")}</p>`:"")+`<p class="dlg-err" role="alert" hidden></p>`+fields.map(fieldHTML).join("")
       +(!fields.length&&danger
         ?`<div class="dlg-actions"><button type="button" data-act="delete" class="danger-solid">${esc(danger)}</button><button type="button" data-act="cancel">取消</button></div>`
         :`<div class="dlg-actions"><button type="button" data-act="ok" class="primary">確定</button><button type="button" data-act="cancel">取消</button>${danger?`<button type="button" data-act="delete" class="danger-btn">${esc(danger)}</button>`:""}${alt?`<button type="button" data-act="alt" class="ghost alt-btn">${esc(alt)}</button>`:""}</div>`);
@@ -49,7 +63,7 @@ function ask(title,fields,{danger,wide,alt,note,validate}={}){
     f.onsubmit=ev=>{ev.preventDefault();if(!fields.length&&danger)d.close("delete");else ok()};
     f.onkeydown=ev=>{if(ev.key==="Enter"&&!ev.isComposing&&ev.target.tagName==="INPUT"&&ev.target.type!=="color"&&ev.target.type!=="checkbox"){ev.preventDefault();ok()}};
     d.onclose=()=>{const v=d.returnValue;if(v==="ok")res(collect());else res(v==="delete"?"delete":v==="alt"?"alt":null)};
-    d.returnValue="";dlgOpen(!fields.length||fields.every(x=>x.type==="password"||x.type==="check"));(f.querySelector("textarea")||f.querySelector("input"))?.focus();
+    d.returnValue="";dlgOpen(modal);(f.querySelector("textarea")||f.querySelector("input"))?.focus();
   });
 }
 const markerFields=(m,it)=>[

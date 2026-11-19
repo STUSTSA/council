@@ -164,7 +164,7 @@ function calOth(c,id){c.oth=c.oth.includes(id)?c.oth.filter(x=>x!==id):[...c.oth
 function calHTML(c){
   const r=calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
-    <div class="cal-h"><h3 class="nt-h" id="${id}"><span class="nt-en">${c.pub?"STUSTSA CALENDAR":"CALENDAR"}</span>${c.pub?"全會行事曆":"行事曆"}</h3>
+    <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
       <span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
     ${calModesHTML(c)}
     <div class="pc">${posterHTML(c,r.xs)}</div></div>
@@ -253,7 +253,7 @@ function dkCardHTML(x,i){
 }
 function lateHTML(){
   const xs=notiLateItems(),ed=canEdit(),u=dkUndoHTML();if(!xs.length&&!u)return "";
-  return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="nt-h" id="ntLateH"><span class="nt-en">OVERDUE</span>逾期</h3>
+  return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="sec-h" id="ntLateH" data-en="OVERDUE">逾期</h3>
     ${xs.length?`<div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
     <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div>`:""}
     ${u}</section>`;

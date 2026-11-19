@@ -69,7 +69,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const hl=await p.evaluate(()=>history.length);
     await p.click('#hmPub');await p.waitForTimeout(700);
     const cal=await p.evaluate(()=>{const l=document.getElementById('hmCal');return {vis:!!l&&!l.hidden,pub:!!l.querySelector('.cal.pub'),modes:[...l.querySelectorAll('.cal-seg [data-k]')].map(x=>x.textContent).join(),
-      noday:!l.querySelector('.nd-card,.nt-late,#notiDeck'),title:l.querySelector('.nt-h')?.textContent,hl:history.length,inert:document.getElementById('hm').inert}});
+      noday:!l.querySelector('.nd-card,.nt-late,#notiDeck'),title:l.querySelector('.sec-h')?.textContent,hl:history.length,inert:document.getElementById('hm').inert}});
     ok(cal.vis&&cal.pub&&cal.modes==='全部,活動,會議'&&cal.noday,`全會行事曆：公共版（${cal.modes}；${cal.title}），沒有今日／明日、逾期`);
     ok(cal.hl===hl+1&&cal.inert,'打開推一筆瀏覽紀錄、主頁 inert');
     await p.keyboard.press('Escape');await p.waitForTimeout(500);

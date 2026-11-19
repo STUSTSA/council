@@ -35,7 +35,7 @@ function labelSetHTML(){
     return `<section class="tm-sec"><div class="att-h">${k}</div>
       <ul class="tm-list">${ls.map(l=>`<li class="tm-row">${adm?`<input data-lblname="${esc(l.id)}" value="${esc(l.name)}" aria-label="標籤名稱">`:`<span class="tm-name">${esc(l.name)}</span>`}<span class="sub">用了 ${use.get(l.id)||0} 次</span>${del?`<button type="button" class="icon danger" data-x="del" data-id="${esc(l.id)}">刪除</button>`:""}</li>`).join("")||'<li class="sub">還沒有</li>'}</ul>
       ${adm?`<div class="tm-tools"><input data-newlbl="${k}" placeholder="新增「${k}」標籤" aria-label="新增${k}標籤"><button type="button" data-x="add" data-k="${k}">＋ 新增</button></div>`:""}</section>`};
-  return `<b>標籤</b>
+  return `${panelHead("標籤")}
   ${LABEL_KINDS.map(grp).join("")}
   <div class="dlg-actions"><button type="button" class="primary" data-x="done">完成</button></div>`;
 }

@@ -36,7 +36,6 @@ html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
 h1{margin:0;font-size:clamp(26px,3.2vw,38px);font-weight:400;letter-spacing:.08em;line-height:1.2}
-h2{margin:0;border-left:0;padding:0;display:flex;align-items:center;gap:12px;font-weight:500;font-size:16px;letter-spacing:.1em;flex:1;min-width:180px;white-space:nowrap}
 button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:6px 16px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
 button.primary{background:var(--teal);border-color:var(--teal);color:var(--onteal)}   /* 按鈕：一般＝外框（次要動作，--hair）；primary＝主要動作的實心（--pri）；被指到放大、按下縮回，沒有光暈 */
 button.ghost{border-style:dashed;color:var(--muted)}
@@ -51,9 +50,14 @@ select{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid tra
 dialog form{display:grid;gap:10px}
 dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 .num{font-family:"Jost","Noto Sans TC",sans-serif;font-weight:400;letter-spacing:.02em}
-h2::after{content:"";flex:1;min-width:44px;height:26px;background:var(--ink);-webkit-mask:linear-gradient(var(--ink),var(--ink)) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat;mask:linear-gradient(var(--ink),var(--ink)) left center/calc(100% - 3px) 1.2px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='127.49 16.61 16.13 31.41'%3E%3Cpath d='M129.07,17.38v-.77h-1.58l.06,1.53a16.13,16.13,0,0,0,11.16,14.55,16.14,16.14,0,0,0-11.160,14.55l-.06,1.54h1.58V48a14.57,14.57,0,0,1,14.55-14.55V31.93A14.57,14.57,0,0,1,129.07,17.38Z'/%3E%3C/svg%3E") right center/12.4px 24.2px no-repeat}
+/* ===== 區塊標題（DESIGN-next 第四節；ui-09 全站統一） =====
+   英文小標在上（Jost 10.5px、字距 .22em、次要色），下面是標題（700、加字距）；不畫細線、箭頭。英文寫在 data-en，用 ::before 畫（標題元素的文字不變）。
+   用在：各區的標題（.panel-head 裡的 h2：即時回報、進度、完成紀錄、會長室與秘書處的面板）、通知頁（逾期、行事曆）、
+   設定的面板標題（合併頁、帳號面板、面板裡的表單、編輯紀錄、每週概述；dialog.js 的 panelHead）、工作報告預覽。
+   標題後面的數字膠囊（完成紀錄的 .count）跟標題同一行 */
+.sec-h{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:3px;margin:0;padding:0;min-width:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2;white-space:nowrap}
+.sec-h[data-en]::before{content:attr(data-en);flex:0 0 100%;font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
 button.primary:hover{opacity:.85}
-.en{font-family:"Jost",sans-serif;font-size:11.5px;letter-spacing:.18em;color:var(--muted);font-weight:400;margin-left:-4px}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px}
 summary{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .dwrap{display:block;padding:0;margin:0}
@@ -72,8 +76,6 @@ body.log-open{overflow:hidden}
 button:not(:where(.nd-card)):active{transform:scale(.96)}
 button.ghost{border-color:var(--muted)}
 @media (max-width:640px){
-  h2{min-width:0;font-size:15px;gap:8px}
-  h2::after{min-width:24px}
   h1{font-size:24px;letter-spacing:.04em}
 }
 @supports not selector(::-webkit-scrollbar){
@@ -99,9 +101,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .g-issue,.card{--tone:var(--prog-hi);--tone-ink:var(--prog-hi-ink)}
 /* 疊層頁的標題列（設定頁、編輯紀錄、工作報告共用）：左邊英文小字＋標題，右邊按鈕。class 名稱沿用自已移除的動畫模式 */
 .anim-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1.5px solid var(--ink);padding-bottom:18px}   /* 按鈕跟分隔線至少留 18px（使用者不喜歡按鈕貼著線） */
-.anim-title{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.anim-title b{font-size:clamp(20px,2.4vw,28px);font-weight:500;letter-spacing:.08em}
-.anim-k{font-family:"Jost",sans-serif;font-size:13px;letter-spacing:.2em;color:var(--muted)}
+.anim-title{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}   /* 標題是 .sec-h（區塊標題段）；後面的頁數跟標題底對齊 */
 .anim-ctl{display:flex;gap:8px}
 /* 每週概述的膠囊滑過去放大一點（即時回報膠囊的同一組效果在「即時回報」段） */
 @media (hover:hover){
@@ -949,8 +949,6 @@ a.link:active{transform:scale(.96)}
 /* 膠囊清單（跟即時回報同一套 .cp，見「即時回報」段）；區塊太長時清單自己捲 */
 #donePanel .scroll{overflow-y:auto;flex:1;margin:-24px -28px 0;padding:28px 28px 16px;scrollbar-gutter:stable}   /* 捲動區四周多留空間（膠囊滑過去放大不會被切），再用負邊距拉回原位，膠囊位置不變 */
 #donePanel .panel-head{position:relative;z-index:1}   /* 捲動區往上多留的那一段疊在標題列上：標題列放上面，按鈕才點得到 */
-#donePanel h2{min-width:0}
-#donePanel h2::after{min-width:16px}
 #donePanel .empty{padding:0 0 16px}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
@@ -970,8 +968,7 @@ a.link:active{transform:scale(.96)}
 /* 捲動時週報卡片從標題列底下滑過：標題列下面接一段底色往下淡掉（剛好是標題列與第一張卡片之間的 16px），卡片是慢慢淡入標題列底下，
    不會被一刀切掉圓角（2026-11-16，03） */
 .week-top::after{content:"";position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(var(--bg) 25%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
-.week-top h2{flex:1;min-width:0;font-size:20px;letter-spacing:.08em}
-.week-top h2::after{content:none}
+.week-top h2{flex:1;min-width:0}
 /* 「秘書處調閱 →」：秘書處的看板有「各部門週報」可以調閱每個部門的週報（秘書處自己不顯示） */
 .week-sec{flex:none;font-size:12.5px;color:var(--muted);text-decoration:none;letter-spacing:.06em;transition:color var(--mo-fast) var(--mo-out)}
 .week-sec:hover{color:var(--ink)}
@@ -1116,7 +1113,6 @@ dialog#dlg:has(.csel.open){overflow:visible}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg.glass>form>:nth-child(n+4){animation-delay:120ms}
 @keyframes paneFormIn{from{opacity:0;transform:translateX(22px)}}
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form{gap:14px}
-:is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg>form>b:first-child{font-size:20px;font-weight:700;letter-spacing:.08em}   /* 跟合併頁標題同一種（設定頁段），不畫分隔線 */
 :is(#setOv .set-pane,#setSub .set-sub-body) dialog#dlg .dlg-actions{margin-top:6px}
 @media (max-width:640px){
   dialog{padding:16px}
@@ -1461,7 +1457,6 @@ body.set-open #pageMain{overflow:hidden}
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
-.set-hub-t{font-size:20px;font-weight:700;letter-spacing:.08em}
 /* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。一步一塊、留縫，前面等寬步驟號 */
 .dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;display:grid;gap:10px}
 .dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:16px 20px;font-size:15px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
@@ -1571,11 +1566,9 @@ body.set-open #pageMain{overflow:hidden}
 
 /* ===== 通知頁（notify.js 的 #notiPage；DESIGN-next 第九節） =====
    部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：由上到下今日／明日、逾期、行事曆，區塊之間 28px。
-   區塊標題：上面很小的英文小標＋粗體名稱（.nt-h，用 h3：全站的 h2 有細線裝飾）。列印不印這一頁 */
+   區塊標題：.sec-h（區塊標題段；用 h3）。列印不印這一頁 */
 .sg-noti{gap:28px;padding-bottom:12px}
 @media print{.sgroup.sg-noti{display:none}}
-.nt-h{display:grid;justify-items:start;gap:3px;margin:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2}
-.nt-en{font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
 /* ===== 今日／明日卡片（notify.js 的 dayCardHTML；通知頁最上面） =====
    左右兩張（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk）。大日期 Jost 300；沒有事＝下方一條短細線。
    按壓回饋由 notify.js 的 ndPress（只動 transform；共用按鈕的指到放大、按下縮回在 button 那段排除） */
@@ -1681,7 +1674,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal{position:relative;display:grid;gap:14px;container-type:inline-size}
 .cal-top{display:grid;gap:18px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
-.cal-h .nt-h{margin-right:auto}
+.cal-h .sec-h{margin-right:auto}
 .cal-mp{position:relative;flex:none}
 .cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
 .cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
@@ -1806,10 +1799,8 @@ body.set-open #pageMain{overflow:hidden}
 .log-ov.in-pane{position:static;inset:auto;z-index:auto;padding:0;background:none;min-height:100%}
 .log-ov.in-pane .log-scroll{overflow:visible;padding:8px 0 0}
 .log-ov.in-pane{max-width:720px}
-.log-ov.in-pane .anim-k{display:none}
 .log-ov.in-pane .anim-ctl{display:none}   /* 設定頁裡沒有「關閉」（DESIGN-next 第十二節）：桌面再點一次那一列、手機子頁的「返回」、Esc、系統返回 */
 .log-ov.in-pane .anim-top{border-bottom:0}   /* 跟合併頁標題同一種（設定頁段）：20px 700、不畫分隔線 */
-.log-ov.in-pane .anim-title b{font-size:20px;font-weight:700;letter-spacing:.08em}
 .log-scroll{flex:1;overflow:auto;scrollbar-gutter:stable;padding:8px max(0px,calc((100% - 880px)/2)) 48px}
 .log-list{list-style:none;margin:0;padding:0;display:grid;gap:22px}
 .lg-day>ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -1834,7 +1825,6 @@ body.set-open #pageMain{overflow:hidden}
 
 /* ===== 工作報告 ===== */
 .rpt-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left))}
-.rpt-hint{font-size:12px;letter-spacing:.06em}
 .rpt-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + env(safe-area-inset-bottom))}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
@@ -1906,7 +1896,7 @@ body.set-open #pageMain{overflow:hidden}
 .rpt-sec{position:relative}
 .rpt-ch-h{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:6px 18px;margin-bottom:22px;padding-bottom:14px;border-bottom:1.5px solid var(--ink)}
 .rpt-ch-n{font-size:80px;font-weight:200;line-height:.82;letter-spacing:-.03em}
-.rpt-paper h2::after{content:none}   /* 報告裡的標題不接全站標題列的細線箭頭 */
+.rpt-paper h2{display:flex;align-items:center;gap:12px;margin:0;padding:0;font-weight:500;font-size:16px;letter-spacing:.1em;flex:1;min-width:180px;white-space:nowrap}   /* 白紙上的標題（目錄、章節名稱；下面兩條再各自改大小）。ui-09 以前是全站 h2 的樣式，區塊標題改成 .sec-h 後留給白紙用 */
 .rpt-ch-h h2{min-width:0;margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;line-height:1.3}
 .rpt-tabs{display:flex;gap:3px;align-self:start}
 .rpt-tabs i{display:grid;place-items:center;min-width:24px;height:20px;padding:0 4px;font:400 10px/1 "Jost",sans-serif;font-style:normal;letter-spacing:.04em;background:color-mix(in srgb,var(--ink) 7%,var(--blk));color:color-mix(in srgb,var(--muted) 62%,var(--blk))}
@@ -2007,7 +1997,6 @@ body.set-open #pageMain{overflow:hidden}
 }
 @media (prefers-reduced-motion:reduce){.rpt-pt{animation:none}}
 @media (max-width:640px){   /* 紙張的版面跟桌面完全一樣（整張縮小），這裡只調工具 */
-  .rpt-hint{display:none}
   .rpt-ct,.rpt-bt{opacity:1;pointer-events:auto}   /* 觸控沒有滑過去：工具一直顯示（圖塊工具列只在點進去的圖塊） */
   .rpt-paper .rpt-bt{display:none}
   .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22)/* 例外：陰影黑 */;animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
