@@ -374,7 +374,7 @@ async function fsLoadLog(){
     if(fsRole()==="super"){const from=logState.done||!fsLog.vers.length?0:Math.min(...fsLog.vers.map(v=>v.t));
       fsLog.audits=(await F.auditSince(CFG.firebase,from)).filter(a=>fsAuditDept(a)===CFG.deptId)}
     logState.items=fsLogItems([...fsLog.vers,...fsLog.audits]);
-  }catch(e){msg=e&&e.code==="permission-denied"?"沒有權限":"讀取失敗"}
+  }catch(e){fsReadErr("編輯紀錄",e);msg=e&&e.code==="permission-denied"?"沒有權限":"讀取失敗"}
   logState.busy=false;renderLog(msg);
 }
 /* host：設定頁桌面版的右側面板（沒有就是全螢幕）。回傳的 Promise 在關閉時完成 */

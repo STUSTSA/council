@@ -53,9 +53,9 @@ async function actLoadFs(force){
   const now=new Date();now.setMinutes(0,0,0);const start=now.getTime()+HOUR-ACT_H*HOUR;
   const ds=window.BOARD_DEPTS||[],c=cloudCfg(),gh=!!(c.owner&&c.repo);
   let F=null;try{F=await storeFsGet()}catch(_){}
-  const audits=F&&fsRole()==="super"?await F.auditSince(CFG.firebase,start).catch(()=>[]):[];
+  const audits=F&&fsRole()==="super"?await F.auditSince(CFG.firebase,start).catch(e=>{fsReadErr("編輯量・稽核紀錄",e);return []}):[];
   const res=await Promise.all(ds.map(d=>deptSourceOf(d.id)==="firestore"
-    ?(F?F.versionsSince(CFG.firebase,d.id,start):Promise.reject()).then(v=>[...v.filter(x=>!x.imported),...audits.filter(a=>fsAuditDept(a)===d.id)].map(x=>({t:x.t,n:1}))).catch(()=>null)
+    ?(F?F.versionsSince(CFG.firebase,d.id,start):Promise.reject()).then(v=>[...v.filter(x=>!x.imported),...audits.filter(a=>fsAuditDept(a)===d.id)].map(x=>({t:x.t,n:1}))).catch(e=>{if(e)fsReadErr("編輯量・"+d.id,e);return null})
     :gh?actFetch(d,start).catch(()=>null):Promise.resolve(null)));
   actSet(ds,res,start,"");
   if(ACT.again){ACT.again=false;actLoadFs(true)}

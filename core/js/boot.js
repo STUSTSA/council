@@ -20,7 +20,7 @@ const boardSplashOut=()=>splashOut(()=>{document.querySelectorAll(INTRO_SEL).for
    部門設成 source:"firestore" 時改讀新資料庫（store.js），讀到的就是最新的，不跟本機暫存比 savedAt，也不存進本機暫存 */
 let storeFsErr=null;
 const dataReady=!(SEEDED&&location.protocol!=="file:")?Promise.resolve()
-:storeSource()==="firestore"?storeFsLoad().then(r=>{netFail=false;storeFsUse(r)}).catch(e=>{netFail=!(e&&e.code==="permission-denied");storeFsErr=e})
+:storeSource()==="firestore"?storeFsLoad().then(r=>{netFail=false;storeFsUse(r)}).catch(e=>{fsReadErr("看板",e);netFail=!(e&&e.code==="permission-denied");storeFsErr=e})
 :fetch(CFG.data.path,{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(d=>{
   netFail=false;
   if(d&&(d.savedAt||"")>=(state.savedAt||"")){const keep=state.sync;state=normalize(d);if(!state.sync&&keep)state.sync=keep;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(_){}}

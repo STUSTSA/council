@@ -10,7 +10,7 @@ async function fwLoad(id,force){
   const c=fwCache.get(id);if(c&&!force&&Date.now()-c.at<3e5)return c;
   const d=fwDept(id);if(!d)return {at:Date.now(),data:null,err:"沒有這個部門"};
   let data=null,err="";
-  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){err=STORE_XERR(e)}}
+  if(deptSourceOf(id)==="firestore"){try{data=await storeDeptData(id)}catch(e){fsReadErr("讀部門 "+id,e);err=STORE_XERR(e)}}
   else try{
     const cc=cloudCfg(),tok=ghToken();
     if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}`,{headers:{Accept:"application/vnd.github.raw+json",Authorization:"Bearer "+tok},cache:"no-store"});if(r.ok)data=await r.json();else if(r.status===404)err="這個部門還沒有資料"}
