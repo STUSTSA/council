@@ -293,15 +293,20 @@
     img.src=srcs[0];w.firstElementChild.append(img);
   }
   /* 首字（兩邊都沒有圖示、或內網網域時圓鈕上的字；ui-09 M2，DievE 11/19 定）：
-     英數網域＝去掉 www. 的網域第一個字母（大寫）。中文等非英數網域（hostname 任一段是 punycode「xn--」；
-     new URL() 一定把非 ASCII 的網域轉成 punycode，所以原始輸入含非 ASCII 也走這條）＝連結名稱的第一個字：
-     照字素切（Intl.Segmenter，沒有就 Array.from），emoji、組合字不切壞；照打的樣子，不轉大寫。
-     這種網域沒取名稱（名稱空的，或名稱就是網域）時維持網域第一個字母（punycode 的 X；交接說明一百零五「中文網域的首字母」待決定） */
+     平常＝去掉 www. 的網域第一個字母（大寫）。只有這個字母會是 punycode 的 x 時（去掉 www. 之後的網域開頭是「xn--」，
+     例如 例子.tw、中文.github.io）改用連結名稱的第一個字；只有後面幾段是中文（example.台灣、blog.例子.tw）首字母照樣取得到，維持網域首字母。
+     new URL() 會把網域照 IDNA 正規化：中文等正規化後仍不是 ASCII 的字變成 punycode「xn--」；全形英數、全形句點會先變成半形 ASCII，不產生 xn--，走英數那條。
+     名稱照字素切（Intl.Segmenter，沒有就 Array.from），emoji、組合字不切壞；照打的樣子，不轉大寫；開頭只由格式字元或空白組成的字素（零寬空格等）跳過。
+     沒取名稱時維持網域第一個字母（punycode 的 X；交接說明一百零五「中文網域的首字母」待決定）：名稱空的、跳過格式字元後沒有字、
+     或名稱本身就是這個網域（lkUrl 解得出網址、去掉 www. 與結尾點的 hostname 跟連結相同：例子.tw、www.例子.tw、https://例子.tw/、xn--fsqu00a.tw 都算） */
   const lkSeg=typeof Intl==="object"&&typeof Intl.Segmenter==="function"?new Intl.Segmenter(undefined,{granularity:"grapheme"}):null;
-  const lkG1=s=>{if(lkSeg){for(const x of lkSeg.segment(s))return x.segment;return ""}return Array.from(s)[0]||""};
+  const lkBlank=/^[\p{Cf}\p{Z}\s]+$/u;
+  const lkG1=s=>{for(const g of lkSeg?Array.from(lkSeg.segment(s),x=>x.segment):Array.from(s))if(!lkBlank.test(g))return g;return ""};
   function lkFirst(x,h){
-    const n=x.n.trim(),host=new URL(x.u).hostname.replace(/\.$/,"").toLowerCase(),nl=n.toLowerCase().replace(/\.$/,"");
-    if(/(^|\.)xn--/.test(host)&&n&&nl!==host&&nl!==h.toLowerCase())return lkG1(n);
+    if(/^xn--/.test(h)&&x.n){
+      const bare=s=>s.replace(/\.$/,""),nu=lkUrl(x.n);
+      if(!nu||bare(lkHost(nu))!==bare(h)){const c=lkG1(x.n);if(c)return c}
+    }
     return h.charAt(0).toUpperCase();
   }
   function lkNode(x){
