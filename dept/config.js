@@ -54,7 +54,7 @@ const BOARD_DEPTS = [
   { id: "affairs",     name: "社務部" },
   { id: "pr",          name: "公關部" },
   { id: "works",       name: "工務部" },
-  { id: "fruit",       name: "水果部", test: true },
+  { id: "fruit",       name: "水果部", test: true, source: "firestore" },
 ].map(d => ({ path: `data-${d.id}.json`, boardId: `board-${d.id}`, logo: false, follow: false, meeting: false, grant: false, test: false, ext: "", extIcon: "", mergeDone: false, source: "github", ...d }));
 
 (() => {
