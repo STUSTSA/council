@@ -1,10 +1,12 @@
-/* ui-10 A：設定頁面板裡的表單（dialog.js 的 in-pane #dlg）
+/* ui-10 A、B：設定頁面板裡的表單（dialog.js 的 in-pane #dlg）
    A 離開面板時，面板裡開著的表單要當成取消收掉（Promise 照取消的值 null 結束、不送出、不寫資料），不能留在別的頁面：
      手機子頁的「返回」、系統返回（popstate）、再進「紀錄」；桌面換到別的面板、按 Esc、收起設定、首頁鍵；
      疊一層面板（人員 → 權限歷史）；離開後立刻打開另一個表單（看板名稱）時新表單不被舊的關閉事件收掉。
+   B 自製下拉（.csel）展開後，每個選項都在最上面、點得到（elementFromPoint 在每個選項中心＝那個選項）：
+     產生 QR、申請編輯權限、授予權限（面板裡的表單）、紀錄的篩選、設定外面跳出的表單；412 寬與 1300 寬。
    用 Auth 模擬器＋Firestore 模擬器、正式規則；水果部＝firestore，總管理員。
    執行（會自己開模擬器與網站）：cd backend && npm run test:web
-   截圖：UI10SHOT=<資料夾> 時把 412 深色的 A（返回清單後）存成 A-412-dark.png */
+   截圖：UI10SHOT=<資料夾> 時把 412 深色的 A（返回清單後）與 B（下拉展開）存成 A-412-dark.png、B-412-dark.png */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
 const {createRequire}=require('module');
 const ROOT=path.resolve(__dirname,'..','..');const breq=createRequire(path.join(ROOT,'backend','package.json'));
@@ -63,12 +65,30 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* 一個節點中心點到的是不是它自己（沒被別的東西蓋住） */
   const onTop=(p,sel)=>p.evaluate(sel=>{const e=[...document.querySelectorAll(sel)].find(x=>x.getClientRects().length);if(!e)return false;e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect(),x=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!x&&e.contains(x)},sel);
 
+  /* B：在 root 裡把每個 .csel 依序展開，檢查每個選項中心點到的就是那個選項 */
+  const cselCheck=async(p,root,label)=>{
+    const n=await p.evaluate(r=>document.querySelector(r).querySelectorAll('.csel').length,root);
+    if(!n){ok(false,`${label}：找不到下拉`);return}
+    for(let i=0;i<n;i++){
+      await p.evaluate(([r,i])=>document.querySelector(r).querySelectorAll('.csel')[i].querySelector('.csel-btn').click(),[root,i]);
+      await p.waitForTimeout(450);
+      const res=await p.evaluate(([r,i])=>{const c=document.querySelector(r).querySelectorAll('.csel')[i],os=[...c.querySelectorAll('.csel-opt')],bad=[];
+        for(const o of os){o.scrollIntoView({block:'nearest'});const q=o.getBoundingClientRect(),x=document.elementFromPoint(q.left+q.width/2,q.top+q.height/2);
+          if(!x||x.closest('.csel-opt')!==o)bad.push(`${o.textContent}→${x?(x.className||x.tagName):'無'}`)}
+        return {name:c.querySelector('input').name,open:c.classList.contains('open'),n:os.length,bad}},[root,i]);
+      ok(res.open&&res.n>0&&!res.bad.length,`${label}「${res.name}」展開：${res.n} 個選項都在最上面、點得到${res.bad.length?`（被蓋住：${res.bad.slice(0,4).join('、')}${res.bad.length>4?'…':''}）`:''}`);
+      if(SHOT&&label.startsWith('412 產生 QR')&&i===0){fs.mkdirSync(SHOT,{recursive:true});await p.screenshot({path:path.join(SHOT,'B-412-dark.png')})}
+      await p.keyboard.press('Escape');await p.waitForTimeout(250);
+    }
+  };
+
   /* ---------- 手機 412、深色 ---------- */
   const m=await open({w:412,vh:915,dark:true});
   const bossUid=await signIn(m,'boss');await setSuper(bossUid);
   await m.waitForFunction(()=>typeof acctSuper==='function'&&acctSuper(),null,{timeout:10000});
   await openSet(m);await row(m,'council');await hubGo(m,'invite');
   ok(await formOpen(m,'[data-new]','產生 QR'),'412：QR 邀請 →「產生 QR」表單畫在子頁裡');
+  await cselCheck(m,'#dlgForm','412 產生 QR');
   /* A1 返回：回到會長室管理清單，表單收掉、照取消結束 */
   await m.click('#subBack');await m.waitForTimeout(900);
   {const a=await lastAsk(m);
@@ -80,6 +100,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* A2 再進「紀錄」：不會看到上一個表單 */
   await hubGo(m,'audit');
   ok(await formGone(m)&&await m.evaluate(()=>!!document.querySelector('#setSub .acct-panel:not([hidden]) .acct-log')),'A 412 再進「紀錄」：只有紀錄，沒有「產生 QR」表單');
+  await cselCheck(m,'#setSub .acct-panel:not([hidden]) .acct-filter','412 紀錄篩選');
   await m.click('#subBack');await m.waitForTimeout(900);
   /* A3 系統返回（popstate） */
   await hubGo(m,'invite');await formOpen(m,'[data-new]','產生 QR');
@@ -89,6 +110,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await m.click('#subBack');await m.waitForTimeout(900);
   await row(m,'acct');
   ok(await formOpen(m,'[data-hub="req"]','申請編輯權限'),'412：帳號 →「申請編輯權限」表單');
+  await cselCheck(m,'#dlgForm','412 申請編輯權限');
   await m.click('#subBack');await m.waitForTimeout(900);
   {const a=await lastAsk(m);ok(await formGone(m)&&a.v===null,'412 申請編輯權限按返回：表單收掉、照取消結束')}
   ok(await count('invitations')===0&&await count('roleRequests')===0,'A 412：離開時沒有送出（沒有建立邀請、申請）');
@@ -100,11 +122,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await signIn(d,'boss');await d.waitForFunction(()=>typeof acctSuper==='function'&&acctSuper(),null,{timeout:10000});
   await openSet(d);await row(d,'council');await hubGo(d,'invite');
   ok(await formOpen(d,'[data-new]','產生 QR'),'1300：QR 邀請 →「產生 QR」表單畫在右側面板');
+  await cselCheck(d,'#dlgForm','1300 產生 QR');
   /* A4 換到別的面板 */
   await row(d,'acct');
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null,`A 1300 換到「帳號」：「產生 QR」表單收掉、照取消結束（${JSON.stringify(a.v)}）`);
     ok(await d.evaluate(()=>!!document.querySelector('#setOv .set-pane [data-hub="out"]')),'A 1300 換到「帳號」：右側是帳號頁');}
   ok(await formOpen(d,'[data-hub="req"]','申請編輯權限'),'1300：帳號 →「申請編輯權限」表單');
+  await cselCheck(d,'#dlgForm','1300 申請編輯權限');
   /* A5 Esc */
   await row(d,'council');await hubGo(d,'invite');await formOpen(d,'[data-new]','產生 QR');
   await d.keyboard.press('Escape');await d.waitForTimeout(900);
@@ -120,11 +144,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await row(d,'council');await hubGo(d,'people');
   await d.click('.acct-panel:not([hidden]) [data-who]');await d.waitForTimeout(600);
   await formOpen(d,'.acct-panel:not([hidden]) [data-add]','boss 同學：新增部門');
+  await cselCheck(d,'#dlgForm','1300 新增部門');
   await d.click('.acct-panel:not([hidden]) [data-hist]');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!!document.querySelector('.acct-panel:not([hidden]) [data-chain]')),'A 1300 人員 → 權限歷史：新增部門表單收掉、照取消結束')}
   await d.click('.acct-panel:not([hidden]) [data-back]');await d.waitForTimeout(700);
   await d.click('.acct-panel:not([hidden]) [data-back]');await d.waitForTimeout(700);
   ok(await formOpen(d,'.acct-panel:not([hidden]) [data-grant]','授予權限'),'1300：人員 →「授予權限」表單');
+  await cselCheck(d,'#dlgForm','1300 授予權限');
   /* A8 收起設定（工具列的設定鍵） */
   await d.click('#setBtn');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!setOpen),'A 1300 收起設定：表單收掉、照取消結束')}
@@ -134,6 +160,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await d.click('.dhead .dh-home');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>window.__left===true),'A 1300 首頁鍵：表單收掉、照取消結束，再離開看板')}
   /* 設定外面跳出的表單（不在面板裡）：下拉一樣點得到 */
+  await d.evaluate(()=>{ask('測試',[{name:'a',label:'部門',type:'select',value:'fruit',options:acctDeptOpts()},{name:'b',label:'角色',type:'select',value:'editor',options:[['editor','編輯者'],['admin','管理員']]},{name:'c',label:'備註'}])});
+  await d.waitForTimeout(700);
+  ok(await d.evaluate(()=>{const x=document.querySelector('#dlg');return x.open&&!x.classList.contains('in-pane')}),'1300 設定外面：表單跳出來（不在面板裡）');
+  await cselCheck(d,'#dlgForm','1300 跳出的表單');
+  await d.click('#dlg [data-act="cancel"]');await d.waitForTimeout(500);
   ok(await count('invitations')===0&&await count('roleRequests')===0,'A 1300：離開時沒有送出（沒有建立邀請、申請）');
   ok(await d.evaluate(()=>{const r=window.__ask.find(x=>x.t==='boss 同學：新增部門');return !!r&&r.v===null}),'A 1300：新增部門沒有寫角色');
   ok(d.errs.length===0,`1300：沒有頁面錯誤${d.errs.length?'：'+d.errs.join(' | '):''}`);
