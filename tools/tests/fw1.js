@@ -160,9 +160,9 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const wk=wid&&await read(`weeks/${DEPT}__${wid}`);ok(wk&&wk.createdAt&&wk.updatedBy===edUid,'新增週報：weeks 文件');
   ok((await read(`deptSettings/${DEPT}`)).rev===1,'新增週報：編輯者不寫部門設定（週報基準）');
   /* h. 新增標籤（設定頁 → 標籤） */
-  await openSet(ed);await ed.click('[data-set="labels"]');await ed.waitForSelector('[data-newlbl="人"]',{timeout:8000});
+  await openSet(ed);await ed.click('[data-set="labels"]');await ed.waitForSelector('[data-x="open"][data-k="人"]',{timeout:8000});   /* ui-09：一類一塊，點虛線「+」才有輸入框 */
   ok(await ed.evaluate(()=>!document.querySelector('#dlgForm [data-x="del"]')),'標籤：編輯者沒有刪除鈕');
-  await ed.fill('[data-newlbl="人"]','FW 標籤');await ed.click('[data-x="add"][data-k="人"]');await ed.click('[data-x="done"]');await settled(ed);
+  await ed.click('[data-x="open"][data-k="人"]');await ed.fill('[data-newlbl="人"]','FW 標籤');await ed.press('[data-newlbl="人"]','Enter');await ed.click('[data-set="labels"]');await settled(ed);   /* 沒有「完成」：再點一次「標籤」離開這一頁就存 */
   const lid=await ed.evaluate(()=>(state.labels.find(l=>l.name==='FW 標籤')||{}).id);
   const lb=lid&&await read(`labels/${DEPT}__${lid}`);ok(lb&&lb.kind==='人'&&lb.updatedBy===edUid,'新增標籤：labels 文件');
   await closeSet(ed);
@@ -218,9 +218,9 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await ad.click(`[data-week="${wid}"] [data-delweek]`);await dlg(ad);await dlgAct(ad,'delete');await settled(ad);await closeSet(ad);
     const wl=await delLogs('weeks');
     ok(!(await read(`weeks/${DEPT}__${wid}`))&&wl.length===1&&wl[0].before.title===wBefore.date&&wl[0].actor===adUid,'管理員刪除週報：文件不在、刪除紀錄的標題是週報日期');
-    await openSet(ad);await ad.click('[data-set="labels"]');await ad.waitForSelector('[data-newlbl="人"]',{timeout:8000});
+    await openSet(ad);await ad.click('[data-set="labels"]');await ad.waitForSelector('[data-x="open"][data-k="人"]',{timeout:8000});
     ok(await ad.evaluate(id=>!!document.querySelector(`#dlgForm [data-x="del"][data-id="${id}"]`),lid),'管理員：標籤有刪除鈕');
-    await ad.click(`#dlgForm [data-x="del"][data-id="${lid}"]`);await ad.click('[data-x="done"]');await settled(ad);await closeSet(ad);
+    await ad.click(`#dlgForm [data-x="del"][data-id="${lid}"]`);await ad.click('[data-set="labels"]');await settled(ad);await closeSet(ad);
     const ll=await delLogs('labels');
     ok(!(await read(`labels/${DEPT}__${lid}`))&&ll.length===1&&ll[0].before.title==='FW 標籤'&&ll[0].actor===adUid,'管理員刪除標籤：文件不在、刪除紀錄有標籤名稱');
     /* 正式專案的伺服器時間到微秒（模擬器只到毫秒）：放一個 updatedAt 有微秒的標籤，管理員從畫面刪除也要成功（02D 審查 P1-1） */

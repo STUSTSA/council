@@ -1781,6 +1781,19 @@ body.set-open #pageMain{overflow:hidden}
 .lbl-grp{display:grid;grid-template-columns:24px minmax(0,1fr);align-items:start;gap:8px}
 .lbl-k{display:inline-flex;align-items:center;justify-content:center;width:24px;height:30px;font-size:13px;font-weight:700;color:var(--muted)}
 .lbl-empty{margin:0}
+/* 設定頁「標籤」面板（labels.js 的 labelSetHTML；DESIGN-next 第十二節、模擬頁 TAGS；ui-09）：一類一塊平面色塊（--blk、圓角 18），
+   標題＋這一類的數量；下面標籤膠囊（--blk2，名字點了就改、× 刪除），最後一顆虛線「+」（點了原地變成虛線輸入框） */
+.lbl-box{display:grid;gap:14px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.lbl-h{display:flex;align-items:baseline;gap:10px;margin:0;font-size:17px;font-weight:700;letter-spacing:.08em}
+.lbl-h .num{font-size:14px;font-weight:400;letter-spacing:0;color:var(--muted)}
+.lbl-tags{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.lbl-tag{display:inline-flex;align-items:center;height:36px;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:13.5px}
+.lbl-n{display:inline-flex;align-items:center;height:36px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:none;color:inherit;font-size:13.5px;line-height:1}
+.lbl-n+.lbl-x{margin-left:-10px}
+.lbl-x{display:grid;place-items:center;width:30px;height:30px;min-height:0;margin-right:3px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font-size:16px;line-height:1}
+.lbl-tag .lbl-in{width:8em;height:36px;padding:0 16px;border:0;border-radius:999px;background:transparent;font-size:13.5px}   /* 改名中：膠囊裡的輸入框 */
+.lbl-add{display:inline-grid;place-items:center;min-width:84px;height:36px;min-height:0;padding:0 16px;border:1.5px dashed var(--ink);border-radius:999px;background:transparent;color:var(--ink);font-size:17px;line-height:1}
+input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛線膠囊本身變成輸入框 */
 .tm-sec{display:grid;gap:8px;padding-top:4px}
 .tm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .tm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 14px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
