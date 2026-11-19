@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-19 20:43",
+ "savedAt": "2026-11-19 23:03",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -354,7 +354,7 @@
   {
    "id": "emvt1pwvqrhyw",
    "name": "停車場冷氣機報廢後續",
-   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考\n☐ ",
    "createdAt": "2026-10-29",
    "staff": [],
    "touched": [
@@ -362,12 +362,22 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-09",
-    "2026-11-16"
+    "2026-11-16",
+    "2026-11-19"
    ],
    "links": [],
-   "times": [],
+   "times": [
+    {
+     "id": "tmwnoj7tb2p91",
+     "label": "",
+     "start": "2026-11-23T20:00",
+     "end": "",
+     "place": "",
+     "toIssue": false
+    }
+   ],
    "round": 3,
-   "touchedAt": "2026-11-16T17:33",
+   "touchedAt": "2026-11-19T23:03",
    "report": true,
    "roundAt": "2026-11-16T17:33",
    "labels": [],
@@ -390,6 +400,12 @@
      "text": "本會提出時段供各處室參考",
      "check": null,
      "timeId": null
+    },
+    {
+     "id": "bmwnoj7tbf47q",
+     "text": "",
+     "check": false,
+     "timeId": "tmwnoj7tb2p91"
     }
    ]
   },
