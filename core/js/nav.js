@@ -310,13 +310,13 @@ function paneReset(){const e=setEls();paneKey="";if(!e)return;e.body.classList.r
 /* 把右側正在進行的流程當成取消：編輯紀錄就關掉，對話框就送出 cancel（身分與專員會照「完成」處理）。
    合併頁（hubRun）：all＝整個收掉（換項目、關設定）；否則一次退一層（合併頁裡開著的功能先取消、回到合併頁，再退才離開） */
 function paneDismiss(all){
-  const d=$("#dlg"),lg=$("#logOv"),hubOn=hubNow&&!hubNow.inFlow;
+  const lg=$("#logOv"),hubOn=hubNow&&!hubNow.inFlow;
   if(hubNow&&(all||hubOn))hubNow.end();
   if(hubOn)return paneJob||Promise.resolve();
   if(weekPaneEnd){weekPaneEnd();return paneJob||Promise.resolve()}   /* 每週概述（weekly.js 的 weekPane）：關掉就回到「報告」合併頁（或設定清單） */
-  if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、會長室管理的面板（account.js）：一次收一層，all＝全部 */
+  if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、會長室管理的面板（account.js）：一次收一層，all＝全部；面板裡開著的表單由 acctPanel 收掉時一起取消 */
   if(lg&&!lg.hidden&&lg.classList.contains("in-pane"))closeLog();
-  else if(d.open&&d.classList.contains("in-pane")){const ev=new Event("cancel",{cancelable:true});d.dispatchEvent(ev);if(!ev.defaultPrevented)d.close()}
+  else dlgPaneCancel();   /* 面板就是表單（名稱、看板名稱、身分與專員、標籤…）：當成取消（dialog.js） */
   return paneJob||Promise.resolve();
 }
 async function paneRun(k,fn){
