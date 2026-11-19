@@ -4,7 +4,7 @@
    2. 今日／明日卡片：今日＝--pri 底；今日層開關（Esc）、只有「本來就要做」；點明日＝行事曆選到那一天
    3. 逾期卡片堆只列逾期（勾了的、還沒到的不列）；左滑延後（明天同一時刻、存檔）；右滑（改時間鈕）打開那張卡片的時間頁
    4. 海報月曆：週一開頭、選到的日期 40px --acc 圓、今天 --acc2 粗體、跨天細線與分層 9px；點日期清單換內容（舊的分身淡出）；月份選單 Esc 關、選月份
-   5. 五類模式：會長室、「其他」勾了才讀那個部門（攔截請求計數，讀過不重讀）；活動、會議在 github 部門是空的、不讀；有 firestore 部門時讀 scope（用替身模組）
+   5. 五類模式：會長室、「其他」勾了才讀那個部門（攔截請求計數，讀過不重讀）；活動、會議在 github 部門是空的、不讀；只有測試部門是 firestore 也不讀；有 firestore 部門時讀 scope（用替身模組）
    6. 跳脫：事件名稱含 <img onerror>；公共版參數（calMount）；唯讀時沒有通知鈕、開著時變唯讀就回原分頁
    7. 關掉動態（reduced-motion）：進出、今日層、換日期、卡片堆都沒有程式動畫
    8. 412 寬：沒有橫捲、鏡片留在原分頁
@@ -158,6 +158,13 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     ok(req.join()==='president,marketing'&&await p.evaluate(()=>$('.cal-oth [data-caloth="marketing"]').getAttribute('aria-checked')==='true'&&/行銷活動/.test($('.cal-list').textContent)),`勾了行銷部才讀（${req}），清單有那件事`);
     await p.click('.cal-oth [data-caloth="marketing"]');await p.waitForTimeout(400);await p.click('.cal-oth [data-caloth="marketing"]');await p.waitForTimeout(500);
     ok(req.length===2,`取消再勾：不重讀（${req.length}）`);
+    /* 只有測試部門（水果部）切到 firestore：不算，活動、會議照舊空的、不讀（2026-11-19，實測 Google 登入時不影響其他部門） */
+    const t0=await p.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='fruit').source='firestore';window.__q0=[];window.__fm=storeFsMod;
+      storeFsMod=Promise.resolve({eventsByScope:async(cfg,s)=>{__q0.push(s);return []}});NOTI.day=today();NOTI.month=today().slice(0,7);renderNoti();return storeScopeOn()});
+    await p.click('.cal-seg [data-k="act"]');await p.waitForTimeout(500);await p.click('.cal-seg [data-k="meet"]');await p.waitForTimeout(500);
+    const t1=await p.evaluate(()=>({on:storeScopeOn(),q:__q0.length,ev:document.querySelectorAll('.cal-list .cal-ev').length}));
+    await p.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='fruit').source='github';storeFsMod=window.__fm;CAL_DATA.forEach((v,k)=>{if(!k.startsWith('dept:'))CAL_DATA.delete(k)})});await p.click('.cal-seg [data-k="mine"]');await p.waitForTimeout(400);
+    ok(!t0&&!t1.on&&t1.q===0&&t1.ev===0,`活動、會議：只有測試部門（水果部）是 firestore 不算＝空的、不讀（${JSON.stringify(t1)}）`);
     /* 有部門切到 firestore 時，活動、會議讀 scope 的時間事件（用替身模組，記下查詢參數） */
     const sc=await p.evaluate(async X=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';window.__q=[];
       storeFsMod=Promise.resolve({eventsByScope:async(cfg,s,a,b)=>{__q.push([s,a<b]);return [{id:'events__e1',deptId:'events',label:X,startRaw:today()+' 18:00',endRaw:'',allDay:false,place:'操場',scope:s}]}});
