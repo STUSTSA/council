@@ -42,6 +42,9 @@ function storeDeptData(id){
    測試部門（test:true，例如實測 Google 登入時的水果部）切到 firestore 不算：不讓一個測試部門改變其他部門與主頁全會行事曆的行為（2026-11-19） */
 const storeScopeOn=()=>!!(CFG.firebase&&CFG.firebase.projectId)&&BOARD_DEPTS.some(d=>d.source==="firestore"&&!d.test);
 function storeScopeEvents(scope,from,to,o){return storeFsGet().then(fs=>fs.eventsByScope(CFG.firebase,scope,from,to,o))}   /* o.pub＝公共版（沒登入時只查公開事件） */
+/* 讀取新資料庫失敗時把原始錯誤記到 console（2026-11-20：開發專案缺索引時畫面只寫「讀取失敗」、查不到原因）。畫面照舊只顯示簡短原因：
+   原始訊息可能含專案網址與建索引的連結，不放上畫面。沒登入或沒權限（permission-denied）是預期中會發生的，用 warn */
+const fsReadErr=(where,e)=>{(e&&e.code==="permission-denied"?console.warn:console.error)(`Firestore 讀取失敗（${where}）`,e)};
 const STORE_XERR=e=>e&&e.code==="permission-denied"?"這個部門已搬到新資料庫，登入後才看得到":"讀不到這個部門的資料";
 /* 02D：稽核紀錄屬於哪個部門（編輯紀錄、各部門編輯量用）：部門設定的修改＝那個部門；卡片刪除、議題／週報／標籤的刪除（D-d）＝被刪文件的部門；其他（角色、邀請、遷移）不算 */
 const fsAuditDept=a=>a.col==="deptSettings"&&a.action==="update"?a.docId
@@ -80,7 +83,7 @@ async function fsPersist(msg,o={}){
     if(!o.quiet){toast(m);setTimeout(()=>fsFailAsk(m),0)}
     return false;
   }
-  try{storeFsUse(await storeFsLoad())}catch(_){storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
+  try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("儲存後重新讀取",e);storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
   fsBusy=false;render();if(!o.quiet)toast(msg||"已儲存");return true;
 }
 /* 補寫：e.draft＝這次要存的畫面資料（完成這一段換過 ID 的時間標記用新的 ID，重試不會再建一份）、e.intended＝這次要寫的文件。
@@ -117,6 +120,6 @@ function fsHold(prev,paths){
 async function fsFailAsk(m){
   if(await ask("儲存失敗",[],{danger:"重新載入",note:m})!=="delete")return;
   editing=false;cardEdit="";dirty=false;evFld=null;ifFld=null;
-  try{storeFsUse(await storeFsLoad())}catch(_){storeFsBase=null;toast("讀取失敗，請重新整理")}
+  try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("重新載入",e);storeFsBase=null;toast("讀取失敗，請重新整理")}
   render();
 }

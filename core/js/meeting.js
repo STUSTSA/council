@@ -15,7 +15,7 @@ async function mtLoadAll(force){
   const cc=cloudCfg(),tok=ghToken();
   await Promise.all((window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId).map(async d=>{
     let data=null,sha=null,err="";
-    if(deptSourceOf(d.id)==="firestore"){try{data=await storeDeptData(d.id)}catch(e){err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore（只讀；寫回時 mtPushAll 擋下） */
+    if(deptSourceOf(d.id)==="firestore"){try{data=await storeDeptData(d.id)}catch(e){fsReadErr("讀部門 "+d.id,e);err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore（只讀；寫回時 mtPushAll 擋下） */
     else try{
       if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}&t=${Date.now()}`,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+tok},cache:"no-store"});
         if(r.ok){const j=await r.json();sha=j.sha;data=JSON.parse(b64dec(j.content))}else if(r.status===404)err="還沒有資料"}

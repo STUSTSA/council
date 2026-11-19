@@ -84,6 +84,30 @@
 
 **失敗時截哪裡**：Cloud Shell 整個視窗（含指令與紅字）；主控台的錯誤提示。報錯裡不會有密碼或金鑰；如果畫面上出現授權碼，截圖前先把那一行遮掉。
 
+### 1.5 2026-11-20 補一個索引（只重新部署索引，規則不變）
+
+開發專案實測時「設定 → 編輯紀錄」讀取失敗（`failed-precondition`，缺索引）。新增集合群組 `versions` 的 `deptId ASC, at DESC`，共 22 個複合索引。前端每一個查詢與索引的對照在 `docs/architecture/indexes.md` 第 4 節。
+
+| 檔案 | 這次 | SHA-256 |
+|---|---|---|
+| `backend/firestore.indexes.json` | 多一個索引 | `dbe4e2c39e01062430cb9c3ad969e0232a7f48267d48c72d06caa958825653b2` |
+| `backend/firestore.rules` | **不變，不用重新部署** | `7f066e5e7023abdf6b93335bffeed89df84c146c340c88cf331becc93d850993`（跟 1.1 一樣） |
+
+1. 打開 https://shell.cloud.google.com/?show=terminal （學生會公用帳號）。
+2. 下載這一版的檔案（commit `1ba7680` 是補索引的那一個，PR 合併前後都可以用）：
+   ```bash
+   C=1ba7680fdab4412452f7064698d8a27f6af41cfb; mkdir -p ~/council-deploy && cd ~/council-deploy && for f in firebase.json firestore.rules firestore.indexes.json; do curl -fsSLO "https://raw.githubusercontent.com/STUSTSA/council/$C/backend/$f"; done; sha256sum firestore.rules firestore.indexes.json
+   ```
+   **算成功**：兩行開頭是 `7f066e5e7023…`（規則，跟上次一樣）與 `dbe4e2c39e01…`（索引，新的）。
+3. 只部署索引：
+   ```bash
+   cd ~/council-deploy && npx -y firebase-tools@13.35.1 deploy --only firestore:indexes --project stustsa-council-dev
+   ```
+   要登入時照 1.4 第 3 步。問要不要刪掉檔案裡沒有的索引：回答 `N`。**算成功**：`Deploy complete!`。
+4. https://console.firebase.google.com/project/stustsa-council-dev/firestore/databases/-default-/indexes 「複合」分頁有 22 列；新的一列是「versions｜集合群組｜deptId 遞增、at 遞減」，從「建構中」變成「已啟用」。
+5. 驗證：水果部 → 設定 → 編輯紀錄，看得到 W-1、W-2 的紀錄（不再是「讀取失敗」）。如果還是失敗：F12 →「Console」會有一行紅字「Firestore 讀取失敗（編輯紀錄）」，截那一行給決策端（裡面有建索引的網址，**不要**照著網址自己建，回報就好）。
+6. `npx -y firebase-tools@13.35.1 logout`。
+
 ---
 
 ## 2. 第一位總管理員與備援擁有者
@@ -183,7 +207,7 @@
 
 | # | 做什麼 | 看到什麼算過 | 失敗時截哪裡 |
 |---|---|---|---|
-| S-1 匯入頁 | 電腦 Chrome、帳號 A：水果部 → 設定 → 會長室管理 →「匯入」→ 清單裡水果部標「新資料庫」→ 點它 → 跳出「匯入 水果部（已切到新資料庫）」→ 按「匯入」 | 依序顯示讀取、寫入、檢查；報告最上面是 `stustsa-council-dev`，下一行 `data-fruit.json · STUSTSA/council · commit …`；表格每一列「相同」、V1～V6「通過」、最下面「結果：通過」「衝突 0」。再按「再匯入一次」：寫入 0、衝突 0、結果通過 | 整張報告（只有數量與代號，沒有機密）；失敗時的紅字 |
+| S-1 匯入頁 | 電腦 Chrome、帳號 A：水果部 → 設定 → 會長室管理 →「匯入」→ 清單裡水果部標「新資料庫」→ 點它 → 跳出「匯入 水果部（已切到新資料庫）」→ 按「匯入」 | 依序顯示讀取、寫入、檢查；報告最上面是 `stustsa-council-dev`，下一行 `data-fruit.json · STUSTSA/council · commit …`；表格每一列「相同」、V1～V4、V6「通過」（沒有 V5 是正常的，V5＝下一句的重跑）、最下面「結果：通過」「衝突 0」。再按「再匯入一次」：寫入 0、衝突 0、結果通過 | 整張報告（只有數量與代號，沒有機密）；失敗時的紅字 |
 | S-2 匯入頁的權限 | 帳號 B（另一個瀏覽器或無痕視窗）登入水果部 → 設定 | 沒有「會長室管理」 | 設定清單 |
 
 S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫了卡片再匯入，報告的卡片數會「不同」（照遷移手冊，報告只在開放編輯前有意義）。
@@ -196,7 +220,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 |---|---|---|---|
 | W-1 建卡 | 即時回報 → 右下新增 → 名稱「上限測試」→ Enter 進內容 → 打「1」Enter「2」Enter …一直到「50」（50 行；第 51 次 Enter 不會再多一行，或出現上限提示）→ 工具列「超連結」加 10 個（名稱 L1～L10、網址 `https://example.com/1`～`/10`）→ 按第 11 次「超連結」出現「最多 10 個超連結」→ 點卡片外面（或 Esc）存檔 | 卡片上的儲存回饋是已儲存、沒有「儲存失敗」；重新整理後卡片還在、內容 50 行、10 顆超連結；卡片上的編輯次數小膠囊是 1 | 卡片下方的儲存回饋文字；F12 Console 紅字（有 `evaluation`、`limit`、`expression` 字樣請整段截，代表超過正式環境的運算上限） |
 | W-2 改一行 | 同一張卡片把第 25 行改成「25 改」→ 存 | 已儲存；重新整理後還在；編輯次數 2；設定 → 編輯紀錄有這一筆 | 同上 |
-| W-3 加時間 | 同一張卡片加一個時間（工具列「時間」）→ 存 | 已儲存（50 行＋10 超連結＋時間同一批） | 同上 |
+| W-3 加時間 | 同一張卡片先刪掉最後一行（剩 49 行）→ 工具列「時間」加一個時間 → 存。時間本身佔一行（規格：每個時間是內容裡的一行），所以滿 50 行時按「時間」會提示「最多 50 行」，這是對的，不是錯誤 | 已儲存；重新整理後是 50 行（49 行文字＋1 行時間）、10 個超連結、編輯次數 3（規則的上限：50 行＋10 個超連結＋時間標記同一批寫入） | 同上 |
 
 ### 3.3 登入（每種環境都做；帳號 B，除非另外寫）
 

@@ -7,7 +7,7 @@
    4. 衝突（別人剛存過）：不寫入、畫面上的修改留著、可以重新載入
    5. 撤權：畫面即時變回唯讀；編輯中按儲存被規則擋下、修改留著；直接呼叫寫入也被拒
    6. 其他部門的 Firestore 文件前後完全相同；沒有頁面錯誤
-   7. 編輯紀錄（版本歷史；總管理員加上稽核紀錄）、會長室在 firestore 模式的各部門編輯量（讀不到的部門顯示「—」）（02D D3，跑在第 6 段之前）
+   7. 編輯紀錄（版本歷史；總管理員加上稽核紀錄）、會長室在 firestore 模式的各部門編輯量（讀不到的部門顯示「—」）（02D D3，跑在第 6 段之前）；讀取失敗時畫面只寫「讀取失敗」、原始錯誤進 console（2026-11-20）
    8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：ID 不合格的文件不顯示、欄位值跳脫，總管理員打開看板不執行（跑在第 6 段之前）
    9. 中斷的永久刪除（timeIds 有不存在的時間標記）不擋別的修改、會接著清完；兩個編輯者同時接著清不會卡住（02D 審查 P1）
    10. 分批儲存中途失敗（route 擋下第二個 commit）：重新讀、只補寫剩下的，完成這一段的時間標記不重複（02D 審查 P1）
@@ -285,6 +285,11 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const su2=await open();const suUid=await signIn(su2,'su2');await setRole(suUid,{},true);await until(async()=>!(await ui(su2)).locked);
   {const r=await logText(su2);
     ok(r.t.includes('設定\n看板名稱')&&r.t.includes(`即時回報\n刪除｜${del.name}`)&&r.t.includes('即時回報\n修改｜FW 新卡片'),'編輯紀錄（總管理員）：加上稽核紀錄（看板名稱、卡片刪除）');}
+  /* 2026-11-20：開發專案缺索引時編輯紀錄只寫「讀取失敗」、console 沒有訊息 → 原始錯誤進 console.error，畫面仍只有簡短原因（不放含專案網址的訊息） */
+  {const cons=[];const h=m=>{if(m.type()==='error')cons.push(m.text())};su2.on('console',h);
+    await su2.evaluate(()=>{const F=window.BoardFirestore;F.__vp=F.versionsPage;F.versionsPage=async()=>{throw Object.assign(new Error('The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/demo-x/firestore/indexes?create_composite=Q9b'),{code:'failed-precondition'})}});
+    const r=await logText(su2);await su2.evaluate(()=>{const F=window.BoardFirestore;F.versionsPage=F.__vp;delete F.__vp});su2.off('console',h);
+    ok(r.msg==='讀取失敗'&&!/https?:|index|demo-x/.test(r.msg+r.t)&&cons.some(x=>x.includes('Firestore 讀取失敗（編輯紀錄）')&&x.includes('requires an index')),`編輯紀錄讀取失敗：畫面只寫「${r.msg}」、原始錯誤進 console（${cons.length} 筆）`);}
   /* 會長室（firestore 模式）的各部門編輯量：權益部＝不是匯入的版本＋稽核紀錄；還在 GitHub、沒有設定 repo 的部門＝讀不到（—） */
   let want=0;await admin(async d=>{want=(await d.collectionGroup('versions').where('deptId','==',DEPT).get()).docs.filter(x=>!x.data().imported).length
     +(await d.collection('auditLogs').get()).docs.map(x=>x.data()).filter(a=>a.col==='deptSettings'&&a.action==='update'&&a.docId===DEPT||a.col==='cards'&&a.action==='purge'&&a.before.deptId===DEPT||['issues','weeks','labels'].includes(a.col)&&a.action==='delete'&&a.before.deptId===DEPT).length});   /* 02D D-d：議題、週報、標籤的刪除紀錄也算 */
