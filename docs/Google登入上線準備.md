@@ -170,7 +170,7 @@
 ### 3.0 前提
 
 - 第 1 節部署完成、索引「已啟用」。
-- 水果部的 PR 已合併（只把水果部改成 `source: "firestore"`，指向開發專案），等 1～2 分鐘。測試修正的 PR（分支 `tests-config-source`）排在它前面合併：不影響網站，只是不先合的話之後跑測試會失敗。
+- 水果部的 PR 已合併（只把水果部改成 `source: "firestore"`，指向開發專案），等 1～2 分鐘。測試修正的 PR（分支 `tests-config-source`）排在它前面合併：不影響網站，只是不先合的話之後跑測試會失敗。行事曆修正（[STUSTSA/council#81](https://github.com/STUSTSA/council/pull/81)，測試部門不算進 `storeScopeOn`）也排在它前面。
 - 第 2 節的總管理員已建立。
 - 網址一律用 https://stustsa.github.io/council/index.html?d=fruit （水果部不在總覽裡，只能用網址進）。
 - 準備：電腦（Chrome）、iPhone、Android 手機；三個 Google 帳號：A＝總管理員（你）、B＝一個沒有任何角色的帳號（個人 Gmail）、C＝學校帳號（R-02 用）。
@@ -302,7 +302,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 |---|---|---|---|
 | 1 | 彈出視窗被擋時的「整頁跳轉」登入，在新版 Safari、Chrome、Firefox 很可能回來仍是未登入：網站在 `stustsa.github.io`、登入用的 `authDomain` 在 `stustsa-council-dev.firebaseapp.com`，瀏覽器的第三方儲存隔離會讓跳轉的結果讀不回來（Firebase 官方文件「Best practices for using signInWithRedirect on browsers that block third-party storage」） | 不改程式，等 L-2、L-3 的實測結果 | (a) 接受只用彈出視窗，被擋時提示「請允許彈出式視窗」；(b) 把登入輔助頁放在同一個網域（要另一個 `stustsa.github.io` 根目錄的 repo，並改 OAuth 重新導向網址）；(c) 自訂網域 |
 | 2 | 安裝成 App 從總覽開始，水果部不在總覽，iPhone 的 App 可能進不了水果部（L-4），Android 要靠連結在 App 裡打開（L-6） | 不改程式，照實記錄 | (a) 接受，App 的登入等第一個正式部門切換時再測；(b) 暫時讓水果部出現在總覽（所有人看得到一個「水果部」）；(c) 加一個只有網址參數才出現的測試入口 |
-| 3 | 水果部一切成 `firestore`，**其他八個部門**的通知頁行事曆「活動」「會議」會改去讀開發專案（`store.js` 的 `storeScopeOn`：只要有任何部門是 firestore 就讀，沒排除測試部門）。沒用 Google 登入的人會看到「登入後才看得到」（原本是空的）；主頁的全會行事曆會多連一次 Google（讀公開活動，開發專案裡沒有，畫面仍是空的）。不寫資料、不影響資料檔 | 照現況，寫在 PR 說明 | (a) 接受（實測期間的小差異）；(b) 讓測試部門不算進 `storeScopeOn`（一行程式，另開 PR） |
+| 3 | 水果部一切成 `firestore`，**其他八個部門**的通知頁行事曆「活動」「會議」會改去讀開發專案（`store.js` 的 `storeScopeOn`：只要有任何部門是 firestore 就讀，沒排除測試部門）。沒用 Google 登入的人會看到「登入後才看得到」（原本是空的）；主頁的全會行事曆會多連一次 Google（讀公開活動，開發專案裡沒有，畫面仍是空的）。不寫資料、不影響資料檔 | **已決定 b**（2026-11-19）：[STUSTSA/council#81](https://github.com/STUSTSA/council/pull/81) 讓測試部門不算進 `storeScopeOn`，排在水果部 PR 之前合併 | (a) 接受（實測期間的小差異）；(b) 讓測試部門不算進 `storeScopeOn`（一行程式，另開 PR） |
 | 4 | 正式專案的授權網域要不要拿掉 `localhost` | 清單建議拿掉；開發專案保留 | 留著的話任何人都能在自己電腦跑一份連正式專案的網站並登入（規則仍然擋權限，只是多一個入口） |
 | 5 | 開發專案授權網域若還有 `linkmasterking.github.io` | 不動 | 拿掉（舊網址已移轉） |
 | 6 | 實測完開發專案裡的測試資料 | 留著 | 用主控台刪掉水果部的 `cards`、`events`、`issues`、`weeks`、`labels`（`docs/遷移步驟.md` 第 4.1 節的做法） |
