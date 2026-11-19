@@ -71,10 +71,10 @@ const SHELL_HTML=`<div class="pager" id="pager">
             <div class="panel-head"><h2 id="ganttH">時間甘特圖<span class="en">TIMELINE</span></h2><button type="button" class="icon card-edit-btn" id="ganttEdBtn" data-edit="s:gantt" aria-label="編輯甘特圖時間軸">編輯</button></div>
             <div class="pv-page" id="pvGantt" data-edbox="s:gantt">
             <div class="g-term lseg" id="gTerm" role="tablist" aria-label="甘特圖範圍"><span class="lseg-lens" aria-hidden="true"></span><button type="button" role="tab" data-k="all" aria-selected="true">全部</button><button type="button" role="tab" data-k="up" aria-selected="false">上學期</button><button type="button" role="tab" data-k="down" aria-selected="false">下學期</button></div>
-            <div class="legend" aria-label="圖例"><span><i class="lg-tk now" aria-hidden="true"></i>今天</span><span><i class="lg-tk on" aria-hidden="true"></i>已過時程</span><span><i class="lg-tk in" aria-hidden="true"></i>剩餘時程</span><span class="lg-hint">點議題列看詳情 · 左右滑動瀏覽月份</span></div>
+            <div class="legend" aria-label="圖例"><span><i class="lg-tk now" aria-hidden="true"></i>今天</span><span><i class="lg-tk on" aria-hidden="true"></i>已過時程</span><span><i class="lg-tk in" aria-hidden="true"></i>剩餘時程</span></div>
             <div class="range">時間軸 <input type="month" id="rStart" aria-label="起始月份"> 到 <input type="month" id="rEnd" aria-label="結束月份"> <button class="icon" id="autoRange">依議題自動調整</button></div>
             <div class="gantt" id="gantt" data-flip></div>
-            <button class="ghost auth-only add-row" id="addIssue">+ 新增議題</button>
+            <button class="ghost auth-only add-row" id="addIssue">+ 議題</button>
             </div>
             <div class="pv-page" id="pvDetail" hidden>
               <button type="button" class="pv-back" id="pvBack">返回甘特圖</button>
@@ -115,18 +115,8 @@ const SHELL_HTML=`<div class="pager" id="pager">
 <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
 <div class="toast" id="toast" role="status"></div>
 `;
-/* 學生會 logo（設定頁標題列）：同一份 SU_LOGO 路徑。淺色模式用原檔的彩色（2026-11-06 使用者）；深色模式是單色（跟著文字色，board.css「學生會 logo」段）。
-   深色的標誌用使用者提供的單色線稿（2026-11-11 使用者：所有黑白模式的 logo 都換成線稿；splash.js 的 SU_LINE，跟開場動畫同一份：左邊小人線框、右邊小人實心），
-   線稿用 SU_LINE.t 疊在彩色標誌的同一個位置，兩組只顯示一組（.logo-color／.logo-line）；字照舊填文字色。
-   以前「兩塊都填文字色＋描一圈底色當分隔縫（.logo-gap）」的做法已拿掉 */
-function suLogoMono(label){
-  const [VX,VY,VW,VH]=SU_LOGO.box,[,,,,[[cy,dy],[cb,db]]]=SU_LOGO.emb;
-  return `<svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="${VX} ${VY} ${VW} ${VH}" role="img" aria-label="${label}"><g>
-    <g class="logo-color"><path fill="${cy}" d="${dy}"/><path fill="${cb}" d="${db}"/></g><g class="logo-line" transform="${SU_LINE.t}">${SU_LINE.d.map(d=>`<path d="${d}"/>`).join("")}</g>${SU_LOGO.g.map(g=>`<path fill="${g[4]}" d="${g[5]}"/>`).join("")}</g></svg>`;
-}
 /* 文件（工作報告）上的學生會 logo：一律原檔彩色、不跟深淺色（2026-11-06 使用者：logo 在文件上都用彩色）。
-   class 不是 .logo，所以深色模式把 .logo 改成單色的規則不會套到；也不需要切割線（兩塊顏色本來就不同）。
-   單色線稿（assets/學生會logo-單色線稿.svg）用在深色模式的頁首、設定頁、總覽與開場，見 suLogoMono */
+   不需要切割線（兩塊顏色本來就不同）。 */
 function suLogoColor(label){
   const [VX,VY,VW,VH]=SU_LOGO.box,[,,,,[[cy,dy],[cb,db]]]=SU_LOGO.emb;
   return `<svg class="su-logo-c" xmlns="http://www.w3.org/2000/svg" viewBox="${VX} ${VY} ${VW} ${VH}" role="img" aria-label="${label}"><path fill="${cy}" d="${dy}"/><path fill="${cb}" d="${db}"/>${SU_LOGO.g.map(g=>`<path fill="${g[4]}" d="${g[5]}"/>`).join("")}</svg>`;
@@ -141,8 +131,8 @@ function suLogoColor(label){
   const lg=document.querySelector(".dhead .dh-logo");if(lg)lg.src=deptLogo(CFG.deptId);
   const q=document.getElementById("boardQ");if(q)q.setAttribute("aria-label","搜尋"+(CFG.dept.name||""));
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
-     設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light */
-  const c=CFG.colors||{},map={accentLight:"--accent-light",accentDark:"--accent-dark"};
+     設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light（accentDark 沒有樣式用到，不再寫入） */
+  const c=CFG.colors||{},map={accentLight:"--accent-light"};
   const vars=Object.keys(map).filter(k=>c[k]).map(k=>`${map[k]}:${c[k]}`).join(";");
   if(vars&&!document.getElementById("dept-theme")){const st=document.createElement("style");st.id="dept-theme";st.textContent=`:root{${vars}}`;document.head.append(st)}
   /* 部門專用的分頁（CFG.ext）與完成紀錄併進即時回報（CFG.mergeDone），見 dept/config.js。

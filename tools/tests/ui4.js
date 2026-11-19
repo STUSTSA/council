@@ -130,7 +130,7 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     ok(tb.l===14&&Math.abs(tb.t+tb.h/2-450)<=1,`1300：左側距左 14（${tb.l}）、垂直置中（${tb.t+tb.h/2}）`);
     ok(ln.w===50&&ln.h===44&&g.w===62&&g.h===62&&lab,`1300：鏡片 50×44（${ln.w}×${ln.h}）、設定鍵 62（${g.w}×${g.h}）、只有圖示（文字只給讀屏：${lab}）`);
     const sh=await p.evaluate(()=>getComputedStyle(document.querySelector('#tabbar .tb-main')).boxShadow);
-    ok(/0px 0px 0px 1px/.test(sh)&&(sh.match(/rgba?\(/g)||[]).length>=2,`工具列帶陰影加一圈 1px 細線（${sh.slice(0,60)}）`);
+    ok(/0px 0px 0px 1px/.test(sh)&&(sh.match(/rgba?\(|color\(/g)||[]).length>=2,`工具列帶陰影加一圈 1px 細線（${sh.slice(0,60)}）`);
     const lit=await p.evaluate(()=>{const t=document.querySelector('#tabbar .tab.lit .tab-ind');return t&&getComputedStyle(t).color===getComputedStyle(document.body).getPropertyValue('--pri-ink').trim().replace(/^#(..)(..)(..)$/,(m,a,b,c)=>`rgb(${parseInt(a,16)}, ${parseInt(b,16)}, ${parseInt(c,16)})`)});
     ok(lit,'選中那一格的圖示反白（--pri-ink）');}
   {const c2=await c.setup();const q=await c2.mk(412,860,'light',true);   /* 另開一份資料（剛才那份已經建立身分，共用的登入流程只會建立新身分） */

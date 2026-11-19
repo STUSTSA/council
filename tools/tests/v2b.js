@@ -42,7 +42,8 @@ ok(await p.evaluate(id=>state.issues.some(i=>i.id===id),iid),'取消就不刪');
 await p.click('#cardDetail [data-edcancel]');await p.waitForTimeout(600);
 /* 忘記這台裝置 */
 await p.evaluate(async()=>{await remSave(meMember())});await hub('device');
-ok(await p.$eval('[data-hub=forget]',e=>e.getAttribute('aria-disabled')!=='true'&&e.textContent.includes('王')),'有記住身分時「忘記這台裝置」可以按、寫出記住誰');
+/* ui-08（DESIGN-next 第十二節，DievE 11/16 定）：列下面不放小字、目前的值也不放，所以不再寫出記住誰；只看可以按、名稱只有「忘記這台裝置」 */
+ok(await p.$eval('[data-hub=forget]',e=>e.getAttribute('aria-disabled')!=='true'&&e.textContent.trim()==='忘記這台裝置'),'有記住身分時「忘記這台裝置」可以按（列上只有名稱）');
 await p.click('[data-hub=forget]');await p.waitForTimeout(400);
 ok(await p.evaluate(()=>!localStorage.getItem(REM_KEY)&&!loggedIn()),'忘記後清掉記住的身分、登出');
 await setClose();

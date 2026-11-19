@@ -6,7 +6,7 @@
 .sp-logo{position:relative;width:min(212px,70vw,calc(40dvh * 340 / 336));aspect-ratio:340/336}
 @media (max-width:640px){.sp-logo{width:min(202px,54vw,calc(34dvh * 340 / 336))}}
 .sp-emb,.sp-gw{position:absolute;display:block}
-.sp-gw{overflow:hidden}   /* 字的窗：窗往右移進來、字往左，窗的左緣由左到右掃過去＝揭開 */
+.sp-gw{overflow:hidden}   /* 字的窗：一開始整個在字的左邊外面，往右移進來、裡面的字相對往左，窗的右緣由左到右掃過字＝揭開（splash.js） */
 .sp-emb svg,.sp-gw svg{display:block;width:100%;height:100%;overflow:visible}
 .sp-gw svg{will-change:transform,opacity}
 .sp-emb path{will-change:transform,opacity}
@@ -15,8 +15,8 @@
 .sp-fly svg{display:block;width:100%;height:100%;overflow:visible}
 /* ===== 學生會標誌（splash.js 的 suLogoH：主頁左上；開場也用同一組 class） =====
    淺色：黃、藍兩個小人與藍字照原檔顏色（標誌的藍黃不跟主題變），深藍字＝文字色；深色：左邊小人只留線稿、右邊小人與字都是文字色 */
-.su-y{fill:#f0bc23}
-.su-b,.su-t{fill:#0a5baa}
+.su-y{fill:#f0bc23}   /* 例外：學生會標誌黃（跟部門標誌同色，不跟主題） */
+.su-b,.su-t{fill:#0a5baa}   /* 例外：學生會標誌藍 */
 .su-k{fill:var(--ink)}
 :root[data-theme="dark"] :is(.su-b,.su-t){fill:var(--ink)}
-:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.8px}
+:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke}   /* 線稿的粗細照畫面上的像素算：開場的大標誌與主頁左上的小標誌（高 28–32px）一樣看得清楚 */

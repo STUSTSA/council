@@ -22,6 +22,7 @@ const Back=(()=>{
   addEventListener("popstate",e=>{
     if(skip){skip--;return}
     const top=stack.pop();if(!top)return;
+    Sfx.play("back");
     top.close(!!e.hasUAVisualTransition);   /* true＝不要動畫（瀏覽器已經播過） */
   });
   /* 看板 → 各部門總覽：從總覽點進來的就用瀏覽器返回（保留總覽的捲動位置），否則直接開總覽（都有換頁動畫） */

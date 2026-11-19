@@ -89,7 +89,10 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   await openSet(su);{const s=await setText(su);ok(s.includes('暫停編輯')&&s.includes('用 Google 登入'),'凍結中、未登入：設定頁有「暫停編輯」與 Google 登入');}
   const suUid=await signIn(su,'su');
   {const g=await open('fruit');const gUid=await signIn(g,'gen');await setRole(gUid,{fruit:'admin'});await g.waitForTimeout(1500);await openSet(g);
-    const s=await setText(g);ok(!s.includes('會長室管理')&&s.includes('水果部管理員'),'凍結中：部門管理員登入後沒有會長室管理（只有總管理員）');
+    /* ui-08：角色不再寫在帳號列下（列下不放小字），改看帳號頁最上面（.acct-me，角色膠囊「水果部・管理員」） */
+    const s=await setText(g);await g.click('#setOv [data-set="acct"]');await g.waitForTimeout(800);
+    const me=await g.evaluate(()=>{const e=document.querySelector('#setOv .set-pane .acct-me');return e?e.innerText:''});
+    ok(!s.includes('會長室管理')&&me.includes('水果部・管理員'),'凍結中：部門管理員登入後沒有會長室管理（只有總管理員）');
     ok(await g.evaluate(()=>boardLocked()&&storeSource()==='frozen'),'凍結中：登入後看板照舊唯讀');
     await g.ctx.close();}
   await setRole(suUid,{},true);

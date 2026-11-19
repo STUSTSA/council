@@ -36,9 +36,9 @@ function cpHTML(ev,o={}){const st=evStatus(ev);
 /* 卡片外框（即時回報、完成紀錄共用）：第一排（全螢幕時返回鍵）燈號、名稱、編輯次數；第二排上一張／下一張、報告；第三排狀態、負責人、時間；
    內容；儲存回饋（role=status）；底部工具列（母議題選單在工具列裡、往上長）。o＝{k,id,key,st,ids,full,ro,ed,sec,attr,title,cnt,rep,meta,body,view,tail,save,tools} */
 function lcFrame(o){
-  const ix=o.ids.indexOf(o.id),tri=d=>`<button type="button" class="lc-tri" data-lcstep="${d}" aria-label="${d<0?"上一張":"下一張"}"${(d<0?ix<=0:ix<0||ix>=o.ids.length-1)?" disabled":""}>${ico("tri")}</button>`;
+  const ix=o.ids.indexOf(o.id),tri=d=>`<button type="button" class="lc-tri" data-lcstep="${d}" aria-label="${d<0?"上一張":"下一張"}"${(d<0?ix<=0:ix<0||ix>=o.ids.length-1)?" disabled":""}>${ico("tri","solo")}</button>`;
   return `<article class="lc${o.ro?" ro":""}${o.ed?" lc-ed sec-edit":o.sec?" sec-edit":""}${o.full?" full":""}" data-lc="${o.k}" data-edbox="${esc(o.key)}" data-st="${o.st}" ${o.attr}>
-    <div class="lc-in"><div class="lc-head">${o.full?`<button type="button" class="lc-back" data-lcback aria-label="返回">${ico("back")}</button>`:""}<span class="live-dot" aria-hidden="true"></span>${o.title}${o.cnt||""}</div>
+    <div class="lc-in"><div class="lc-head">${o.full?`<button type="button" class="lc-back" data-lcback aria-label="返回">${ico("back","solo")}</button>`:""}<span class="live-dot" aria-hidden="true"></span>${o.title}${o.cnt||""}</div>
       <div class="lc-nav">${tri(-1)}${tri(1)}<span class="lc-sp"></span>${o.rep||""}</div>
       <div class="lc-meta">${o.meta}</div>
       <div class="lc-body" data-view="${o.view||"main"}">${o.body}</div>${o.tail||""}
@@ -100,7 +100,7 @@ function lcSaveHTML(ev){const s=kpSt&&kpSt.id===ev.id&&(!editing||["bad","fail"]
   return `<span class="kp-st" role="status"${s?` data-st="${s.st}"`:""}>${s?esc(s.msg||KP_MSG[s.st]||""):""}</span>${s&&!editing&&s.st==="ok"&&s.before?`<button type="button" class="lc-undo" data-kpundo>復原</button>`:""}`}
 /* 底部工具列：左邊母議題膠囊（點開自製選單），右邊文字、人、時間、地點、核取、超連結；人、時間、地點那一頁打開時那顆放大、其他變淡 */
 function lcToolsHTML(ev,ed){const par=parentOf(ev),pane=ed&&lvPane;
-  const tb=(k,i,l)=>`<button type="button"${pane===k?' class="on"':""} data-lctool="${k}" aria-label="${l}"${["staff","time","place"].includes(k)?` aria-pressed="${pane===k}"`:""}>${ico(i)}</button>`;
+  const tb=(k,i,l)=>`<button type="button"${pane===k?' class="on"':""} data-lctool="${k}" aria-label="${l}"${["staff","time","place"].includes(k)?` aria-pressed="${pane===k}"`:""}>${ico(i,"solo")}</button>`;
   return `<div class="lc-tools"><button type="button" class="lc-pa" data-lcpa aria-haspopup="listbox" aria-expanded="${ed&&lvPop}" aria-label="母議題"><span>${esc(par?par.title:"母議題")}</span><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 2l4 6H1z"/></svg></button>
     <div class="lc-tl${pane?" paned":""}">${tb("text","text","文字")}${tb("staff","user","人")}${tb("time","clock","時間")}${tb("place","pin","地點")}${tb("check","box","核取")}${tb("link","link","超連結")}</div>${ed&&lvPop?lcPopHTML(ev):""}</div>`}
 function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
@@ -181,6 +181,7 @@ function lcGhost(el){
 /* 打開或收回 k（live／done）那一張：id＝null 收回。全螢幕時推一筆瀏覽紀錄（系統返回鍵先關卡片） */
 function lcShow(k,id){
   const cur=lcCur(),was=cur&&cur[0]===k?cur[1]:null;if(was===id&&id)return;
+  if(id||cur)Sfx.play(id?"enter":"back");   /* 打開卡片＝進入，收回＝返回 */
   const wide=lvWide(),oldEl=cur&&lcCard(cur[0]),from=id&&!wide?lcCap(lcPill(k,id)):null,oldCap=oldEl&&lcCap(oldEl),g=oldEl&&!reduceMotion()?lcGhost(oldEl):null;
   if(cur&&cur[0]!==k)lcSet(cur[0],null);
   lcSet(k,id);if(kpSt&&kpSt.id!==id&&kpSt.st!=="saving")kpSt=null;
@@ -205,6 +206,7 @@ async function lvEndEdit(){
 async function lcStep(dir){
   const cur=lcCur();if(!cur)return;const [k,id]=cur;
   const ids=k==="live"?liveOrder().map(e=>e.id):doneIds(),to=ids[ids.indexOf(id)+dir];if(!to)return;
+  Sfx.play("tab");   /* 上一張／下一張＝換頁 */
   if(!(await lvEndEdit()))return;
   const el=lcCard(k),inn=el&&el.querySelector(".lc-in"),h0=el&&el.getBoundingClientRect().height,gi=inn&&!reduceMotion()?inn.cloneNode(true):null,top=inn&&inn.offsetTop;
   lcSet(k,to);kpSt=null;render();
@@ -275,7 +277,7 @@ function lvAddTime(ev){
   const t={id:uid("t"),label:"",start:`${today()}T${pad(h)}:${pad(m%60)}`,end:"",place:"",toIssue:false};
   ev.times.push(t);ev.blocks.push({id:uid("b"),text:"",check:false,timeId:t.id});kpSync(ev);return t;
 }
-function kpSay(st,msg){kpSt={id:kp&&kp.id,st,msg};const s=document.querySelector(".lc-ed .kp-st");if(s){s.dataset.st=st;s.textContent=msg}}
+function kpSay(st,msg){if(st==="bad")Sfx.play("no");kpSt={id:kp&&kp.id,st,msg};const s=document.querySelector(".lc-ed .kp-st");if(s){s.dataset.st=st;s.textContent=msg}}
 /* 工具列：文字、核取＝在最後新增一行；超連結＝新增一組；人、時間、地點＝卡片內容換成那一頁（再按一次回到逐行內容） */
 function lvTool(ev,k){
   lvPop=false;
@@ -305,7 +307,7 @@ function teTick(t,k,dir,set){
 }
 function lvSegTick(dir,set){
   const ev=kpEv(),s=lvSeg,t=ev&&s&&ev.times.find(x=>x.id===s.tid);if(!t)return;
-  teTick(t,s.k,dir,set);kpSync(ev);render();
+  teTick(t,s.k,dir,set);kpSync(ev);render();Sfx.play("roll");
   const el=document.querySelector(`.lc-ed .sg.on`);if(el&&!reduceMotion())el.animate([{transform:`translateY(${(dir||1)>0?8:-8}px)`,opacity:.2},{transform:"none",opacity:1}],{duration:MO.fast,easing:MO.out});
 }
 /* 編輯中卡片裡的點擊（回傳 true＝處理掉了） */
@@ -341,7 +343,7 @@ function lvCheck(ev,ck){
   const ln=ck.closest(".ln");if(ln){ln.classList.toggle("done",b.check);const tc=ln.querySelector(".tmc");if(tc)tc.classList.toggle("late",!b.check&&tmLate(ev.times.find(x=>x.id===b.timeId)))}
   if(!reduceMotion())ck.animate([{transform:"scale(.7)"},{transform:"scale(1.16)",offset:.55},{transform:"none"}],{duration:280,easing:MO.out});
   ln&&ln.querySelector("input.tx")?.focus({preventScroll:true});   /* 游標到那一行（ui-03：按核取框那一下不失焦，放開後到那一行） */
-  if(typeof Sfx!=="undefined")Sfx.play("check");
+  Sfx.play("check");
 }
 /* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行；時間頁選到一段時上下鍵、數字調整；Esc＝收起母議題選單或存檔並離開編輯 */
 function kpKey(e){
@@ -429,6 +431,7 @@ async function kpSave(){
   morph(()=>{editing=false;cardEdit="";dirty=false;kp=null;kpSt={id,st:"saving"};state.savedAt=nowStr();if(meName())state.savedBy=meName();render()});
   let ok=false;
   try{ok=fsMode()?await fsPersist("",{quiet:true}):await persist()}catch(_){ok=false}
+  if(fsMode())Sfx.result(ok);   /* github 模式的 persist 自己會響 */
   kpSaving=false;
   if(ok){const ev=state.events.find(e=>e.id===id);kpSt={id,st:"ok",before:undoable?draft.before:null,after:ev?JSON.stringify(ev):""};render();
     if(!fsMode()&&CFG.meeting)mtPushAll();return true}
@@ -494,7 +497,7 @@ document.addEventListener("click",async e=>{
   /* 檢視中：點名稱、一行、核取框（同時切換勾選）、「沒有說明」、工具列、母議題＝原位進入編輯 */
   const ck=t.closest("[data-kpck]");if(ck){e.preventDefault();const ln=ck.closest(".ln");await kpStart(id,{toggle:ck.dataset.kpck,focus:ln&&ln.dataset.k!=="time"?ck.dataset.kpck:null});
     const nb=document.querySelector(`.lc-ed [data-kpck="${CSS.escape(ck.dataset.kpck)}"]`);if(nb&&!reduceMotion())nb.animate([{transform:"scale(.7)"},{transform:"scale(1.16)",offset:.55},{transform:"none"}],{duration:280,easing:MO.out});
-    if(typeof Sfx!=="undefined")Sfx.play("check");return}
+    return}   /* 勾選音由點擊預設音（sfx.js 的 [data-kpck]）在按下的當下響，不等進入編輯 */
   const tool=t.closest("[data-lctool]");if(tool){if(await kpStart(id,{focus:null}))lvTool(kpEv(),tool.dataset.lctool);return}
   if(t.closest("[data-lcpa]")){if(await kpStart(id,{focus:null})){lvPop=true;render();document.querySelector(`.lc-pop [aria-selected="true"]`)?.focus({preventScroll:true})}return}
   const go=t.closest("[data-kpgo]")||t.closest(".ln[data-blk]");if(go){e.preventDefault();await kpStart(id,{focus:go.dataset.kpgo!==undefined?go.dataset.kpgo:go.dataset.blk});return}
@@ -531,7 +534,7 @@ const lvZone=()=>{let z=$("#lzDel");if(!z){document.body.insertAdjacentHTML("bef
     const side=z.k.ok>=z.k.del?"ok":"del",k=Math.max(z.k.ok,z.k.del),tilt=(side==="ok"?1:-1)*(k*k*7+(d.hot?9:0)),mix=Math.round(k*k*30+(d.hot?26:0));d.tilt=tilt;
     el.style.transform=`translate(${dx}px,${dy}px) rotate(${tilt.toFixed(2)}deg) scale(${d.hot?1.08:1.04})`;
     el.style.backgroundColor=mix>2?`color-mix(in srgb,var(--${side==="ok"?"ok":"late"}) ${mix}%,var(--blk))`:"";
-    if(d.hot&&d.hot!==was&&typeof Sfx!=="undefined")Sfx.play(d.hot==="ok"?"check":"no");
+    if(d.hot&&d.hot!==was)Sfx.play(d.hot==="ok"?"check":"no");
     const me=state.events.find(e=>e.id===d.id),ov=d.hot?null:document.elementsFromPoint(x,y).map(n=>n.closest&&n.closest("#events .cp")).find(n=>n&&n!==el);
     const oe=ov&&state.events.find(e=>e.id===ov.dataset.cp),ok=oe&&me&&!!oe.report===!!me.report?ov:null;
     if(d.over!==ok){d.over&&d.over.classList.remove("over");ok&&ok.classList.add("over");d.over=ok}
@@ -595,7 +598,7 @@ function lvComplete(ev,el,s){
 }
 /* 完成的慶祝（約兩秒、不擋操作）：右上角漫開一圈光暈（規格明寫的例外）、彩帶從那一角噴出再落下、一段上行的音（設定的音效開關）。減少動態時只有聲音 */
 function lvCelebrate(){
-  if(typeof Sfx!=="undefined")Sfx.play("fete");
+  Sfx.play("fete");
   if(reduceMotion())return;
   const L=document.createElement("div");L.className="fete";L.setAttribute("aria-hidden","true");document.body.append(L);
   const W=innerWidth,H=innerHeight,ox=W-70,oy=70,cols=["var(--acc)","var(--acc2)","var(--ok)","var(--ink)","var(--pri)"],rn=(a,b)=>a+Math.random()*(b-a);

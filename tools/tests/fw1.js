@@ -106,7 +106,11 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const gen=await open();await signIn(gen,'gen');
   await until(async()=>(await ui(gen)).cards>0);
   {const u=await ui(gen);ok(u.locked&&!u.authed&&u.editBtns===0&&u.cards>40,`一般登入者：讀得到（${u.cards} 張）、唯讀、沒有編輯鈕`);}
-  await openSet(gen);{const s=await setText(gen);ok(s.includes('唯讀')&&!s.includes('標籤')&&!s.includes('看板名稱')&&!s.includes('備份'),'一般登入者：設定頁沒有看板設定');}
+  /* ui-08：「唯讀」不再寫在帳號列下（列下不放小字），改看清單有「帳號」、沒有看板設定，「唯讀」在帳號頁最上面 */
+  await openSet(gen);{const s=await setText(gen);await gen.click('#setOv [data-set="acct"]');await gen.waitForTimeout(800);
+    const me=await gen.evaluate(()=>{const e=document.querySelector('#setOv .set-pane .acct-me');return e?e.innerText:''});
+    ok(s.includes('帳號')&&me.includes('唯讀')&&!s.includes('標籤')&&!s.includes('看板名稱')&&!s.includes('備份'),'一般登入者：設定頁沒有看板設定、帳號頁寫唯讀');
+    await gen.click('#setOv [data-set="acct"]');await gen.waitForTimeout(600);}
 
   /* ---------- 2. 編輯者 ---------- */
   const ed=await open();const edUid=await signIn(ed,'ed');

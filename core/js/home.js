@@ -4,6 +4,7 @@
    - 手機（640px 以下）：錢包式卡片堆（見下面 WAL）。
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
+   - 下排：全會行事曆圓鈕、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
@@ -23,7 +24,7 @@
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
   $id("hmMe").innerHTML=suLogoH("hm-su");
-  $id("hmSet").innerHTML=ico("sliders");
+  $id("hmSet").innerHTML=ico("sliders","solo");
   const clock=$id("hmClock");let clockT=0;
   function tick(){const d=new Date();clock.textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`;clearTimeout(clockT);if(!document.hidden)clockT=setTimeout(tick,60050-d.getSeconds()*1000-d.getMilliseconds())}
   document.addEventListener("visibilitychange",tick);tick();
@@ -58,6 +59,7 @@
   /* 換焦點：原地換 class，不重畫（重畫會讓放大、焦點框都變成直接跳）；超過兩端＝頂一下再彈回（拉過頭的回彈） */
   function setFoc(i,how){
     const want=i;i=Math.max(0,Math.min(D.length-1,i));
+    if(!(H.mode==="wal"&&WAL.lock)&&i!==(H.mode==="wal"?WAL.f:H.i)){Sfx.play(how==="wheel"?"roll":"move");WAL.snd=false}   /* 音效：點、方向鍵＝移動焦點，滾輪一格＝滾動；WAL.snd＝手指拖、甩出去的期間，卡片堆每過一張響一次滾動（walDraw） */
     if(H.mode==="wal"){if(WAL.lock)return;if(i===WAL.f&&want!==i){WAL.v+=want<i?-2.6:2.6;walRun();return}WAL.f=i;walRun();if(how==="key")walFocus(i);return}
     if(i===H.i){if(want!==i)bump(want<i?-1:1);return}
     H.i=i;
@@ -94,7 +96,7 @@
     const els=WAL.els,p=WAL.p,y0=WU*Math.max(0,Math.min(p,2)),rf=Math.max(0,Math.min(els.length-1,Math.round(p)));
     els.forEach((el,i)=>{const d=i-p,y=d<=0?y0+Math.max(d,-2)*WU-(d<-2?Math.min(1,-2-d)*16:0):d<=1?y0+d*(WH+WG):y0+WH+WG+(d-1)*WU,sc=d<0?1+Math.max(d,-3)*.05:1;
       el.style.transform=`translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;el.style.opacity=d>=-2?"":Math.max(0,3+d).toFixed(3)});
-    if(WAL.lr!==rf){WAL.lr=rf;H.i=rf;els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
+    if(WAL.lr!==rf){if(WAL.lr!=null&&WAL.snd)Sfx.play("roll");WAL.lr=rf;H.i=rf;els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
   }
   function walRun(){
     cancelAnimationFrame(WAL.raf);
@@ -109,11 +111,11 @@
     const w=$id("hmWal");WAL.els=[...w.querySelectorAll(".hm-wc")];WAL.f=WAL.p=H.i;WAL.v=0;WAL.lr=null;walDraw();
     w.addEventListener("pointerdown",e=>{if(WAL.lock||e.button>0)return;cancelAnimationFrame(WAL.raf);WAL.raf=0;
       WAL.d={id:e.pointerId,y:e.clientY,p:WAL.p,moved:false,t:e.target.closest(".hm-wc"),ly:e.clientY,lt:e.timeStamp,vy:0};try{w.setPointerCapture(e.pointerId)}catch(_){}});
-    w.addEventListener("pointermove",e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.moved&&Math.abs(dy)<6)return;d.moved=true;
+    w.addEventListener("pointermove",e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;const dy=e.clientY-d.y;if(!d.moved&&Math.abs(dy)<6)return;d.moved=WAL.snd=true;
       const dt=e.timeStamp-d.lt;if(dt>0){d.vy=d.vy*.4+(e.clientY-d.ly)/dt*.6;d.ly=e.clientY;d.lt=e.timeStamp}
       const n=WAL.els.length;let q=d.p-dy/WDRAG;if(q<0)q*=.35;else if(q>n-1)q=n-1+(q-n+1)*.35;WAL.p=q;walDraw()});
     const up=e=>{const d=WAL.d;if(!d||e.pointerId!==d.id)return;WAL.d=null;const n=WAL.els.length;
-      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){hmEnter(i);return}WAL.f=i}walRun();return}
+      if(!d.moved){if(d.t&&e.type==="pointerup"){const i=+d.t.dataset.i;if(i===Math.round(WAL.f)&&Math.abs(WAL.p-WAL.f)<.2){hmEnter(i);return}if(i!==WAL.f)Sfx.play("move");WAL.snd=false;WAL.f=i}walRun();return}
       const v=e.timeStamp-d.lt>90?0:d.vy,b=Math.round(d.p);   /* 手指停住才放開＝沒有速度 */
       let to=Math.round(WAL.p-v*170/WDRAG);if(to===b&&Math.abs(v)>.35)to=b+(v<0?1:-1);
       WAL.f=Math.max(0,Math.min(n-1,Math.max(b-3,Math.min(b+3,to))));WAL.v=-v*1000/WDRAG;walRun()};
@@ -138,9 +140,9 @@
   /* 滾輪：一格換一張（每 170ms 最多一次；到兩端頂一下再彈回）；方向鍵：左右（桌面）、上下（手機）；Enter 在色塊上＝點擊 */
   let wheelAt=0;
   document.addEventListener("wheel",e=>{
-    if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||hmLayerOpen())return;
+    if(e.ctrlKey||!e.target.closest||!e.target.closest("#hm")||e.target.closest("#hmDkIn.sc")||hmLayerOpen())return;   /* 下排放不下（.sc，可橫捲）時在它上面滾＝捲下排，不換部門 */
     const d=H.mode==="wal"?e.deltaY:Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
-    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1));
+    const now=performance.now();if(now-wheelAt<170)return;wheelAt=now;setFoc((H.mode==="wal"?WAL.f:H.i)+(d>0?1:-1),"wheel");
   },{passive:false});
   document.addEventListener("keydown",e=>{
     if(hmLayerOpen()||e.altKey||e.ctrlKey||e.metaKey||(e.target.closest&&e.target.closest("input,textarea")))return;
@@ -153,7 +155,7 @@
      看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
      減少動態時直接換頁、不交接 */
   function hmEnter(i){
-    const d=D[i];if(!d||H.busy)return;const u=href(d),k=H.mode==="wal"?"flip":"tile";
+    const d=D[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
@@ -218,6 +220,142 @@
     if(document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   });
 
+  /* ---------- 下排：全會行事曆圓鈕、個人常用連結（DESIGN-next 第六節「下排」，ui-08） ----------
+     連結只存在這台裝置這個瀏覽器：localStorage「stustsa-links」＝[{u:網址, n:名稱}]（最多 LK_MAX 個；名稱可空＝顯示網域；最長 LK_NAME 字）。
+     不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
+     網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
+     圖示只向那個網站自己要 /favicon.ico（不經過第三方的圖示服務、不帶 referrer），載不到顯示網域第一個字母。
+     「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
+     寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
+     桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
+  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
+  const lkCut=s=>[...String(s==null?"":s).trim()].slice(0,LK_NAME).join("");
+  function lkUrl(raw){
+    let s=String(raw==null?"":raw).trim();if(!s||s.length>2000)return null;
+    if(!/^https?:\/\//i.test(s)){if(/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s))return null;s="https://"+s}   /* 「example.com:8080」的冒號後面是數字＝連接埠，不是協定 */
+    let u;try{u=new URL(s)}catch(_){return null}
+    return (u.protocol==="http:"||u.protocol==="https:")&&u.hostname&&!u.username&&!u.password?u.href:null;
+  }
+  const lkHost=u=>new URL(u).hostname.replace(/^www\./,"");
+  let lkSeq=0;const lkKey=()=>"l"+(++lkSeq);   /* 畫面用的代號（同一個網址加兩次也分得開），不存 */
+  let lkOk=true;   /* localStorage 讀寫都正常；讀不到或寫不進去（無痕、滿了）之後就只用畫面上這一份，不再拿存的那份來對（lkSync） */
+  function lkRead(){
+    let raw;try{raw=localStorage.getItem(LK_KEY)}catch(_){lkOk=false;return []}
+    let a;try{a=JSON.parse(raw||"[]")}catch(_){a=[]}
+    const out=[];if(!Array.isArray(a))return out;
+    for(const x of a){if(out.length>=LK_MAX)break;const u=x&&typeof x==="object"&&lkUrl(x.u);if(u)out.push({u,n:typeof x.n==="string"?lkCut(x.n):"",k:lkKey()})}
+    return out;
+  }
+  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n})=>({u,n}))))}catch(_){lkOk=false}}
+  /* 跟存的那份對齊（別的分頁可能改過）：同網址同名稱的沿用原本的畫面代號（節點、焦點不動），其餘換新；有變回傳 true。
+     加、刪之前都先對一次，再寫回——編輯中收到別的分頁的修改時不會被這個分頁的舊清單整份蓋掉 */
+  function lkSync(){
+    if(!lkOk)return false;
+    const nx=lkRead(),pool=LK.list.slice();
+    if(!lkOk||nx.length===pool.length&&nx.every((x,i)=>x.u===pool[i].u&&x.n===pool[i].n))return false;
+    nx.forEach(x=>{const i=pool.findIndex(o=>o.u===x.u&&o.n===x.n);if(i>=0)x.k=pool.splice(i,1)[0].k});
+    LK.list=nx;return true;
+  }
+  const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
+  DKN.set("pub",$id("hmPub"));
+  function lkNode(x){
+    const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
+    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true">${esc(h.charAt(0).toUpperCase())}</b></a>`;
+    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
+    img.addEventListener("load",()=>{if(img.naturalWidth)w.classList.add("ico");else img.remove()},{once:true});
+    img.addEventListener("error",()=>img.remove(),{once:true});
+    img.src=new URL(x.u).origin+"/favicon.ico";w.firstElementChild.append(img);
+    return w;
+  }
+  function dkNode(k){
+    let n=DKN.get(k);if(n)return n;
+    const x=LK.list.find(l=>l.k===k);
+    if(x)n=lkNode(x);
+    else{n=document.createElement(k==="dv"?"i":k==="form"?"span":"button");n.dataset.k=k;
+      if(k==="dv"){n.className="hm-dv";n.setAttribute("aria-hidden","true")}
+      else if(k==="add"){n.type="button";n.className="hm-lkadd";n.setAttribute("aria-label","編輯常用連結");n.innerHTML=ico("plus","solo")}
+      else if(k==="back"){n.type="button";n.className="hm-lkb";n.setAttribute("aria-label","結束編輯");n.innerHTML=ico("back","solo")}
+      else{n.className="hm-lkf";n.innerHTML=`<input class="hm-lku" id="hmLkU" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="https://" aria-label="網址"><input class="hm-lkn" id="hmLkN" type="text" autocomplete="off" maxlength="${LK_NAME}" enterkeyhint="done" placeholder="名稱" aria-label="名稱"><button type="button" class="primary hm-lkok">加入</button>`}}
+    DKN.set(k,n);return n;
+  }
+  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub","dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
+  /* 畫下排：沿用節點（照代號），只增減有變的；anim＝寬度與位置用動畫滑過去，show＝這一個要捲進可見範圍（手機、編輯中放不下時） */
+  function dkPaint(anim,show){
+    const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
+    if(R){w0=dk.getBoundingClientRect().width;[...dkIn.children].forEach(c=>r0.set(c.dataset.k,c.getBoundingClientRect()))}
+    const gone=[...dkIn.children].filter(c=>!keys.includes(c.dataset.k));
+    gone.forEach(c=>{c.remove();if(c.classList.contains("hm-lk"))DKN.delete(c.dataset.k)});
+    let at=dkIn.firstElementChild;keys.forEach(k=>{const n=dkNode(k);if(n===at)at=at.nextElementSibling;else dkIn.insertBefore(n,at)});   /* 只插入新的，沒動的節點不搬（焦點、動畫都留著） */
+    LK.list.forEach(x=>{const n=DKN.get(x.k),b=n.querySelector(".hm-lkx");
+      if(LK.ed&&!b){n.insertAdjacentHTML("beforeend",`<button type="button" class="hm-lkx" aria-label="移除 ${esc(n.dataset.nm)}">${ico("close","solo")}</button>`);if(R&&r0.has(x.k))n.lastElementChild.animate([{transform:"scale(0)"},{transform:"none"}],{duration:MO.base,easing:POP})}
+      else if(!LK.ed&&b)b.remove()});
+    dk.classList.toggle("ed",LK.ed);
+    dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc");
+    /* 放不下時盡量捲到最後（輸入框、「+」都看得到），但 show 那一個（返回鍵、剛加的連結）不能捲出左邊 */
+    if(show){const n=DKN.get(show);if(n&&dkIn.classList.contains("sc"))dkIn.scrollLeft=Math.min(n.offsetLeft-8,dkIn.scrollWidth-dkIn.clientWidth)}
+    if(!R)return;
+    /* 底板兩半：中線不動，各自從原本的邊滑到新的邊 */
+    const pr=dk.getBoundingClientRect(),dx=(pr.width-w0)/2;
+    if(Math.abs(dx)>.5)dkBg.forEach((s,i)=>s.animate([{transform:`translateX(${(i?-dx:dx).toFixed(1)}px)`},{transform:"none"}],{duration:MO.layout,easing:SOFT}));
+    keys.forEach(k=>{const n=DKN.get(k),a=r0.get(k);
+      if(!a){n.animate([{opacity:0,transform:"scale(.6)"},{opacity:1,transform:"none"}],{duration:MO.base+40,delay:60,easing:POP,fill:"backwards"});return}
+      const b=n.getBoundingClientRect(),d=a.left-b.left;if(Math.abs(d)>.5)n.animate([{transform:`translateX(${d.toFixed(1)}px)`},{transform:"none"}],{duration:MO.layout,easing:SOFT})});
+    /* 拿掉的：留分身在原本的位置淡出縮小 */
+    gone.forEach(c=>{const a=r0.get(c.dataset.k);if(!a)return;const g=c.cloneNode(true);g.querySelectorAll("[id]").forEach(x=>x.removeAttribute("id"));g.removeAttribute("data-k");g.inert=true;g.setAttribute("aria-hidden","true");
+      g.style.cssText=`position:absolute;left:${(a.left-pr.left).toFixed(1)}px;top:${(a.top-pr.top).toFixed(1)}px;width:${a.width}px;height:${a.height}px;margin:0;pointer-events:none`;
+      dk.append(g);g.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(.6)"}],{duration:MO.base,easing:MO.in,fill:"forwards"}).finished.catch(()=>{}).then(()=>g.remove())});
+  }
+  function nope(el){el.setAttribute("aria-invalid","true");if(!reduceMotion())el.animate([{transform:"none"},{transform:"translateX(-6px)"},{transform:"translateX(5px)"},{transform:"translateX(-3px)"},{transform:"none"}],{duration:MO.slow,easing:"ease-out"})}
+  function lkEdit(on){
+    if(LK.ed===on)return;const had=dk.contains(document.activeElement);
+    LK.ed=on;tipHide();
+    if(!on){lkSync();const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
+    dkPaint(true,on?"back":"add");
+    if(on){const u=$id("hmLkU");(u||DKN.get("back")).focus({preventScroll:true})}
+    else if(had)(dkIn.contains(DKN.get("add"))?DKN.get("add"):$id("hmPub")).focus({preventScroll:true});
+  }
+  function lkAdd(){
+    const ui=$id("hmLkU"),ni=$id("hmLkN");if(!ui)return;
+    const u=lkUrl(ui.value);if(!u){nope(ui);ui.focus({preventScroll:true});return}
+    if(lkSync()&&LK.list.length>=LK_MAX){dkPaint(true);return}   /* 別的分頁加滿了：只換成最新的清單（輸入框收起） */
+    if(LK.list.length>=LK_MAX)return;
+    const x={u,n:lkCut(ni.value),k:lkKey()};LK.list.push(x);lkWrite();
+    ui.value="";ni.value="";ui.removeAttribute("aria-invalid");
+    dkPaint(true,x.k);
+    const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
+  }
+  function lkDel(k){
+    lkSync();const i=LK.list.findIndex(x=>x.k===k);if(i>=0){LK.list.splice(i,1);lkWrite()}dkPaint(true);   /* 別的分頁已經刪掉同一個：只換成最新的清單 */
+    const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
+  }
+  dk.addEventListener("click",e=>{
+    const t=e.target.closest&&e.target.closest("button");if(!t||!dk.contains(t))return;
+    if(t.classList.contains("hm-lkadd"))lkEdit(true);
+    else if(t.classList.contains("hm-lkb"))lkEdit(false);
+    else if(t.classList.contains("hm-lkok"))lkAdd();
+    else if(t.classList.contains("hm-lkx"))lkDel(t.closest(".hm-lk").dataset.k);
+  });
+  dk.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches(".hm-lkf input")&&!e.isComposing){e.preventDefault();lkAdd()}});
+  dk.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".hm-lku"))e.target.removeAttribute("aria-invalid")});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!e.isComposing&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});   /* 注音選字中的 Esc 給輸入法，不結束編輯 */
+  document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk")))lkEdit(false)},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
+  addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換；編輯中先不動畫面（加、刪、結束編輯時才對齊） */
+    if(!LK.ed&&lkSync())dkPaint(false)});
+  /* 名稱的小膠囊：只給有滑鼠的桌面（hover），圖示上方置中；換到別的連結時原地換字與位置，移開淡出 */
+  const HOVER=matchMedia("(hover:hover) and (pointer:fine)");let tip=null;
+  function tipShow(a){
+    const w=a.closest(".hm-lk");if(!w||!HOVER.matches||LK.ed)return;
+    if(!tip){tip=document.createElement("div");tip.className="hm-tip";tip.id="hmTip";tip.setAttribute("aria-hidden","true");document.body.append(tip)}
+    const r=a.getBoundingClientRect();tip.textContent=w.dataset.nm;
+    tip.style.transform=`translate(${(r.left+r.width/2).toFixed(1)}px,${(r.top-8).toFixed(1)}px) translate(-50%,-100%)`;tip.classList.add("on");
+  }
+  function tipHide(){if(tip)tip.classList.remove("on")}
+  dk.addEventListener("pointerover",e=>{if(e.pointerType!=="mouse")return;const a=e.target.closest&&e.target.closest(".hm-lkc");if(a)tipShow(a)});
+  dk.addEventListener("pointerout",e=>{const a=e.target.closest&&e.target.closest(".hm-lkc");if(a&&!a.contains(e.relatedTarget))tipHide()});
+  dk.addEventListener("click",tipHide);dkIn.addEventListener("scroll",tipHide,{passive:true});
+  addEventListener("resize",()=>{tipHide();dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc")});
+  dkPaint(false);
+
   /* ---------- 疊層：全會行事曆（下排圓鈕）、外觀（設定鈕） ----------
      在主頁上蓋一層畫面；打開推一筆瀏覽紀錄，關閉鈕、Esc、系統返回鍵都關掉（關閉鈕與 Esc 走 history.back，由 popstate 真的關）。
      全會行事曆＝notify.js 的公共版 calMount(host)（全部／活動／會議，沒有今日／明日與逾期），關掉時 calUnmount(host) 拆掉
@@ -225,27 +363,28 @@
   const LYS={},LBL={cal:"全會行事曆",look:"外觀"};let LY=null;
   function hmLayerOpen(){return !!LY}
   function layerOpen(kind,opener){
-    if(LY)return;
+    if(LY)return;lkEdit(false);
     let L=LYS[kind];
     if(!L){
       const el=document.createElement("div");el.className="hm-ly";el.id=kind==="cal"?"hmCal":"hmLook";el.hidden=true;
       el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");el.setAttribute("aria-label",LBL[kind]);
-      el.innerHTML=`<div class="hm-ly-in"><div class="hm-ly-bar"><button type="button" class="hm-round hm-ly-x" aria-label="關閉">${ico("close")}</button></div><div class="hm-ly-body"></div></div>`;
+      el.innerHTML=`<div class="hm-ly-in"><div class="hm-ly-bar"><button type="button" class="hm-round hm-ly-x" aria-label="關閉">${ico("close","solo")}</button></div><div class="hm-ly-body"></div></div>`;
       document.body.append(el);L=LYS[kind]={el,host:el.querySelector(".hm-ly-body")};
       el.querySelector(".hm-ly-x").addEventListener("click",()=>layerClose());
       el.hidden=false;
       if(kind==="cal")calMount(L.host);else{L.host.innerHTML=lookHTML(true);lookMount(L.host)}
     }else L.el.hidden=false;
-    LY={kind,opener,...L};$id("hm").inert=true;
+    LY={kind,opener,...L};$id("hm").inert=true;Sfx.play("open");
     try{history.pushState({hmLayer:kind},"")}catch(_){}
     if(!reduceMotion()){L.el.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});L.el.firstElementChild.animate([{transform:"translateY(28px)"},{transform:"none"}],{duration:MO.layout,easing:"cubic-bezier(.25,1.12,.4,1)"})}
     L.el.querySelector(".hm-ly-x").focus({preventScroll:true});
   }
-  /* 關閉：fromPop＝瀏覽紀錄已經退了（popstate）；其他（關閉鈕、Esc）先退一筆，等 popstate 再關 */
+  /* 關閉：fromPop＝瀏覽紀錄已經退了（popstate）；其他（關閉鈕、Esc）先退一筆，等 popstate 再關。
+     返回音在使用者操作的當下響一次（關閉鈕的點擊預設音也是返回，同一個工作裡併成一次）；等到的 popstate 不再響（不管隔多久），系統返回鍵才在 popstate 響 */
   function layerClose(fromPop){
     if(!LY)return;
-    if(!fromPop&&history.state&&history.state.hmLayer){history.back();return}
-    const L=LY;LY=null;$id("hm").inert=false;
+    if(!fromPop&&history.state&&history.state.hmLayer){if(LY.bk)return;LY.bk=true;Sfx.play("back");history.back();return}   /* 已經在退了：連按不再多退一筆 */
+    const L=LY;LY=null;$id("hm").inert=false;if(!L.bk)Sfx.play("back");
     const done=()=>{L.el.hidden=true;if(L.kind==="cal"){calUnmount(L.host);L.el.remove();delete LYS.cal}};
     if(reduceMotion())done();
     else{L.el.animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"}).finished.then(a=>{done();},()=>done()).then(()=>L.el.getAnimations().forEach(a=>a.cancel()));
@@ -254,7 +393,7 @@
   }
   addEventListener("popstate",()=>{if(LY)layerClose(true)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
-  $id("hmPub").innerHTML=ico("calendar");
+  $id("hmPub").innerHTML=ico("calendar","solo");
   $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 

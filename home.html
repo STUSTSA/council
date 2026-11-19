@@ -39,8 +39,9 @@ try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesB
     <button type="button" class="hm-round" id="hmSet" aria-label="設定"></button>
   </header>
   <div class="hm-stage" id="hmStage"></div>
-  <!-- 下排（寬度跟著內容、置中、浮在上面）：只有「全會行事曆」（公共版，notify.js 的 calMount）；個人常用連結這一輪不做 -->
-  <div class="hm-dock" id="hmDock"><button type="button" class="hm-pub" id="hmPub" aria-label="全會行事曆"></button></div>
+  <!-- 下排（寬度跟著內容、以整個畫面寬置中、浮在上面）：「全會行事曆」（公共版，notify.js 的 calMount）、個人常用連結、「+」（home.js 的 dkPaint）。
+       底板是左右兩半（.hm-dk-bg），寬度改變時各自滑到新的邊 -->
+  <div class="hm-dock" id="hmDock"><div class="hm-dk" id="hmDk"><span class="hm-dk-bg hm-dk-l" aria-hidden="true"><span></span></span><span class="hm-dk-bg hm-dk-r" aria-hidden="true"><span></span></span><div class="hm-dk-in" id="hmDkIn"><button type="button" class="hm-pub" id="hmPub" data-k="pub" aria-label="全會行事曆"></button></div></div></div>
 </main>
 <script src="core/js/pagefx.js"></script>
 <script src="dept/config.js"></script>
@@ -53,6 +54,7 @@ try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesB
 <script src="core/js/store.js"></script>
 <script src="core/js/follow.js"></script>
 <script src="core/js/notify.js"></script>
+<script src="core/js/sfx.js"></script>   <!-- 音效（設定 → 外觀的開關） -->
 <script src="core/js/home.js"></script>
 </body>
 </html>
