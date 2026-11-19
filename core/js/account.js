@@ -147,7 +147,7 @@ function acctPanel(title,draw){
     Promise.resolve().then(()=>draw(p)).catch(err=>{console.error(err);if(alive)box.insertAdjacentHTML("beforeend",`<p class="acct-err" role="alert">讀取失敗</p>`)});
   });
 }
-const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
+const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","changed":"這筆申請剛被改過，請再看一次","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
 /* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
@@ -163,7 +163,7 @@ async function acctHub(){
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}（待審）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
-        if(await acctTry(()=>A.requestDecide(q.id,"cancelled"),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
+        if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
 }
 async function acctRename(){
@@ -404,8 +404,12 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});if(p.alive){await load();draw()}}}
-      else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")&&p.alive){await load();draw()}}   /* 已經離開面板：不重讀 */
+      /* 04：核准、拒絕的是畫面上那一版（rev；同一份申請可以撤回後再申請）。不論成功或失敗都重讀清單（失敗多半是申請剛被撤回或改過）；已經離開面板就不重讀 */
+      const q=list.find(x=>x.id===(b.dataset.ok||b.dataset.no));if(!q)return;
+      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
+      else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.requestDecide(q.id,"rejected",q.rev),"已拒絕")}
+      else return;
+      if(p.alive){await load();draw()}
     });
     await load();draw();
   });

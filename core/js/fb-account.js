@@ -287,13 +287,16 @@ async function requestCreate(o) {
   await b.commit();
   return id;
 }
-const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, createdAt: ms(d.createdAt) }; };
+const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
 async function requestsMine() { return (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", uid())))).docs.map(plainReq).sort((a, b) => b.createdAt - a.createdAt); }
 async function requestsPending() { return (await getDocs(query(collection(db, "roleRequests"), where("status", "==", "pending"), orderBy("createdAt")))).docs.map(plainReq); }
-async function requestDecide(id, to) {   /* to＝cancelled（本人撤回）｜rejected（總管理員） */
+/* seen＝畫面上那一筆的 rev。04 起同一份申請可以撤回後再申請（內容可能不一樣）：決定的一定是畫面上看到的那一版，
+   交易裡讀到的 rev 不同＝清單讀出來之後被改過，不寫入、回 changed，畫面重讀清單 */
+async function requestDecide(id, to, seen) {   /* to＝cancelled（本人撤回）｜rejected（總管理員） */
   await runTransaction(db, async tx => {
     const s = await tx.get(ref("roleRequests", id));
     if (!s.exists() || s.data().status !== "pending") throw fail("inactive");
+    if (seen != null && s.data().rev !== seen) throw fail("changed");
     const rev = s.data().rev + 1, w = { status: to, rev, updatedAt: NOW(), updatedBy: uid() };
     if (to === "rejected") Object.assign(w, { decidedBy: uid(), decidedAt: NOW() });
     tx.update(ref("roleRequests", id), w);
@@ -302,10 +305,12 @@ async function requestDecide(id, to) {   /* to＝cancelled（本人撤回）｜r
 }
 /* 核准：同一批把申請改成 approved、roles 只加（或改成）申請的那一項（lastVia request、lastRef＝申請 ID），各自稽核；
    申請帶舊身分而且還沒人認領時，同一批替申請人認領 */
-async function requestApprove(id) {
+async function requestApprove(id, seen) {
+  if (seen == null) throw fail("changed");   /* 一定要帶畫面上那一版的 rev */
   await runTransaction(db, async tx => {
     const s = await tx.get(ref("roleRequests", id));
     if (!s.exists() || s.data().status !== "pending") throw fail("inactive");
+    if (s.data().rev !== seen) throw fail("changed");
     const q = s.data(), rs = await tx.get(ref("roles", q.uid)), cur = rs.exists() ? rs.data() : null, before = cur ? plainRole(cur) : null;
     if (before && before.depts[q.deptId] === q.role) throw fail("same");
     let leg = null;
