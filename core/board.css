@@ -1327,13 +1327,16 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-pub .ico{width:20px;height:20px}
 .hm-dv{width:1px;height:22px;background:var(--hair)}
 .hm-lk{position:relative;display:flex}
-.hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--mo-spring)}
+/* 連結圓鈕（.hm-lkc）：首字母與網站圖示共用同一顆圓——跟 .hm-pub、.hm-lkadd 同大小（44px，手機同），底色 --blk2（只用主題變數，深色、各主題跟著變）；
+   字或圖示都在圓的正中間。滑過、按下跟下排其他圓鈕（一般按鈕）同一套：transform 放大 1.05／縮 .96、同一條過渡曲線；關掉動態時不動。離開就回到 none */
+.hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--blk2);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--ease)}
 @media (hover:hover){.hm-lkc:hover{transform:scale(1.05)}}
 .hm-lkc:active{transform:scale(.96)}
-.hm-lkl{display:block;width:44px;height:44px;border-radius:50%;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:44px;text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母圓鈕：跟 .hm-pub、.hm-lkadd 同大小；顏色只用主題變數（深色、各主題跟著變），手機同尺寸。字形置中：行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照 44px 行高置中（字框置中，大寫字會偏上一點） */
-.hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}
-.hm-lk.ico .hm-lkl{display:none}
-.hm-lk.ico .hm-lki{position:static;opacity:1}
+@media (prefers-reduced-motion:reduce){.hm-lkc:hover,.hm-lkc:active{transform:none}}
+.hm-lkl{display:block;width:44px;height:44px;font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:44px;text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母：字形置中——行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照 44px 行高置中（字框置中，大寫字會偏上一點） */
+.hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}   /* 網站圖示：26px、不裁成圓、不變形；載到前透明且不佔位（首字母先顯示） */
+.hm-lk.fav .hm-lkl{display:none}   /* 載到網站圖示（home.js 的 lkIco 加 .fav；不用 .ico，那是全站 SVG 圖示的 class，會把連結框改成 1.15em 大小） */
+.hm-lk.fav .hm-lki{position:static;opacity:1}
 .hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */
 .hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:var(--lite)}
 .hm-lkx .ico{width:10px;height:10px}
