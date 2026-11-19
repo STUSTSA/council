@@ -128,9 +128,9 @@ document.addEventListener("keydown",e=>{
   else if(e.key==="Tab")cselClose(c);
 },true);
 
-/* ---------- 對話框：玻璃質地＋開關都有過渡 ---------- */
+/* ---------- 對話框：開關都有過渡（外觀在 board.css「對話框與下拉選單」段；ui-09 起不再掛 .glass） ---------- */
 (function(){
-  const d=$("#dlg");if(!d)return;glassify(d);
+  const d=$("#dlg");if(!d)return;
   d.addEventListener("cancel",e=>{if(e.isTrusted)Sfx.play("no")});   /* Esc＝取消（設定子頁返回送的 cancel 不是使用者按的，那一下由返回自己響） */
   const nativeClose=HTMLDialogElement.prototype.close;
   d.close=function(v){

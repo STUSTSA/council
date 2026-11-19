@@ -64,7 +64,7 @@ async function unlockEdit(){
   for(;;){
     const opts=state.members.map(m=>[m.id,m.name+(m.role==="admin"?"（管理員）":"")]);
     const v=await ask("選擇編輯身分",[{name:"who",label:"我是",type:"select",value:last||opts[0][0],options:opts},{name:"pw",label:"個人密碼",type:"password"},{name:"rem",label:"在這個裝置上記住密碼",type:"check"}],
-      {alt:"＋ 新增身分",note:"選自己的名字、輸入個人密碼。勾「記住密碼」之後，這台裝置就不用再輸入。\n還沒有身分的人按「＋ 新增身分」（要輸入部門共用密碼）。",
+      {alt:"＋ 新增身分",   /* ui-09：拿掉說明句（DESIGN-next 第一節：介面不放教學文字） */
        validate:async o=>{const m=state.members.find(x=>x.id===o.who);return m&&await kdfCheck(m.kdf,o.pw)?"":"個人密碼不正確。忘記的話請部門管理員刪掉你的身分，再用「＋ 新增身分」重新建立。"}});
     if(v===null)return false;
     if(v==="alt"){
@@ -93,8 +93,7 @@ function pwProblem(p1,p2,what){
 async function askNewPassword(title,extra=[],tail=[]){
   const named=extra.some(f=>f.name==="name");
   const v=await ask(title,[...extra,{name:"p1",label:`個人密碼（至少 ${MIN_PW} 碼）`,type:"password"},{name:"p2",label:"再輸入一次",type:"password"},...tail],
-    {note:`個人密碼只有你自己知道，之後換裝置就用它登入。登入時勾「記住密碼」，同一台裝置就不用再打。`,
-     validate:o=>{if(named){const n=(o.name||"").trim();if(!n)return "請填名字";if(state.members.some(m=>m.name===n))return "已經有同名的身分，請換一個名字（例如加上職稱）"}
+    {validate:o=>{if(named){const n=(o.name||"").trim();if(!n)return "請填名字";if(state.members.some(m=>m.name===n))return "已經有同名的身分，請換一個名字（例如加上職稱）"}
        return pwProblem(o.p1||"",o.p2||"","個人密碼")}});
   return !v||v==="alt"?null:v;
 }

@@ -17,14 +17,14 @@ document.addEventListener("click",async e=>{
     if(v&&v.text)copyText(v.text);return}
   if(t.closest("#genWeek")&&!readOnly()){
     const r=buildWeekly();
-    const v=await ask("生成週報",[{name:"date",label:"日期",type:"date",value:r.end},{name:"text",label:`列出標了「會議要報告」的即時回報（沒有人標就列全部即時回報），與 ${fmt(r.start)} 之後到 ${fmt(r.end)} 完成的項目（只有標題），可直接修改後按確定`,type:"textarea",value:r.text}],{wide:true});
+    const v=await ask("生成週報",[{name:"date",label:"日期",type:"date",value:r.end},{name:"text",label:`內容（${fmt(r.start)} 之後 – ${fmt(r.end)}）`,type:"textarea",value:r.text}],{wide:true});
     if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);state.events.forEach(e=>{e.report=false});newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
   /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
   if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
   if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
   if(t.closest("#addWeek")){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:last?"內容（已預帶上一週內容當底稿，可直接改或全部清掉）":"內容",type:"textarea",value:last?last.text:""}],{wide:true});
+    const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:"內容",type:"textarea",value:last?last.text:""}],{wide:true});
     if(v&&v.text)await settingSave(()=>{const nw={id:uid("w"),date:v.date||today(),text:v.text};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500);snapshotBase(v.date||today())},"已新增週報");return}
 
   const wk=t.closest("[data-week]");

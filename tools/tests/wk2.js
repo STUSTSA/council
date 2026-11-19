@@ -5,7 +5,7 @@
 const c=require('./common');(async()=>{
 for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login}=await c.setup();
   const p=await mk(w,860,'dark',touch);await p.waitForFunction(()=>!document.getElementById('splash'),null,{timeout:8000}).catch(()=>{});
-  const st=()=>p.evaluate(()=>{const ww=$('#weekWrap'),h=document.querySelector('.set-hub');return {set:setOpen,sub:subOpen,pane:paneKey,week:!!weekPaneEnd,wrapIn:ww.parentElement.className||ww.parentElement.tagName,wrapHidden:ww.hidden,hub:h?(h.hidden?'hidden':h.querySelector('.set-hub-t').textContent):null,list:!!document.querySelector('#weekList .week')}});
+  const st=()=>p.evaluate(()=>{const ww=$('#weekWrap'),h=document.querySelector('.set-hub');return {set:setOpen,sub:subOpen,pane:paneKey,week:!!weekPaneEnd,wrapIn:ww.parentElement.className||ww.parentElement.tagName,wrapHidden:ww.hidden,hub:h?(h.hidden?'hidden':h.querySelector('.sec-h').textContent):null,list:!!document.querySelector('#weekList .week')}});
   /* 登入前 */
   await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#setOv [data-set=week]');await p.waitForTimeout(1000);
   console.log(w,'logged out week',JSON.stringify(await st()));

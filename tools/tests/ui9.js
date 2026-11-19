@@ -6,6 +6,8 @@
    K4 「這台裝置」「網站管理」合併頁最上面一塊寫目前的狀態：記住的身分（忘記後即時改成「沒有記住身分」）、雲端同步的 repo 與權杖狀態（資料經過跳脫）；設定列上照樣只有名稱
    K5 進度頁標題列：英文小標 TIMELINE＋「進度」（700）；全部／上學期／下學期與實心「+ 議題」（--pri 底、高 52）在標題列（桌面同一列在標題右邊、手機在標題下一列）；
       分段切換的鏡片看得到（寬 > 0，進度頁一開始藏著也一樣）；議題詳情時切換與新增藏起來、回甘特圖再出現；唯讀檢視沒有「+ 議題」
+   K6 其他：區塊標題（即時回報）英文小標在上、700、沒有細線箭頭；對話框寬 380（手機畫面寬減 40）、內距 26、標題 17px 700、刪除鈕紅底（沒有 !important 也對）；
+      即時回報卡片存檔不跳「已儲存並同步到雲端…」提示（卡片上照樣「已儲存」、有寫 commit）；登入的對話框沒有說明句；時間頁的名稱平面字（聚焦時沒有底線）
    （其他 K 項的斷言接在後面）
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common.js');
@@ -105,6 +107,38 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
     ok(!r2.gv&&!r2.av&&r.gv&&r.av,`${w} 議題詳情時切換與新增藏起來、回甘特圖再出現`);
     if(!touch){await p.click('#peekBtn');await p.waitForTimeout(600);r=await geo();ok(!r.av&&r.gv,'唯讀檢視：沒有「+ 議題」、切換照常');await p.click('#peekBtn');await p.waitForTimeout(400)}
     errs.push(...p.errs);await p.__b.close()}
+
+  /* ---------- K6 其他 ---------- */
+  for(const w of [1300,412]){const touch=w<700,p=await fresh(w);
+    let r=await p.evaluate(()=>{const h=$('#evH'),b=getComputedStyle(h,'::before'),a=getComputedStyle(h,'::after');return {t:h.textContent,en:b.content,enFs:b.fontSize,fw:getComputedStyle(h).fontWeight,after:a.content}});
+    ok(r.t==='即時回報'&&r.en==='"LIVE"'&&r.enFs==='10.5px'&&+r.fw>=700&&(r.after==='none'||r.after==='normal'),`${w} 即時回報標題：英文小標 ${r.en}（${r.enFs}）在上、${r.fw}、沒有細線箭頭（${r.after}）`);
+    await p.evaluate(()=>{window.__dl=ask('刪除這張卡片',[],{danger:'刪除'})});await p.waitForTimeout(500);
+    r=await p.evaluate(()=>{const d=$('#dlg'),cs=getComputedStyle(d),b=getComputedStyle($('#dlgForm>b')),x=$('#dlgForm .danger-solid');
+      const t=document.createElement('i');t.style.color='var(--late)';document.body.append(t);const late=getComputedStyle(t).color;t.remove();
+      return {w:d.getBoundingClientRect().width,pad:cs.paddingLeft,fs:b.fontSize,fw:b.fontWeight,bg:getComputedStyle(x).backgroundColor,late,W:innerWidth}});
+    ok(Math.abs(r.w-Math.min(380,r.W-40))<1&&r.pad==='26px'&&r.fs==='17px'&&+r.fw>=700&&r.bg===r.late,`${w} 對話框寬 ${r.w}、內距 ${r.pad}、標題 ${r.fs} ${r.fw}；刪除鈕紅底（${r.bg}）`);
+    await p.click('#dlgForm [data-act=cancel]');await p.waitForTimeout(400);
+    if(!touch){
+      /* 卡片存檔：不跳「已儲存並同步到雲端」提示 */
+      const c0=p.__S.st.commits.length;await p.evaluate(()=>{window.__toasts=[];const o=window.toast;const t=$('#toast');new MutationObserver(()=>window.__toasts.push(t.textContent)).observe(t,{childList:true,characterData:true,subtree:true})});
+      await p.click('#events .cp, #events [data-ev]').catch(()=>{});await p.waitForTimeout(900);
+      await p.click('[data-kpgo="title"]').catch(()=>{});await p.waitForTimeout(400);await p.keyboard.press('End');await p.keyboard.type('Z');await p.click('#evH');await p.waitForTimeout(2600);
+      r=await p.evaluate(()=>({toasts:window.__toasts.join('|'),st:(document.querySelector('.kp-st')||{}).textContent||''}));
+      ok(p.__S.st.commits.length===c0+1&&!/同步到雲端/.test(r.toasts)&&/已儲存/.test(r.st),`卡片存檔：寫了一筆 commit、卡片上「${r.st}」、沒有跳同步提示（${r.toasts||'無提示'}）`);
+      /* 時間頁的名稱：平面字 */
+      await p.click('[data-kpgo="title"]').catch(()=>{});await p.waitForTimeout(400);await p.click('[data-lctool="time"]').catch(()=>{});await p.waitForTimeout(600);
+      if(!(await p.$('.te-nm'))){await p.click('[data-teadd]').catch(()=>{});await p.waitForTimeout(500)}
+      r=await p.evaluate(()=>{const i=document.querySelector('.te-nm');if(!i)return null;i.focus();const cs=getComputedStyle(i);return {bb:cs.borderBottomWidth,bg:cs.backgroundColor,ol:cs.outlineStyle}});
+      ok(!!r&&r.bb==='0px'&&r.bg==='rgba(0, 0, 0, 0)'&&r.ol==='none',`時間頁名稱：平面字、聚焦時沒有底線（${JSON.stringify(r)}）`);
+      await p.keyboard.press('Escape');await p.waitForTimeout(800);
+    }
+    errs.push(...p.errs);await p.__b.close()}
+  /* 登入的對話框沒有說明句（選擇編輯身分：已有身分時；ui-09 拿掉） */
+  {const S=await c.setup(),p=await S.mk(1300,860,'light',false);await S.login(p);await dlgOff(p);await p.evaluate(()=>{localStorage.removeItem('workboard:remember');meId='';sessionPw='';render()}).catch(()=>{});
+    await p.evaluate(()=>{if(typeof forgetDevice==='function')forgetDevice()});await p.waitForTimeout(400);
+    await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#setOv .set-gate .primary').catch(()=>{});await p.waitForTimeout(700);
+    const r=await p.evaluate(()=>({t:$('#dlg').open?$('#dlgForm>b').textContent:'',note:!!document.querySelector('#dlgForm .dlg-note')}));
+    ok(r.t==='選擇編輯身分'&&!r.note,`登入（${r.t}）沒有說明句`);errs.push(...p.errs);await S.b.close()}
 
   ok(!errs.length,`沒有 pageerror${errs.length?'：'+errs.slice(0,3).join('；'):''}`);
   console.log(`\n${passes} 通過，${fails} 失敗`);process.exit(fails?1:0)})();

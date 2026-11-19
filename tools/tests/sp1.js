@@ -38,7 +38,7 @@ const login=async p=>{await p.click('#setOv .set-gate .primary');await p.waitFor
  log('list:',await p.evaluate(()=>({rows:[...document.querySelectorAll('#setOv .set-inner .set-row')].map(r=>r.dataset.set),heads:document.querySelectorAll('#setOv .set-h').length,logo:!!document.querySelector('#setOv .set-top .logo'),k:!!document.querySelector('#setOv .anim-k')})));
  await p.evaluate(()=>{localStorage.setItem('workboard:siteadmin','1');renderSettings()});await p.waitForTimeout(400);
  log('site row after mark:',await p.evaluate(()=>!!document.querySelector('#setOv [data-set=site]')));
- const hub=()=>p.evaluate(()=>{const h=document.querySelector('#setOv .set-pane .set-hub');return h&&{t:h.querySelector('.set-hub-t').textContent,hidden:h.hidden,rows:[...h.querySelectorAll('[data-hub]')].map(r=>r.dataset.hub)}});
+ const hub=()=>p.evaluate(()=>{const h=document.querySelector('#setOv .set-pane .set-hub');return h&&{t:h.querySelector('.sec-h').textContent,hidden:h.hidden,rows:[...h.querySelectorAll('[data-hub]')].map(r=>r.dataset.hub)}});
  await p.click('#setOv [data-set=site]');await p.waitForTimeout(800);log('site hub:',await hub(),await st(p));await p.screenshot({path:'sp_site.png'});
  await p.click('#setOv [data-hub=cloud]');await p.waitForTimeout(800);log('cloud in hub:',await hub(),await st(p));
  await p.keyboard.press('Escape');await p.waitForTimeout(800);log('esc1 -> hub:',await hub(),await st(p));
