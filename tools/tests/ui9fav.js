@@ -60,7 +60,7 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     await ctx.addInitScript(([v,ui])=>{try{if(!sessionStorage.getItem('__lk')){sessionStorage.setItem('__lk','1');localStorage.setItem('stustsa-links',JSON.stringify(v));if(ui)localStorage.setItem('stustsa-ui',JSON.stringify(ui))}}catch(_){}},[o.links||LINKS,o.ui||null]);
     const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));p.reqs=[];p.on('request',q=>p.reqs.push(q.url()));p.ctx=ctx;return p};
   /* 等每個連結都有結果：載到圖示（.ico）或圖片已拿掉（顯示首字母） */
-  const settled=(p,n=LINKS.length)=>p.waitForFunction(n=>{const l=[...document.querySelectorAll('.hm-dk-in>.hm-lk')];return l.length===n&&l.every(x=>x.classList.contains('ico')||!x.querySelector('img'))},n,{timeout:10000}).then(()=>true).catch(()=>false);
+  const settled=(p,n=LINKS.length)=>p.waitForFunction(n=>{const l=[...document.querySelectorAll('.hm-dk-in>.hm-lk')];return l.length===n&&l.every(x=>x.classList.contains('fav')||!x.querySelector('img'))},n,{timeout:10000}).then(()=>true).catch(()=>false);
   /* 新插入的圖示節點：插入當下（同一個 microtask 內，網路還沒回來）的 src */
   const watchNew=p=>p.evaluate(()=>{window.__first=[];new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;
     (n.matches('img')?[n]:[...n.querySelectorAll('img')]).forEach(i=>{const l=i.closest('.hm-lk');window.__first.push({nm:l&&l.dataset.nm,src:i.getAttribute('src')})})}}).observe(document.getElementById('hmDkIn'),{childList:true,subtree:true})});
@@ -77,9 +77,9 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     if(!bb)return null;return {dx:((bb.x0+bb.x1+1)/2-bb.W/2)/dsf,dy:((bb.y0+bb.y1+1)/2-bb.H/2)/dsf,w:(bb.x1-bb.x0+1)/dsf,h:(bb.y1-bb.y0+1)/dsf}};
   const read=p=>p.evaluate(()=>{const pub=document.getElementById('hmPub').getBoundingClientRect();
     return {pub:{w:pub.width,h:pub.height},xss:window.__xss||0,imgs:[...document.querySelectorAll('#hmDk img')].every(i=>i.classList.contains('hm-lki')),
-      links:[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img'),c=l.querySelector('.hm-lkl'),cs=getComputedStyle(c),r=c.getBoundingClientRect();
-        return {nm:l.dataset.nm,ico:l.classList.contains('ico'),src:i&&i.getAttribute('src'),nw:i&&i.naturalWidth,rp:i&&i.referrerPolicy,ivis:i?getComputedStyle(i).opacity:null,
-          ch:c.textContent,html:c.innerHTML,kids:c.children.length,disp:cs.display,w:r.width,h:r.height,br:cs.borderRadius,brPx:parseFloat(cs.borderTopLeftRadius)||0,bg:cs.backgroundColor}})}});
+      links:[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img'),c=l.querySelector('.hm-lkl'),cs=getComputedStyle(c),o=l.querySelector('.hm-lkc'),os=getComputedStyle(o),r=o.getBoundingClientRect();   /* 圓（大小、圓角、底色）在 .hm-lkc（ui-10 起首字母與圖示共用） */
+        return {nm:l.dataset.nm,ico:l.classList.contains('fav'),src:i&&i.getAttribute('src'),nw:i&&i.naturalWidth,rp:i&&i.referrerPolicy,ivis:i?getComputedStyle(i).opacity:null,
+          ch:c.textContent,html:c.innerHTML,kids:c.children.length,disp:cs.display,w:r.width,h:r.height,br:os.borderRadius,brPx:parseFloat(os.borderTopLeftRadius)||0,bg:os.backgroundColor}})}});
 
   for(const [w,h] of [[412,860],[1300,800]]){const T=`${w} 寬`;site.length=0;g.length=0;net.extra.length=0;
     const p=await mk(w,h);await p.goto(U+'home.html');
@@ -138,7 +138,7 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
   /* 8. 內網／本機網域：兩步都不要，直接首字母 */
   {site.length=0;g.length=0;net.extra.length=0;
     const p=await mk(1300,800,{links:LAN.map(x=>({u:x.u,n:''}))});await p.goto(U+'home.html');await p.waitForTimeout(2500);
-    const d=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({nm:l.dataset.nm,img:!!l.querySelector('img'),ico:l.classList.contains('ico'),
+    const d=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({nm:l.dataset.nm,img:!!l.querySelector('img'),ico:l.classList.contains('fav'),
       ch:l.querySelector('.hm-lkl').textContent,disp:getComputedStyle(l.querySelector('.hm-lkl')).display})));
     const out=p.reqs.filter(u=>!u.startsWith(U)&&!/^https:\/\/(fonts\.googleapis\.com|api\.github\.com)\//.test(u));
     ok(d.length===LAN.length&&d.every((x,i)=>!x.img&&!x.ico&&x.disp!=='none'&&x.ch===LAN[i].ch),`內網／本機網域：沒有 <img>、直接顯示首字母（${d.map(x=>x.nm+'＝'+x.ch+(x.img?'＋img':'')).join('、')}）`);
@@ -215,7 +215,7 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
   if(process.env.SHOTS){fs.mkdirSync(process.env.SHOTS,{recursive:true});
     for(const [w,h] of [[412,860],[1300,800]])for(const mode of ['light','dark']){
       const p=await mk(w,h,{links:LINKS.slice(0,3),ui:{pal:'fin',mode,sound:false}});await p.goto(U+'home.html');
-      await p.waitForFunction(()=>{const l=[...document.querySelectorAll('.hm-dk-in>.hm-lk')];return l.length===3&&l.every(x=>x.classList.contains('ico')||!x.querySelector('img'))},null,{timeout:10000}).catch(()=>{});
+      await p.waitForFunction(()=>{const l=[...document.querySelectorAll('.hm-dk-in>.hm-lk')];return l.length===3&&l.every(x=>x.classList.contains('fav')||!x.querySelector('img'))},null,{timeout:10000}).catch(()=>{});
       await p.waitForTimeout(1500);const f=path.join(process.env.SHOTS,`fav-${w}-${mode}.png`);await p.screenshot({path:f});
       const box=await p.evaluate(()=>{const r=document.getElementById('hmDk').getBoundingClientRect();return {x:r.left-12,y:r.top-12,width:r.width+24,height:r.height+24}});
       await p.screenshot({path:f.replace(/\.png$/,'-dock.png'),clip:box});console.log('截圖 '+f);await p.ctx.close()}}

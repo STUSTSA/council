@@ -2,9 +2,9 @@
    - 網頁、CSS、JS、圖示：網路優先（每次都先拿最新版，拿不到才用離線備份）→ 更新後重開就是新版
    - data.json、各部門的 data-*.json、archive/：一律走網路，不存進快取（離線時改由看板顯示這台裝置最後一次看過的內容）
    - GitHub API：不經過這裡 */
-/* 快取版本：換大版本（改版 03 上線，2026-11-17 改 v2；新介面上線改 v3；ui-08 修正批改 v4；ui-09 改 v5）時改這個名字。sw.js 內容一變，瀏覽器下次開頁就會裝新的 Service Worker（skipWaiting＋clients.claim），
+/* 快取版本：換大版本（改版 03 上線，2026-11-17 改 v2；新介面上線改 v3；ui-08 修正批改 v4；ui-09 改 v5；ui-10 改 v6）時改這個名字。sw.js 內容一變，瀏覽器下次開頁就會裝新的 Service Worker（skipWaiting＋clients.claim），
    activate 時刪掉自己舊名字（board-cache-*）的快取，離線備份不會留著舊版的 JS／CSS 跟新的網頁混用 */
-const CACHE="board-cache-v5";
+const CACHE="board-cache-v6";
 const NO_CACHE=/(^|\/)data(-[^/]*)?\.json$|\/archive\//;
 /* 安裝時先收進離線備份的檔案：網頁本身、看板（index.html）載入的所有 CSS／JS、主頁另外用的 home.js 與九個部門標誌——
    App 打開的是主頁，只開過主頁就離線、再點部門時看板也畫得出來；第一次只打開看板就離線時，主頁也打得開。

@@ -122,7 +122,10 @@ document.addEventListener("click",async e=>{
 
 /* ---------- 面板（畫在設定頁右側面板／手機子頁，跟合併頁同一個位置）----------
    面板可以疊（人員 → 某人的權限歷史）：只顯示最上面那一層。acctPanelEnd(all)：nav.js 的 paneDismiss 呼叫，
-   返回、Esc 一次收一層；換項目、關設定（all）全部收掉 */
+   返回、Esc 一次收一層；換項目、關設定（all）全部收掉。
+   面板裡按鈕打開的表單（產生 QR、授予權限、新增部門）畫在同一個位置（#dlg 接在面板後面）：最上面那層換掉（疊一層、收掉）時一律當成取消收掉
+   （dialog.js 的 dlgPaneCancel），不會接在別的面板或合併頁下面、也不會被按到「確定」（ui-10）；已經按了確定、還在淡出的照確定完成，
+   寫入晚於面板收掉時只寫、不再重讀名單（各面板檢查 p.alive） */
 const acctPanels=[];
 let acctPanelEnd=null;
 const acctPanelSync=()=>{acctPanelEnd=acctPanels.length?all=>(all?[...acctPanels].reverse():[acctPanels[acctPanels.length-1]]).forEach(p=>p.end()):null};
@@ -131,12 +134,12 @@ function acctPanel(title,draw){
     const host=setPaneHost();if(!host)return res();
     const prev=acctPanels[acctPanels.length-1],depth=acctPanels.length;
     const box=document.createElement("div");box.className="set-hub acct-panel";
-    if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
+    dlgPaneCancel();if(prev){prev.box.hidden=true;prev.box.after(box)}else host.prepend(box);
     let alive=true;const timers=[],ends=[];
     const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},onEnd(fn){ends.push(fn)},
       head:(extra="")=>`${panelHead(title)}${extra}`,
       set html(h){morphTo(box,h)}};   /* 面板內容：原位更新（morph.js），QR 倒數、名單重畫時沒變的節點留著 */
-    p.end=()=>{if(!alive)return;alive=false;timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
+    p.end=()=>{if(!alive)return;alive=false;dlgPaneCancel();timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;
       if(depth)Back.closed("acct"+depth);acctPanelSync();res()};
     acctPanels.push(p);acctPanelSync();
@@ -221,7 +224,7 @@ function peoplePanel(){
       p.html=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="acct-rt"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
-    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});await load();draw()}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補） */
+    const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});if(p.alive){await load();draw()}}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補）；按確定後才離開面板（寫入晚完成）就不重讀 */
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
@@ -339,7 +342,7 @@ function invitePanel(){
     const live=()=>!!cur&&cur.status==="active"&&left()>0;
     const curText=()=>cur.status==="used"?`已使用 · ${esc(nameOf(cur.usedBy))}`:cur.status==="revoked"?"已撤銷":left()>0?mmss(left()):"已過期";
     /* 面板上這一張被別人用掉或撤銷：跟著變（監聽這一份邀請；換一張或收掉面板就解除） */
-    const watch=()=>{if(curOff){curOff();curOff=null}if(!cur)return;cur.status="active";const h=cur.h;
+    const watch=()=>{if(curOff){curOff();curOff=null}if(!cur||!p.alive)return;cur.status="active";   /* 面板已經收掉（按確定後才離開、產生晚完成）：不再監聽，onEnd 已經解除過 */const h=cur.h;
       curOff=A.inviteWatch(h,v=>{if(!cur||cur.h!==h||!v||v.status===cur.status)return;Object.assign(cur,{status:v.status,usedBy:v.usedBy});load().then(draw)})};
     p.onEnd(()=>{if(curOff)curOff()});
     const statusOf=i=>i.status==="used"?`已使用 · ${esc(nameOf(i.usedBy))} · ${hm(i.usedAt)}`:i.status==="revoked"?"已撤銷":i.expiresAt<=A.serverNow()?"已過期":`剩 ${mmss(i.expiresAt-A.serverNow())}`;
@@ -369,13 +372,15 @@ function invitePanel(){
             {name:"email",label:"綁定信箱（選填）",type:"email",value:""},
             ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[])],
             {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
-          if(v){try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email,legacyRef:v.legacy||""});watch()}catch(err){toast(acctErr(err))}}
+          if(!v)return;   /* 取消（含離開面板）：沒有變動，不重讀 */
+          try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email,legacyRef:v.legacy||""});watch()}catch(err){toast(acctErr(err))}
         }else if(b.hasAttribute("data-regen")&&cur){
           try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}
         }else if(b.dataset.revoke){
-          const h=b.dataset.revoke,v=await ask("撤銷這張 QR",[],{danger:"撤銷"});
-          if(v==="delete"&&await acctTry(()=>A.inviteRevoke(h),"已撤銷")&&cur&&cur.h===h){cur=null;watch()}
+          const h=b.dataset.revoke,v=await ask("撤銷這張 QR",[],{danger:"撤銷"});if(v!=="delete")return;
+          if(await acctTry(()=>A.inviteRevoke(h),"已撤銷")&&cur&&cur.h===h){cur=null;watch()}
         }else return;
+        if(!p.alive)return;   /* 已經離開面板：不重讀 */
         await load();await draw();
       }finally{busy=false}
     });
@@ -398,8 +403,8 @@ function requestsPanel(){
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
-      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});await load();draw()}}
-      else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")){await load();draw()}}
+      if(b.dataset.ok){const q=list.find(x=>x.id===b.dataset.ok);if(await acctTry(()=>A.requestApprove(b.dataset.ok),"已核准")){if(q)A.rosterSync(q.uid).catch(()=>{});if(p.alive){await load();draw()}}}
+      else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v==="delete"&&await acctTry(()=>A.requestDecide(b.dataset.no,"rejected"),"已拒絕")&&p.alive){await load();draw()}}   /* 已經離開面板：不重讀 */
     });
     await load();draw();
   });

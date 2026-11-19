@@ -148,7 +148,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     const before=JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]));await p.reload();await p.waitForTimeout(800);
     ok(JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]))===before,'重新整理後連結都還在、順序不變');
     /* 圖示：網站與 Google 圖示服務都載不到（這裡外部網路都擋掉；Playwright 攔截時 /favicon.ico 也一律中止）顯示網域第一個字母 */
-    const fv=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({k:l.classList.contains('ico'),ch:getComputedStyle(l.querySelector('.hm-lkl')).display})));
+    const fv=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({k:l.classList.contains('fav'),ch:getComputedStyle(l.querySelector('.hm-lkl')).display})));
     ok(fv.every(f=>!f.k&&f.ch!=='none'),'圖示載不到：顯示網域第一個字母');
     /* 別的分頁在這一頁編輯中改了清單（直接改 localStorage；編輯中這一頁不跟著換畫面）：這一頁再加、刪時先讀回最新的，不用舊清單整份蓋掉 */
     {const add=(u,n)=>p.evaluate(([u,n])=>{const a=JSON.parse(localStorage.getItem('stustsa-links'));a.push({u,n});localStorage.setItem('stustsa-links',JSON.stringify(a))},[u,n]);
@@ -180,7 +180,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     await ctx.addInitScript(v=>{if(!sessionStorage.getItem('__lk')){sessionStorage.setItem('__lk','1');localStorage.setItem('stustsa-links',JSON.stringify(v))}},[{u:'https://ico.example/some/page',n:'有圖示'}]);
     const p=await ctx.newPage(),errs=[];p.on('pageerror',e=>errs.push(e.message));
     await p.goto(U+'home.html',{waitUntil:'domcontentloaded'});await p.waitForTimeout(1500);
-    const r=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img');return {ico:l.classList.contains('ico'),src:i&&i.getAttribute('src'),rp:i&&i.referrerPolicy,ch:getComputedStyle(l.querySelector('.hm-lkl')).display,ltr:l.querySelector('.hm-lkl').textContent}}));
+    const r=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img');return {ico:l.classList.contains('fav'),src:i&&i.getAttribute('src'),rp:i&&i.referrerPolicy,ch:getComputedStyle(l.querySelector('.hm-lkl')).display,ltr:l.querySelector('.hm-lkl').textContent}}));
     ok(r[0].ico&&r[0].src==='https://ico.example/favicon.ico'&&r[0].rp==='no-referrer'&&r[0].ch==='none',`圖示：先向網站自己要 /favicon.ico（${r[0].src}）、不帶 referrer，載到就換掉字母`);
     ok(seen.length===1&&seen[0].u==='/favicon.ico'&&!seen[0].ref,`網站只收到 /favicon.ico 一個請求、沒有 Referer（${JSON.stringify(seen)}）`);
     ok(!net.extra.length,`圖示那段沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
