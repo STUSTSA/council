@@ -58,6 +58,8 @@ async function signIn() {
   }
 }
 async function signOut() { await fbSignOut(auth); }
+/* 個人資料的圖片網址：規則只收 null 或 https 網址（最多 500 字、可見的 ASCII 字元）；不合的當成沒有，不要讓整批（連同 users）寫不進去 */
+const photoOf = u => typeof u === "string" && u.length <= 500 && /^https:\/\/[!-~]+$/.test(u) ? u : null;
 /* 第一次登入：同一批建 users（信箱＝登入信箱）＋ profiles（名稱取 Google 名稱，最多 40 字）。之後登入只更新 lastLoginAt；
    重新整理（沒有重新登入）只補建缺的文件。 */
 async function ensureUser(fresh) {
@@ -70,7 +72,7 @@ async function ensureUser(fresh) {
   else if (fresh) { b.update(ref("users", u.uid), { lastLoginAt: NOW() }); n++; }
   if (!ps.exists()) {
     const name = ([...(u.displayName || "").trim()].slice(0, 40).join("")) || (u.email || "").split("@")[0].slice(0, 40) || "未命名";
-    b.set(ref("profiles", u.uid), { displayName: name, photoURL: u.photoURL || null, updatedAt: NOW() }); n++;
+    b.set(ref("profiles", u.uid), { displayName: name, photoURL: photoOf(u.photoURL), updatedAt: NOW() }); n++;
   }
   if (n) await b.commit();
 }
@@ -93,7 +95,7 @@ async function setName(name) {
   if (!v) throw fail("empty");
   const cur = (await getDoc(ref("profiles", uid()))).data() || {};
   const b = writeBatch(db);
-  b.set(ref("profiles", uid()), { displayName: v, photoURL: cur.photoURL || null, updatedAt: NOW() });
+  b.set(ref("profiles", uid()), { displayName: v, photoURL: photoOf(cur.photoURL), updatedAt: NOW() });
   await b.commit();
 }
 
@@ -272,13 +274,18 @@ async function roleWrite(target, mutate, via, r = "") {
 }
 
 /* ---------- 權限申請 ---------- */
+/* 04：每人每個部門一份申請，文件 ID＝{自己的 UID}_{部門}（規則要求）。待審中不能再送；撤回、被拒絕、已核准之後再申請＝同一份改回 pending（rev +1＋稽核）。
+   04 之前送出的申請（亂數 ID）還在待審時也算，不重複送 */
 async function requestCreate(o) {
-  const r = doc(collection(db, "roleRequests")), me = uid(), b = writeBatch(db);
+  const me = uid(), id = `${me}_${o.deptId}`, r = ref("roleRequests", id);
+  const mine = (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", me)))).docs;
+  if (mine.some(s => s.data().deptId === o.deptId && s.data().status === "pending")) throw fail("pending");
+  const cur = mine.find(s => s.id === id), rev = cur ? cur.data().rev + 1 : 1, b = writeBatch(db);
   b.set(r, { uid: me, deptId: o.deptId, role: o.role, note: String(o.note || "").slice(0, 200), ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}),
-    status: "pending", rev: 1, createdAt: NOW(), updatedAt: NOW(), updatedBy: me });
-  b.set(auditRef("roleRequests", r.id, 1), audit("roleRequests", r.id, 1, "request", {}, { status: "pending" }));
+    status: "pending", rev, createdAt: NOW(), updatedAt: NOW(), updatedBy: me });
+  b.set(auditRef("roleRequests", id, rev), audit("roleRequests", id, rev, "request", cur ? { status: cur.data().status } : {}, { status: "pending" }));
   await b.commit();
-  return r.id;
+  return id;
 }
 const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, createdAt: ms(d.createdAt) }; };
 async function requestsMine() { return (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", uid())))).docs.map(plainReq).sort((a, b) => b.createdAt - a.createdAt); }

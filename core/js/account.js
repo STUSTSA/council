@@ -147,7 +147,7 @@ function acctPanel(title,draw){
     Promise.resolve().then(()=>draw(p)).catch(err=>{console.error(err);if(alive)box.insertAdjacentHTML("beforeend",`<p class="acct-err" role="alert">讀取失敗</p>`)});
   });
 }
-const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
+const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
 /* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
@@ -159,7 +159,7 @@ async function acctHub(){
     return `<div class="acct-me"><div class="acct-person"><b>${esc(acct.names[u.uid]||u.name||u.email||"")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>`};
   return hubRun("帳號",()=>[
     {k:"name",ic:"edit",t:"名稱",flow:acctRename},
-    {k:"req",ic:"doc",t:"申請編輯權限",flow:async()=>{if(await acctRequest())mine=await A.requestsMine().catch(()=>mine)}},
+    {k:"req",ic:"doc",t:"申請編輯權限",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}（待審）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
@@ -176,14 +176,15 @@ async function acctLegacyOpts(A,dept){
   let l=[];try{l=await A.legacyList()}catch(_){}
   return [["","不指定"],...l.filter(x=>!x.claimedBy&&(!dept||x.deptId===dept)).map(x=>[x.id,`${deptNameOf(x.deptId)}・${x.name}`])];
 }
-async function acctRequest(){
+/* pending＝自己還在待審的申請：同一個部門已經有一筆就不能再送（04，規則也是每人每個部門一份） */
+async function acctRequest(pending=[]){
   const A=await acctLoad(),legacy=await acctLegacyOpts(A);
   const v=await ask("申請編輯權限",[
     {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
     {name:"role",label:"角色",type:"select",value:"editor",options:[["editor","編輯者"],["admin","管理員"]]},
     ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[]),
     {name:"note",label:"備註",ph:""}],
-    {validate:o=>acctDepts()[o.dept]===o.role?"已經是這個角色":o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
+    {validate:o=>acctDepts()[o.dept]===o.role?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
   if(!v)return false;
   return acctTry(()=>A.requestCreate({deptId:v.dept,role:v.role,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
 }
