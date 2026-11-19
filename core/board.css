@@ -726,8 +726,15 @@ a.doc-pill:active{scale:.96}
 .meet-edit{margin-top:var(--gap,16px)}
 
 /* ===== 時間甘特圖 ===== */
-/* 甘特圖範圍：全部／上學期／下學期（液態分段切換，樣式在「液態分段切換」段；這裡只管位置） */
-.g-term{margin:0 0 12px}
+/* 進度頁標題列（shell.js 的 .pg-head；DESIGN-next 第八節、模擬頁 TIMELINE；ui-09）：英文小標＋「進度」，右邊全部／上學期／下學期（液態分段切換，樣式在「液態分段切換」段）、
+   實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
+.pg-head{flex-wrap:wrap;gap:12px 16px;margin-bottom:16px}
+.pg-head .sec-h{flex:1 1 auto}
+.g-term{flex:none}
+.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 22px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
+.pg-add .ico{width:18px;height:18px;margin:0;stroke-width:2}
+#progPanel.pv-on :is(.g-term,.pg-add){display:none}
+@media (max-width:640px){.pg-head .sec-h{flex-basis:100%}}
 .range{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:13px;color:var(--muted)}
 .sec-edit .range{display:flex}
 .range input{width:auto}

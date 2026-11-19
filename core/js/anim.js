@@ -122,10 +122,11 @@ class LiquidSeg{
     this.drag=null;this.raf=0;this.last=0;this.releasing=false;this.releaseAt=0;this.cur=0;this.suppress=false;
     glassify(box);this.bind();
     const on=this.btns().findIndex(b=>b.getAttribute("aria-selected")==="true");this.set(on<0?0:on,true);
-    this.onResize=()=>this.set(this.cur,true);addEventListener("resize",this.onResize);document.fonts?.ready.then(()=>{if(!this.dead)this.set(this.cur,true)});
+    /* 這排的大小變了就重量鏡片：視窗大小、字型載入，還有一開始藏著（例如進度頁還沒打開時的 #gTerm）之後才出現——藏著時量到的寬是 0，鏡片會不見（ui-09 修正） */
+    this.ro=new ResizeObserver(()=>{if(!this.dead&&this.box.offsetWidth)this.set(this.cur,true)});this.ro.observe(this.box);document.fonts?.ready.then(()=>{if(!this.dead)this.set(this.cur,true)});
   }
-  /* 拆掉：這排會被移除時（例如公共版行事曆 calUnmount）解除視窗的 resize 監聽、停掉動畫；box 自己身上的監聽跟著 box 一起回收 */
-  destroy(){this.dead=true;removeEventListener("resize",this.onResize);if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
+  /* 拆掉：這排會被移除時（例如公共版行事曆 calUnmount）停掉大小監聽與動畫；box 自己身上的監聽跟著 box 一起回收 */
+  destroy(){this.dead=true;this.ro.disconnect();if(this.raf)cancelAnimationFrame(this.raf);this.raf=0}
   btns(){return [...this.box.querySelectorAll("[data-k]")]}
   geo(){const bs=this.btns();return bs.map(b=>({x:b.offsetLeft+b.offsetWidth/2,w:b.offsetWidth,k:b.dataset.k}))}
   set(i,instant){

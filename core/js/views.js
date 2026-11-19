@@ -249,7 +249,7 @@ function renderCards(){
   const b0=$("#cardDetail .sl"),was=b0&&b0.closest("[data-issue]").dataset.issue===(it&&it.id)?b0.dataset.p:"";
   morphTo($("#cardDetail"),it?cardHTML(it):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
   if(was!=="")slAnim($("#cardDetail .sl"),cssNum(was));   /* 同一個議題的時程變了（改了期間）：把手滑到新位置 */
-  $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;
+  $("#pvGantt").hidden=!!it;$("#pvDetail").hidden=!it;$("#progPanel").classList.toggle("pv-on",!!it);   /* pv-on：議題詳情那一頁（標題列的分段切換與「+ 議題」藏起來，board.css「進度頁標題列」） */
 }
 /* 甘特圖 ⇄ 詳情切換：原本的畫面往下淡出，新的畫面往上淡入（id＝要看的議題，null＝回甘特圖） */
 let pvTok=0;

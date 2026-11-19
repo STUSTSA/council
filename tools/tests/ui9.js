@@ -4,6 +4,8 @@
    K3 標籤面板一類一塊：五塊（標題＋數量）、沒有「完成」與舊的逐列輸入框；虛線「+」→ 輸入框，Enter 加入且輸入框留著、HTML 字元照字面顯示；
       點名字原地改名（Enter 存、Esc 不改）；× 刪除；點別處有字就加入；離開這一頁才寫一筆 commit；唯讀檢視沒有 +、×，名字不能點
    K4 「這台裝置」「網站管理」合併頁最上面一塊寫目前的狀態：記住的身分（忘記後即時改成「沒有記住身分」）、雲端同步的 repo 與權杖狀態（資料經過跳脫）；設定列上照樣只有名稱
+   K5 進度頁標題列：英文小標 TIMELINE＋「進度」（700）；全部／上學期／下學期與實心「+ 議題」（--pri 底、高 52）在標題列（桌面同一列在標題右邊、手機在標題下一列）；
+      分段切換的鏡片看得到（寬 > 0，進度頁一開始藏著也一樣）；議題詳情時切換與新增藏起來、回甘特圖再出現；唯讀檢視沒有「+ 議題」
    （其他 K 項的斷言接在後面）
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common.js');
@@ -85,6 +87,23 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
     ok(/^記住的身分/.test(r.st)&&r.st.includes(r.n||'沒有記住身分')&&!/記住/.test(row),`這台裝置：最上面寫記住的身分（${r.st}）；設定列上沒有（${row}）`);
     if(r.n){await p.click('#setOv .set-pane [data-hub="forget"]');await p.waitForTimeout(500);
       const t=await p.evaluate(()=>document.querySelector('#setOv .set-pane .acct-me').textContent);ok(t==='記住的身分沒有記住身分',`忘記這台裝置後即時改成「${t}」`)}
+    errs.push(...p.errs);await p.__b.close()}
+
+  /* ---------- K5 進度頁標題列 ---------- */
+  for(const w of [1300,412]){const touch=w<700,p=await fresh(w);await p.evaluate(()=>setSection('progress',{instant:true}));await p.waitForTimeout(900);
+    const geo=()=>p.evaluate(()=>{const R=e=>e&&e.getBoundingClientRect(),V=e=>!!e&&getComputedStyle(e).display!=='none'&&R(e).width>0,h=$('#ganttH'),g=$('#gTerm'),a=$('#addIssue');
+      const hb=R(h),gb=R(g),ab=R(a),cs=getComputedStyle(a),pri=getComputedStyle(document.documentElement).getPropertyValue('--pri').trim();
+      const t=document.createElement('i');t.style.color=pri;document.body.append(t);const priC=getComputedStyle(t).color;t.remove();
+      return {t:h.textContent,en:getComputedStyle(h,'::before').content,fw:getComputedStyle(h).fontWeight,inHead:!!g.closest('.panel-head')&&!!a.closest('.panel-head'),
+        gv:V(g),av:V(a),hb:[hb.left,hb.right,hb.top,hb.bottom],gb:[gb.left,gb.top,gb.bottom],ab:[ab.left,ab.height],bg:cs.backgroundColor,priC,lens:R(g.querySelector('.lseg-lens')).width}});
+    let r=await geo();
+    ok(r.t==='進度'&&r.en==='"TIMELINE"'&&+r.fw>=700&&r.inHead,`${w} 標題「${r.t}」英文小標 ${r.en}、${r.fw}；切換與新增在標題列`);
+    ok(r.gv&&r.av&&r.bg===r.priC&&Math.abs(r.ab[1]-52)<1&&r.lens>10,`${w} 「+ 議題」實心（${r.bg}＝--pri）、高 ${r.ab[1]}；鏡片寬 ${r.lens.toFixed(0)}`);
+    ok(touch?r.gb[1]>=r.hb[3]-1:(r.gb[0]>r.hb[0]+100&&r.gb[1]<r.hb[3]),`${w} ${touch?'手機：切換在標題下一列':'桌面：切換在標題右邊同一列'}（標題 ${r.hb.map(x=>x.toFixed(0))}，切換 ${r.gb.map(x=>x.toFixed(0))}）`);
+    const id=await p.evaluate(()=>activeIssues()[0].id);await p.evaluate(id=>progShow(id),id);await p.waitForTimeout(900);
+    r=await geo();const r2=r;await p.evaluate(()=>progShow(null));await p.waitForTimeout(900);r=await geo();
+    ok(!r2.gv&&!r2.av&&r.gv&&r.av,`${w} 議題詳情時切換與新增藏起來、回甘特圖再出現`);
+    if(!touch){await p.click('#peekBtn');await p.waitForTimeout(600);r=await geo();ok(!r.av&&r.gv,'唯讀檢視：沒有「+ 議題」、切換照常');await p.click('#peekBtn');await p.waitForTimeout(400)}
     errs.push(...p.errs);await p.__b.close()}
 
   ok(!errs.length,`沒有 pageerror${errs.length?'：'+errs.slice(0,3).join('；'):''}`);
