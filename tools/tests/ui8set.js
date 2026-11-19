@@ -88,7 +88,7 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     ok(!lblNote.length,'標籤面板沒有說明小字 '+lblNote);await shut('labels');
     s=await open('backup');seen['備份']=s.hub.includes('export')&&s.hub.includes('import');await shut('backup');
     s=await open('device');seen['這台裝置']=s.hub.includes('forget');await shut('device');
-    s=await open('site');seen['網站管理']=s.hub.includes('cloud')&&s.hub.includes('share');await shut('site');
+    s=await open('site');seen['網站管理']=s.hub.includes('cloud')&&!s.hub.includes('share');   /* ui-09 N：分享預覽入口拿掉（ui9og 另外檢查） */await shut('site');
     s=await open('look');seen['外觀']=s.look;
     c=await noChrome(p);ok(c.title===0,'設定頁沒有 title 屬性');
     await shut('look');

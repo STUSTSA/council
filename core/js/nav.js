@@ -402,11 +402,11 @@ const SET_HUBS={
   term:()=>hubRun("學年與開學日",()=>[
     {k:"year",ic:"cap",t:"學年",flow:()=>editBoardInfo("year")},
     {k:"term",ic:"flag",t:"開學日",flow:()=>editBoardInfo("term")}]),
-  /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列 */
+  /* 網站管理：只有後台管理員（cloud.js 的 siteAdmin）看得到這一列。
+     ui-09 N：「分享預覽」拿掉（主頁與看板的分享預覽統一寫在 index.html、home.html，要改就直接改 HTML；以前這裡會用 GitHub API 把 index.html 改回各部門自己的標題） */
   site:()=>hubRun("網站管理",()=>[
     {k:"cloud",ic:"cloud",t:"雲端同步",
       flow:async()=>{const before=JSON.stringify(state);const ok=await cloudSettings();if(ok&&!editing&&JSON.stringify(state)!==before)await settingSave(()=>{},"雲端設定已更新");else render()}},
-    {k:"share",ic:"share",t:"分享預覽",flow:()=>shareSettings()},
     /* 全會密碼與自動開通、重置測試部門（provision.js） */
     ...(cloudOn()&&ghToken()?[{k:"allpw",ic:"people",t:"全會密碼",flow:()=>allPwSet()},
       ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])],
