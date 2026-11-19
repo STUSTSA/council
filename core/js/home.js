@@ -262,6 +262,7 @@
   /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
      Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
      （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零四。）
+     任何一步回寬或高 ≤ 2 的極小圖（1×1 透明佔位）也當成沒有，往下一步。
      內網／本機網域（lkLan）兩步都不要：正式站是 https，向內網 http 要圖多半被擋，等於一定把內部名稱送給 Google。
      結果只記在記憶體（LK_ICO：網站 origin → 載到的圖片網址，"" ＝兩邊都沒有），重畫、同網站的連結不重複要；不存 */
   const LK_G="https://www.google.com/s2/favicons?domain=",LK_ICO=new Map();
@@ -273,7 +274,8 @@
     const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
     const next=()=>{if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
     img.addEventListener("load",()=>{
-      if(!img.naturalWidth||srcs[i].startsWith(LK_G)&&img.naturalWidth<=16&&img.naturalHeight<=16){next();return}
+      const iw=img.naturalWidth,ih=img.naturalHeight;
+      if(iw<=2||ih<=2||srcs[i].startsWith(LK_G)&&iw<=16&&ih<=16){next();return}
       if(!hit)LK_ICO.set(key,srcs[i]);w.classList.add("ico")});
     img.addEventListener("error",next);
     img.src=srcs[0];w.firstElementChild.append(img);
