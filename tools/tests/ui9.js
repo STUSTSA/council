@@ -3,6 +3,7 @@
       底下的頁面不捲；關掉後標題列照舊
    K3 標籤面板一類一塊：五塊（標題＋數量）、沒有「完成」與舊的逐列輸入框；虛線「+」→ 輸入框，Enter 加入且輸入框留著、HTML 字元照字面顯示；
       點名字原地改名（Enter 存、Esc 不改）；× 刪除；點別處有字就加入；離開這一頁才寫一筆 commit；唯讀檢視沒有 +、×，名字不能點
+   K4 「這台裝置」「網站管理」合併頁最上面一塊寫目前的狀態：記住的身分（忘記後即時改成「沒有記住身分」）、雲端同步的 repo 與權杖狀態（資料經過跳脫）；設定列上照樣只有名稱
    （其他 K 項的斷言接在後面）
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common.js');
@@ -71,6 +72,19 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
     await p.click('#peekBtn');await p.waitForTimeout(2500);
     r=await p.evaluate(()=>({set:setOpen,ro:roView,gear:(b=>!b||b.hidden||getComputedStyle(b).display==='none'||getComputedStyle(b).visibility==='hidden')(document.querySelector('#tabbar .tb-gear')),has:state.labels.some(l=>l.name==='公文')}));
     ok(!r.set&&r.ro&&r.gear&&r.has&&p.__S.st.commits.length===c0+2,`設定開著時按眼睛鈕：設定收起、沒有設定鍵、打到一半的標籤有存（${JSON.stringify(r)}）`);
+    errs.push(...p.errs);await p.__b.close()}
+
+  /* ---------- K4 這台裝置、網站管理的狀態塊 ---------- */
+  {c.q='?admin';const p=await fresh(1300);c.q='';await p.click('#setBtn');await p.waitForTimeout(800);
+    const row=await p.evaluate(()=>[...document.querySelectorAll('#setOv .set-inner .set-row')].map(r=>r.textContent.trim()).join('|'));
+    await p.click('#setOv [data-set="site"]');await p.waitForTimeout(900);
+    let r=await p.evaluate(()=>({st:document.querySelector('#setOv .set-pane .set-hub .acct-me')?.textContent||'',c:cloudCfg(),on:cloudOn(),tk:!!ghToken()}));
+    ok(r.st===`雲端同步${r.on?`${r.c.owner}/${r.c.repo}・${r.tk?'這台裝置已連上':'這台裝置還沒有權杖'}`:'尚未設定'}`,`網站管理：最上面寫雲端同步的狀態（${r.st}）`);
+    await p.click('#setOv [data-set="device"]');await p.waitForTimeout(900);
+    r=await p.evaluate(()=>({st:[...document.querySelectorAll('#setOv .set-pane .set-hub .acct-me .acct-person')].map(x=>x.textContent).join('|'),n:remName()}));
+    ok(/^記住的身分/.test(r.st)&&r.st.includes(r.n||'沒有記住身分')&&!/記住/.test(row),`這台裝置：最上面寫記住的身分（${r.st}）；設定列上沒有（${row}）`);
+    if(r.n){await p.click('#setOv .set-pane [data-hub="forget"]');await p.waitForTimeout(500);
+      const t=await p.evaluate(()=>document.querySelector('#setOv .set-pane .acct-me').textContent);ok(t==='記住的身分沒有記住身分',`忘記這台裝置後即時改成「${t}」`)}
     errs.push(...p.errs);await p.__b.close()}
 
   ok(!errs.length,`沒有 pageerror${errs.length?'：'+errs.slice(0,3).join('；'):''}`);
