@@ -50,7 +50,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
   /* 標籤：遷移的資料只有一個，再加一個，專員欄才有東西可勾 */
   await admin(d=>d.doc(`labels/${DEPT}__kp3lbl`).set({deptId:DEPT,kind:'地',name:'六宿',updatedAt:TS.now(),updatedBy:'su'}));
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const open=async(o)=>{
     const ctx=await b.newContext({viewport:{width:o.w,height:o.h},colorScheme:o.sc,hasTouch:!!o.touch,isMobile:!!o.touch,serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));

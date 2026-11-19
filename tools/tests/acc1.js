@@ -40,7 +40,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     await d.doc('legacyIdentities/events__m1').set({deptId:'events',name:'舊專員小明',oldRole:'member',createdAt:'',claimedBy:null,claimedAt:null,rev:1,updatedAt:TS.now(),updatedBy:'seed'});
   });
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const fbReq=[];
   /* source：把 fruit 設成 firestore（其他部門照設定檔＝github）；firebase 設定改成模擬器 */
   const open=async(url,{ua,fruitSource='firestore'}={})=>{
