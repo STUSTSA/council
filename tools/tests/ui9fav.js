@@ -14,7 +14,9 @@
    8. 內網／本機網域（IP、localhost、單段名、.local、.internal、.lan、.home.arpa、.localhost）：不向網站也不向 Google 要任何圖示（page.on('request') 記下全部請求），直接首字母
    9. 載入中刪掉連結（網站延遲 1.5 秒才回 404）：Google 沒收到那個網域、結果沒寫進快取（再加回來會重新向網站要）
   10. 中文網域的首字（M2）：中文網域（hostname 有 punycode「xn--」段）有名稱＝名稱第一個字（照字素：emoji、組合字完整一個）；
-      沒名稱（空的或名稱就是網域）＝維持網域第一個字母（punycode 的 X）；英數網域有名稱＝仍用網域首字母；從輸入框打中文網址也一樣
+      沒名稱（空的或名稱就是網域）＝維持網域第一個字母（punycode 的 X）；英數網域有名稱＝仍用網域首字母；從輸入框打中文網址也一樣。
+      審查修正：只看首字母實際取字的那一段（去掉 www. 後的網域開頭）——只有頂級網域或後段是中文（example.台灣、blog.例子.tw）仍用網域首字母、
+      中文子網域（中文.github.io）用名稱；名稱寫成網域的各種樣子（例子.tw、www.例子.tw、https://例子.tw/）＝沒取名稱；名稱開頭的零寬空格跳過、只有零寬空格＝沒取名稱
    外部網址用 fakenet.js（--host-resolver-rules 指到測試自己開的 https 小伺服器、拿掉 proxy），不用 route（見 fakenet.js 檔頭）；
    小伺服器扮演 Google Fonts、GitHub API、Google 圖示服務與各網站，記下每個請求（網域、路徑、Referer），不在預期內的就讓測試失敗。
    SHOTS=<資料夾> 時另存截圖（412、1300 × 米黃淺色、深色），不 commit。失敗會印 FAIL 並以非 0 結束 */
@@ -46,12 +48,12 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     if(host==='www.google.com'&&url.pathname==='/s2/favicons'){const d=url.searchParams.get('domain');g.push({u:'https://www.google.com'+q.url,d,ref});
       if(d==='b.example'||d==='tiny.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(G64);return true}
       r.writeHead(404,{'Content-Type':'image/png'});r.end(G16);return true}
-    if(!/\.example$|^xn--[a-z0-9-]+\.tw$/.test(host))return false;
+    if(!/\.example$|^([a-z0-9-]+\.)?xn--[a-z0-9-]+\.tw$|^example\.xn--kpry57d$|^xn--fiq228c\.github\.io$/.test(host))return false;
     site.push({host,u:q.url,ref});if(q.url!=='/favicon.ico')return false;
     if(host==='a.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(SITE_PNG);return true}
     if(host==='tiny.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(PX1);return true}
     const nf=()=>{try{r.writeHead(404,{'Content-Type':'text/html'});r.end('<!doctype html><title>404</title>')}catch(_){}};
-    if(host==='slow.example')setTimeout(nf,1500);else nf();return true},/^(www\.google\.com|.+\.example|xn--[a-z0-9-]+\.tw)$/);
+    if(host==='slow.example')setTimeout(nf,1500);else nf();return true},/^(www\.google\.com|.+\.example|([a-z0-9-]+\.)?xn--[a-z0-9-]+\.tw|example\.xn--kpry57d|xn--fiq228c\.github\.io)$/);
   const b=await chromium.launch(net.launch);
   const mk=async(w,h,o={})=>{const touch=w<700;
     const ctx=await b.newContext({viewport:{width:w,height:h},hasTouch:touch,isMobile:touch,serviceWorkers:'block',ignoreHTTPSErrors:true,reducedMotion:'reduce',deviceScaleFactor:o.dsf||1});
@@ -190,7 +192,24 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
       await q.ctx.close()}
     ok(!net.extra.length,`中文網域：沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
     ok(!p.errs.length,'中文網域：沒有錯誤 '+p.errs.join(' | '));
-    await p.ctx.close()}
+    await p.ctx.close();
+    /* 審查修正（下排最多 12 個，另開一頁）：只看取字的那一段、名稱等於網域的各種寫法、零寬字元 */
+    const ZW='\u200B',REV=[{u:'https://example.台灣/',n:'我的網站',ch:'E',t:'只有頂級網域是中文＝首字母取得到，仍用網域首字母'},
+      {u:'https://blog.例子.tw/',n:'部落格',ch:'B',t:'中文在後段（blog.例子.tw）＝仍用網域首字母'},
+      {u:'https://中文.github.io/',n:'測試',ch:'測',t:'中文子網域＝名稱第一個字'},
+      {u:'https://例子.tw/u1',n:'https://例子.tw/',ch:'X',t:'名稱是完整中文網址＝當成沒取名稱'},
+      {u:'https://例子.tw/u2',n:'www.例子.tw',ch:'X',t:'名稱是 www. 加中文網域＝當成沒取名稱'},
+      {u:'https://www.例子.tw/u3',n:'例子.tw',ch:'X',t:'連結有 www.、名稱是中文網域＝當成沒取名稱'},
+      {u:'https://例子.tw/z1',n:ZW+'範例',ch:'範',t:'名稱開頭零寬空格＝跳過，取「範」'},
+      {u:'https://例子.tw/z2',n:ZW+ZW,ch:'X',t:'名稱只有零寬空格＝當成沒取名稱'}];
+    site.length=0;g.length=0;net.extra.length=0;
+    const r2=await mk(1300,800,{links:REV.map(({u,n})=>({u,n}))});await r2.goto(U+'home.html');
+    ok(await settled(r2,REV.length),`審查修正：${REV.length} 個連結的圖示都有結果`);
+    const d2=await r2.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const c=l.querySelector('.hm-lkl');return {ch:c.textContent,kids:c.children.length,img:!!l.querySelector('img')}}));
+    REV.forEach((x,i)=>{const r=d2[i]||{};ok(r.ch===x.ch&&!r.kids&&!r.img,`${x.t}：${x.u}（名稱「${x.n.replace(/\u200B/g,'<ZWSP>')}」）→「${(r.ch||'').replace(/\u200B/g,'<ZWSP>')}」（應為「${x.ch}」）`)});
+    ok(!net.extra.length,`審查修正：沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
+    ok(!r2.errs.length,'審查修正：沒有錯誤 '+r2.errs.join(' | '));
+    await r2.ctx.close()}
 
   /* 截圖（SHOTS=資料夾）：下排三種圖示各一個 */
   if(process.env.SHOTS){fs.mkdirSync(process.env.SHOTS,{recursive:true});
