@@ -225,6 +225,7 @@
      不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
      網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
      圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕）。不帶 referrer。
+     內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
@@ -261,10 +262,13 @@
   /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
      Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
      （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零四。）
+     內網／本機網域（lkLan）兩步都不要：正式站是 https，向內網 http 要圖多半被擋，等於一定把內部名稱送給 Google。
      結果只記在記憶體（LK_ICO：網站 origin → 載到的圖片網址，"" ＝兩邊都沒有），重畫、同網站的連結不重複要；不存 */
   const LK_G="https://www.google.com/s2/favicons?domain=",LK_ICO=new Map();
+  /* IP（URL 解析後 IPv4 一定是四段數字、IPv6 用 [] 包起來）、localhost、沒有點的單段名、保留給內網的字尾；結尾的點先去掉 */
+  const lkLan=h=>{h=h.replace(/\.$/,"");return !h.includes(".")||h.startsWith("[")||/^\d+\.\d+\.\d+\.\d+$/.test(h)||/(^|\.)(localhost|local|internal|lan|home\.arpa)$/.test(h)};
   function lkIco(w,u){
-    const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit==="")return;
+    const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit===""||lkLan(p.hostname))return;
     const srcs=hit?[hit]:[key+"/favicon.ico",LK_G+encodeURIComponent(p.hostname)+"&sz=64"];let i=0;
     const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
     const next=()=>{if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
