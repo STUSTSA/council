@@ -227,7 +227,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     const mic=`${DEPT}__fwmicro`;await admin(d=>d.doc(`labels/${mic}`).set({deptId:DEPT,kind:'物',name:'微秒標籤',updatedAt:new TS(1763000000,123456000),updatedBy:'su'}));
     await ad.evaluate(()=>acctReload());await until(()=>ad.evaluate(()=>state.labels.some(l=>l.name==='微秒標籤')&&!fsBusy));
     await openSet(ad);await ad.click('[data-set="labels"]');await ad.waitForSelector('#dlgForm [data-x="del"][data-id="fwmicro"]',{timeout:8000});
-    await ad.click('#dlgForm [data-x="del"][data-id="fwmicro"]');await ad.click('[data-x="done"]');await settled(ad);await closeSet(ad);
+    await ad.click('#dlgForm [data-x="del"][data-id="fwmicro"]');await ad.click('[data-set="labels"]');await settled(ad);await closeSet(ad);
     ok(!(await read(`labels/${mic}`))&&!!(await read(`auditLogs/labels_${mic}_delete_1763000000123`)),'管理員刪除 updatedAt 有微秒的標籤：成功，紀錄 ID 用整數毫秒');
     /* 編輯者繞過畫面：自己寫一模一樣的刪除＋紀錄，規則拒絕 */
     const tmp=`${DEPT}__fwdel`;await admin(d=>d.doc(`labels/${tmp}`).set({deptId:DEPT,kind:'事',name:'暫時',updatedAt:TS.fromMillis(1763000000000),updatedBy:'su'}));

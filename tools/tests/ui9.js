@@ -8,6 +8,8 @@
       分段切換的鏡片看得到（寬 > 0，進度頁一開始藏著也一樣）；議題詳情時切換與新增藏起來、回甘特圖再出現；唯讀檢視沒有「+ 議題」
    K6 其他：區塊標題（即時回報）英文小標在上、700、沒有細線箭頭；對話框寬 380（手機畫面寬減 40）、內距 26、標題 17px 700、刪除鈕紅底（沒有 !important 也對）；
       即時回報卡片存檔不跳「已儲存並同步到雲端…」提示（卡片上照樣「已儲存」、有寫 commit）；登入的對話框沒有說明句；時間頁的名稱平面字（聚焦時沒有底線）
+   審查修正：設定開著時按首頁鍵＝先存標籤面板再離開；點「+」前沒失焦（觸控）也會先提交輸入框；設定開著時按通知鈕，系統返回先關通知頁、不離站；
+      白紙目錄標題 28px 700；長的面板標題會換行不溢出
    （其他 K 項的斷言接在後面）
    失敗會印 FAIL 並以非 0 結束 */
 const c=require('./common.js');
@@ -139,6 +141,36 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
     await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#setOv .set-gate .primary').catch(()=>{});await p.waitForTimeout(700);
     const r=await p.evaluate(()=>({t:$('#dlg').open?$('#dlgForm>b').textContent:'',note:!!document.querySelector('#dlgForm .dlg-note')}));
     ok(r.t==='選擇編輯身分'&&!r.note,`登入（${r.t}）沒有說明句`);errs.push(...p.errs);await S.b.close()}
+
+  /* ---------- 審查修正 ---------- */
+  {const p=await fresh(1300);const S=p.__S;let r;
+    await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#setOv [data-set="labels"]');await p.waitForTimeout(900);
+    /* 觸控：輸入框還有焦點時就點另一類的「+」（blur 跟 click 同一輪） */
+    await p.click('#dlgForm [data-x="open"][data-k="人"]');await p.fill('#dlgForm [data-newlbl="人"]','先打的字');
+    await p.evaluate(()=>document.querySelector('#dlgForm [data-x="open"][data-k="事"]').click());await p.waitForTimeout(300);
+    r=await p.evaluate(()=>({has:state.labels.some(l=>l.name==='先打的字'),inp:document.querySelector('#dlgForm .lbl-in')?.dataset.newlbl}));
+    ok(r.has&&r.inp==='事','輸入框沒失焦就點另一類的「+」：打的字先加入、換成那一類的輸入框');
+    const id=await p.evaluate(()=>state.labels.find(l=>l.name==='先打的字').id);
+    await p.evaluate(id=>document.querySelector(`#dlgForm [data-x="ren"][data-id="${id}"]`).click(),id);await p.waitForTimeout(200);
+    await p.fill(`#dlgForm [data-lblname="${id}"]`,'改過的字');await p.evaluate(()=>document.querySelector('#dlgForm [data-x="open"][data-k="時"]').click());await p.waitForTimeout(300);
+    r=await p.evaluate(id=>state.labels.find(l=>l.id===id).name,id);ok(r==='改過的字',`改名打到一半就點「+」：名字先存（${r}）`);
+    /* 首頁鍵：先存再離開 */
+    await p.fill('#dlgForm [data-newlbl="時"]','離開前');const c0=S.st.commits.length;
+    await p.click('.dhead .dh-home');await p.waitForURL(/home\.html/,{timeout:8000}).catch(()=>{});
+    const saved=S.remote().labels||[];
+    ok(/home\.html/.test(p.url())&&S.st.commits.length===c0+1&&['改過的字','離開前'].every(n=>saved.some(l=>l.name===n)),`設定開著時按首頁鍵：先存一筆（${S.st.commits[0]?.split('\n')[0]}）再回主頁`);
+    await S.b.close()}
+  {const p=await fresh(1300);
+    await p.click('#setBtn');await p.waitForTimeout(800);await p.click('#notiBtn');await p.waitForTimeout(1000);
+    const a=await p.evaluate(()=>({set:setOpen,noti:notiOpen,st:history.state&&history.state.bl}));
+    await p.goBack().catch(()=>{});await p.waitForTimeout(900);
+    const b=await p.evaluate(()=>({url:location.pathname,noti:notiOpen})).catch(()=>({url:'?'}));
+    ok(!a.set&&a.noti&&a.st==='noti'&&/index\.html$/.test(b.url)&&!b.noti,`設定開著時按通知鈕：瀏覽紀錄換成通知頁（${a.st}），系統返回先關通知頁、留在看板（${b.url}）`);
+    const r=await p.evaluate(()=>{const d=document.createElement('div');d.innerHTML='<article class="rpt-paper"><header class="toc-h"><span>CONTENTS</span><h2>目錄</h2></header></article>';document.body.append(d);
+      const h=getComputedStyle(d.querySelector('h2'));const o={fs:h.fontSize,fw:h.fontWeight};d.remove();
+      const b=document.createElement('b');b.className='sec-h';b.style.width='200px';b.textContent='分享預覽（貼連結到 LINE、IG、FB 時顯示）';document.body.append(b);o.over=b.scrollWidth>b.clientWidth+1;b.remove();return o});
+    ok(r.fs==='28px'&&+r.fw>=700&&!r.over,`白紙目錄標題 ${r.fs} ${r.fw}；長的區塊標題換行不溢出`);
+    errs.push(...p.errs);await p.__b.close()}
 
   ok(!errs.length,`沒有 pageerror${errs.length?'：'+errs.slice(0,3).join('；'):''}`);
   console.log(`\n${passes} 通過，${fails} 失敗`);process.exit(fails?1:0)})();

@@ -54,7 +54,7 @@ dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
    用在：各區的標題（.panel-head 裡的 h2：即時回報、進度、完成紀錄、會長室與秘書處的面板）、通知頁（逾期、行事曆）、
    設定的面板標題（合併頁、帳號面板、面板裡的表單、編輯紀錄、每週概述；dialog.js 的 panelHead）、工作報告預覽。
    標題後面的數字膠囊（完成紀錄的 .count）跟標題同一行 */
-.sec-h{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:3px;margin:0;padding:0;min-width:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2;white-space:nowrap}
+.sec-h{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:3px;margin:0;padding:0;min-width:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2;overflow-wrap:anywhere}
 .sec-h[data-en]::before{content:attr(data-en);flex:0 0 100%;font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
 button.primary:hover{opacity:.85}
 input:focus,textarea:focus,select:focus{outline:2px solid var(--ink);outline-offset:1px}
@@ -222,6 +222,7 @@ body.searching .layout{display:none}
 .layout{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}   /* 一次只放一區；relative＝換分頁時舊區塊那一層（.sg-out）的定位基準 */
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.panel-head>.sec-h{flex:1}   /* 標題佔掉剩下的寬，右邊的按鈕靠右（以前是全站 h2 的 flex:1；ui-09 審查） */
 .count{font-size:12px;border-radius:999px;padding:1px 8px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 新增鈕（+ 新增議題、+ 新增文件、+ 追蹤項目；即時回報 2026-11-17 起是右下角的浮動圓鈕）：2026-11-06 使用者：平常檢視太明顯，不常用。
    低調的小字：沒有框、灰字 13px、靠左，滑過／按下才變文字色 */
@@ -663,7 +664,6 @@ a.doc-pill:active{scale:.96}
 .mt-ev .evfs{margin-top:4px}
 .mt-pick{align-items:center}
 .mt-open{margin-left:auto}
-.meet-panel .panel-head #meetRefresh{margin-left:auto}
 /* 2026-11-06：一次看一個部門（上面一排部門膠囊 .mt-pick 沿用週報的 .wk-d），下面上一個／下一個部門、最下面匯出會議紀錄 */
 .mt-none{margin:4px 0 0;font-size:12.5px}
 .mt-step{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
@@ -728,7 +728,6 @@ a.doc-pill:active{scale:.96}
 /* 進度頁標題列（shell.js 的 .pg-head；DESIGN-next 第八節、模擬頁 TIMELINE；ui-09）：英文小標＋「進度」，右邊全部／上學期／下學期（液態分段切換，樣式在「液態分段切換」段）、
    實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
 .pg-head{flex-wrap:wrap;gap:12px 16px;margin-bottom:16px}
-.pg-head .sec-h{flex:1 1 auto}
 .g-term{flex:none}
 .pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 22px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
 .pg-add .ico{width:18px;height:18px;margin:0;stroke-width:2}
@@ -967,7 +966,7 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 每週概述 ===== */
 /* 2026-11-06 起是設定裡的一頁（weekly.js 的 weekPane）：畫在設定的右側面板／手機子頁，平常藏著。
-   標題列跟合併頁同一種（20px 700、不畫分隔線，ui-08），捲動時黏在面板上方；「返回」只在桌面出現（手機用子頁上方的「返回」） */
+   標題是區塊標題（.sec-h，區塊標題段；不畫分隔線），捲動時黏在面板上方；「返回」只在桌面出現（手機用子頁上方的「返回」） */
 .week-wrap{max-width:640px}
 .week-wrap[hidden]{display:none}
 .week-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-14px;background:var(--bg);z-index:5;padding:14px 0 12px;margin:-14px 0 16px}   /* 黏住時往上多蓋 14px：面板／子頁上方有留白（.set-pane 14px、.set-sub-body 10px），不蓋住的話捲動時內容會從那段露出來（2026-11-06 使用者回報跑版） */
@@ -1084,7 +1083,7 @@ fieldset.multi legend{padding:0;margin-bottom:6px;font-size:13px;color:var(--mut
 .chip span{display:inline-flex;align-items:center;min-height:30px;padding:3px 14px 4px;border:1px solid transparent;background:var(--blk2);border-radius:999px;font-size:13px;transition:background-color .2s,color .2s}
 .chip input:checked+span{background:var(--pri);color:var(--pri-ink)}
 .chip input:focus-visible+span{outline:2px solid var(--ink);outline-offset:2px}
-.dlg-ghost{animation:none;pointer-events:none;display:block}   /* 關閉時的分身（dialog.js）：外觀照上面的 dialog */
+dialog.dlg-ghost{animation:none;pointer-events:none;display:block}   /* 關閉時的分身（dialog.js）：外觀照上面的 dialog；不播進場（寫成 dialog.dlg-ghost 才蓋得過前面的 dialog[open]） */
 .dlg-ghost-bd{position:fixed;inset:0;z-index:2147482999;background:color-mix(in srgb,var(--bg) 78%,transparent);pointer-events:none}
 .fld{display:grid;gap:4px;font-size:12.5px;color:var(--muted)}
 /* 數字的上下按鈕（dialog.js 的 type:"stepper"，例如學年）：不用打字、不跳鍵盤；數字換的時候往按的方向滾一下 */
@@ -1440,7 +1439,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
    沒有自己的標題列（沒有 logo 與「關閉」）：進出都用工具列的設定鍵（工具列 z-index 45，蓋在設定上面；設定開著時設定鍵是選中的實心）。
    設定是部門內的一頁（ui-09）：部門標題列留在畫面上，設定（含手機子頁）從標題列下緣（--set-top，nav.js 的 setTopSync）開始蓋；開著時底下的頁面不捲。
    列：一列一塊平面色塊（--blk、圓角 14），列與列之間留 10px 縫，不做相連又各自圓角；列上只有圖示、名稱、右側箭頭，下面不放小字。
-   面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題 20px 700，不畫分隔線；面板裡的清單也是一列一塊、留縫 */
+   面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題是區塊標題（.sec-h，英文小標在上；dialog.js 的 panelHead），不畫分隔線；面板裡的清單也是一列一塊、留縫 */
 .set-ov{position:fixed;inset:var(--set-top,0px) 0 0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:0 max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
 .set-ov[hidden]{display:none}
 body.set-open #pageMain{overflow:hidden}
@@ -1457,7 +1456,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-sub-top{display:flex;align-items:center;min-height:44px}   /* 手機子頁上方只有「返回」 */
 #subBack{gap:6px;padding-left:12px;padding-right:16px}   /* 左邊的箭頭自己帶留白，左內距少 4px，箭頭＋「返回」整組才視覺置中 */
 .set-sub-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:10px 2px calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
-/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（20px 700、不畫線），下面一列一個功能；
+/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
@@ -1815,7 +1814,7 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .log-ov.in-pane .log-scroll{overflow:visible;padding:8px 0 0}
 .log-ov.in-pane{max-width:720px}
 .log-ov.in-pane .anim-ctl{display:none}   /* 設定頁裡沒有「關閉」（DESIGN-next 第十二節）：桌面再點一次那一列、手機子頁的「返回」、Esc、系統返回 */
-.log-ov.in-pane .anim-top{border-bottom:0}   /* 跟合併頁標題同一種（設定頁段）：20px 700、不畫分隔線 */
+.log-ov.in-pane .anim-top{border-bottom:0}   /* 跟合併頁標題同一種（區塊標題 .sec-h）：不畫分隔線 */
 .log-scroll{flex:1;overflow:auto;scrollbar-gutter:stable;padding:8px max(0px,calc((100% - 880px)/2)) 48px}
 .log-list{list-style:none;margin:0;padding:0;display:grid;gap:22px}
 .lg-day>ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -1898,6 +1897,7 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .cv-col>span:empty:not(:focus){min-height:1.7em}
 .rpt-live{color:var(--ink);text-decoration:none;word-break:break-all}   /* 回到線上看板的連結（PDF 裡仍可點；網址照印，紙本也能照打） */
 /* --- 目錄：英文小字＋「目錄」，下面每章一列：細體大數字、章名、羅馬數字，列與列之間細線（參考樓層導覽卡） --- */
+.rpt-paper h2{display:flex;align-items:center;gap:12px;margin:0;padding:0;font-weight:500;font-size:16px;letter-spacing:.1em;flex:1;min-width:180px;white-space:nowrap}   /* 白紙上的標題（目錄、章節名稱；後面的 .toc-h h2、.rpt-ch-h h2 再各自改大小，所以這條要寫在它們前面）。ui-09 以前是全站 h2 的樣式，區塊標題改成 .sec-h 後留給白紙用 */
 .toc-h{display:grid;gap:4px;margin-bottom:28px}
 .toc-h span{font-size:12px;letter-spacing:.32em;color:var(--muted)}
 .toc-h h2{margin:0;font-size:28px;font-weight:700;letter-spacing:.14em}
@@ -1911,7 +1911,6 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-sec{position:relative}
 .rpt-ch-h{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:end;gap:6px 18px;margin-bottom:22px;padding-bottom:14px;border-bottom:1.5px solid var(--ink)}
 .rpt-ch-n{font-size:80px;font-weight:200;line-height:.82;letter-spacing:-.03em}
-.rpt-paper h2{display:flex;align-items:center;gap:12px;margin:0;padding:0;font-weight:500;font-size:16px;letter-spacing:.1em;flex:1;min-width:180px;white-space:nowrap}   /* 白紙上的標題（目錄、章節名稱；下面兩條再各自改大小）。ui-09 以前是全站 h2 的樣式，區塊標題改成 .sec-h 後留給白紙用 */
 .rpt-ch-h h2{min-width:0;margin:0;font-size:22px;font-weight:700;letter-spacing:.1em;line-height:1.3}
 .rpt-tabs{display:flex;gap:3px;align-self:start}
 .rpt-tabs i{display:grid;place-items:center;min-width:24px;height:20px;padding:0 4px;font:400 10px/1 "Jost",sans-serif;font-style:normal;letter-spacing:.04em;background:color-mix(in srgb,var(--ink) 7%,var(--blk));color:color-mix(in srgb,var(--muted) 62%,var(--blk))}

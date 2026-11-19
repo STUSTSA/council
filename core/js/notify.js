@@ -415,7 +415,8 @@ async function openNoti(){
   if(notiOpen||deptRO())return;
   if(editing&&!(await lvEndEdit()))return;
   if(notiOpen||deptRO())return;
-  if(setOpen)closeSettings(true);
+  /* 設定開著（ui-09 起設定開著時標題列的通知鈕按得到）：把設定那一筆瀏覽紀錄直接換成通知頁，不先退一筆再推一筆（跟 nav.js 設定鍵那條同一個做法；ui-09 審查） */
+  if(setOpen){Back.replace("settings","noti",i=>closeNoti(i));closeSettings(true)}
   if(HS.q)hsClear();
   notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false});calStale();calLoad(NOTI);
   Back.layers.noti();$("#notiBtn").setAttribute("aria-pressed","true");

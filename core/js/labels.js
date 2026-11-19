@@ -51,7 +51,11 @@ async function labelSettings(){
     if(state.labels.some(l=>l.kind===k&&l.name===n)){toast("已經有這個標籤");return false}
     state.labels.push({id:uid("g"),kind:k,name:n});dirty=true;inp.value="";return true};
   const renLbl=inp=>{const l=labelById(inp.dataset.lblname),n=inp.value.trim();
-    if(l&&n&&n!==l.name&&!state.labels.some(x=>x!==l&&x.kind===l.kind&&x.name===n)){l.name=n;dirty=true}};
+    if(!l||!n||n===l.name)return;
+    if(state.labels.some(x=>x!==l&&x.kind===l.kind&&x.name===n)){toast("已經有這個標籤");return}   /* 同類重名不改（跟新增一樣提示） */
+    l.name=n;dirty=true};
+  /* 觸控點一下時 blur 跟 click 在同一輪送出：click 先換掉輸入框，blur 的計時到了輸入框已經不在。所以點「+」、名字、× 之前先把開著的輸入框照「點別處」提交（ui-09 審查） */
+  const commitOpen=()=>{const i=f.querySelector(".lbl-in");if(!i)return;if(i.dataset.newlbl)addLbl(i.dataset.newlbl,i);else renLbl(i);st.add=st.ren=""};
   const focusIn=()=>{const i=f.querySelector(".lbl-in");if(i&&document.activeElement!==i){i.focus();if(i.dataset.lblname)i.select()}};
   const bind=()=>{
     f.onsubmit=ev=>ev.preventDefault();
@@ -61,7 +65,7 @@ async function labelSettings(){
     f.querySelectorAll(".lbl-in").forEach(i=>i.onblur=()=>setTimeout(()=>{if(!i.isConnected||document.activeElement===i)return;
       if(i.dataset.newlbl){addLbl(i.dataset.newlbl,i);if(st.add===i.dataset.newlbl)st.add=""}else{renLbl(i);st.ren=""}paint()},0));   /* 點別處：有字就存，再收回 */
     f.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>{
-      const x=b.dataset.x;
+      const x=b.dataset.x;commitOpen();
       if(x==="open"){st.add=b.dataset.k;st.ren="";paint();focusIn();return}
       if(x==="ren"){st.ren=b.dataset.id;st.add="";paint();focusIn();return}
       if(x==="del"){const id=b.dataset.id;state.labels=state.labels.filter(l=>l.id!==id);[...state.events,...state.issues].forEach(o=>{if(o.labels)o.labels=o.labels.filter(v=>v!==id)});dirty=true;paint();return}
