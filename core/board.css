@@ -1437,11 +1437,13 @@ dialog#dlg:has(.csel.open){overflow:visible}
 @keyframes dg-idea{22%{transform:scale(.82) rotate(-7deg)}46%{transform:none}66%{transform:scale(.9) rotate(5deg)}}
 
 /* ===== 設定頁（nav.js；DESIGN-next 第三、十二節） =====
-   沒有標題列（沒有 logo 與「關閉」）：進出都用工具列的設定鍵（工具列 z-index 45，蓋在設定上面；設定開著時設定鍵是選中的實心）。
+   沒有自己的標題列（沒有 logo 與「關閉」）：進出都用工具列的設定鍵（工具列 z-index 45，蓋在設定上面；設定開著時設定鍵是選中的實心）。
+   設定是部門內的一頁（ui-09）：部門標題列留在畫面上，設定（含手機子頁）從標題列下緣（--set-top，nav.js 的 setTopSync）開始蓋；開著時底下的頁面不捲。
    列：一列一塊平面色塊（--blk、圓角 14），列與列之間留 10px 縫，不做相連又各自圓角；列上只有圖示、名稱、右側箭頭，下面不放小字。
    面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題 20px 700，不畫分隔線；面板裡的清單也是一列一塊、留縫 */
-.set-ov{position:fixed;inset:0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
+.set-ov{position:fixed;inset:var(--set-top,0px) 0 0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:0 max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
 .set-ov[hidden]{display:none}
+body.set-open #pageMain{overflow:hidden}
 /* 清單（.set-scroll）與右側面板（.set-pane）：平常清單佔滿、內容置中；
    桌面版選了有下一層的項目時加 .split，清單縮成左欄（寬度變化由 nav.js 用 Web Animations 做），面板從右邊滑入 */
 .set-body{flex:1;min-height:0;display:flex;gap:clamp(20px,3vw,48px)}

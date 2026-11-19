@@ -215,7 +215,11 @@ function settingsInner(){
       setRow("device","device","這台裝置"))+
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
-/* 設定頁沒有標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
+/* 設定是部門內的一頁（DESIGN-next 第六節「部門內」、第十二節；ui-09）：部門標題列（同一個節點，data-fx-keep）留在畫面上，設定清單、桌面右側面板、手機子頁都從標題列下緣開始蓋。
+   打開時頁面捲回頂端（跟換分頁一樣，render.js 的 secSwap），底下的頁面鎖住不捲（board.css body.set-open）；--set-top＝標題列下緣，視窗大小變了重量 */
+function setTopSync(){const h=$(".dhead"),b=h&&!h.hidden?Math.max(0,Math.round(h.getBoundingClientRect().bottom)):0;document.documentElement.style.setProperty("--set-top",b+"px")}
+addEventListener("resize",()=>{if(setOpen)setTopSync()});
+/* 設定頁沒有自己的標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
    所以 #setOv 不設 aria-modal：設成強制回應的話，報讀器會把外面的工具列（唯一的關閉控制）當成不可用（ui-08 審查） */
 function settingsHTML(){
   return `<div class="set-body"><div class="set-scroll"><div class="set-inner"></div></div><div class="set-pane" hidden></div></div>`;
@@ -235,6 +239,7 @@ async function openSettings(){
   if(setOpen)return;
   if(!loggedIn()&&remRead())await remLogin();   /* 這台裝置記住了身分：直接進去，不顯示鎖頭 */
   const from=pageUnder(ov);PageFx.settle(ov);
+  const pm=$("#pageMain");if(pm)pm.scrollTop=0;setTopSync();   /* 設定是部門內的一頁：標題列留在畫面上（捲回頂端），設定從標題列下緣開始蓋 */
   setOpen=true;ov.getAnimations().forEach(a=>a.cancel());ov.hidden=false;Back.layers.settings();   /* 關閉動畫還沒播完又打開：先停掉 */document.body.classList.add("set-open");renderSettings();renderTabbar();
   PageFx.swap(from,ov);   /* 換頁動畫：底下那頁往後退、設定從後面浮上來 */
 }
