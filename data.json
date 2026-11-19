@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-18 22:57",
+ "savedAt": "2026-11-19 16:51",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -2146,6 +2146,28 @@
      "timeId": null
     }
    ]
+  },
+  {
+   "id": "emwnb94vefxpm",
+   "name": "123",
+   "desc": "5656",
+   "blocks": [
+    {
+     "id": "bmwnb97h6mmis",
+     "text": "5656",
+     "check": null,
+     "timeId": null
+    }
+   ],
+   "createdAt": "2026-11-19",
+   "staff": [],
+   "links": [],
+   "times": [],
+   "round": 1,
+   "touched": [
+    "2026-11-19"
+   ],
+   "touchedAt": "2026-11-19T16:51"
   }
  ],
  "yearLabel": "115學年",
