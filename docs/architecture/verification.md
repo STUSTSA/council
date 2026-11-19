@@ -140,6 +140,8 @@
 
 指令（你自己登入 Firebase CLI 後在 `backend/` 執行，或同意後我照做）：`npx firebase deploy --only firestore:rules,firestore:indexes --project stustsa-council-dev`。只影響開發專案；正式專案不受影響。部署索引時 CLI 若問要不要刪掉檔案裡沒有的索引，回答「不要」。
 
+2026-11-19：照主控台（規則）＋Google Cloud Shell（索引）逐步操作、每一步怎樣算成功、第一位總管理員的欄位與做錯時怎麼改回來、9.3 擴充成五種環境的實測清單、正式專案的準備清單，都在 [`docs/Google登入上線準備.md`](../Google登入上線準備.md)。
+
 ### 9.2 學校 Google 組織是否允許任何 Google 帳號登入（主控台確認）
 
 1. Google Cloud 主控台 → 選專案 `stustsa-council-dev` → 左上專案選擇器旁看「機構」：寫學校網域（例如 stust.edu.tw）＝專案在學校組織底下；寫「沒有機構」＝不受學校組織政策影響，下面第 3 點可略過。

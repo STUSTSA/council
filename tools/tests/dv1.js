@@ -31,7 +31,7 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
   const setRole=(uid,depts,sup=false)=>admin(d=>d.doc(`roles/${uid}`).set({super:sup,depts,rev:1,lastVia:'manual',lastRef:'bootstrap',updatedAt:TS.now(),updatedBy:'su'}));
   const read=async p=>{let v;await admin(async d=>{const s=await d.doc(p).get();v=s.exists?s.data():null});return v};
   const roster=async dept=>{let v;await admin(async d=>{v=(await d.collection('deptMembers').where('deptId','==',dept).get()).docs.map(x=>x.data().uid).sort()});return v};
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const open=async(dept,{ua,standalone,w=1000,vh=850}={})=>{
     const ctx=await b.newContext({viewport:{width:w,height:vh},serviceWorkers:'block',...(ua?{userAgent:ua,isMobile:true,hasTouch:true}:{})});
     if(standalone)await ctx.addInitScript(()=>{Object.defineProperty(navigator,'standalone',{get:()=>true})});

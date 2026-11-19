@@ -44,7 +44,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   const mig=await import(path.join(ROOT,'backend/migrate/run.js'));
   await mig.runImport(t.authenticatedContext('su',tok('su')).firestore(),firebase.firestore.FieldValue,TS,mig.loadSources({dept:DEPT}),{batch:'kp-test',uid:'su'});
 
-  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8');
+  const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const open=async()=>{
     const ctx=await b.newContext({viewport:{width:1300,height:900},serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));

@@ -2,7 +2,7 @@
 /* ---------- 面板標題的英文小標（DESIGN-next 第四節「標題上方放很小、字距很疏的英文小標」；ui-09） ----------
    設定頁的面板（合併頁、帳號與會長室管理的面板、畫在面板裡的表單、編輯紀錄、每週概述）標題上方放英文小標。
    英文名寫在 data-en，由 board.css「區塊標題」段的 .sec-h::before 畫出來（標題元素的文字不變）。
-   模擬頁有的照模擬頁（REPORT、ACCOUNT、TAGS、HISTORY、BACKUP），其他是這次暫定的（交接說明一百零四「待決定」）；
+   模擬頁有的照模擬頁（REPORT、ACCOUNT、TAGS、HISTORY、BACKUP），其他是這次暫定的（交接說明一百零五「待決定」）；
    「紀錄・某某」這種帶名字的標題看「・」前面那段。表上沒有的不放 */
 const PANEL_EN={"報告":"REPORTS","每週概述":"WEEKLY","工作報告":"REPORT","匯出工作報告":"REPORT","編輯紀錄":"HISTORY","看板名稱":"BOARD NAME",
   "身分與專員":"MEMBERS","人員":"MEMBERS","標籤":"TAGS","學年與開學日":"TERM","學年":"ACADEMIC YEAR","開學日":"TERM START","備份":"BACKUP",

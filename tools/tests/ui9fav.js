@@ -97,7 +97,7 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     ok(g.some(x=>x.d==='c.example')&&!c.ico&&!c.src&&c.disp!=='none'&&c.ch==='C',`${T} 兩邊都沒有（Google 回 16×16 預設圖、404）：顯示首字母「${c.ch}」`);
     ok(Math.abs(c.w-r.pub.w)<.01&&Math.abs(c.h-r.pub.h)<.01,`${T} 首字母圓鈕跟全會行事曆圓鈕同寬高（${c.w}×${c.h} vs ${r.pub.w}×${r.pub.h}）`);
     ok((c.br==='50%'||c.brPx>=c.w/2-.01)&&c.w===c.h,`${T} 首字母圓鈕是圓的（border-radius ${c.br}）`);
-    /* 墨跡置中：另開一頁只放這一個連結（下排不捲、不動），deviceScaleFactor 4。字的基線會對齊到整數 px，44px 圓鈕裡 11px 高的大寫字最好也差 0.5px，所以門檻 1px（見交接說明一百零四「審查修正」） */
+    /* 墨跡置中：另開一頁只放這一個連結（下排不捲、不動），deviceScaleFactor 4。字的基線會對齊到整數 px，44px 圓鈕裡 11px 高的大寫字最好也差 0.5px，所以門檻 1px（見交接說明一百零五「審查修正」） */
     {const q=await mk(w,h,{dsf:4,links:[{u:'https://c.example/',n:''}]});await q.goto(U+'home.html');await settled(q,1);await q.waitForTimeout(300);
       const ik=await ink(q,'.hm-dk-in>.hm-lk .hm-lkl');
       ok(ik&&ik.w>2&&ik.h>2&&Math.abs(ik.dx)<=1&&Math.abs(ik.dy)<=1,`${T} 字形實際墨跡的中心在圓鈕中心 1px 內（${ik?`${ik.dx.toFixed(2)}, ${ik.dy.toFixed(2)}；墨跡 ${ik.w.toFixed(2)}×${ik.h.toFixed(2)}`:'量不到'}）`);
