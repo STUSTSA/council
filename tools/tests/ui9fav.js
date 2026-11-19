@@ -13,6 +13,8 @@
    另外各一次（1300）：
    8. 內網／本機網域（IP、localhost、單段名、.local、.internal、.lan、.home.arpa、.localhost）：不向網站也不向 Google 要任何圖示（page.on('request') 記下全部請求），直接首字母
    9. 載入中刪掉連結（網站延遲 1.5 秒才回 404）：Google 沒收到那個網域、結果沒寫進快取（再加回來會重新向網站要）
+  10. 中文網域的首字（M2）：中文網域（hostname 有 punycode「xn--」段）有名稱＝名稱第一個字（照字素：emoji、組合字完整一個）；
+      沒名稱（空的或名稱就是網域）＝維持網域第一個字母（punycode 的 X）；英數網域有名稱＝仍用網域首字母；從輸入框打中文網址也一樣
    外部網址用 fakenet.js（--host-resolver-rules 指到測試自己開的 https 小伺服器、拿掉 proxy），不用 route（見 fakenet.js 檔頭）；
    小伺服器扮演 Google Fonts、GitHub API、Google 圖示服務與各網站，記下每個請求（網域、路徑、Referer），不在預期內的就讓測試失敗。
    SHOTS=<資料夾> 時另存截圖（412、1300 × 米黃淺色、深色），不 commit。失敗會印 FAIL 並以非 0 結束 */
@@ -44,12 +46,12 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     if(host==='www.google.com'&&url.pathname==='/s2/favicons'){const d=url.searchParams.get('domain');g.push({u:'https://www.google.com'+q.url,d,ref});
       if(d==='b.example'||d==='tiny.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(G64);return true}
       r.writeHead(404,{'Content-Type':'image/png'});r.end(G16);return true}
-    if(!/\.example$/.test(host))return false;
+    if(!/\.example$|^xn--[a-z0-9-]+\.tw$/.test(host))return false;
     site.push({host,u:q.url,ref});if(q.url!=='/favicon.ico')return false;
     if(host==='a.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(SITE_PNG);return true}
     if(host==='tiny.example'){r.writeHead(200,{'Content-Type':'image/png'});r.end(PX1);return true}
     const nf=()=>{try{r.writeHead(404,{'Content-Type':'text/html'});r.end('<!doctype html><title>404</title>')}catch(_){}};
-    if(host==='slow.example')setTimeout(nf,1500);else nf();return true},/^(www\.google\.com|.+\.example)$/);
+    if(host==='slow.example')setTimeout(nf,1500);else nf();return true},/^(www\.google\.com|.+\.example|xn--[a-z0-9-]+\.tw)$/);
   const b=await chromium.launch(net.launch);
   const mk=async(w,h,o={})=>{const touch=w<700;
     const ctx=await b.newContext({viewport:{width:w,height:h},hasTouch:touch,isMobile:touch,serviceWorkers:'block',ignoreHTTPSErrors:true,reducedMotion:'reduce',deviceScaleFactor:o.dsf||1});
@@ -159,6 +161,35 @@ const LAN=[{u:'http://192.168.1.1/admin',ch:'1'},{u:'http://localhost:3000/',ch:
     await p.keyboard.press('Escape');ok(await settled(p,1),'再加回來的連結照常走完後援（網站 404 → Google 預設圖 → 首字母）');
     ok(!net.extra.length,`載入中刪掉連結：沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
     ok(!p.errs.length,'載入中刪掉連結：沒有錯誤 '+p.errs.join(' | '));
+    await p.ctx.close()}
+
+  /* 10. 中文網域的首字（M2）：網站與 Google 都沒有圖示（404、16×16 預設圖），看首字 */
+  {site.length=0;g.length=0;net.extra.length=0;
+    const ZWJ='\u{1F468}\u200D\u{1F469}\u200D\u{1F467}',COMB='e\u0301',FLAG='\u{1F1F9}\u{1F1FC}';
+    const CJK=[{u:'https://例子.tw/',n:'範例網站',ch:'範',t:'中文網域有名稱＝名稱第一個字'},
+      {u:'https://例子.tw/none',n:'',ch:'X',t:'中文網域沒名稱＝維持網域第一個字母（punycode）'},
+      {u:'https://例子.tw/same',n:'xn--fsqu00a.tw',ch:'X',t:'中文網域、名稱就是網域＝維持網域第一個字母'},
+      {u:'https://www.範例.example/',n:ZWJ+'家庭',ch:ZWJ,t:'名稱開頭是 ZWJ 組成的 emoji＝完整一個字素'},
+      {u:'https://範例.example/f',n:FLAG+'台灣',ch:FLAG,t:'名稱開頭是國旗 emoji＝完整一個字素'},
+      {u:'https://範例.example/c',n:COMB+'clair',ch:COMB,t:'名稱開頭是組合字＝完整一個字素（照打的樣子，不轉大寫）'},
+      {u:'https://d.example/',n:'丁站',ch:'D',t:'英數網域有名稱＝仍用網域首字母'}];
+    const p=await mk(1300,800,{links:CJK.map(({u,n})=>({u,n}))});await p.goto(U+'home.html');
+    ok(await settled(p,CJK.length),`中文網域：${CJK.length} 個連結的圖示都有結果`);
+    const d=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const c=l.querySelector('.hm-lkl');return {ch:c.textContent,kids:c.children.length,img:!!l.querySelector('img'),disp:getComputedStyle(c).display}}));
+    CJK.forEach((x,i)=>{const r=d[i]||{};ok(r.ch===x.ch&&!r.kids&&!r.img&&r.disp!=='none',`${x.t}：${x.u}（名稱「${x.n}」）→「${r.ch}」（應為「${x.ch}」）`)});
+    /* 從輸入框打中文網址（原始輸入含非 ASCII） */
+    await p.click('.hm-dk-in>.hm-lkadd');await p.waitForTimeout(150);
+    await p.fill('#hmLkU','測試.tw');await p.fill('#hmLkN','<b>粗</b>');await p.press('#hmLkU','Enter');await p.waitForTimeout(300);
+    await p.keyboard.press('Escape');ok(await settled(p,CJK.length+1),'從輸入框加的中文網域連結也有結果');
+    const e=await p.evaluate(()=>{const l=[...document.querySelectorAll('.hm-dk-in>.hm-lk')].pop(),c=l.querySelector('.hm-lkl');return {ch:c.textContent,html:c.innerHTML,kids:c.children.length,u:l.querySelector('a').getAttribute('href')}});
+    ok(e.ch==='<'&&e.html==='&lt;'&&!e.kids&&/xn--/.test(e.u),`從輸入框打中文網址：首字照名稱第一個字、照字面（${e.u}「${e.ch}」${e.html}）`);
+    /* 中文字的墨跡也在圓鈕正中（行框裁到大寫字高到基線，中文字比大寫字高、略低於基線，兩邊抵掉；門檻同上 1px） */
+    {const q=await mk(1300,800,{dsf:4,links:[{u:'https://例子.tw/',n:'範例網站'}]});await q.goto(U+'home.html');await settled(q,1);await q.waitForTimeout(300);
+      const ik=await ink(q,'.hm-dk-in>.hm-lk .hm-lkl');
+      ok(ik&&ik.w>2&&ik.h>2&&Math.abs(ik.dx)<=1&&Math.abs(ik.dy)<=1,`中文網域：首字「範」的墨跡中心在圓鈕中心 1px 內（${ik?`${ik.dx.toFixed(2)}, ${ik.dy.toFixed(2)}；墨跡 ${ik.w.toFixed(2)}×${ik.h.toFixed(2)}`:'量不到'}）`);
+      await q.ctx.close()}
+    ok(!net.extra.length,`中文網域：沒有預期外的外部請求（${net.extra.join('、')||'無'}）`);
+    ok(!p.errs.length,'中文網域：沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
 
   /* 截圖（SHOTS=資料夾）：下排三種圖示各一個 */

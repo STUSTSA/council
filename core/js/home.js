@@ -234,7 +234,7 @@
      連結只存在這台裝置這個瀏覽器：localStorage「stustsa-links」＝[{u:網址, n:名稱}]（最多 LK_MAX 個；名稱可空＝顯示網域；最長 LK_NAME 字）。
      不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
      網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
-     圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕）。不帶 referrer。
+     圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕；中文網域改用名稱第一個字，見 lkFirst）。不帶 referrer。
      內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
@@ -292,10 +292,22 @@
     img.addEventListener("error",next);
     img.src=srcs[0];w.firstElementChild.append(img);
   }
+  /* 首字（兩邊都沒有圖示、或內網網域時圓鈕上的字；ui-09 M2，DievE 11/19 定）：
+     英數網域＝去掉 www. 的網域第一個字母（大寫）。中文等非英數網域（hostname 任一段是 punycode「xn--」；
+     new URL() 一定把非 ASCII 的網域轉成 punycode，所以原始輸入含非 ASCII 也走這條）＝連結名稱的第一個字：
+     照字素切（Intl.Segmenter，沒有就 Array.from），emoji、組合字不切壞；照打的樣子，不轉大寫。
+     這種網域沒取名稱（名稱空的，或名稱就是網域）時維持網域第一個字母（punycode 的 X；交接說明一百零五「中文網域的首字母」待決定） */
+  const lkSeg=typeof Intl==="object"&&typeof Intl.Segmenter==="function"?new Intl.Segmenter(undefined,{granularity:"grapheme"}):null;
+  const lkG1=s=>{if(lkSeg){for(const x of lkSeg.segment(s))return x.segment;return ""}return Array.from(s)[0]||""};
+  function lkFirst(x,h){
+    const n=x.n.trim(),host=new URL(x.u).hostname.replace(/\.$/,"").toLowerCase(),nl=n.toLowerCase().replace(/\.$/,"");
+    if(/(^|\.)xn--/.test(host)&&n&&nl!==host&&nl!==h.toLowerCase())return lkG1(n);
+    return h.charAt(0).toUpperCase();
+  }
   function lkNode(x){
     const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
     w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true"></b></a>`;
-    w.querySelector(".hm-lkl").textContent=h.charAt(0).toUpperCase();
+    w.querySelector(".hm-lkl").textContent=lkFirst(x,h);
     lkIco(w,x.u);
     return w;
   }
