@@ -31,8 +31,8 @@ const login=async p=>{await p.click('#setOv .set-gate .primary');await p.waitFor
  log('no staff list:',!(await p.$('#newStaff')));
  await p.click('#dlg [data-x=done]');await p.waitForTimeout(1500);log('team done:',await st(p));
  // 標籤（人事時地物）：新增一個「地」標籤
- await p.click('#setOv [data-set=labels]');await p.waitForTimeout(800);await p.fill('#dlg [data-newlbl="地"]','六宿');await p.click('#dlg [data-x=add][data-k="地"]');await p.waitForTimeout(300);
- await p.click('#dlg [data-x=done]');await p.waitForTimeout(2500);log('labels:',await p.evaluate(()=>state.labels.map(l=>l.kind+l.name)),'commit:',commits[0].commit.message.split('\n')[0]);
+ await p.click('#setOv [data-set=labels]');await p.waitForTimeout(800);await p.click('#dlg [data-x=open][data-k="地"]');await p.fill('#dlg [data-newlbl="地"]','六宿');await p.press('#dlg [data-newlbl="地"]','Enter');await p.waitForTimeout(300);
+ await p.click('#setOv [data-set=labels]');await p.waitForTimeout(2500);log('labels:',await p.evaluate(()=>state.labels.map(l=>l.kind+l.name)),'commit:',commits[0].commit.message.split('\n')[0]);
  await p.screenshot({path:'sp_back.png'});
  // 2026-11-06 設定頁整理：沒有小標題；學年與開學日只有秘書處有（tm1.js）；網站管理只給後台管理員
  log('list:',await p.evaluate(()=>({rows:[...document.querySelectorAll('#setOv .set-inner .set-row')].map(r=>r.dataset.set),heads:document.querySelectorAll('#setOv .set-h').length,logo:!!document.querySelector('#setOv .set-top .logo'),k:!!document.querySelector('#setOv .anim-k')})));

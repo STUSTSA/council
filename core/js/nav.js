@@ -371,6 +371,10 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
     });
   });
 }
+/* 合併頁最上面的狀態塊（ui-09）：設定列上不放目前的值（DievE 11/16 定），進到合併頁時最上面一塊寫目前的狀態（「標題＋值」，跟帳號頁的名稱塊同一種樣式 .acct-me）。
+   rows＝[[標題, 值], …]，一律跳脫 */
+const hubSt=rows=>rows.length?`<div class="acct-me">${rows.map(([k,v])=>`<div class="acct-person"><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join("")}</div>`:"";
+const remName=()=>{const rem=remRead();return rem&&(state.members.find(m=>m.id===rem.id)||{}).name||""};
 const SET_HUBS={
   /* 報告：每週概述（在同一個面板打開，返回回到這一頁；weekly.js 的 weekPane）與工作報告 */
   report:()=>hubRun("報告",()=>[
@@ -380,10 +384,11 @@ const SET_HUBS={
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
-  device:()=>hubRun("這台裝置",()=>{const rem=remRead(),n=rem&&(state.members.find(m=>m.id===rem.id)||{}).name;
+  device:()=>hubRun("這台裝置",()=>{const n=remName();
     return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",off:!n,act:()=>forgetDevice()}])]},
-    {foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
+    {head:()=>devForget()?hubSt([["記住的身分",remName()||"沒有記住身分"]]):"",   /* GitHub 模式：這台裝置記住了誰（忘記之後即時改） */
+     foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
   /* 外觀：沒有「帳號」合併頁時（舊的看板登入、沒登入、唯讀）的入口，內容跟帳號裡的外觀同一份（lookHTML） */
   look:()=>hubRun("外觀",()=>[],{foot:()=>lookHTML(false),mount:lookMount}),
   /* 學年與開學日：只有秘書處有這一列 */
@@ -397,7 +402,8 @@ const SET_HUBS={
     {k:"share",ic:"share",t:"分享預覽",flow:()=>shareSettings()},
     /* 全會密碼與自動開通、重置測試部門（provision.js） */
     ...(cloudOn()&&ghToken()?[{k:"allpw",ic:"people",t:"全會密碼",flow:()=>allPwSet()},
-      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])]),
+      ...BOARD_DEPTS.filter(d=>d.test).map(d=>({k:"reset-"+d.id,ic:"history",t:`重置${d.name}（測試）`,flow:()=>pvReset(d.id)}))]:[])],
+    {head:()=>{const c=cloudCfg();return hubSt([["雲端同步",cloudOn()?`${c.owner}/${c.repo}・${ghToken()?"這台裝置已連上":"這台裝置還沒有權杖"}`:"尚未設定"]])}}),   /* 雲端同步的 repo 與這台裝置的權杖狀態（改完設定回到這一頁時重畫） */
 };
 /* 有下一層的項目（桌面版放右側面板、手機進子頁） */
 const SET_FLOWS={
