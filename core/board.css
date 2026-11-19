@@ -1801,13 +1801,11 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .tm-sec{display:grid;gap:8px;padding-top:4px}
 .tm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .tm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 14px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
-.tm-row input{flex:1;min-width:120px;border:0;padding:4px 0;background:transparent}
 .tm-name{font-weight:500}
 .tm-pill{display:inline-flex;align-items:center;height:22px;padding:0 10px 1px;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
 .tm-pill.on{background:var(--acc2);color:var(--acc2-ink)}   /* 管理員：焦點色（紅色只給逾期、刪除、報告） */
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.tm-tools input{flex:1;min-width:140px}
 
 /* ===== 編輯紀錄頁 ===== */
 .log-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left));gap:10px}

@@ -23,7 +23,7 @@ const PageFx=(()=>{
   /* 先藏起來（新頁還沒輪到它浮上來時）：只動透明度 */
   function hold(el){save(el);el.style.opacity="0"}
   /* 找出要翻的區塊：從元素往下找，比畫面高四成多的容器繼續往裡面拆，其他的（卡片、膠囊、標題列、工具列…）當成一塊；只算畫面上看得到的，最多 MAXP 塊。
-     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico、.logo）與按鈕不往裡面拆，不會挑到圖形的零件。
+     只挑版面上的區塊（DESIGN-next 第五節）：圖示、標誌（svg、.ico）與按鈕不往裡面拆，不會挑到圖形的零件。
      標題列（data-fx-keep）是換畫面時沿用的節點：一直留在畫面上，不參加進場動畫；只有跨頁到達（all）時整頁一起浮上來 */
   function pieces(el,all){
     const H=innerHeight,W=innerWidth,out=[];
@@ -33,7 +33,7 @@ const PageFx=(()=>{
       const cs=getComputedStyle(c);if(cs.display==="none"||cs.visibility==="hidden")continue;
       if(cs.display==="contents"){walk(c,depth);continue}
       const r=c.getBoundingClientRect();if(!(r.bottom>0&&r.top<H&&r.right>0&&r.left<W&&r.width>1&&r.height>1))continue;
-      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico,.logo"))walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
+      if(r.height>H*.42&&c.children.length&&depth<7&&!(c instanceof SVGElement)&&!c.matches("button,a,.ico"))walk(c,depth+1);else out.push({el:c,r,base:cs.transform&&cs.transform!=="none"?cs.transform:""});
     }};
     walk(el,0);return out;
   }
