@@ -6,7 +6,7 @@
    「紀錄・某某」這種帶名字的標題看「・」前面那段。表上沒有的不放 */
 const PANEL_EN={"報告":"REPORTS","每週概述":"WEEKLY","工作報告":"REPORT","匯出工作報告":"REPORT","編輯紀錄":"HISTORY","看板名稱":"BOARD NAME",
   "身分與專員":"MEMBERS","人員":"MEMBERS","標籤":"TAGS","學年與開學日":"TERM","學年":"ACADEMIC YEAR","開學日":"TERM START","備份":"BACKUP",
-  "這台裝置":"DEVICE","外觀":"APPEARANCE","網站管理":"SITE ADMIN","雲端同步設定（GitHub）":"CLOUD SYNC","分享預覽（貼連結到 LINE、IG、FB 時顯示）":"SHARE PREVIEW",
+  "這台裝置":"DEVICE","外觀":"APPEARANCE","網站管理":"SITE ADMIN","雲端同步設定（GitHub）":"CLOUD SYNC",
   "帳號":"ACCOUNT","會長室管理":"COUNCIL ADMIN","名稱":"NAME","申請編輯權限":"REQUEST ACCESS","匯入":"IMPORT","QR 邀請":"QR INVITE","申請":"REQUESTS",
   "紀錄":"AUDIT LOG","權限歷史":"ROLE HISTORY"};
 const panelEn=t=>PANEL_EN[t]||PANEL_EN[String(t).split("・")[0]]||"";
