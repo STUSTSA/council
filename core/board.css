@@ -1309,7 +1309,7 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}
 /* 下排（home.js 的 dkPaint）：寬度跟著內容、以整個畫面寬置中（不是以主頁的內容區：左右安全區不一樣時也在正中間）；浮在上面（帶陰影）。
    .hm-dock＝跟畫面一樣寬的一條（左右用負邊距抵掉 .hm 的內距，本身不接點擊；左右超出畫面的底板分身在這裡裁掉），.hm-dk＝膠囊，在那一條的正中間。
-   內容：全會行事曆圓鈕（主要動作色）、細線、個人常用連結（網站圖示，載不到是網域第一個字母）、最後「+」；編輯中「+」換成返回鍵、網址、名稱、加入，連結右上角紅色 ×。
+   內容：全會行事曆圓鈕（主要動作色）、細線、個人常用連結（網站圖示；網站與 Google 圖示服務都要不到時是網域第一個字母，跟其他圓鈕一樣大的圓鈕、字置中）、最後「+」；編輯中「+」換成返回鍵、網址、名稱、加入，連結右上角紅色 ×。
    底板＝左右兩半（.hm-dk-bg，各自從膠囊的一邊延伸到中線、在中線裁掉；裡面那條很長的膠囊帶陰影）：寬度改變時兩半各自用 transform 滑到新的邊（中線不動），
    不動 width。內容放不下（手機、編輯中）時 .hm-dk-in 自己橫捲（.sc），放得下時不裁切（滑動中的按鈕不會被切掉） */
 .hm-dock{flex:none;display:flex;justify-content:center;margin:clamp(14px,4vh,40px) calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));overflow-x:clip;pointer-events:none}
@@ -1328,10 +1328,10 @@ dialog#dlg:has(.csel.open){overflow:visible}
 .hm-pub .ico{width:20px;height:20px}
 .hm-dv{width:1px;height:22px;background:var(--hair)}
 .hm-lk{position:relative;display:flex}
-.hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:var(--r-md);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--mo-spring)}
+.hm-lkc{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--mo-spring)}
 @media (hover:hover){.hm-lkc:hover{transform:scale(1.05)}}
 .hm-lkc:active{transform:scale(.96)}
-.hm-lkl{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:14px;font-weight:700;line-height:1}
+.hm-lkl{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--blk2);font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:1}   /* 首字母圓鈕：跟 .hm-pub、.hm-lkadd 同大小；顏色只用主題變數（深色、各主題跟著變），手機同尺寸 */
 .hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}
 .hm-lk.ico .hm-lkl{display:none}
 .hm-lk.ico .hm-lki{position:static;opacity:1}

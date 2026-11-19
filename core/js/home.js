@@ -224,7 +224,7 @@
      連結只存在這台裝置這個瀏覽器：localStorage「stustsa-links」＝[{u:網址, n:名稱}]（最多 LK_MAX 個；名稱可空＝顯示網域；最長 LK_NAME 字）。
      不存進帳號、不上傳，別的裝置、別的瀏覽器、別人都看不到。讀不到、壞掉、不是 http(s) 的一律略過（當成沒有）；localStorage 不能用時照樣能加，只是不會記住。
      網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
-     圖示只向那個網站自己要 /favicon.ico（不經過第三方的圖示服務、不帶 referrer），載不到顯示網域第一個字母。
+     圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕）。不帶 referrer。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
@@ -258,13 +258,27 @@
   }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
   DKN.set("pub",$id("hmPub"));
+  /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
+     Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
+     （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零四。）
+     結果只記在記憶體（LK_ICO：網站 origin → 載到的圖片網址，"" ＝兩邊都沒有），重畫、同網站的連結不重複要；不存 */
+  const LK_G="https://www.google.com/s2/favicons?domain=",LK_ICO=new Map();
+  function lkIco(w,u){
+    const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit==="")return;
+    const srcs=hit?[hit]:[key+"/favicon.ico",LK_G+encodeURIComponent(p.hostname)+"&sz=64"];let i=0;
+    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
+    const next=()=>{if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
+    img.addEventListener("load",()=>{
+      if(!img.naturalWidth||srcs[i].startsWith(LK_G)&&img.naturalWidth<=16&&img.naturalHeight<=16){next();return}
+      if(!hit)LK_ICO.set(key,srcs[i]);w.classList.add("ico")});
+    img.addEventListener("error",next);
+    img.src=srcs[0];w.firstElementChild.append(img);
+  }
   function lkNode(x){
     const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
-    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true">${esc(h.charAt(0).toUpperCase())}</b></a>`;
-    const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
-    img.addEventListener("load",()=>{if(img.naturalWidth)w.classList.add("ico");else img.remove()},{once:true});
-    img.addEventListener("error",()=>img.remove(),{once:true});
-    img.src=new URL(x.u).origin+"/favicon.ico";w.firstElementChild.append(img);
+    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true"></b></a>`;
+    w.querySelector(".hm-lkl").textContent=h.charAt(0).toUpperCase();
+    lkIco(w,x.u);
     return w;
   }
   function dkNode(k){

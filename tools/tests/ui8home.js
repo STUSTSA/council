@@ -7,7 +7,7 @@
    H. 下排個人常用連結（只存這台裝置 localStorage「stustsa-links」）：「+」進入編輯、新增（Enter、「加入」）、名稱空的用網域、只收 http(s)
       （javascript:、data:、mailto:、ftp: 拒絕）、跳脫（名稱含 <img onerror> 不執行）、名稱 30 字、最多 12 個（滿了「+」不出現）、× 移除、
       Esc／點下排以外／返回鍵結束編輯、桌面滑鼠停在連結上浮出名稱膠囊（沒有 title）、手機不浮出、重新整理後保留、壞值不出錯、
-      新分頁 noopener noreferrer、圖示只向網站自己要 /favicon.ico（不帶 referrer），載不到顯示網域第一個字母、程式動畫只動 transform／opacity
+      新分頁 noopener noreferrer、圖示先向網站自己要 /favicon.ico（不帶 referrer），網站與 Google 圖示服務都載不到顯示網域第一個字母（Google 後援的細節在 ui9fav）、程式動畫只動 transform／opacity
    I. 下排以整個畫面寬置中：412、811、1300 寬，下排膠囊中心與 innerWidth/2 的差在 0.5px 以內（0、3、12 個連結）；左右安全區不一樣時也一樣
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
@@ -147,7 +147,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     /* 重新整理後保留 */
     const before=JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]));await p.reload();await p.waitForTimeout(800);
     ok(JSON.stringify((await dock(p)).links.map(l=>[l.href,l.lbl]))===before,'重新整理後連結都還在、順序不變');
-    /* 圖示：只向網站自己要 /favicon.ico、不帶 referrer；載不到（這裡外部網路都擋掉）顯示網域第一個字母 */
+    /* 圖示：網站與 Google 圖示服務都載不到（這裡外部網路都擋掉；Playwright 攔截時 /favicon.ico 也一律中止）顯示網域第一個字母 */
     const fv=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>({k:l.classList.contains('ico'),ch:getComputedStyle(l.querySelector('.hm-lkl')).display})));
     ok(fv.every(f=>!f.k&&f.ch!=='none'),'圖示載不到：顯示網域第一個字母');
     /* 別的分頁在這一頁編輯中改了清單（直接改 localStorage；編輯中這一頁不跟著換畫面）：這一頁再加、刪時先讀回最新的，不用舊清單整份蓋掉 */
@@ -166,7 +166,8 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
       ok(!d.links.some(l=>l.lbl==='第三')&&d.links.length===(await st(p)).length,'沒在編輯時收到別的分頁的修改：畫面跟著換')}
     ok(!p.errs.length,'桌面連結沒有錯誤 '+p.errs.join(' | '));
     await p.ctx.close()}
-  {/* 圖示載得到：不攔截網路（Playwright 攔截時 /favicon.ico 一律失敗），連到測試自己開的小伺服器 */
+  {/* 圖示載得到：不攔截網路（Playwright 攔截時 /favicon.ico 一律失敗），連到測試自己開的小伺服器。
+     只放網站有圖示的那一個：網站沒有圖示時會改向 Google 圖示服務要，這一段沒攔截網路會真的連出去，所以「載不到」的情況改由 ui9fav 測（它模擬全部外部網址） */
     const http=require('http'),zlib=require('zlib');
     const png=(()=>{const crc=b=>{let c,t=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}let x=0xffffffff;for(const v of b)x=t[(x^v)&255]^(x>>>8);return (x^0xffffffff)>>>0};
       const ch=(ty,d)=>{const l=Buffer.alloc(4);l.writeUInt32BE(d.length);const td=Buffer.concat([Buffer.from(ty),d]);const c=Buffer.alloc(4);c.writeUInt32BE(crc(td));return Buffer.concat([l,td,c])};
@@ -174,12 +175,11 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
       return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),ch('IHDR',ih),ch('IDAT',zlib.deflateSync(raw)),ch('IEND',Buffer.alloc(0))])})();
     const seen=[];const srv=http.createServer((q,r)=>{seen.push({u:q.url,ref:q.headers.referer||''});if(q.url==='/favicon.ico'){r.writeHead(200,{'Content-Type':'image/png'});r.end(png)}else{r.writeHead(404);r.end()}});
     await new Promise(r=>srv.listen(FAV_PORT,'127.0.0.1',r));
-    const p=await mk(1300,800,{noRoute:1,rm:1,links:[{u:`http://localhost:${FAV_PORT}/some/page`,n:'有圖示'},{u:`http://127.0.0.1:${FAV_PORT+1}/`,n:''}]});
+    const p=await mk(1300,800,{noRoute:1,rm:1,links:[{u:`http://localhost:${FAV_PORT}/some/page`,n:'有圖示'}]});
     await p.goto(U+'home.html',{waitUntil:'domcontentloaded'});await p.waitForTimeout(1500);
     const r=await p.evaluate(()=>[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img');return {ico:l.classList.contains('ico'),src:i&&i.getAttribute('src'),rp:i&&i.referrerPolicy,ch:getComputedStyle(l.querySelector('.hm-lkl')).display,ltr:l.querySelector('.hm-lkl').textContent}}));
-    ok(r[0].ico&&r[0].src===`http://localhost:${FAV_PORT}/favicon.ico`&&r[0].rp==='no-referrer'&&r[0].ch==='none',`圖示：只向網站自己要 /favicon.ico（${r[0].src}）、不帶 referrer，載到就換掉字母`);
+    ok(r[0].ico&&r[0].src===`http://localhost:${FAV_PORT}/favicon.ico`&&r[0].rp==='no-referrer'&&r[0].ch==='none',`圖示：先向網站自己要 /favicon.ico（${r[0].src}）、不帶 referrer，載到就換掉字母`);
     ok(seen.length===1&&seen[0].u==='/favicon.ico'&&!seen[0].ref,`網站只收到 /favicon.ico 一個請求、沒有 Referer（${JSON.stringify(seen)}）`);
-    ok(!r[1].ico&&!r[1].src&&r[1].ch!=='none'&&r[1].ltr==='1',`載不到：顯示網域第一個字母（${r[1].ltr}）`);
     await p.ctx.close();srv.close()}
   {/* 12 個上限 */
     const p=await mk(1300,800,{links:Array.from({length:11},(_,i)=>({u:`https://s${i}.example/`,n:`站${i}`}))});await p.goto(U+'home.html');await p.waitForTimeout(3600);
