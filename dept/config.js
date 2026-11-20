@@ -41,13 +41,14 @@ const BOARD_BASE = {
      後台管理員可以在設定 → 網站管理「重置」它（回到剛開通的狀態，provision.js 的 pvReset）
    ext:"名稱"＝多一個分頁放這個部門專用的功能（2026-11-06：會長室「會長室」＝文件、會議開關、追蹤、編輯量；秘書處「會議」＝逐部門編輯報告事項、會議紀錄、各部門週報）；
    extIcon＝那個分頁的圖示；mergeDone:true＝完成紀錄併進「即時回報」那一頁（不另外佔一個分頁）
+   adminTitle："名稱"＝這個部門的管理員（資料裡的角色值 admin）在畫面上的稱呼，沒寫就是「部長」（2026-11-20：秘書處「處長」、會長室「會長／副會長」；只改顯示，權限不變；core/js/account.js 的 roleT）
    source（01B，資料來源；core/js/store.js）："github"＝讀寫 repo 的資料檔（預設）｜"frozen"＝搬家中，整個看板唯讀、不寫資料檔｜"firestore"＝讀寫新資料庫（02B 起 Google 登入；02D 起有這個部門角色的人可以編輯，其他人只能檢視）。
      切換一個部門＝合併一個只改這一個值的 PR（docs/architecture/migration.md 第 5 節）
    --------------------------------------------------------- */
 const BOARD_DEPTS = [
   { id: "rights",      name: "權益部", path: "data.json", boardId: "board-main", logo: true, source: "firestore" },
-  { id: "president",   name: "會長室", follow: true, grant: true, ext: "會長室", extIcon: "flag", mergeDone: true, source: "firestore" },
-  { id: "secretariat", name: "秘書處", meeting: true, ext: "會議", extIcon: "calendar", mergeDone: true, source: "firestore" },
+  { id: "president",   name: "會長室", adminTitle: "會長／副會長", follow: true, grant: true, ext: "會長室", extIcon: "flag", mergeDone: true, source: "firestore" },
+  { id: "secretariat", name: "秘書處", adminTitle: "處長", meeting: true, ext: "會議", extIcon: "calendar", mergeDone: true, source: "firestore" },
   { id: "marketing",   name: "行銷部", source: "firestore" },
   { id: "finance",     name: "財務部", source: "firestore" },
   { id: "events",      name: "活動部", source: "firestore" },

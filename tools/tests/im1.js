@@ -101,7 +101,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     /* ui-08：角色不再寫在帳號列下（列下不放小字），改看帳號頁最上面（.acct-me，角色膠囊「水果部・管理員」） */
     const s=await setText(g);await g.click('#setOv [data-set="acct"]');await g.waitForTimeout(800);
     const me=await g.evaluate(()=>{const e=document.querySelector('#setOv .set-pane .acct-me');return e?e.innerText:''});
-    ok(!s.includes('系統管理')&&me.includes('水果部・管理員'),'凍結中：部門管理員登入後沒有系統管理（只有總管理員）');
+    ok(!s.includes('系統管理')&&me.includes('水果部・部長'),'凍結中：部門管理員登入後沒有系統管理（只有總管理員）');
     ok(await g.evaluate(()=>boardLocked()&&storeSource()==='frozen'),'凍結中：登入後看板照舊唯讀');
     await g.ctx.close();}
   await setRole(suUid,{},true);
