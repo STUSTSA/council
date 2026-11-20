@@ -91,6 +91,12 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
     ok(!r.err&&r.place&&r.place.pane===null&&r.place.lns===50&&r.place.st==='最多 50 行',`50 行按「地點」：同上（${JSON.stringify(r.place||r)}）`);
     await p.keyboard.press('Escape');await p.waitForTimeout(600);}
 
+  /* D. 紀錄的動作中文 */
+  {const r=await p.evaluate(()=>{const mk=(col,action,o={})=>auditWhat({col,docId:'x123456789',rev:1,action,actor:'u1',before:{},after:{},ref:'',...o});
+      const xs=[mk('migrations','start'),mk('migrations','done'),mk('migrations','failed'),mk('migrations','rollingBack'),mk('migrations','rolledBack'),mk('issues','import'),mk('labels','import'),mk('cards','import'),mk('deptSettings','import'),mk('legacyIdentities','import'),mk('grants','import'),mk('org','delete')];
+      return {acts:xs.map(x=>x.act),purge:mk('cards','purge',{before:{title:'某卡片',deptId:'rights'}}).act,del:mk('issues','delete',{before:{title:'某議題'}}).act}});
+    ok(r.acts.every(a=>a&&!/[A-Za-z]/.test(a)),`遷移與匯入的動作都是中文（${r.acts.join('、')}）`);
+    ok(r.acts[7]==='匯入'&&r.purge==='刪除卡片'&&r.del==='刪除議題',`匯入的卡片寫「匯入」、刪除卡片照舊、刪除議題照舊（${r.acts[7]}／${r.purge}／${r.del}）`);}
 
   /* A. 儲存空間用量 */
   {const g=await p.evaluate(()=>typeof usageUrl==='function'?usageUrl():'(none)');ok(g===''||g==='(none)',`github 模式：沒有用量網址（${g}）`);
