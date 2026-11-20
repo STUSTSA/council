@@ -2313,14 +2313,31 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
 
 
-/* ===== 行政會議議程（meeting.js 的 renderAgenda） =====
-   上面一排部門膠囊（沿用 .wk-d，選取＝實心；後面寫本週或週報日期），中間是併好的議程全文，下面「複製議程」「定版」，最下面是定版過的議程（跟週報同一種收合膠囊） */
+/* ===== 行政會議資料（meeting.js 的 renderAgenda／agOpen；2026-11-21 重做） =====
+   會議分頁的小卡：狀態一行＋「編輯」＋匯出過的議程（跟週報同一種收合膠囊）。
+   「編輯」進全螢幕文件 #agOv（跟 #rptOv 同一套換頁動畫與標題列，但配色用看板自己的）：一張置中的紙（最寬 760px），最上面日期與名稱，
+   接著上次決議追蹤，然後一個部門一段（標題列：部門名、本週有週報／舊的／沒有週報、貼上或移除；貼上後是可直接改的文字框）。手機同一欄，沒有左右捲動。 */
 .ag-st{margin:0 0 12px;font-size:12.5px}
-.ag-text{margin:0 0 4px;padding:12px 14px;border:1px solid var(--hair);border-radius:12px}
-.ag-body:empty{display:none}
 .ag-h{margin:18px 0 8px;font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:.06em}
 .ag-done:empty{display:none}
-.mt-foot .primary{min-height:32px;padding:3px 16px;font-size:13px}
+.ag-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left))}
+.ag-scroll{flex:1;overflow:auto;scrollbar-gutter:stable;padding:6px 0 calc(48px + env(safe-area-inset-bottom))}
+.ag-paper{max-width:760px;margin:0 auto;display:grid;gap:18px}
+.ag-meta{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px}
+.ag-meta label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.ag-meta input{font-size:15px;color:var(--ink)}
+.ag-quick{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ag-sec{border-top:1px solid var(--hair);padding-top:12px}
+.ag-sh{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;font-size:15px;font-weight:600}
+.ag-sh .num{font-size:12px;font-weight:400;color:var(--muted)}
+.ag-sh .icon{margin-left:auto}
+.ag-sh .ag-chip+.icon{margin-left:auto}
+.ag-chip{font-size:11.5px;font-weight:400;padding:2px 9px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--hair);color:var(--muted);letter-spacing:.04em}
+.ag-chip.on{background:var(--ink);color:var(--blk);box-shadow:none}
+.ag-trk{margin:0 0 6px;font-size:14px;line-height:1.7}
+.ag-trk b{display:inline-block;min-width:4.5em;margin-right:8px;color:var(--muted);font-weight:500}
+.ag-ta{width:100%;box-sizing:border-box;min-height:7em;font:inherit;font-size:14px;line-height:1.75;resize:vertical}
+@media (max-width:640px){.ag-meta{grid-template-columns:minmax(0,1fr)}}
 /* 會議決議（定版議程裡逐部門一行，秘書處填；下次議程最前面列「上次決議追蹤」） */
 .ag-dec{margin-top:12px;padding-top:4px;border-top:1px solid var(--hair)}
 .ag-dec .ag-h{margin:10px 0 8px}

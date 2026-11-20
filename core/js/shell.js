@@ -51,13 +51,10 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="follows" id="follows" data-flip></div>
         <button class="ghost edit-only add-row" id="addFollow">+ 追蹤項目</button>
       </section>
-      <!-- 秘書處：行政會議議程（2026-11-21，meeting.js 的 renderAgenda）：把各部門最新一份週報併成一份議程（可以勾掉不併入的部門），按「定版」存成該次會議的議程；下面列出定版過的 -->
+      <!-- 秘書處：行政會議資料（2026-11-21，meeting.js 的 renderAgenda／agOpen）：頁面上只有狀態一行與「編輯」，編輯進全螢幕文件（#agOv）；下面列出匯出過的議程 -->
       <section class="panel follow-panel meet-panel ag-panel" id="agPanel" aria-labelledby="agH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議議程</h2><button type="button" class="icon" data-mtrefresh>擷取最新</button></div>
+        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agEdit">編輯</button></div>
         <p class="sub ag-st" id="agSt"></p>
-        <div class="wk-depts" id="agDepts" role="group" aria-label="併入的部門"></div>
-        <div class="ag-body" id="agBody" data-flow></div>
-        <div class="mt-foot"><button type="button" class="icon" id="agCopy">複製議程</button><button type="button" class="primary" id="agFinal">定版</button><span class="sub" id="agInfo"></span></div>
         <div class="ag-done" id="agDone" data-flow></div>
       </section>
       <section class="panel follow-panel meet-panel wk-panel" id="wkPanel" aria-labelledby="wkH" hidden>
