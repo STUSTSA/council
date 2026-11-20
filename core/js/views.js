@@ -1,6 +1,6 @@
 /* 核心｜各區塊畫面：頁首、週報、甘特圖、議題卡片、即時回報、完成紀錄 */
 function renderHeader(){
-  document.title=state.title;renderHero();
+  document.title=CFG.dept.name;renderHero();
   $("#saveInfo").textContent=readOnly()?`更新於 ${fmt(state.savedAt)||"—"}`
     :fsMode()?"":(state.savedAt?`上次儲存 ${state.savedAt}${state.savedBy?`（${state.savedBy}）`:""}`:"尚未儲存")+(cloudOn()?` · ${({ok:"雲端已同步",empty:"雲端尚無資料，儲存後建立",offline:"離線中",limited:"GitHub 讀取次數暫時用完",error:"雲端讀取失敗"})[cloud.status]||"連線雲端中…"}${cloudOn()&&!ghToken()&&loggedIn()?" · 這台裝置沒有連上雲端，儲存只會留在這台裝置":""}`:"")+(localOK?"":" · 這個瀏覽器無法本機保存，請用「匯出備份」");
   offlinePill();notiBadge();if(notiOpen)renderNoti();

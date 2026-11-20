@@ -1,11 +1,11 @@
 /* ui-10 A、B：設定頁面板裡的表單（dialog.js 的 in-pane #dlg）
    A 離開面板時，面板裡開著的表單要當成取消收掉（Promise 照取消的值 null 結束、不送出、不寫資料），不能留在別的頁面：
      手機子頁的「返回」、系統返回（popstate）、再進「紀錄」；桌面換到別的面板、按 Esc、收起設定、首頁鍵；
-     疊一層面板（人員 → 權限歷史）；離開後立刻打開另一個表單（看板名稱）時新表單不被舊的關閉事件收掉。
+     疊一層面板（人員 → 權限歷史）；離開後立刻打開另一個表單（申請編輯權限）時新表單不被舊的關閉事件收掉。
    A 競態（ui-10 審查）：第一次關閉的值算數、新表單不沿用上一個的「確定」——
      (a) 授予權限按確定、淡出中又開第二個授予權限，再按 Esc：第一個照確定寫入、第二個照取消結束，只寫一筆角色；
      (b) 授予權限按確定、淡出中按「返回」：照確定寫入一筆；
-     (c) 非同步檢查（validate）還在跑時離開面板：不送出；離開後打開別的表單（看板名稱），檢查跑完也不會把新表單關掉。
+     (c) 非同步檢查（validate）還在跑時離開面板：不送出；離開後打開別的表單（申請編輯權限），檢查跑完也不會把新表單關掉。
    外部請求：模擬器與本機以外的請求一律攔下並記下來（字型、firebase SDK、GitHub API 照下面的 route 模擬），最後要是空的。
    B 自製下拉（.csel）展開後，每個選項都在最上面、點得到（elementFromPoint 在每個選項中心＝那個選項）：
      產生 QR、申請編輯權限、授予權限（面板裡的表單）、紀錄的篩選、設定外面跳出的表單；412 寬與 1300 寬。
@@ -166,10 +166,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!!document.querySelector('#setOv .set-pane .set-hub:not([hidden]) [data-hub="export"]')),'A 1300 Esc：表單收掉、回到系統管理清單')}
   /* A6 離開後立刻打開另一個表單：新表單留著、不被舊表單的關閉收掉 */
   await hubGo(d,'invite');await formOpen(d,'[data-new]','產生 QR');
-  await row(d,'title');await d.waitForTimeout(600);
+  await row(d,'acct');await hubGo(d,'req');await d.waitForTimeout(600);
   {const r=await d.evaluate(()=>window.__ask.slice(-2));
-    ok(r.length===2&&r[0].t==='產生 QR'&&r[0].v===null&&r[1].t==='看板名稱'&&r[1].v==='(還沒結束)',`A 1300 換到「看板名稱」：舊表單照取消結束，新表單還開著等輸入（${JSON.stringify(r.map(x=>x.v))}）`);
-    ok(await d.evaluate(()=>{const x=document.querySelector('#dlg');return x.open&&x.classList.contains('in-pane')&&document.querySelector('#dlgForm [name="v"]')}),'A 1300 換到「看板名稱」：畫面上是看板名稱的表單');}
+    ok(r.length===2&&r[0].t==='產生 QR'&&r[0].v===null&&r[1].t==='申請編輯權限'&&r[1].v==='(還沒結束)',`A 1300 換到「申請編輯權限」：舊表單照取消結束，新表單還開著等輸入（${JSON.stringify(r.map(x=>x.v))}）`);
+    ok(await d.evaluate(()=>{const x=document.querySelector('#dlg');return x.open&&x.classList.contains('in-pane')&&document.querySelector('#dlgForm')}),'A 1300 換到「申請編輯權限」：畫面上是申請編輯權限的表單');}
   await d.click('#dlg [data-act="cancel"]');await d.waitForTimeout(700);
   /* A7 疊一層面板：人員 → 某人 → 新增部門（表單）→ 權限歷史 */
   await row(d,'council');await hubGo(d,'people');
@@ -223,15 +223,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await d.evaluate(()=>document.querySelector('#dlg [data-act="ok"]').click());await d.waitForTimeout(30);
   await d.keyboard.press('Escape');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(a.t==='延遲檢查'&&a.v===null&&await d.evaluate(()=>window.__vd===1)&&await formGone(d),`A 競態 (c1) 1300：檢查還在跑時離開，檢查跑完也不送出（${JSON.stringify(a.v)}）`)}
-  /* A 競態 (c2)：非同步檢查還在跑時換到「看板名稱」，檢查跑完 → 舊表單照取消結束，看板名稱表單還開著 */
+  /* A 競態 (c2)：非同步檢查還在跑時換到「申請編輯權限」，檢查跑完 → 舊表單照取消結束，申請編輯權限表單還開著 */
   await hubGo(d,'invite');
   await d.evaluate(()=>{window.__vd=0;ask('延遲檢查',[{name:'v',label:'名稱',value:'乙'}],{validate:async()=>{await new Promise(r=>setTimeout(r,900));window.__vd++;return ''}})});
   await d.waitForTimeout(500);
   await d.evaluate(()=>document.querySelector('#dlg [data-act="ok"]').click());await d.waitForTimeout(30);
-  await row(d,'title');await d.waitForTimeout(800);
-  {const r=await d.evaluate(()=>window.__ask.slice(-2)),st=await d.evaluate(()=>({vd:window.__vd,open:document.querySelector('#dlg').open,v:!!document.querySelector('#dlgForm [name="v"]')}));
-    ok(st.vd===1&&r[0].t==='延遲檢查'&&r[0].v===null&&r[1].t==='看板名稱'&&r[1].v==='(還沒結束)'&&st.open&&st.v,
-      `A 競態 (c2) 1300：檢查跑完後舊表單照取消、看板名稱表單還開著（${JSON.stringify(r.map(x=>x.v))}，檢查 ${st.vd} 次）`);
+  await row(d,'acct');await hubGo(d,'req');await d.waitForTimeout(800);
+  {const r=await d.evaluate(()=>window.__ask.slice(-2)),st=await d.evaluate(()=>({vd:window.__vd,open:document.querySelector('#dlg').open,v:!!document.querySelector('#dlgForm')}));
+    ok(st.vd===1&&r[0].t==='延遲檢查'&&r[0].v===null&&r[1].t==='申請編輯權限'&&r[1].v==='(還沒結束)'&&st.open&&st.v,
+      `A 競態 (c2) 1300：檢查跑完後舊表單照取消、申請編輯權限表單還開著（${JSON.stringify(r.map(x=>x.v))}，檢查 ${st.vd} 次）`);
     if(st.open)await d.click('#dlg [data-act="cancel"]');await d.waitForTimeout(700)}
   ok(d.ctx.ext.length===0,`1300：沒有模擬器與本機以外的請求${d.ctx.ext.length?'：'+d.ctx.ext.slice(0,5).join(' | '):''}`);
   ok(d.errs.length===0,`1300：沒有頁面錯誤${d.errs.length?'：'+d.errs.join(' | '):''}`);

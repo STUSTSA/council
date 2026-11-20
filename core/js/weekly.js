@@ -106,7 +106,7 @@ function weekRange(){
 function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
   const inP=d=>!!d&&d>start&&d<=end;
-  const dept=CFG.dept.name||(state.title||"").replace(/(工作)?(看板|進度|進度看板)$/,"").trim()||state.title;
+  const dept=CFG.dept.name;
   const dot=d=>d.replaceAll("-",".");
   const live=liveOrder(),rep=live.filter(reportOn);
   const done=[...state.issues.filter(i=>inP(i.doneAt)).map(i=>({d:i.doneAt,t:i.title})),...state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).map(e=>({d:inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),t:evName(e)}))].sort((a,b)=>b.d.localeCompare(a.d));

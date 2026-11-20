@@ -45,11 +45,6 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  await p.click('#setOv .set-gate .primary');await p.waitForTimeout(500);const g1=await dlgTitle(p);log('D dlg1:',g1);A(g1==='輸入目前的編輯密碼','dlg1');
  await p.fill('#dlgForm input[name=pw]','0000');await ok(p);await p.waitForTimeout(500);const g2=await dlgTitle(p);log('D dlg2:',g2);A(/建立你的編輯身分/.test(g2||''),'dlg2');
  await p.fill('#dlgForm input[name=name]','王小明');await p.fill('#dlgForm input[name=p1]','wang-password-1');await p.fill('#dlgForm input[name=p2]','wang-password-1');await ok(p);await p.waitForTimeout(2500);await (async()=>{for(let i=0;i<4;i++){await p.waitForTimeout(500);const t=await p.$eval('#dlg[open] #dlgForm>b',b=>b.textContent).catch(()=>'');if(/共用密碼太短|沒有連上雲端/.test(t))await p.click('#dlgForm [data-act=cancel]').catch(()=>{})}})();   /* 2026-11-05：建立第一個身分後，共用密碼 0000 會請管理員換（team.js 的 sharedPwFix），測試先取消 */
- await p.click('#setOv [data-set=title]');await p.waitForTimeout(700);
- const g3=await dlgTitle(p),inp=await p.evaluate(()=>$('#dlg').classList.contains('in-pane'));log('D dlg3:',g3,'| in pane:',inp);A(g3==='看板名稱'&&inp,'title dialog in pane');
- await p.fill('#dlgForm input[name=v]','權益部工作進度（測試）');await ok(p);await p.waitForTimeout(2500);
- A(remote.title==='權益部工作進度（測試）'&&/看板名稱/.test((commits[0]||{commit:{}}).commit.message||''),'title saved to remote');
- log('D title saved:',await T(p),'| document.title:',await p.evaluate(()=>document.title),'| remote:',remote.title,'| commit:',(commits[0]||{commit:{}}).commit.message);
  const nr=await p.$$eval('#setOv .set-row',x=>x.length);log('D rows after login:',nr);A(nr>1,'rows after login');
  // 看板日期已拿掉（schemaVersion 8）：大日期＝上次儲存日期，設定頁沒有這一列
  log('D no date row:',!(await p.$('#setOv [data-set=date]')),'| 頁首沒有大日期（2026-11-05 精簡）:',await p.evaluate(()=>!$('#bigDate')));

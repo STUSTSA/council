@@ -57,7 +57,7 @@ async function exportBackup(){
   if(fsMode())delete s.minutes;   /* 02D：新資料庫的部門沒有讀會議紀錄（只在 GitHub 模式）：不放進備份，寫回 GitHub 時才不會清掉原本的（events.js 的匯入備份） */
   /* 備份 = JSON（只有資料，用「匯入備份」還原） */
   const doc=JSON.stringify(s,null,1);
-  await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
+  await saveJsonFile(`${CFG.dept.name.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
 }
 /* 存一個 JSON 檔：看板「匯出備份」與系統管理「匯出全部資料」（02D D-c）共用 */
 async function saveJsonFile(name,doc,label){
