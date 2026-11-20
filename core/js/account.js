@@ -188,7 +188,10 @@ async function acctRequest(){
   return acctTry(()=>A.requestCreate({deptId:v.dept,role:v.role,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
 }
 
-/* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄 ---------- */
+/* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
+/* 儲存空間用量（ui-11）：在新分頁開 Firebase 主控台的用量頁（要用自己的 Google 帳號登入主控台才看得到）；不估算、不讀資料。
+   只在這個部門已切到新資料庫（firestore；凍結中不算，同「匯入備份」的 fsMode 判斷）、而且有 projectId 時出現 */
+const usageUrl=()=>{const id=fsMode()&&CFG.firebase&&CFG.firebase.projectId;return id?`https://console.firebase.google.com/project/${encodeURIComponent(id)}/usage`:""};
 async function councilHub(){
   await acctLoad();
   return hubRun("會長室管理",()=>[
@@ -197,7 +200,8 @@ async function councilHub(){
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
     {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
     {k:"import",ic:"cloud",t:"匯入",flow:()=>importPanel()},
-    {k:"export",ic:"download",t:"匯出全部資料",act:exportAllData}]);
+    {k:"export",ic:"download",t:"匯出全部資料",act:exportAllData},
+    ...(usageUrl()?[{k:"usage",ic:"progress",t:"儲存空間用量",act:()=>{const u=usageUrl();if(u)window.open(u,"_blank","noopener,noreferrer")}}]:[])]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
