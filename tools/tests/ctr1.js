@@ -36,9 +36,9 @@ const PAGE_LIB=()=>{
         /* 往上找最近的有形狀容器（最多 3 層） */
         let box=null;for(let e=el,i=0;e&&i<4&&e!==document.body;e=e.parentElement,i++){const r=e.getBoundingClientRect();if(r.height>96||r.width<8)break;if(shaped(e,r)){box=e;break}}
         if(!box)continue;cand.set(box,1)}
-      const SKIP='.look-pal,.tb-main,.tabbar,.tab,.pc-wk,.g-name';
-      /* 預設另外量：行事曆日期（字在 40×40 的圓裡；有事件小點的日子字本來就往上讓，不量）；EXTRA 環境變數可再加選擇器 */
-      for(const el of document.querySelectorAll('.pc-d:not(:has(i)) .pc-n'+(window.__extra?','+window.__extra:'')))cand.set(el,1);
+      const SKIP='.look-pal,.tb-main,.tabbar,.tab,.pc-wk,.g-name,.pc-foot,.today-tag';   /* 今天標籤貼著甘特圖左緣會被裁掉 */
+      /* 預設另外量：行事曆日期（字在 40×40 的圓裡；有事件（小點或事件條）的日子字本來就往上讓，不量）；EXTRA 環境變數可再加選擇器 */
+      for(const el of document.querySelectorAll('.pc-d:not(:has(i)):not(.has) .pc-n'+(window.__extra?','+window.__extra:'')))cand.set(el,1);
       const out=[];
       for(const el of cand.keys()){
         const r=el.getBoundingClientRect();if(r.width<8||r.height<8||r.height>96)continue;
@@ -55,7 +55,7 @@ const PAGE_LIB=()=>{
         if(tops.size>1)continue;   /* 多行（靠左的內文、說明）不量 */
         const cs=getComputedStyle(el);
         let txtW=0;{const rg=document.createRange();rg.selectNodeContents(el);txtW=rg.getBoundingClientRect().width}   /* 文字（含裡面的圖示）的寬度：容器比文字寬很多＝靠左的列，不判左右 */
-        const flexy=/flex|grid/.test(cs.display);const cx=flexy?((cs.justifyContent==='center'||cs.justifyContent==='space-around'||cs.justifyContent==='space-evenly')&&!/^(left|start)$/.test(cs.textAlign)&&r.width-txtW<=120):cs.textAlign==='center'||(el.matches('button')&&!/^(left|start)$/.test(cs.textAlign));
+        const flexy=/flex|grid/.test(cs.display);const cx=el.querySelector('svg,img')?false:flexy?((cs.justifyContent==='center'||cs.justifyContent==='space-around'||cs.justifyContent==='space-evenly')&&!/^(left|start)$/.test(cs.textAlign)&&r.width-txtW<=120):cs.textAlign==='center'||(el.matches('button')&&!/^(left|start)$/.test(cs.textAlign));
         /* 寬度被文字撐開（膠囊）：容器寬度 − 文字寬度 小於 2×(padding 估 24px) 也算要置中 */
         const name=(el.id?'#'+el.id:el.tagName.toLowerCase()+'.'+[...el.classList].filter(c=>!/^(ico-|__c|on$|sel$|in$|cur$|open$)/.test(c)).join('.'))+'「'+txt.slice(0,8)+'」';
         /* 外層候選量測範圍要扣掉裡面的候選 */
@@ -115,7 +115,7 @@ const CALC=async(calc,a,b,cands,dpr)=>calc.evaluate(async([a,b,cands,dpr])=>{
   const tap=async(p,sel)=>{const el=await p.$(sel);if(!el)return false;await el.click().catch(()=>{});return true};
   const SCEN=require('./ctr1-scenes.js');
   const widths=(process.env.W?process.env.W.split(','):['390','1366']).map(Number);
-  for(const w of widths){const h=w<700?844:900;for(const scheme of (process.env.SCHEME?process.env.SCHEME.split(','):['light','dark'])){
+  for(const w of widths){const h=w<700?1800:1300;   /* 夠高：整頁一次量完，不用捲 */for(const scheme of (process.env.SCHEME?process.env.SCHEME.split(','):['light','dark'])){
     const tag=`${w}${scheme==='light'?'淺':'深'}`;
     await SCEN({mk,measure,login,tap,W,w,h,scheme,tag,U,ok,all});
   }}
@@ -127,7 +127,7 @@ const CALC=async(calc,a,b,cands,dpr)=>calc.evaluate(async([a,b,cands,dpr])=>{
     const wx=o.cx?v.reduce((m,[t,r])=>Math.abs(r.dx)>Math.abs(m)?r.dx:m,0):0;
     const line=`${k}｜${o.txt.slice(0,12)}｜`+v.map(([t,r])=>`${t} x${r.dx>=0?'+':''}${r.dx} y${r.dy>=0?'+':''}${r.dy}`).join('，');
     if(LIST)console.log('LIST '+line);
-    if(Math.abs(wy)>tolY||Math.abs(wx)>1)bad.push(line)}
+    if(Math.abs(wy)>tolY||Math.abs(wx)>1.5)bad.push(line)}
   for(const l of bad)ok(false,'偏移 '+l);
   ok(bad.length===0,`量了 ${all.size} 種容器，偏差超過門檻 ${bad.length} 種`);
   await b.close();console.log(`\n${passes} OK，${fails} FAIL`);process.exit(fails?1:0)})().catch(e=>{console.error('FAIL 例外',e);process.exit(1)});

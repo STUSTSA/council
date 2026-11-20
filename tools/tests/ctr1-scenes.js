@@ -45,7 +45,7 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       <div class="mt-foot"><button type="button" class="primary">匯出會議紀錄</button><button type="button" class="icon">上一個</button><button type="button">下一個</button></div>
       <div class="acct-chips" style="margin:14px 0"><span class="acct-chip on">總管理員</span><span class="acct-chip">秘書處・處長</span><span class="acct-chip">唯讀</span></div>
       <div style="margin:14px 0"><a class="doc-pill" href="#"><b>會議文件</b></a> <span class="grant-st"><span class="grant-on">開放修改中</span></span></div>
-      <div class="tl-act" style="margin:14px 0"><button type="button" class="tl-btn pri">完成</button><button type="button" class="tl-btn">改期</button></div>
+      <div style="margin:14px 0"><button type="button" class="tl-btn pri">完成</button><button type="button" class="tl-btn">改期</button></div>
       <div class="at-tools" style="margin-top:14px"><button type="button" class="icon">匯入名冊</button><button type="button" class="icon">+ 場次</button></div>`;document.body.appendChild(d)});
     await W(300);await measure(p,'點名預約會議元件',tag);await p.evaluate(()=>document.getElementById('__syn').remove());
     ok(!p.errs.length,`${tag} 部門沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}

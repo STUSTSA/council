@@ -579,7 +579,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
    編輯中：一個文件一列（膠囊＋小字網址＋修改／上下移／刪除），列與列之間細線 */
 .docs{display:flex;flex-wrap:wrap;gap:10px}
 .docs .empty{margin:0}
-.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
+.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:3.5px 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
 .doc-pill .ico{font-size:16px;flex:none}
 .doc-pill b{font-weight:500;overflow-wrap:anywhere}
 .doc-go{font-size:13px;color:var(--muted);transition:transform .35s var(--mo-spring),color .2s}
@@ -1750,7 +1750,7 @@ body.set-open #pageMain{overflow:hidden}
 .tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
 .tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
 .tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.tl-btn{height:40px;min-height:0;padding:0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-btn{height:40px;min-height:0;padding:3.5px 22px 0;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
 .tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
