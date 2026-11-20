@@ -1,4 +1,4 @@
-/* 核心｜Google 登入、QR 加入、會長室管理（02B，docs/architecture/invitations-roles-audit.md 第 9 節）
+/* 核心｜Google 登入、QR 加入、系統管理（02B，docs/architecture/invitations-roles-audit.md 第 9 節）
    - 只在 Firebase 設定好（dept/config.js 的 firebase.projectId）時作用；部門是 source:"firestore" 的看板才在設定頁顯示登入與帳號。
      網址帶 #join=（QR 邀請）時任何部門的看板都會走加入流程（角色寫進新資料庫，部門切換後生效）。
    - 資料操作都在 fb-account.js（ES module，第一次用到才載入，其他部門完全不載入 Firebase）。授權一律由 Security Rules 判斷，畫面只負責顯示。
@@ -13,7 +13,7 @@ const JOIN_KEY="workboard:join";
 })();
 const joinToken=()=>{try{return sessionStorage.getItem(JOIN_KEY)||""}catch(_){return ""}};
 const joinClear=()=>{try{sessionStorage.removeItem(JOIN_KEY)}catch(_){}};
-/* 02D D-a：凍結中的部門也用 Google 登入（總管理員在這裡進會長室管理 → 匯入；看板本身照舊唯讀、不讀 Firestore） */
+/* 02D D-a：凍結中的部門也用 Google 登入（總管理員在這裡進系統管理 → 匯入；看板本身照舊唯讀、不讀 Firestore） */
 const acctOn=()=>FB_ON&&(storeSource()==="firestore"||storeSource()==="frozen");
 const ROLE_T={admin:"管理員",editor:"編輯者"};
 const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
@@ -69,7 +69,7 @@ function acctReload(){
   storeFsLoad().then(r=>{if(my!==acctReloadSeq)return;storeFsErr=null;storeFsUse(r);render()})
     .catch(e=>{if(my!==acctReloadSeq)return;storeFsErr=e;storeFsBase=null;state=normalize({});render();if(e&&e.code==="permission-denied")toast("這個部門要登入才能看")});
 }
-/* 收掉帳號與會長室管理的面板（登出、換帳號、失去總管理員時） */
+/* 收掉帳號與系統管理的面板（登出、換帳號、失去總管理員時） */
 function acctCloseAdmin(){if(typeof setOpen!=="undefined"&&setOpen&&(acctPanels.length||paneKey==="council"||paneKey==="acct"||subOpen))paneClose().catch(()=>{})}
 const SIGNIN_ERR={"auth/unauthorized-domain":"這個網址還沒開放登入","auth/network-request-failed":"沒有連上網路，稍後再試","auth/operation-not-allowed":"還沒開放 Google 登入","auth/user-disabled":"這個帳號已停用"};
 async function acctSignIn(){
@@ -106,7 +106,7 @@ function acctSettingsInner(){
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
   return setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people","帳號"))+ed
-    +(acctSuper()?setSec(setRow("council","flag","會長室管理")):"")
+    +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
@@ -189,13 +189,13 @@ async function acctRequest(pending=[]){
   return acctTry(()=>A.requestCreate({deptId:v.dept,role:v.role,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
 }
 
-/* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
+/* ---------- 系統管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
 /* 儲存空間用量（ui-11）：在新分頁開 Firebase 主控台的用量頁（要用自己的 Google 帳號登入主控台才看得到）；不估算、不讀資料。
    只在這個部門已切到新資料庫（firestore；凍結中不算，同「匯入備份」的 fsMode 判斷）、而且有 projectId 時出現 */
 const usageUrl=()=>{const id=fsMode()&&CFG.firebase&&CFG.firebase.projectId;return id?`https://console.firebase.google.com/project/${encodeURIComponent(id)}/usage`:""};
 async function councilHub(){
   await acctLoad();
-  return hubRun("會長室管理",()=>[
+  return hubRun("系統管理",()=>[
     {k:"people",ic:"people",t:"人員",flow:()=>peoplePanel()},
     {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},

@@ -36,7 +36,7 @@
 | Q22 | 待審申請 | `roleRequests` where `status == 'pending'` order by `createdAt` | `status ASC, createdAt ASC` | L4 |
 | Q23 | 我的申請 | `roleRequests` where `uid == me` | 單一欄位 | 本人 |
 | Q24 | 邀請清單 | `invitations` where `status == 'active'` order by `expiresAt` | `status ASC, expiresAt ASC` | L4 |
-| Q24b | 最近的邀請（02B 會長室管理 → QR 邀請，含已使用、已撤銷） | `invitations` order by `createdAt DESC` limit 30 | 單一欄位 | L4 |
+| Q24b | 最近的邀請（02B 系統管理 → QR 邀請，含已使用、已撤銷） | `invitations` order by `createdAt DESC` limit 30 | 單一欄位 | L4 |
 | Q25 | 稽核：某人的權限歷史 | `auditLogs` where `col == 'roles'` and `docId == uid` order by `rev DESC` | `col ASC, docId ASC, rev DESC` | L4 |
 | Q26 | 稽核：最近紀錄；02D 起也給編輯紀錄與會長室編輯量（`at >= 起` order by `at`） | `auditLogs` order by `at DESC` limit 50 | 單一欄位 | L4 |
 | Q27 | 稽核：某人做過什麼 | `auditLogs` where `actor == uid` order by `at DESC` | `actor ASC, at DESC` | L4 |
@@ -70,12 +70,12 @@
 | store-write `resumeUnits` | 接續中斷的永久刪除 | `cards` deptId ==, state == purging | 兩個等號，免複合 | — | 還沒遇到 |
 | store-write `resumeUnits` | 同上 | `events` cardId == | 單一欄位 | 自動 | 還沒遇到 |
 | store-write `resumeUnits` | 同上 | `cards/{id}/versions` 全部 | 不用 | — | — |
-| fb-account `inviteList` | 會長室管理 → QR 邀請 | `invitations` order by createdAt DESC limit 30 | 單一欄位（降冪） | 自動 | 還沒測 |
+| fb-account `inviteList` | 系統管理 → QR 邀請 | `invitations` order by createdAt DESC limit 30 | 單一欄位（降冪） | 自動 | 還沒測 |
 | fb-account `roster` | 專員名單 | `deptMembers` deptId == | 單一欄位 | 自動 | 還沒測 |
 | fb-account `rosterSync` | 打開人員 | `deptMembers` uid ==，或整個集合 | 單一欄位／不用 | 自動 | 還沒測 |
 | fb-account `requestsMine` | 帳號頁我的申請 | `roleRequests` uid == | 單一欄位 | 自動 | 還沒測 |
-| fb-account `requestsPending` | 會長室管理 → 申請 | `roleRequests` status == pending, order by createdAt | `status ASC, createdAt ASC` | 有 | 還沒測 |
-| fb-account `auditList`（最近） | 會長室管理 → 紀錄 | `auditLogs` order by at DESC, startAfter, limit 50 | 單一欄位（降冪） | 自動 | 正常（看得到「建立總管理員」「刪除議題」） |
+| fb-account `requestsPending` | 系統管理 → 申請 | `roleRequests` status == pending, order by createdAt | `status ASC, createdAt ASC` | 有 | 還沒測 |
+| fb-account `auditList`（最近） | 系統管理 → 紀錄 | `auditLogs` order by at DESC, startAfter, limit 50 | 單一欄位（降冪） | 自動 | 正常（看得到「建立總管理員」「刪除議題」） |
 | fb-account `auditList`（某人做過什麼） | 紀錄 → 選人 | `auditLogs` actor ==, order by at DESC, startAfter, limit 50 | `actor ASC, at DESC` | 有 | 還沒測 |
 | fb-account `auditList`（權限歷史）、`auditChain` | 人員 → 權限歷史、檢查連號 | `auditLogs` col ==, docId ==, order by rev DESC | `col ASC, docId ASC, rev DESC` | 有 | 還沒測 |
 | fb-account `profiles`／`legacyList`／`rolesList`／`usersList` | 名稱、人員、舊身分 | 整個集合 | 不用 | — | 正常（人員） |

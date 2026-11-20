@@ -314,7 +314,7 @@ function paneDismiss(all){
   if(hubNow&&(all||hubOn))hubNow.end();
   if(hubOn)return paneJob||Promise.resolve();
   if(weekPaneEnd){weekPaneEnd();return paneJob||Promise.resolve()}   /* 每週概述（weekly.js 的 weekPane）：關掉就回到「報告」合併頁（或設定清單） */
-  if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、會長室管理的面板（account.js）：一次收一層，all＝全部；面板裡開著的表單由 acctPanel 收掉時一起取消 */
+  if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、系統管理的面板（account.js）：一次收一層，all＝全部；面板裡開著的表單由 acctPanel 收掉時一起取消 */
   if(lg&&!lg.hidden&&lg.classList.contains("in-pane"))closeLog();
   else dlgPaneCancel();   /* 面板就是表單（名稱、看板名稱、身分與專員、標籤…）：當成取消（dialog.js） */
   return paneJob||Promise.resolve();
@@ -427,7 +427,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」「外觀」不用登入；帳號、會長室管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」「外觀」不用登入；帳號、系統管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);

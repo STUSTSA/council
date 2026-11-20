@@ -1,8 +1,8 @@
-/* 02D D-a 網頁匯入頁（會長室管理 → 匯入，core/js/migrate-web.js＋migrate-core.js）與 D-c 匯出全部資料：
+/* 02D D-a 網頁匯入頁（系統管理 → 匯入，core/js/migrate-web.js＋migrate-core.js）與 D-c 匯出全部資料：
    用 Auth 模擬器＋Firestore 模擬器、正式規則。網站設定成 github.io 的 repo（dept/config.js 的 data.owner／repo 換成測試值），
    GitHub API 用 route 回應：最新 commit＝固定的 SHA、檔案內容＝repo 裡的資料檔（只讀）。
-   1. 凍結中的部門（水果部）：未登入看到「暫停編輯」＋登入；一般登入者、部門管理員沒有會長室管理
-   2. 總管理員：會長室管理 → 匯入 → 水果部 → 筆數報告每一列相同、V1～V4、V6 通過、結果通過；commit SHA 與 SHA-256 跟資料檔一樣；批次 done
+   1. 凍結中的部門（水果部）：未登入看到「暫停編輯」＋登入；一般登入者、部門管理員沒有系統管理
+   2. 總管理員：系統管理 → 匯入 → 水果部 → 筆數報告每一列相同、V1～V4、V6 通過、結果通過；commit SHA 與 SHA-256 跟資料檔一樣；批次 done
    3. 再匯入一次：寫入 0、衝突 0，水果部的文件前後完全相同（重跑結果不變）
    4. 權益部（資料最多）從頁面匯入：通過；命令列的 deptReport 也通過
    5. 不是總管理員：直接呼叫匯入被規則拒絕（沒有寫進任何東西）；讀不到資料檔時顯示錯誤、不寫入
@@ -86,14 +86,14 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   /* 等到確認畫面（有「確認匯入」）或錯誤 */
   const checked=async p=>{await until(async()=>!!(await p.$('.acct-panel [data-go]'))||DONE.test(await panel(p)),60000);return panel(p)};
   const go=async p=>{if(await p.$('.acct-panel [data-go]'))await p.click('.acct-panel [data-go]');await until(async()=>DONE.test(await panel(p)),90000);return panel(p)};
-  /* 會長室管理 → 匯入 → 部門 → 輸入來源版本 → 核對 → 確認匯入 → 等報告 */
+  /* 系統管理 → 匯入 → 部門 → 輸入來源版本 → 核對 → 確認匯入 → 等報告 */
   const importVia=async(p,dept,first=true,x={})=>{
     if(first){await openSet(p);await p.click('[data-set="council"]');await p.waitForTimeout(800);await p.click('[data-hub="import"]');await p.waitForSelector(`[data-imp="${dept}"]`,{timeout:8000})}
     if(first){await p.click(`[data-imp="${dept}"]`);await dlg(p);await fillExpect(p,dept,x)}else await p.click('.acct-panel [data-run]');
     await checked(p);
     return go(p)};
 
-  /* ---------- 1. 凍結中的部門：登入入口、誰看得到會長室管理 ---------- */
+  /* ---------- 1. 凍結中的部門：登入入口、誰看得到系統管理 ---------- */
   const su=await open('fruit');
   await openSet(su);{const s=await setText(su);ok(s.includes('暫停編輯')&&s.includes('用 Google 登入'),'凍結中、未登入：設定頁有「暫停編輯」與 Google 登入');}
   const suUid=await signIn(su,'su');
@@ -101,11 +101,11 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     /* ui-08：角色不再寫在帳號列下（列下不放小字），改看帳號頁最上面（.acct-me，角色膠囊「水果部・管理員」） */
     const s=await setText(g);await g.click('#setOv [data-set="acct"]');await g.waitForTimeout(800);
     const me=await g.evaluate(()=>{const e=document.querySelector('#setOv .set-pane .acct-me');return e?e.innerText:''});
-    ok(!s.includes('會長室管理')&&me.includes('水果部・管理員'),'凍結中：部門管理員登入後沒有會長室管理（只有總管理員）');
+    ok(!s.includes('系統管理')&&me.includes('水果部・管理員'),'凍結中：部門管理員登入後沒有系統管理（只有總管理員）');
     ok(await g.evaluate(()=>boardLocked()&&storeSource()==='frozen'),'凍結中：登入後看板照舊唯讀');
     await g.ctx.close();}
   await setRole(suUid,{},true);
-  ok(await until(async()=>(await setText(su)).includes('會長室管理'),8000),'總管理員：凍結中的部門設定頁有會長室管理');
+  ok(await until(async()=>(await setText(su)).includes('系統管理'),8000),'總管理員：凍結中的部門設定頁有系統管理');
 
   /* ---------- 2. 總管理員從頁面匯入水果部 ---------- */
   const before=await deptDocs('fruit');

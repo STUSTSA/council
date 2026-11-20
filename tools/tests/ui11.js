@@ -1,11 +1,11 @@
 /* ui11：2026-11-20 ui-11（docs/交接說明.md 該節）。github 模式（data_test.json），固定 8300 埠（run-tests.sh 換埠時會一起換）。
-   A. 會長室管理「儲存空間用量」：firestore 模式＋總管理員才有這一列；點了在新分頁開 Firebase 主控台的用量頁（projectId 照 dept/config.js、encodeURIComponent），
+   A. 系統管理「儲存空間用量」：firestore 模式＋總管理員才有這一列；點了在新分頁開 Firebase 主控台的用量頁（projectId 照 dept/config.js、encodeURIComponent），
       新分頁沒有 opener（noopener）；凍結中、github 模式、projectId 空白時沒有這一列；列上沒有小字。
       firestore 模式用替身：把這個部門的 source 改成 firestore、acct 填成已登入的總管理員、acctLoad 換成不載入 Firebase 的替身（不開模擬器、不連任何專案）。
    B. 母議題處理紀錄：時間行寫進來的那一筆，那一行還沒勾＝處理紀錄與甘特圖註記半透明（.pend，opacity .5）；在卡片裡勾了、存檔後變回不透明；取消勾選回到半透明。
       沒有核取框的舊時間標記、找不到來源卡片（卡片刪掉＝連結拿掉、evId 指到不存在的卡片）＝不透明。
    C. 卡片已滿 50 行（沒有時間行）時按「時間」「地點」：不換到空白的時間頁，提示「最多 50 行」。
-   D. 會長室管理「紀錄」的動作：遷移與匯入的 start、import、done、failed、rollingBack、rolledBack、delete 顯示中文；匯入的卡片不再寫成「刪除卡片」。
+   D. 系統管理「紀錄」的動作：遷移與匯入的 start、import、done、failed、rollingBack、rolledBack、delete 顯示中文；匯入的卡片不再寫成「刪除卡片」。
    E. 進度頁沒有議題時：已登入寫「還沒有議題。」（不再叫人登入）；沒登入照舊；唯讀「目前沒有進行中的議題。」。
    外部請求：本機以外、測試沒有模擬的請求一律攔下並記下來，最後要是空的。
    截圖（UI11SHOT＝資料夾時才拍，不 commit）：A 的設定列、B 的處理紀錄與甘特圖註記，412 深色、1300 淺色柔光。
@@ -108,14 +108,14 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
 
   /* A. 儲存空間用量 */
   {const g=await p.evaluate(()=>typeof usageUrl==='function'?usageUrl():'(none)');ok(g===''||g==='(none)',`github 模式：沒有用量網址（${g}）`);
-    const gs=await hubRows(p,'#setOv .set-pane');ok(gs===null,'github 模式：設定清單沒有會長室管理（也就沒有儲存空間用量）');}
+    const gs=await hubRows(p,'#setOv .set-pane');ok(gs===null,'github 模式：設定清單沒有系統管理（也就沒有儲存空間用量）');}
   await fsFake(p,'firestore');
   {const rows=await hubRows(p,'#setOv .set-pane'),u=(rows||[]).find(x=>x.k==='usage');
-    ok(!!u&&u.t==='儲存空間用量'&&!u.small,`firestore＋總管理員：會長室管理有「儲存空間用量」一列、列上沒有小字（${JSON.stringify(rows&&rows.map(x=>x.t))}）`);
+    ok(!!u&&u.t==='儲存空間用量'&&!u.small,`firestore＋總管理員：系統管理有「儲存空間用量」一列、列上沒有小字（${JSON.stringify(rows&&rows.map(x=>x.t))}）`);
     if(u){const [pg]=await Promise.all([p.context().waitForEvent('page',{timeout:5000}),p.click('#setOv .set-pane [data-hub="usage"]')]);await pg.waitForLoadState().catch(()=>{});
       const o=await pg.evaluate(()=>({op:window.opener,ref:document.referrer})).catch(e=>({err:e.message}));
       ok(pg.url()===USAGE,`點了開新分頁：${pg.url()}`);ok(!o.err&&o.op===null&&o.ref==='',`新分頁沒有 opener、不帶 referrer（${JSON.stringify(o)}）`);
-      const still=await p.evaluate(()=>!!document.querySelector('#setOv .set-pane .set-hub:not([hidden]) [data-hub="usage"]'));ok(still,'看板這一頁留在會長室管理（沒有換頁）');await pg.close()}
+      const still=await p.evaluate(()=>!!document.querySelector('#setOv .set-pane .set-hub:not([hidden]) [data-hub="usage"]'));ok(still,'看板這一頁留在系統管理（沒有換頁）');await pg.close()}
     const enc=await p.evaluate(()=>{const k=CFG.firebase.projectId;CFG.firebase.projectId='a/b c';const v=usageUrl();CFG.firebase.projectId=k;return v});
     ok(enc==='https://console.firebase.google.com/project/a%2Fb%20c/usage',`projectId 經過 encodeURIComponent（${enc}）`);
     if(SHOT){for(const [w,h,sc] of [[412,860,'dark'],[1300,900,'light']]){const q=await mk(w,h,sc,w<900);
@@ -126,9 +126,9 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
     const rows=await hubRows(p,'#setOv .set-pane');await p.evaluate(k=>{CFG.firebase.projectId=k},k);
     ok(rows&&rows.length&&!rows.some(x=>x.k==='usage'),`projectId 空白：沒有這一列（${JSON.stringify(rows&&rows.map(x=>x.k))}）`);}
   await fsFake(p,'frozen');
-  {const rows=await hubRows(p,'#setOv .set-pane');ok(rows&&rows.length&&!rows.some(x=>x.k==='usage'),`凍結中：會長室管理照舊、沒有儲存空間用量（${JSON.stringify(rows&&rows.map(x=>x.k))}）`);}
+  {const rows=await hubRows(p,'#setOv .set-pane');ok(rows&&rows.length&&!rows.some(x=>x.k==='usage'),`凍結中：系統管理照舊、沒有儲存空間用量（${JSON.stringify(rows&&rows.map(x=>x.k))}）`);}
   await fsFake(p,'firestore');await p.evaluate(()=>{acct.roles={super:false,depts:{rights:'admin'}}});
-  {const rows=await hubRows(p,'#setOv .set-pane');ok(rows===null,'不是總管理員：沒有會長室管理（也就沒有這一列）');}
+  {const rows=await hubRows(p,'#setOv .set-pane');ok(rows===null,'不是總管理員：沒有系統管理（也就沒有這一列）');}
 
   const errs=p.errs.filter(x=>!/Failed to load resource: the server responded with a status of 404/.test(x));   /* 模擬的 GitHub API 對資料檔以外回 404（common.js），瀏覽器會記一筆 */
   ok(errs.length===0,`沒有頁面錯誤${errs.length?'：'+errs.slice(0,3).join(' | '):''}`);

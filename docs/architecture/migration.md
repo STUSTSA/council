@@ -105,7 +105,7 @@ function importing() {
 - 流程：總管理員建立 `migrations/{batch}`（`status: 'running'`，有稽核）→ 匯入 → 驗證 → 改成 `done`（之後這個批次號就不能再用來寫入）。
 - 一批最多 500 筆寫入〔文件〕；全會約 170 份文件，分 1～3 批。
 - 模擬器演練時用測試身分直接跑同一支匯入程式。
-- **02D 現況**：命令列（`backend/migrate/cli.js`）只連模擬器。正式匯入＝**網頁匯入頁**（02D D-a）：總管理員在看板 → 設定 → 會長室管理 → 匯入，選部門；網頁讀 GitHub 上 `dept/config.js` 的 `data` 設定的 repo（owner／repo 留空＝從 github.io 網址推）與分支（`main`）最新 commit 的資料檔（只讀、不用權杖；不看資料檔或本機暫存裡的 `sync`；本機開發讀網站上的檔案），報告印出 `owner/repo@分支 · commit`，照 `core/js/migrate-core.js`（命令列 `run.js` 也改成呼叫它，邏輯只有一份）寫進 `dept/config.js` 設定的 Firebase 專案，批次號 `web-{部門}-{毫秒}`，完成後改成 `done`（報告不通過或有衝突＝`failed`）並顯示筆數報告；中途失敗也改成 `failed`（不留在 `running`），按「再試一次」用新批次補完。凍結中的部門的設定頁也有 Google 登入，總管理員從那裡進會長室管理。測試：`tools/tests/im1.js`。
+- **02D 現況**：命令列（`backend/migrate/cli.js`）只連模擬器。正式匯入＝**網頁匯入頁**（02D D-a）：總管理員在看板 → 設定 → 系統管理 → 匯入，選部門；網頁讀 GitHub 上 `dept/config.js` 的 `data` 設定的 repo（owner／repo 留空＝從 github.io 網址推）與分支（`main`）最新 commit 的資料檔（只讀、不用權杖；不看資料檔或本機暫存裡的 `sync`；本機開發讀網站上的檔案），報告印出 `owner/repo@分支 · commit`，照 `core/js/migrate-core.js`（命令列 `run.js` 也改成呼叫它，邏輯只有一份）寫進 `dept/config.js` 設定的 Firebase 專案，批次號 `web-{部門}-{毫秒}`，完成後改成 `done`（報告不通過或有衝突＝`failed`）並顯示筆數報告；中途失敗也改成 `failed`（不留在 `running`），按「再試一次」用新批次補完。凍結中的部門的設定頁也有 Google 登入，總管理員從那裡進系統管理。測試：`tools/tests/im1.js`。
 
 - **匯入前的核對與確認（2026-11-20）**：
   - 來源版本：操作的人先輸入操作手冊第 B 步的 commit 與資料檔 SHA-256。網頁讀「那個 commit」的資料檔，SHA-256 不符就停；再讀分支最新 commit 的同一個檔，內容不同（那個 commit 之後又被改過）也停。兩種都不寫入任何文件（連批次紀錄都沒有）。本機開發（不是 github.io）只核對 SHA-256。
@@ -178,7 +178,7 @@ function importing() {
 
 ## 8. 備份（Spark 沒有排程備份）
 
-- 總管理員可用的「匯出全部資料」（**02D D-c 已做**：會長室管理 → 匯出全部資料，`core/js/migrate-web.js` 的 `exportAll`）：一個 JSON 檔 `學生會看板_全部資料_{專案ID}_{日期}.json`，內容 `{kind, version, projectId, exportedAt, exportedBy, batches（每個遷移批次的狀態、來源 commit、資料檔雜湊、時間）, unreadable（總管理員也讀不到的集合，例如別人的預約）, counts, collections（每個集合的文件陣列 {id, path, data}，子集合 versions 用 collection group，時間值是 {__ts: 毫秒}）, boards（每個部門轉成 schemaVersion 13 的部門檔，跟看板「匯出備份」、命令列 `--export` 同一個 `toState`）}`。另外看板「匯出備份」仍是逐部門的（有這個部門角色的人；不含角色、稽核、會議紀錄）。測試：`im1.js` 第 6 段。
+- 總管理員可用的「匯出全部資料」（**02D D-c 已做**：系統管理 → 匯出全部資料，`core/js/migrate-web.js` 的 `exportAll`）：一個 JSON 檔 `學生會看板_全部資料_{專案ID}_{日期}.json`，內容 `{kind, version, projectId, exportedAt, exportedBy, batches（每個遷移批次的狀態、來源 commit、資料檔雜湊、時間）, unreadable（總管理員也讀不到的集合，例如別人的預約）, counts, collections（每個集合的文件陣列 {id, path, data}，子集合 versions 用 collection group，時間值是 {__ts: 毫秒}）, boards（每個部門轉成 schemaVersion 13 的部門檔，跟看板「匯出備份」、命令列 `--export` 同一個 `toState`）}`。另外看板「匯出備份」仍是逐部門的（有這個部門角色的人；不含角色、稽核、會議紀錄）。測試：`im1.js` 第 6 段。
 - 頻率、存放位置、負責人：決策 D11。建議每週一次＋每次部門切換前後各一次，存到學生會公用帳號的雲端硬碟（只有幹部看得到的資料夾）。
 - 備份檔包含 L4 資料（角色、稽核），存放位置的存取權要跟總管理員一致。
 

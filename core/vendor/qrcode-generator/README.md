@@ -1,6 +1,6 @@
 # qrcode-generator（第三方程式，不要修改）
 
-- 用途：會長室管理 → QR 邀請畫出 QR（`core/js/account.js` 的 `qrSvg`，只有打開那個畫面才載入）。
+- 用途：系統管理 → QR 邀請畫出 QR（`core/js/account.js` 的 `qrSvg`，只有打開那個畫面才載入）。
 - 來源：npm 套件 `qrcode-generator` **1.4.4** 裡的 `qrcode.js`，原檔沒有修改。
   - 作者：Kazuhiko Arase（https://github.com/kazuhikoarase/qrcode-generator）
   - 授權：MIT（`LICENSE`，取自上游 repo；`qrcode.js` 檔頭也有授權聲明）

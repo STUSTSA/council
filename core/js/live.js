@@ -53,13 +53,13 @@ function lnHTML(b,t,ed,ro){
   const ck=k==="text"?"":k==="time"?`<button type="button" class="ln-dot" role="checkbox" aria-checked="${!!b.check}" data-kpck="${esc(b.id)}" aria-label="完成"${dis}></button>`
     :`<label class="fld-check ln-ck"><input type="checkbox" data-kpck="${esc(b.id)}"${b.check?" checked":""}${dis} aria-label="完成"></label>`;
   const tm=k!=="time"?"":ed?`<button type="button" class="tmc num${late?" late":""}" data-kptm="${esc(t?t.id:"")}">${esc(when)}</button>`:`<span class="tmc num${late?" late":""}">${esc(when)}</span>`;
-  const tx=ed?`<input class="tx" data-kptx="${esc(b.id)}" value="${esc(b.text)}" maxlength="${StoreMap.TXT_MAX}" aria-label="內容">`
+  const tx=ed?`<textarea class="tx" rows="1" data-kptx="${esc(b.id)}" maxlength="${StoreMap.TXT_MAX}" aria-label="內容">${esc(b.text)}</textarea>`
     :`<span class="tx"${ro?"":` data-kpgo="${esc(b.id)}" tabindex="0" role="button"`}>${esc(b.text)}</span>`;
   return `<div class="ln${k==="time"?" tm":k==="check"?" ck":""}${b.check?" done":""}" data-blk="${esc(b.id)}" data-k="${k}">${ck}${tm}${tx}${t&&t.place?`<span class="pl">${esc(t.place)}</span>`:""}${ed?`<button type="button" class="ln-x" data-kpdel="${esc(b.id)}" aria-label="刪除這一行">${ico("close","solo")}</button>`:""}</div>`;
 }
 /* 沒有連到行的舊時間標記：時間線的樣子，圓點不能按（沒有勾選狀態）；編輯中名稱可以改、可以刪 */
 function freeHTML(t,ed){const when=evTimeText(t).when;
-  return `<div class="ln tm free" data-tfree="${esc(t.id)}" data-k="time"><span class="ln-dot" aria-hidden="true"></span>${ed?`<button type="button" class="tmc num" data-kptm="${esc(t.id)}">${esc(when)}</button><input class="tx" data-kplb="${esc(t.id)}" value="${esc(t.label)}" maxlength="${StoreMap.TXT_MAX}" aria-label="時間標記名稱"><button type="button" class="ln-x" data-kptdel="${esc(t.id)}" aria-label="刪除這個時間標記">${ico("close","solo")}</button>`:`<span class="tmc num">${esc(when)}</span><span class="tx">${esc(t.label)}</span>`}${t.place?`<span class="pl">${esc(t.place)}</span>`:""}</div>`}
+  return `<div class="ln tm free" data-tfree="${esc(t.id)}" data-k="time"><span class="ln-dot" aria-hidden="true"></span>${ed?`<button type="button" class="tmc num" data-kptm="${esc(t.id)}">${esc(when)}</button><textarea class="tx" rows="1" data-kplb="${esc(t.id)}" maxlength="${StoreMap.TXT_MAX}" aria-label="時間標記名稱">${esc(t.label)}</textarea><button type="button" class="ln-x" data-kptdel="${esc(t.id)}" aria-label="刪除這個時間標記">${ico("close","solo")}</button>`:`<span class="tmc num">${esc(when)}</span><span class="tx">${esc(t.label)}</span>`}${t.place?`<span class="pl">${esc(t.place)}</span>`:""}</div>`}
 /* 逐行內容＋超連結（檢視是膠囊、編輯中是名稱與網址兩欄） */
 function lcLinesHTML(ev,ed,ro){
   const tm=new Map((ev.times||[]).map(t=>[t.id,t])),rows=(ev.blocks||[]).map(b=>lnHTML(b,tm.get(b.timeId),ed,ro)).join("")+evFreeTimes(ev).map(t=>freeHTML(t,ed)).join("");
@@ -247,6 +247,10 @@ async function kpStart(id,o={}){
   else kpAdd(ev,0);
   return true;
 }
+/* 逐行內容是自動折行的輸入框：高度跟著內容（渲染後、輸入時、視窗寬度變了都重算；折行只是視覺，一行還是一筆） */
+function kpFit(el){el.style.height="auto";if(el.scrollHeight)el.style.height=el.scrollHeight+"px"}
+function kpFitAll(){document.querySelectorAll(".lc-ed textarea.tx").forEach(kpFit)}
+window.addEventListener("resize",()=>{if(kp)kpFitAll()});
 /* 游標放到某一行（或名稱）的文字最後；sel＝true 時全選（新卡片的名稱） */
 function kpFocus(id,sel){
   const el=id==="title"?document.querySelector(".lc-ed [data-kptitle]"):document.querySelector(`.lc-ed [data-kptx="${CSS.escape(id)}"]`);if(!el)return;
@@ -344,7 +348,7 @@ function lvCheck(ev,ck){
   if(ck.tagName==="INPUT")ck.checked=b.check;else ck.setAttribute("aria-checked",String(b.check));
   const ln=ck.closest(".ln");if(ln){ln.classList.toggle("done",b.check);const tc=ln.querySelector(".tmc");if(tc)tc.classList.toggle("late",!b.check&&tmLate(ev.times.find(x=>x.id===b.timeId)))}
   if(!reduceMotion())ck.animate([{transform:"scale(.7)"},{transform:"scale(1.16)",offset:.55},{transform:"none"}],{duration:280,easing:MO.out});
-  ln&&ln.querySelector("input.tx")?.focus({preventScroll:true});   /* 游標到那一行（ui-03：按核取框那一下不失焦，放開後到那一行） */
+  ln&&ln.querySelector("textarea.tx")?.focus({preventScroll:true});   /* 游標到那一行（ui-03：按核取框那一下不失焦，放開後到那一行） */
   Sfx.play("check");
 }
 /* 鍵盤：Enter＝在下面新增一行（名稱欄＝到第一行）、空白行按 Backspace＝刪掉回到上一行；時間頁選到一段時上下鍵、數字調整；Esc＝收起母議題選單或存檔並離開編輯 */
@@ -357,6 +361,7 @@ function kpKey(e){
     if(/^\d$/.test(e.key)&&!/d$/.test(lvSeg.k)){const b=(lvSeg.buf+e.key).slice(-2),v=+b;lvSeg.buf=b;if(v<(lvSeg.k.slice(-1)==="h"?24:60))lvSegTick(0,v);e.preventDefault();return true}
     return false}
   if(e.key==="Enter"&&a.dataset.kptitle!==undefined){e.preventDefault();lvPane=null;if(ev.blocks.length){render();kpFocus(ev.blocks[0].id)}else kpAdd(ev,0);return true}
+  if(e.key==="Enter"&&a.dataset.kplb!==undefined&&a.tagName==="TEXTAREA"){e.preventDefault();return true}   /* 沒連到行的時間標記名稱：一樣不能換行（折行只是視覺） */
   const id=a.dataset.kptx;if(id===undefined||a.closest(".te"))return false;
   const i=ev.blocks.findIndex(b=>b.id===id);
   if(e.key==="Enter"){e.preventDefault();kpAdd(ev,i+1,ev.blocks[i]);return true}
@@ -365,6 +370,7 @@ function kpKey(e){
 }
 document.addEventListener("input",e=>{
   const a=e.target,ev=kp&&a.closest&&a.closest(".lc-ed")&&kpEv();if(!ev)return;
+  if(a.tagName==="TEXTAREA"&&a.classList.contains("tx")){if(/[\r\n]/.test(a.value)){const c=a.selectionStart;a.value=a.value.replace(/[\r\n]+/g," ");a.setSelectionRange(c,c)}kpFit(a)}   /* 貼上多行文字＝接成一行；高度跟著內容 */
   if(a.dataset.kptitle!==undefined)ev.name=a.value;
   else if(a.dataset.kptx!==undefined){const b=ev.blocks.find(x=>x.id===a.dataset.kptx);if(b){b.text=a.value.replace(/[\r\n]+/g," ");const t=b.timeId&&ev.times.find(x=>x.id===b.timeId);if(t)t.label=b.text}}
   else if(a.dataset.kplb!==undefined){const t=ev.times.find(x=>x.id===a.dataset.kplb);if(t)t.label=a.value}

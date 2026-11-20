@@ -10,7 +10,7 @@
 (()=>{
   const D=[...(window.BOARD_DEPTS||[])].sort((a,b)=>(b.id==="president")-(a.id==="president")||(b.id==="secretariat")-(a.id==="secretariat"));   /* 會長室、秘書處排最前面，其他照設定檔 */
   const PHONE=matchMedia("(max-width:640px)"),$id=id=>document.getElementById(id);
-  const href=d=>d.id==="rights"?"index.html":`index.html?d=${encodeURIComponent(d.id)}`;
+  const href=d=>`index.html?d=${encodeURIComponent(d.id)}`;
   const EN=id=>DEPT_EN[id]||"";
   const stage=$id("hmStage");
   /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（FROM）：

@@ -1,8 +1,8 @@
 /* 02B Google 登入、角色、QR 邀請、撤權、稽核紀錄（core/js/account.js、fb-account.js）：
    用 Auth 模擬器＋Firestore 模擬器，從畫面操作走完整流程（規則用正式的 backend/firestore.rules）。
    1. 未登入：設定頁只有「用 Google 登入」；看板讀不到。App 內建瀏覽器：改成「用瀏覽器開啟」＋「複製網址」
-   2. 一般登入者：第一次登入建 users／profiles；讀得到看板；帳號頁「唯讀」（ui-08 起信箱與角色在帳號頁最上面，不在列下）；沒有會長室管理
-   3. 總管理員：角色即時出現「會長室管理」；產生 QR（內容＝本站網址＋#join=權杖、文件 ID＝SHA-256）、10 分鐘倒數、重新產生（舊的撤銷）、撤銷
+   2. 一般登入者：第一次登入建 users／profiles；讀得到看板；帳號頁「唯讀」（ui-08 起信箱與角色在帳號頁最上面，不在列下）；沒有系統管理
+   3. 總管理員：角色即時出現「系統管理」；產生 QR（內容＝本站網址＋#join=權杖、文件 ID＝SHA-256）、10 分鐘倒數、重新產生（舊的撤銷）、撤銷
    4. 掃 QR：權杖一讀到就從網址列拿掉；先登入再加入；加入後角色、邀請、稽核鏈正確；重放、過期、綁定信箱、已有角色都擋下
    5. 申請 → 核准；撤權（對方畫面即時變唯讀）；紀錄（含卡片刪除紀錄、權限歷史與檢查連號）；登出
    6. github 模式的部門、沒帶 QR：完全不載入 Firebase
@@ -95,7 +95,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok((await board(anon)).length===0&&await toastHas(anon,'要登入才能看'),'未登入：讀不到看板、提示要登入');
   await openSet(anon);
   let s=await setText(anon);
-  ok(s.includes('用 Google 登入')&&!s.includes('會長室管理')&&!s.includes('人員'),'未登入：設定頁只有每週概述與「用 Google 登入」');
+  ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有每週概述與「用 Google 登入」');
   await anon.ctx.close();
   const line=await open(`${BASE}/index.html?d=fruit`,{ua:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Line/14.0.0'});
   await openSet(line);s=await setText(line);
@@ -111,7 +111,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>(await board(gen)).includes('測試卡片甲')),'一般登入者：登入後重新讀到看板內容');
   ok(await until(async()=>{const u=await read(`users/${genUid}`),pf=await read(`profiles/${genUid}`);return u&&u.email==='gen@example.test'&&pf&&pf.displayName==='gen 同學'}),'第一次登入：建立 users（信箱＝登入信箱）與 profiles（Google 名稱）');
   await openSet(gen);
-  ok(await until(async()=>{const x=await meText(gen);return x.includes('gen@example.test')&&x.includes('唯讀')&&!(await setText(gen)).includes('會長室管理')}),'一般登入者：帳號頁顯示信箱與「唯讀」、沒有會長室管理');
+  ok(await until(async()=>{const x=await meText(gen);return x.includes('gen@example.test')&&x.includes('唯讀')&&!(await setText(gen)).includes('系統管理')}),'一般登入者：帳號頁顯示信箱與「唯讀」、沒有系統管理');
 
   /* ---------- 3. 總管理員與 QR ---------- */
   const boss=await open(`${BASE}/index.html?d=fruit`);
@@ -119,7 +119,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await admin(d=>d.doc(`roles/${bossUid}`).set({super:true,depts:{},rev:1,lastVia:'manual',lastRef:'bootstrap',updatedAt:TS.now(),updatedBy:bossUid}));
   await admin(d=>d.doc(`auditLogs/roles_${bossUid}_1`).set({col:'roles',docId:bossUid,rev:1,action:'bootstrap',actor:bossUid,at:TS.now(),before:{},after:{super:true,depts:{}},ref:'console'}));
   await openSet(boss);
-  ok(await until(async()=>(await setText(boss)).includes('會長室管理')),'總管理員：不用重新整理就出現「會長室管理」（監聽 roles）');
+  ok(await until(async()=>(await setText(boss)).includes('系統管理')),'總管理員：不用重新整理就出現「系統管理」（監聽 roles）');
   const hub=async(p,k)=>{await p.click('[data-set="council"]');await p.waitForTimeout(800);if(k){await p.click(`[data-hub="${k}"]`);await p.waitForTimeout(900)}};
   await hub(boss,'invite');
   await boss.click('[data-new]');ok((await dlg(boss))==='產生 QR','QR：「產生 QR」表單');

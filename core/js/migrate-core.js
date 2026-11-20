@@ -1,5 +1,5 @@
 /* 核心｜遷移的共用邏輯（02D D-a）：命令列（backend/migrate/run.js，只連模擬器）與網頁匯入頁（core/js/migrate-web.js，總管理員登入後
-   在會長室管理執行）共用這一份，所以兩邊的匯入、跳過、衝突、驗證、筆數報告一定相同。欄位對照在 store-map.js。
+   在系統管理執行）共用這一份，所以兩邊的匯入、跳過、衝突、驗證、筆數報告一定相同。欄位對照在 store-map.js。
    不碰網路與畫面：讀寫都透過呼叫端給的 io（下面），時間值一律 {__ts: 毫秒}，伺服器時間 {__now: true}，由 io 換成 Firestore 的型別。
    io＝{ get(path) → 文件內容（plain）或 null；list(col) → [{id, path, ...內容}]；listGroup(name) → 同上（collection group）；
          commit(writes) → 一批寫入，writes＝[{path, data, merge}]（merge＝只改給的欄位） }
