@@ -150,7 +150,7 @@ async function minutesDialog(){
   openReport(mn.date,mn.date,{label:"會議紀錄",k:"MINUTES",file:`會議紀錄_${mn.date.replaceAll("-","")}`,html:minutesHTML(mn,!!v.all)});
 }
 function minutesHTML(mn,all){
-  const dot=s=>fmt(s).replaceAll("/","."),when=t=>{const d=(t.start||"").slice(0,10),h=(t.start||"").slice(11,16),e=(t.end||"").slice(0,10),eh=(t.end||"").slice(11,16);
+  const dot=s=>esc(fmt(s).replaceAll("/",".")),when=t=>{const d=(t.start||"").slice(0,10),h=(t.start||"").slice(11,16),e=(t.end||"").slice(0,10),eh=(t.end||"").slice(11,16);
     return `${d?fmt(d).slice(5):""}${h?" "+h:""}${t.end?` – ${e&&e!==d?fmt(e).slice(5):""}${eh?" "+eh:""}`:""}`};
   const order=(window.BOARD_DEPTS||[]).map(d=>d.id),byDept=new Map();
   mn.items.forEach(x=>{if(!byDept.has(x.dept))byDept.set(x.dept,{name:x.deptName,items:[]});byDept.get(x.dept).items.push(x)});
@@ -190,10 +190,10 @@ function renderWeekRead(){
     ...ms.filter(m=>ws(m).length||m.id===WK.dept).map(m=>{const n=ws(m).length,fresh=n&&wkThisWeek(ws(m)[0].date);return `<button type="button" role="tab" class="wk-d${n?"":" none"}" data-wkd="${esc(m.id)}" aria-selected="${WK.dept===m.id}">${fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(m.name)}<span class="num">${n}</span></button>`})].join("");
   const body=$("#wkBody");
   if(MT.loading&&!ms.length){body.innerHTML=`<p class="sub">讀取各部門資料中…</p>`;return}
-  const block=(m,w,head)=>`<article class="wk-doc" data-wkdoc><div class="wk-top">${head}<span class="num">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></article>`;
+  const block=(m,w,head)=>`<article class="wk-doc" data-wkdoc><div class="wk-top">${head}<span class="num">${esc(fmt(w.date))}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></article>`;
   if(WK.dept==="all"){
     /* 全部最新：每個部門一顆膠囊（部門、日期、本週），點了才展開全文（2026-11-06 使用者：秘書處太臃腫，要收起來） */
-    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${esc(m.id)}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${fmt(w.date)}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
+    const cap=(m,w)=>`<details class="ev wk-cap" data-wkdoc data-wkcap="${esc(m.id)}"${WK.open.has(m.id)?" open":""}><summary><b>${esc(m.name)}</b><span class="num wk-date">${esc(fmt(w.date))}</span>${wkThisWeek(w.date)?'<span class="wk-fresh">本週</span>':""}<span class="ev-chev" aria-hidden="true">▾</span></summary>
       <div class="ev-body"><div class="wk-top"><button type="button" class="icon" data-wkcopy>複製文字</button></div><pre class="wk-text">${esc(w.text)}</pre></div></details>`;
     const docs=ms.map(m=>{const w=ws(m)[0];return w?cap(m,w):""}).filter(Boolean);
     const miss=ms.filter(m=>!ws(m).length).map(m=>m.name);
@@ -203,7 +203,7 @@ function renderWeekRead(){
   const m=MT.depts.get(WK.dept),list=ws(m);
   if(!list.length){body.innerHTML=`<p class="empty">${esc(m.name)}${m.data?"還沒有週報。":esc(m.err||"讀不到資料")}</p>`;return}
   const w=list.find(x=>x.id===WK.week)||list[0];
-  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${esc(x.id)}" aria-selected="${x.id===w.id}"><span class="num">${fmt(x.date).slice(5)}</span></button>`).join("")}</div>
+  body.innerHTML=`<div class="wk-weeks" role="tablist" aria-label="週次">${list.slice(0,12).map(x=>`<button type="button" role="tab" class="wk-w" data-wkw="${esc(x.id)}" aria-selected="${x.id===w.id}"><span class="num">${esc(fmt(x.date).slice(5))}</span></button>`).join("")}</div>
     ${block(m,w,`<span class="tag sm">${esc(m.name)}</span>`)}<a class="wk-open" href="?d=${encodeURIComponent(m.id)}" target="_blank" rel="noopener">開啟${esc(m.name)}看板 →</a>`;
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#wkBody .wk-cap"))return;if(d.open)WK.open.add(d.dataset.wkcap);else WK.open.delete(d.dataset.wkcap)},true);
