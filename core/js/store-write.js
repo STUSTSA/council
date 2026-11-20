@@ -322,7 +322,16 @@ async function saveMinutes(cfg, date, items) {
   const f = fb(cfg);
   db = f.db;
   try {
-    await runTransaction(db, async tx => { tx.set(doc(db, "meetingMinutes", date), { date, items: JSON.parse(JSON.stringify(items)), deptId: "secretariat" }); });
+    await runTransaction(db, async tx => { tx.set(doc(db, "meetingMinutes", date), { date, items: JSON.parse(JSON.stringify(items)), deptId: "secretariat" }, { merge: true }); });   /* merge：同一天的 agenda（行政會議議程定版）要留著 */
+  } catch (e) { throw e && e.code ? e : fail("error"); }
+}
+/* 行政會議議程定版（2026-11-21）：存在 meetingMinutes/{日期} 的 agenda 欄位，同一天重新定版就取代；規則同 meetingMinutes（秘書處與總管理員） */
+async function saveAgenda(cfg, date, agenda) {
+  await authReady(cfg);
+  const f = fb(cfg);
+  db = f.db;
+  try {
+    await runTransaction(db, async tx => { tx.set(doc(db, "meetingMinutes", date), { date, deptId: "secretariat", agenda: JSON.parse(JSON.stringify(agenda)) }, { merge: true }); });
   } catch (e) { throw e && e.code ? e : fail("error"); }
 }
 
@@ -357,5 +366,5 @@ async function run(units) {
   return { batches: committed };
 }
 
-window.BoardStoreWrite = { saveDept, saveMeeting, setMeetGrant, saveMinutes };
+window.BoardStoreWrite = { saveDept, saveMeeting, setMeetGrant, saveMinutes, saveAgenda };
 dispatchEvent(new Event("board-store-write-ready"));
