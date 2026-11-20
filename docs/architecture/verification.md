@@ -227,5 +227,5 @@
 |---|---|
 | `cd backend && npm test` | 201／201 通過（第 12 節的 199＋`rules-04.test.js` G-01＋`migrate.test.js` 的整理與舊身分檢查） |
 | 網頁（只跑跟這次有關的） | `acc1.js` 77 項（70＋核准與改成管理員的確認、信箱顯示 7 項）、`im1.js` 41 項（31＋來源版本不符的三種情況、確認畫面、沒有核對過的來源不執行等 10 項）、用到匯入載入器的 `fs1.js` 26、`sw1.js` 77、`cx1.js` 20：全部通過 |
-| 預覽檔產生器 | `node tools/build-preview.js && node tools/tests/prev03.js`：產生器照常產生檔案（不進 repo）。`prev03.js` 在「展開卡片」那一步逾時，在 `origin/main`（`f0ad704`）上同樣逾時，跟這次修改無關，沒有動它 |
+| 預覽檔產生器 | `cd tools/tests && node prev03.js`：`prev03.js` 改成自己把預覽檔產生到暫存資料夾再測（操作改成現在的介面；原本的步驟在 `origin/main` 上已經逾時）：15 項全過，repo 裡不留檔案 |
 | 沒有重跑 | github 模式的 Playwright 測試（這次沒有改看板讀寫資料檔的程式；`store-map.js` 只改遷移用的 `toDocs`）、`npm run test:web` 其餘幾支 |
