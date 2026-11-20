@@ -414,8 +414,10 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
 .pg-ppl h4{margin:0;font-size:14px;font-weight:700;letter-spacing:.1em}
 .lc .chips{display:flex;flex-wrap:wrap;gap:8px}
 .te{display:grid;justify-items:start;gap:10px;padding:6px 0 16px;border-bottom:1px solid var(--hair)}
-.te-nm{width:min(20em,100%);padding:2px 0;border:0;border-radius:0;background:transparent;font-size:15.5px}   /* 時間頁、地點頁的名稱：平面字，點了就改（模擬頁 .te input.nm；ui-09 拿掉聚焦時的底線） */
-.te-nm:focus{outline:none}
+.te-nm{width:min(20em,100%);padding:2px 0 4px;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font-size:15.5px;transition:border-color var(--mo-fast) var(--mo-out)}   /* 時間頁、地點頁的標題欄：有底線的輸入欄；空的時候底線改成虛線強調色、提示字「標題（例如：協商會議）」，提醒要先打標題（只提醒、不擋存檔；沒標題的時間標記會沒有自己的名稱） */
+.te-nm::placeholder{color:color-mix(in srgb,var(--acc2) 75%,var(--muted));opacity:1}
+.te-nm:placeholder-shown{border-bottom:1.5px dashed var(--acc2)}
+.te-nm:focus{outline:none;border-bottom-color:var(--ink)}
 .te-rw{display:flex;flex-wrap:wrap;gap:8px}
 .te-pl{position:relative;display:inline-flex;align-items:center;height:36px;min-height:36px;padding:0 14px;border:0;border-radius:999px;background:color-mix(in srgb,var(--acc2) 15%,var(--blk));color:var(--acc2);font-size:14px;line-height:1}
 button.te-pl.dsh{background:transparent;border:1.5px dashed var(--acc2);color:color-mix(in srgb,var(--acc2) 60%,transparent)}
