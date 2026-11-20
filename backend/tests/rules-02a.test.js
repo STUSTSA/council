@@ -45,7 +45,8 @@ async function seedBoard() {
 const INTERNAL = d => [`cards/${d}__c1`, `cards/${d}__c1/versions/1`, `issues/${d}__i1`, `weeks/${d}__w1`, `labels/${d}__l1`,
   `events/${d}__e1`, `deptSettings/${d}`];
 // 06：看板內容（卡片、議題、週報、標籤、時間事件、部門設定）對外公開，不用登入；版本歷史仍要登入
-const PUBLIC_BOARD = d => [`cards/${d}__c1`, `issues/${d}__i1`, `weeks/${d}__w1`, `labels/${d}__l1`, `events/${d}__e1`, `deptSettings/${d}`];
+const PUBLIC_BOARD = d => [`cards/${d}__c1`, `issues/${d}__i1`, `weeks/${d}__w1`, `labels/${d}__l1`, `deptSettings/${d}`];
+const EVENT_DOC = d => `events/${d}__e1`;   // 06：時間事件（行事曆）要登入才讀
 const NOT_PUBLIC = d => [`cards/${d}__c1/versions/1`];
 const SHARED = ['profiles/ed', 'legacyIdentities/rights__m1', 'grants/meetingEdit', 'calendars/pres', 'openWindows/w1', 'slots/pres_1'];
 
@@ -78,16 +79,17 @@ describe('N-01～N-03 讀取範圍（02A：登入即可讀內部看板）', () =
     await seedBoard();
     for (const dept of DEPTS) for (const p of NOT_PUBLIC(dept)) await assertFails(anon(t).doc(p).get());
     for (const dept of DEPTS) for (const p of PUBLIC_BOARD(dept)) await assertSucceeds(anon(t).doc(p).get());   // 06
+    for (const dept of DEPTS) await assertFails(anon(t).doc(EVENT_DOC(dept)).get());
     for (const p of SHARED) await assertFails(anon(t).doc(p).get());
     for (const q of [anon(t).collection('profiles'), anon(t).collectionGroup('versions'), anon(t).collection('users'), anon(t).collection('roles'),
                      anon(t).collection('legacyIdentities'), anon(t).collection('deptMembers'), anon(t).collection('roleRequests'), anon(t).collection('invitations')])
       await assertFails(q.get());
     for (const q of [anon(t).collection('cards').where('state', 'in', ['open', 'done']), anon(t).collection('issues'), anon(t).collection('weeks'),
-                     anon(t).collection('labels'), anon(t).collection('events').where('deptId', '==', 'rights'), anon(t).collection('deptSettings')])
+                     anon(t).collection('labels'), anon(t).collection('deptSettings')])
       await assertSucceeds(q.get());   // 06
     await assertFails(anon(t).collection('cards').get());   // 永久刪除中的卡片不公開：不帶 state 條件的查詢拒絕
     await assertSucceeds(anon(t).collection('departments').get());
-    await assertSucceeds(anon(t).collection('events').where('visibility', '==', 'public').get());
+    await assertFails(anon(t).collection('events').where('visibility', '==', 'public').get());   // 06：行事曆不公開
   });
   it('N-02 未登入者寫任何部門的內部資料：拒絕', async () => {
     await seedBoard();

@@ -4,7 +4,6 @@ document.addEventListener("click",async e=>{
   const t=e.target;
   const jump=t.closest("[data-jump]");
   /* 進度卡片：點甘特圖的議題列換成該議題詳情，按返回回到甘特圖 */
-  if(t.closest("#pvBack")){progShow(null);return}
   if(jump&&!t.closest("[data-marker]")){e.preventDefault();if(curSec!=="progress")setSection("progress",{instant:true});progShow(jump.dataset.jump);return}
   /* 單卡編輯（render.js 的 startEdit／cancelEdit）：卡片上的「編輯」、編輯中那張的「取消｜儲存」 */
   const edb=t.closest("[data-edit]");if(edb){e.preventDefault();e.stopPropagation();await startEdit(edb.dataset.edit);return}

@@ -222,10 +222,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>(await meText(u1b)).includes('唯讀')),'撤權：被撤的人帳號頁即時變回唯讀');
   ok((await board(u1b)).includes('測試卡片甲'),'撤權：仍然看得到看板（登入就能讀）');
   /* 自己不能取消自己的總管理員：畫面上沒有按鈕 */
-  await boss.click('[data-back]');await boss.waitForTimeout(300);await boss.click(`[data-who="${bossUid}"]`);await boss.waitForTimeout(300);
+  await boss.click('.dh-home');await boss.waitForTimeout(300);await boss.click(`[data-who="${bossUid}"]`);await boss.waitForTimeout(300);
   ok(!(await boss.$('[data-super]'))&&(await paneText(boss)).includes('自己'),'人員：自己的總管理員不能取消');
   /* 權限歷史＋檢查連號 */
-  await boss.click('[data-back]');await boss.waitForTimeout(300);await boss.click(`[data-who="${u1Uid}"]`);await boss.waitForTimeout(300);
+  await boss.click('.dh-home');await boss.waitForTimeout(300);await boss.click(`[data-who="${u1Uid}"]`);await boss.waitForTimeout(300);
   await boss.click('[data-hist]');await boss.waitForTimeout(900);
   let pt2=await paneText(boss);
   ok(pt2.includes('權限歷史')&&pt2.includes('撤權')&&pt2.includes('QR 加入'),'權限歷史：列出 QR 加入與撤權');

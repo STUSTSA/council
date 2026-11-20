@@ -139,6 +139,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(!(((await read(`roles/${U.g3}`))||{}).depts||{}).fruit,'攻擊之後：部長申請人仍沒有權限');
   ok(await tryW(P.boss,'requestApprove',`${U.g3}_fruit`,1)==='ok'&&((await read(`roles/${U.g3}`)).depts||{}).fruit==='admin','總管理員核准部長申請：成功');
 
+  /* 4. 行事曆（時間事件）不公開：沒登入讀不到（畫面顯示「登入後才看得到」），看板其餘照常；登入後讀得到 */
+  await admin(d=>d.doc('events/fruit__e1').set({deptId:'fruit',cardId:'c1',visibility:'public',scope:'all-activity',start:TS.fromMillis(Date.now()+864e5),end:TS.fromMillis(Date.now()+864e5),allDay:false,label:'迎新',rev:1,updatedAt:TS.now(),updatedBy:'seed'}));
+  await admin(d=>d.doc('cards/fruit__c1').set({deptId:'fruit',title:'公開的卡片',blocks:[],timeIds:[],state:'open',version:1,report:false,updatedAt:TS.now(),updatedBy:'seed',createdAt:TS.now(),createdBy:'seed'}));
+  const an=await open(`${BASE}/index.html?d=fruit`);P.an=an;
+  const fsr=await an.evaluate(async()=>{const f=await storeFsGet();const o={};try{await f.eventsByScope(CFG.firebase,'all-activity',0,4e12,{pub:true});o.ev='ok'}catch(e){o.ev=e.code}
+    try{const r=await f.loadDept(CFG.firebase,'fruit');o.cards=Object.keys(r.src.cards||{}).length||(r.src.cards||[]).length}catch(e){o.cards='err '+e.code}return o});
+  ok(fsr.ev==='permission-denied','未登入：全會行事曆讀時間事件被拒（畫面顯示登入後才看得到）');
+  ok(fsr.cards>=1,`未登入：看板內容（卡片）照常讀得到、不因時間事件被拒而整個讀不出來（${JSON.stringify(fsr)}）`);
+  ok(await P.g1.evaluate(async()=>{const f=await storeFsGet();return (await f.eventsByScope(CFG.firebase,'all-activity',0,4e12,{pub:true})).length>=1}),'登入（沒有部門角色也行）：讀得到時間事件');
   for(const p of Object.values(P))await p.ctx.close().catch(()=>{});
   await b.close();await t.cleanup();srv.close();
   console.log(fails?`失敗 ${fails} 項（通過 ${passes}）`:`全部通過（${passes} 項）`);process.exit(fails?1:0);

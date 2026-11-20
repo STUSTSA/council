@@ -118,10 +118,13 @@ describe('時間事件', () => {
     await assertSucceeds(db('ev').doc('events/p1').set(pub('ev')));
     await assertFails(db('ev').doc('events/p2').set({ ...pub('ev'), label: '內文', cardId: 'c' }));
     await assertSucceeds(db('ed').doc('events/i1').set(ev('ed')));
-    await assertSucceeds(anon(t).doc('events/p1').get());
-    await assertSucceeds(anon(t).collection('events').where('visibility', '==', 'public').get());
-    await assertSucceeds(anon(t).doc('events/i1').get());   // 06：看板內容（internal 事件不能帶 title／summary）
-    await assertSucceeds(anon(t).collection('events').get());
+    await assertFails(anon(t).doc('events/p1').get());   // 06：行事曆（時間事件）不公開，未登入讀不到（public 也一樣）
+    await assertFails(anon(t).collection('events').where('visibility', '==', 'public').get());
+    await assertFails(anon(t).doc('events/i1').get());
+    await assertFails(anon(t).collection('events').get());
+    await assertSucceeds(db('nb').doc('events/p1').get());   // 任何登入的帳號（不要求部門角色）讀得到
+    await assertSucceeds(db('nb').doc('events/i1').get());
+    await assertSucceeds(db('nb').collection('events').get());
   });
   it('全會範圍：活動部可標 all-activity、秘書處可標 all-meeting、其他人不行', async () => {
     await seed(t, d => d.doc('events/e1').set({ ...ev('ed'), updatedAt: TS.now() }));
@@ -267,8 +270,8 @@ describe('卡片與版本 C-01～C-20', () => {
       await d.doc('events/e1').set({ deptId: 'rights', visibility: 'internal' }); });
     for (const p of ['cards/c1', 'issues/i1', 'events/e1', 'profiles/ed', 'slots/p_1', 'cards/c1/versions/1']) {
       await assertSucceeds(db('nb').doc(p).get());
-      if (['profiles/ed', 'slots/p_1', 'cards/c1/versions/1'].includes(p)) await assertFails(anon(t).doc(p).get());
-      else await assertSucceeds(anon(t).doc(p).get());   // 06：卡片、議題、時間事件對外公開
+      if (['profiles/ed', 'slots/p_1', 'cards/c1/versions/1', 'events/e1'].includes(p)) await assertFails(anon(t).doc(p).get());
+      else await assertSucceeds(anon(t).doc(p).get());   // 06：卡片、議題對外公開（時間事件不公開）
     }
     await assertSucceeds(db('nb').collection('cards').where('state', 'in', ['open', 'done']).get());
     await assertSucceeds(anon(t).collection('cards').where('state', 'in', ['open', 'done']).get());   // 06：對外公開

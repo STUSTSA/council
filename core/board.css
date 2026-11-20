@@ -753,7 +753,7 @@ a.doc-pill:active{scale:.96}
    一張卡片：右上「匯入名冊」「+ 場次」；場次膠囊一排（沿用週報的 .wk-d）；四個數字（出席、請假、缺席、還沒點）；下面一個部門一段，每人一顆按鈕，點一下換狀態。
    狀態材質照 DESIGN-next 第三節：出席＝實心、請假＝外框、缺席＝斜紋、還沒點＝平面。手機兩欄、桌面自動多欄，按鈕高 52px 方便單手連點；顏色全用變數，深色不另寫。 */
 .at-panel[hidden]{display:none}
-.at-tools{display:flex;gap:8px}
+.at-tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .at-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
 .at-pick{margin-bottom:12px}
 .at-sum{display:flex;gap:24px;padding:4px 0 14px;margin-bottom:4px;border-bottom:1px solid var(--hair)}
@@ -852,7 +852,6 @@ a.doc-pill:active{scale:.96}
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
 #progPanel{--cpx:18px;overflow:hidden}
 .pv-page[hidden]{display:none}
-.pv-back{gap:4px;padding-left:8px;margin-bottom:20px}   /* 下面是議題詳情的分隔線：至少留 18px */
 #cardDetail{margin:0 calc(-1*var(--cpx)) -16px}
 #cardDetail .card{background:transparent}
 .card-top{display:flex;align-items:center;gap:6px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -1067,10 +1066,6 @@ a.link:active{transform:scale(.96)}
 [data-copyweek].copied{background:var(--ok);border-color:var(--ok);color:var(--ok-ink);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
 .week:hover summary .num{letter-spacing:.04em}
 .week .badge{animation:none}
-#backMain span{transition:transform .2s var(--ease)}
-#backMain{transition:transform .2s var(--ease);gap:6px;padding:5px 14px 5px 13px}
-#backMain:hover{transform:translateX(-2px)}
-@media (max-width:899px){#backMain{display:none}}
 #genWeek{padding-left:12px;padding-right:20px}
 @media (prefers-reduced-motion:reduce){
   .week:hover{transform:none!important}
@@ -1712,8 +1707,9 @@ body.set-open #pageMain{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.td-ov.on .td-row{transition:none}}
 
 /* ===== 清點區（notify.js 的 tallyHTML；通知頁今日／明日下面） =====
-   三段：已過期（段標題用 --late 紅字，紅色只給逾期）、本週到期、之後（最多列 5 項）。一項一塊平面色塊（--blk）：左邊日期、中間名稱與小字（所屬卡片・時刻・地點・專員）、
-   右邊兩顆動作鈕（只有已過期的才有：完成＝主要動作色、改期＝外框）。手機動作鈕換到下一列、各佔一半。按完成那一列往右淡出（.gone，之後重畫拿掉）。
+   三段：已過期（段標題用 --late 紅字，紅色只給逾期）、本週到期。本週到期：一項一塊平面色塊（--blk），左邊日期、中間名稱與小字（所屬卡片・時刻・地點・專員）。
+   已過期：卡片堆（.tl-stack，tlFly／tlBind）。最多露出三張（後面的往下 12px、縮 5%、越後面越淡）；最上面那張跟手指走並傾斜：往右拖浮出「完成」（左上，焦點色）、往左拖浮出「改期」（右上，文字色）。
+   下面一排小按鈕：改期（外框）、剩幾張、完成（主要動作色），給滑鼠與鍵盤。後面的卡片往前補位時滑過去（transform 過渡；拖曳中由程式關掉）。
    完成後的「已完成＋復原」沿用 .lc-save／.kp-st／.lc-undo */
 .nt-tally{display:grid;gap:18px}
 .tl-g{display:grid;gap:10px}
@@ -1721,26 +1717,37 @@ body.set-open #pageMain{overflow:hidden}
 .tl-gh .num{font-size:13px;font-weight:400;color:var(--muted)}
 .tl-g[data-g="late"] .tl-gh{color:var(--late)}
 .tl-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.tl-row{display:grid;grid-template-columns:5.6em minmax(0,1fr) auto;align-items:center;gap:8px 18px;padding:14px 18px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh);transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-slow) var(--mo-out)}
-.tl-row.gone{opacity:0;transform:translateX(16px);pointer-events:none}
+.tl-row{display:grid;grid-template-columns:5.6em minmax(0,1fr);align-items:center;gap:8px 18px;padding:14px 18px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .tl-d{display:grid;gap:3px;line-height:1}
 .tl-d b{font-family:"Jost",sans-serif;font-weight:300;font-size:26px;line-height:1}
 .tl-d small{font-size:12px;color:var(--muted);letter-spacing:.04em;white-space:nowrap}
 .tl-x{display:grid;gap:3px;min-width:0}
 .tl-x b{font-size:15.5px;font-weight:500;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .tl-x small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-act{display:flex;gap:8px}
-.tl-btn{height:40px;min-height:0;padding:0 18px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-stack{position:relative;height:150px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.tl-card{position:absolute;inset:0 0 14px;display:grid;grid-template-columns:5.6em minmax(0,1fr);align-items:center;gap:18px;padding:0 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 12px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform;transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
+.tl-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}
+.tl-card[data-i="1"]{opacity:.7}
+.tl-card[data-i="2"]{opacity:.4}
+.tl-card[data-i="0"]:active{cursor:grabbing}
+.tl-card:not([data-i="0"]){pointer-events:none}
+.tl-stack.ro .tl-card{cursor:default}   /* 不能編輯：只能看（notify.js 的 tlDeckHTML） */
+/* 拖曳時浮出的印章（--r／--l＝0～1，由拖曳距離決定；飛出去時 .go-r／.go-l 全亮） */
+.tl-stp{position:absolute;top:14px;display:grid;place-items:center;height:28px;padding:0 14px;border-radius:999px;font-size:13px;line-height:1;letter-spacing:.08em;pointer-events:none;opacity:0}
+.tl-stp.r{left:16px;opacity:var(--r,0);background:var(--acc2);color:var(--acc2-ink)}
+.tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
+.tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
+.tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
+.tl-btn{height:40px;min-height:0;padding:0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
-.tl-more{margin:0;padding-left:calc(5.6em + 18px);font-size:12.5px;color:var(--muted)}
+.tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
-@media (prefers-reduced-motion:reduce){.tl-row{transition:none}}
+@media (prefers-reduced-motion:reduce){.tl-card{transition:none}}
 @media (max-width:640px){
   .tl-row{grid-template-columns:4.6em minmax(0,1fr);padding:13px 14px;gap:10px 12px}
   .tl-d b{font-size:22px}
-  .tl-act{grid-column:1/-1}
-  .tl-btn{flex:1}
-  .tl-more{padding-left:calc(4.6em + 12px)}
+  .tl-stack{height:140px}
+  .tl-card{grid-template-columns:4.6em minmax(0,1fr);gap:12px;padding:0 16px}
 }
 
 /* ===== 行事曆（notify.js 的 calHTML；通知頁最下面，主頁的全會行事曆是公共版 .cal.pub） =====

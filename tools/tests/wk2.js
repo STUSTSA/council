@@ -22,7 +22,7 @@ for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login}=await c.set
   console.log(w,'gen dialog',await p.evaluate(()=>{const d=$('#dlg');return [d.open,d.classList.contains('in-pane'),d.parentElement.tagName]}));
   await p.click('#dlg [data-act=cancel]');await p.waitForTimeout(700);
   console.log(w,'after cancel',JSON.stringify(await st()));
-  if(touch)await p.goBack();else await p.click('#backMain');await p.waitForTimeout(1000);
+  if(touch)await p.goBack();else await p.click('.dh-home');await p.waitForTimeout(1000);
   console.log(w,'back -> hub',JSON.stringify(await st()));
   if(touch)await p.click('.dh-home');else await p.keyboard.press('Escape');await p.waitForTimeout(1000);
   console.log(w,'back -> list',JSON.stringify(await st()));

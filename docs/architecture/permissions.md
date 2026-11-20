@@ -426,9 +426,9 @@ match /events/{id} {
 結論：01A 範圍內沒有「非 Functions 不可」的需求。上表左欄的取捨要請你確認（決策 D8）。
 
 ### 5.1j 06 對外公開讀取（`backend/tests/rules-06-public.test.js`，N6-01～N6-07）
-- 看板內容不用登入就讀得到：卡片（永久刪除中的除外，list 要帶 `state in [open, done]`）、議題、完成紀錄（卡片 done）、週報、標籤、時間事件、部門設定、部門名稱與 org。這些在切換前本來就是公開 repo 裡的資料檔。
+- 看板內容不用登入就讀得到：卡片（永久刪除中的除外，list 要帶 `state in [open, done]`）、議題、完成紀錄（卡片 done）、週報、標籤、部門設定、部門名稱與 org。**時間事件（行事曆）不公開**（DievE 2026-11-20 決定）：`events` 的 get、list 都要登入（任何登入的帳號，不要求部門角色，public 與 internal 一樣），未登入讀不到（測試 N6-08）；畫面顯示「登入後才看得到」。這些在切換前本來就是公開 repo 裡的資料檔。
 - 一律不公開：users（信箱）、roles、invitations、roleRequests、deptMembers、legacyIdentities、profiles（顯示名稱）、auditLogs、卡片版本歷史（編輯紀錄）、meetingMinutes 與秘書處其他資料、grants、預約相關（calendars、openWindows、slots、busyBlocks、bookings）。拿不準的不公開。
-- 寫入不變：未登入、沒有角色的登入者都不能寫。internal 的時間事件不能帶 title、summary（整個 events 集合公開，不能夾帶文字）。
+- 寫入不變：未登入、沒有角色的登入者都不能寫。internal 的時間事件不能帶 title、summary（events 要登入才讀，這條仍保留，登入的人看到的 internal 事件一樣不夾帶文字）。
 - 畫面：沒登入時看板照常顯示，負責人（舊身分、帳號名稱）不顯示（名字在 profiles、舊身分，要登入）。
 
 ### 5.1k 06 申請與審核流程（`backend/tests/rules-07-requests.test.js` R-01～R-11、`tools/tests/rq1.js`）

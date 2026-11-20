@@ -3,7 +3,7 @@
    內容（#weekWrap：標題列、生成週報、週報清單）平常藏在畫面外；從設定「報告 → 每週概述」（或登入前清單上的「每週概述」）打開時，
    weekPane 把它搬進設定的右側面板（桌面）／子頁（手機），關掉再搬回去。按鈕事件都掛在 document 上，搬動不影響。
    開著的時候對話框（生成週報、新增、編輯週報）一律跳出來（nav.js 的 setPaneHost 在 weekPaneEnd 有值時不給面板），不會畫到清單下面。
-   返回：標題列的「返回」（桌面才有；手機用子頁上方的「返回」）、系統返回、Esc 都走 nav.js 的 paneDismiss，一次退一層 */
+   返回：標題列左上的「上一頁」鍵（views.js 的 homeUp）、系統返回、Esc 都走 nav.js 的 paneDismiss，一次退一層 */
 let weekPaneEnd=null;
 function weekPane(){
   return new Promise(res=>{
@@ -13,7 +13,6 @@ function weekPane(){
     weekPaneEnd=()=>{weekPaneEnd=null;w.hidden=true;w.classList.remove("enter");document.body.append(w);res()};
   });
 }
-$("#backMain").onclick=()=>paneDismiss();
 {const l=$("#weekSecLink");if(l)l.hidden=!!CFG.meeting||CFG.deptId==="secretariat"}   /* 秘書處自己就不顯示「秘書處調閱」 */
 
 /* ---------- 即時回報：母議題連結、分段、狀態、時間標記 ---------- */

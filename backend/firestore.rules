@@ -770,8 +770,8 @@ service cloud.firestore {
                 : exists(evCard()));
       }
 
-      // 06 對外公開：卡片的時間、地點是看板內容；internal 事件不能帶 title／summary（visOk），所以整個集合公開不會多洩露文字
-      allow get, list: if true;
+      // 06：行事曆（時間事件）不對外公開（DievE 2026-11-20 決定）：要登入才讀；任何登入的帳號都讀得到（不要求部門角色），public 與 internal 都一樣
+      allow get, list: if signedIn();
       allow create: if safeId(id) && deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
         && d().rev == 1 && stamped();
       allow update: if eventShape() && unchanged(['deptId', 'cardId', 'importBatch']) && stamped() && revNext() && (

@@ -137,7 +137,7 @@ document.addEventListener("click",async e=>{
    寫入晚於面板收掉時只寫、不再重讀名單（各面板檢查 p.alive） */
 const acctPanels=[];
 let acctPanelEnd=null;
-const acctPanelSync=()=>{acctPanelEnd=acctPanels.length?all=>(all?[...acctPanels].reverse():[acctPanels[acctPanels.length-1]]).forEach(p=>p.end()):null};
+const acctPanelSync=()=>{acctPanelEnd=acctPanels.length?all=>(all?[...acctPanels].reverse():[acctPanels[acctPanels.length-1]]).forEach(p=>all||!p.up?p.end():p.up()):null};
 function acctPanel(title,draw){
   return new Promise(res=>{
     const host=setPaneHost();if(!host)return res();
@@ -148,7 +148,12 @@ function acctPanel(title,draw){
     const p={box,get alive(){return alive},every(fn,ms){timers.push(setInterval(()=>alive&&fn(),ms))},onEnd(fn){ends.push(fn)},
       head:(extra="")=>`${panelHead(title)}${extra}`,
       set html(h){morphTo(box,h)}};   /* 面板內容：原位更新（morph.js），QR 倒數、名單重畫時沒變的節點留著 */
-    p.end=()=>{if(!alive)return;alive=false;dlgPaneCancel();timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
+    /* 面板裡的下一層（人員 → 某個人、匯入 → 某個部門）：p.sub(true,back) 登記成一層（Back 疊一筆），標題列左上的「上一頁」、系統返回、Esc 都先退這一層（back），
+       不在頁面裡另放「返回」鈕；p.sub(false) 收掉登記。back 不想退（流程進行中）時自己再呼叫 p.sub(true,back) 補回 */
+    let subName="",subBack=null;
+    p.sub=(on,back)=>{if(on){subBack=back;if(!subName){subName="acs"+depth;Back.opened(subName,()=>subBack&&subBack())}}else if(subName){const n=subName;subName="";subBack=null;Back.closed(n)}};
+    Object.defineProperty(p,"up",{get:()=>subName?()=>subBack&&subBack():null});
+    p.end=()=>{if(!alive)return;p.sub(false);alive=false;dlgPaneCancel();timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;
       if(depth)Back.closed("acct"+depth);acctPanelSync();res()};
     acctPanels.push(p);acctPanelSync();
@@ -231,12 +236,13 @@ function peoplePanel(){
     const mail=uid=>mailOf(users,uid);
     const draw=()=>{
       if(!p.alive)return;
+      p.sub(!!who,()=>{who=null;draw()});
       if(who){const r=roles.find(x=>x.uid===who)||{uid:who,super:false,depts:{}},self=who===acct.user.uid;
         p.html=p.head()+`<div class="acct-person"><b>${esc(nameOf(who))}</b><small>${esc(mail(who))}</small></div>
           <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${esc(roleT(v,d))}</span>
             <button type="button" class="icon" data-swap="${esc(d)}">改成${v==="admin"?"編輯者":roleT("admin",d)}</button><button type="button" class="icon danger" data-rm="${esc(d)}">撤銷</button></div>`).join("")}
             <div class="acct-line"><span>總管理員</span>${self?`<small>自己</small>`:`<button type="button" class="icon${r.super?" danger":""}" data-super>${r.super?"取消":"授予"}</button>`}</div></div>
-          <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button><button type="button" class="add-row" data-back>返回</button></div>`;
+          <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button></div>`;
         return}
       const list=roles.slice().sort((a,b)=>(b.super-a.super)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
       /* 05：登入過、還沒有任何角色文件的帳號也列出來（點進去就能指派部門與角色）；有 roles 文件的（含被撤光的）在上面那一區 */
@@ -249,7 +255,6 @@ function peoplePanel(){
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.dataset.who){who=b.dataset.who;draw();return}
-      if(b.hasAttribute("data-back")){who=null;draw();return}
       if(b.hasAttribute("data-hist")){await auditPanel({roles:who});return}
       const nm=who&&nameOf(who);
       if(b.dataset.swap){const d=b.dataset.swap,to=(roles.find(x=>x.uid===who).depts[d]==="admin")?"editor":"admin";
@@ -422,20 +427,22 @@ function importPanel(){
         +(v.members.length?`<ol class="acct-log">${v.members.map(m=>`<li><span class="acct-log-t">${m.role==="admin"?"管理員":"成員"}</span><span class="acct-log-b"><b>${esc(m.name)}</b></span></li>`).join("")}</ol>`:"")
         +(v.fixed.length?`<div class="acct-person"><small>格式不合、匯入時會清空的欄位 ${v.fixed.length} 個</small></div>${impBig(v.fixed)}`:"")
         +(stop.length?`<p class="acct-err" role="alert">有 ${stop.length} 項超過規則的上限，要先在看板上改好才能匯入</p>${impBig(stop)}`:"")
-        +`<div class="acct-acts">${stop.length?"":`<button type="button" class="primary" data-go>確認匯入</button>`}<button type="button" class="add-row" data-back>返回</button></div>`};
+        +`<div class="acct-acts">${stop.length?"":`<button type="button" class="primary" data-go>確認匯入</button>`}</div>`};
+    const reset=()=>{if(busy){p.sub(true,reset);return}dept="";pre=null;res=null;err="";expect=null;draw()};   /* 讀取、寫入進行中不退（再補回這一層） */
     const draw=()=>{
       if(!p.alive)return;
+      p.sub(!!dept,reset);
       if(dept){
         const head=`<div class="acct-person"><b>${esc(nm(dept))}</b><small>${esc(CFG.firebase.projectId)}</small></div>`;
         if(busy){p.html=p.head()+head+`<p class="set-p imp-step" role="status">${esc(step)}</p>`;return}
-        if(err){p.html=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
+        if(err){p.html=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button></div>`;return}
         if(!res){p.html=p.head()+head+preHTML();return}
         const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
         p.html=p.head()+head+srcHTML(res)
           +impBig(res.report.tooBig)+rowsHTML(res)
           +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
           +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
-          +`<div class="acct-acts"><button type="button" class="add-row" data-run>再匯入一次</button><button type="button" class="add-row" data-back>返回</button></div>`;
+          +`<div class="acct-acts"><button type="button" class="add-row" data-run>再匯入一次</button></div>`;
         return}
       p.html=p.head()+`<div class="set-list">${BOARD_DEPTS.map(d=>`<button type="button" class="set-row acct-row" data-imp="${esc(d.id)}"><span class="acct-rt"><b>${esc(d.name)}</b><span class="acct-chips"><span class="acct-chip${deptSourceOf(d.id)==="frozen"?" on":""}">${SRC_T[deptSourceOf(d.id)]}</span></span></span>${SR_CHEV}</button>`).join("")}</div>`;
     };
@@ -468,7 +475,6 @@ function importPanel(){
         dept=id;expect={commit:(v.commit||"").trim(),sha256:(v.sha||"").trim()};await check();return}
       if(b.hasAttribute("data-go")){await run();return}
       if(b.hasAttribute("data-run")){await check();return}
-      if(b.hasAttribute("data-back")){dept="";pre=null;res=null;err="";expect=null;draw()}
     });
     draw();
   });
@@ -604,14 +610,13 @@ function auditPanel(by={}){
         +`<ol class="acct-log">${items.map(l=>{const w=auditWhat(l);return `<li><span class="acct-log-t num">${hm(l.at)}</span><span class="acct-log-b"><b>${esc(w.act)}</b> ${esc(w.obj)}${w.diff?`<small>${esc(w.diff)}</small>`:""}<small>${esc(nameOf(l.actor))}${l.col==="roles"||l.col==="invitations"||l.col==="roleRequests"?` · 第 ${l.rev} 號`:""}</small></span></li>`}).join("")}</ol>`
         +(items.length?"":`<p class="set-p acct-empty">沒有紀錄</p>`)
         +(more?`<button type="button" class="add-row" data-more>更早的紀錄</button>`:"")
-        +(by.roles||by.actor?`<button type="button" class="add-row" data-back>返回</button>`:"");
+        ;
     };
     const page=async(reset)=>{const r=await A.auditList(by,reset?null:items[items.length-1]);items=reset?r.items:items.concat(r.items);more=r.more};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       if(b.hasAttribute("data-more")){await page(false);draw()}
       else if(b.hasAttribute("data-chain")){chain=await A.auditChain("roles",by.roles).catch(()=>null);draw()}
-      else if(b.hasAttribute("data-back"))p.end();
     });
     p.box.addEventListener("change",async e=>{if(e.target.name!=="who"||!e.target.value)return;const u=e.target.value;await auditPanel({actor:u});if(p.alive){e.target.value="";draw()}});
     try{people=(await A.rolesList()).map(r=>r.uid)}catch(_){}

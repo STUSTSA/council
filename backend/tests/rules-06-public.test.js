@@ -31,12 +31,11 @@ beforeEach(async () => {
 });
 
 describe('N6-01～N6-08 對外公開讀取', () => {
-  it('N6-01 未登入讀得到：部門、org、卡片、議題、週報、標籤、時間事件、部門設定（get 與帶條件的 list）', async () => {
+  it('N6-01 未登入讀得到：部門、org、卡片、議題、週報、標籤、部門設定（時間事件不公開，見 N6-08）（get 與帶條件的 list）', async () => {
     const a = anon(t);
-    for (const p of ['cards/c1', 'issues/i1', 'weeks/w1', 'labels/l1', 'events/e1']) await assertSucceeds(a.doc(p).get());
+    for (const p of ['cards/c1', 'issues/i1', 'weeks/w1', 'labels/l1']) await assertSucceeds(a.doc(p).get());
     await assertSucceeds(a.collection('cards').where('deptId', '==', 'rights').where('state', 'in', ['open', 'done']).get());
     await assertSucceeds(a.collection('issues').where('deptId', '==', 'rights').get());
-    await assertSucceeds(a.collection('events').where('deptId', '==', 'rights').get());
     await assertSucceeds(a.collection('departments').get());
   });
   it('N6-02 未登入讀不到：帳號、信箱、角色、邀請、申請、名單、舊身分、名稱、稽核、版本歷史、會議紀錄', async () => {
@@ -72,6 +71,16 @@ describe('N6-01～N6-08 對外公開讀取', () => {
     const ev = o => ({ deptId: 'rights', cardId: 'c1', visibility: 'internal', scope: 'dept', start: TS.now(), end: TS.now(), allDay: false, rev: 1, updatedAt: NOW(), updatedBy: 'ed', ...o });
     await assertFails(ed.doc('events/e9').set(ev({ title: '祕密', summary: '內文' })));
     await assertFails(ed.doc('events/e9').set(ev({ summary: '內文' })));
+  });
+  it('N6-08 行事曆（時間事件）不公開：未登入讀不到（get、list、public／internal 都一樣）；任何登入帳號（沒有部門角色也行）讀得到', async () => {
+    const a = anon(t);
+    await assertFails(a.doc('events/e1').get());
+    await assertFails(a.collection('events').get());
+    await assertFails(a.collection('events').where('deptId', '==', 'rights').get());
+    await assertFails(a.collection('events').where('visibility', '==', 'public').get());
+    await assertFails(a.collectionGroup('events').get());
+    await assertSucceeds(google(t, 'nb').doc('events/e1').get());
+    await assertSucceeds(google(t, 'nb').collection('events').where('deptId', '==', 'rights').get());
   });
   it('N6-07 登入帳號讀不到別人的 users（信箱）；profiles 仍要登入', async () => {
     await assertFails(google(t, 'nb').doc('users/ed').get());

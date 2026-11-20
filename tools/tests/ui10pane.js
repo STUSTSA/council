@@ -178,8 +178,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await cselCheck(d,'#dlgForm','1300 新增部門');
   await d.click('.acct-panel:not([hidden]) [data-hist]');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!!document.querySelector('.acct-panel:not([hidden]) [data-chain]')),'A 1300 人員 → 權限歷史：新增部門表單收掉、照取消結束')}
-  await d.click('.acct-panel:not([hidden]) [data-back]');await d.waitForTimeout(700);
-  await d.click('.acct-panel:not([hidden]) [data-back]');await d.waitForTimeout(700);
+  await d.click('.dh-home');await d.waitForTimeout(700);
+  await d.click('.dh-home');await d.waitForTimeout(700);
   ok(await formOpen(d,'.acct-panel:not([hidden]) [data-grant]','授予權限'),'1300：人員 →「授予權限」表單');
   await cselCheck(d,'#dlgForm','1300 授予權限');
   /* A8 收起設定（工具列的設定鍵） */
@@ -190,6 +190,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await d.evaluate(()=>{PageFx.leave=()=>{window.__left=true}});
   await d.click('.dhead .dh-home');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>window.__left!==true),'A 1300 上一頁鍵：表單收掉、照取消結束，不離開看板')}
+  for(let i=0;i<4&&await d.evaluate(()=>setOpen);i++){await d.click('.dh-home');await d.waitForTimeout(800)}   /* 再按幾次退回主頁（一次只退一層） */
   /* 設定外面跳出的表單（不在面板裡）：下拉一樣點得到 */
   await d.evaluate(()=>{ask('測試',[{name:'a',label:'部門',type:'select',value:'fruit',options:acctDeptOpts()},{name:'b',label:'角色',type:'select',value:'editor',options:[['editor','編輯者'],['admin','管理員']]},{name:'c',label:'備註'}])});
   await d.waitForTimeout(700);
