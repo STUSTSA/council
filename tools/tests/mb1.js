@@ -9,7 +9,7 @@ const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 (async()=>{
   const {b,mk,login}=await c.setup();
-  for(const [w,h,touch] of [[390,844,true],[1300,900,false]]){
+  for(const [w,h,touch] of [[390,844,true],[1300,900,false]].filter(x=>!process.argv[2]||+process.argv[2]===x[0])){
     const tag=w+'：';
     const p=await mk(w,h,'light',touch);await login(p);
     await p.evaluate(()=>{setSection('live',{instant:true});render()});await p.waitForTimeout(600);
