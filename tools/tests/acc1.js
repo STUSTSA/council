@@ -262,7 +262,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     ok(await toastHas(boss,'這筆申請剛被改過'),'04 核准：清單讀出來之後被改過的申請，提示再看一次');
     const r2=await read(`roles/${u2Uid}`),q2=await read(`roleRequests/${u2Uid}_works`);
     ok(!((r2&&r2.depts)||{}).works&&q2.status==='pending','04 核准：沒有寫入角色、申請仍是待審');
-    ok(await until(async()=>(await paneText(boss)).includes('工務部管理員')),'04 核准：清單更新成現在的內容');
+    ok(await until(async()=>(await paneText(boss)).includes('工務部部長')),'04 核准：清單更新成現在的內容');
     await boss.click('[data-no]');await dlg(boss);await dlgAct(boss,'delete');
     ok(await until(async()=>(await read(`roleRequests/${u2Uid}_works`)).status==='rejected'),'04 拒絕：照畫面上那一版拒絕');
     /* 人員：改成管理員先確認（寫出信箱）；取消不寫入；降成編輯者不用確認 */
@@ -272,7 +272,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     if(await prRole()==='editor'){
       await boss.click('[data-swap="pr"]');
       const title=await dlg(boss),note=await boss.evaluate(()=>{const n=document.querySelector('#dlgForm .dlg-note');return n?n.innerText:''});
-      ok(title==='把 u2 同學 改成公關部管理員'&&note.includes('帳號：u2@example.test'),'04 人員：改成管理員先確認，寫出信箱');
+      ok(title==='把 u2 同學 改成公關部部長'&&note.includes('帳號：u2@example.test'),'04 人員：改成管理員先確認，寫出信箱');
       await dlgAct(boss,'cancel');await boss.waitForTimeout(500);
       ok(await prRole()==='editor','04 人員：按取消不寫入');
       await boss.click('[data-swap="pr"]');await dlg(boss);await dlgAct(boss,'delete');
