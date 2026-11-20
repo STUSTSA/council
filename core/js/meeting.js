@@ -39,7 +39,7 @@ const mtWho=()=>(fsMode()&&typeof acct!=="undefined"&&acct.user&&acct.user.name)
    2026-11-06 使用者：秘書處看起來依然很臃腫，不要直接粗暴地條列——每一筆收成跟即時回報同一種膠囊（<details class="ev">，motion.js 的展開收合動畫），
    收合只看燈號、名稱、狀態，點了才展開說明、時間、連結；哪幾筆開著記在 MTS.open，重畫後照舊 */
 const MTS={sel:"",open:new Set()};
-const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&e.report):[];
+const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&reportOn(e)):[];
 function mtGroupHTML(m,ed){
   const evs=mtEvs(m);if(!evs.length)return "";
   return `<section class="mt-dept" data-mtdept="${esc(m.id)}" data-fk="mt${esc(m.id)}">${ed&&m.dirty?'<p class="sub mt-dirty">已修改，按「儲存」後寫回</p>':""}

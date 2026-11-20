@@ -459,7 +459,7 @@ service cloud.firestore {
     //   ③ 刪卡片：timeIds 必須是空的、第 1 版必須已經不在 ⇒ 版本與時間事件都沒有殘留。
     match /cards/{id} {
       function cardKeys() {
-        return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report',
+        return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report', 'reportAt',
                 'state', 'doneAt', 'deletedAt', 'deletedBy', 'order', 'round', 'roundAt', 'touched', 'touchedAt',
                 'fromEv', 'version', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'legacyDesc', 'importBatch', 'purgeLog'];
       }
@@ -469,7 +469,15 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().title is string && d().title.size() <= 500
           && (d().blocks is map || d().blocks is list) && d().state in ['open', 'done', 'purging']   // list＝02D 遷移的舊格式（沒改內容時照留）
           && d().version is int && d().report is bool
+          && reportAtOk()
           && d().get('timeIds', []) is list;
+      }
+      // 05 報告標記每週三（台灣時間）自動失效：reportAt＝標記當下的台灣時間「YYYY-MM-DD HH:mm」，只有 report 為 true 時才能有；
+      // 改的時候只能往後（字串比較；格式固定所以等於時間先後），不能倒回去讓過期的標記復活。沒有 reportAt＝舊標記，網頁當作本週有效
+      function reportAtOk() {
+        return d().get('reportAt', null) == null
+          || (d().report == true && d().reportAt is string && d().reportAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$')
+              && (resource == null || resource.data.get('reportAt', '') <= d().reportAt));
       }
       function verDoc()   { return /databases/$(database)/documents/cards/$(id)/versions/$(string(d().version)); }
       function verGone(n) { return !existsAfter(/databases/$(database)/documents/cards/$(id)/versions/$(string(n))); }

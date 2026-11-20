@@ -108,7 +108,7 @@ function buildWeekly(){
   const inP=d=>!!d&&d>start&&d<=end;
   const dept=CFG.dept.name||(state.title||"").replace(/(工作)?(看板|進度|進度看板)$/,"").trim()||state.title;
   const dot=d=>d.replaceAll("-",".");
-  const live=liveOrder(),rep=live.filter(e=>e.report);
+  const live=liveOrder(),rep=live.filter(reportOn);
   const done=[...state.issues.filter(i=>inP(i.doneAt)).map(i=>({d:i.doneAt,t:i.title})),...state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).map(e=>({d:inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),t:evName(e)}))].sort((a,b)=>b.d.localeCompare(a.d));
   /* 開頭照工作報告（report.js）：標題、日期、統計期間、本期摘要（數字都是下面兩區列出的筆數） */
   const L=[`${dept} 本週例行回報`,`日期：【${dot(end)}】`,`統計期間：${dot(addDays(start,1))} – ${dot(end)}`,`本期摘要：報告事項 ${rep.length} 項・完成事項 ${done.length} 項`,""];

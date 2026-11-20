@@ -3,6 +3,12 @@ let BODY_SRC="";   /* 在 boot.js 擷取（扣除執行期產生的骨架）*/
 const HOSTED=!!(window.claude&&window.claude.use);
 let artifactNS=null,canWrite=!HOSTED;
 const readOnly=()=>boardLocked()||(HOSTED&&!canWrite)||(isOffline()&&!editing);
+/* 「報告」標記每週三（台灣時間 00:00）自動失效：標記當下記 ev.reportAt（"YYYY-MM-DD HH:mm"，台灣時間）；畫面只認本週三 00:00 之後的標記。
+   舊標記沒有 reportAt 一律當作有效（上線當天不會全部消失）。過期的標記在有權限的人下次儲存時寫回 false（store-map.js desired），沒有權限的人只是看不到 */
+const taipeiStr=ms=>{const t=new Date(ms+8*3600000),p=n=>String(n).padStart(2,"0");return `${t.getUTCFullYear()}-${p(t.getUTCMonth()+1)}-${p(t.getUTCDate())} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`};
+const nowTaipei=()=>taipeiStr(Date.now());
+const reportWeekStart=(ms=Date.now())=>{const back=(new Date(ms+8*3600000).getUTCDay()+4)%7;return taipeiStr(ms-back*86400000).slice(0,10)+" 00:00"};
+const reportOn=ev=>!!(ev&&ev.report)&&(!ev.reportAt||ev.reportAt>=reportWeekStart());
 const COLORS=["#6a4fd8","#3d7fe0","#a24fc0","#d84f92","#2f8f84","#c26a12","#6b6b75","#111114"];
 const MARK_COLORS=["#8a6cf2","#6ea2f2","#b993f2","#f39ac8","#7fd0c8","#111114"];
 const $=s=>document.querySelector(s);
