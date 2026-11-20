@@ -240,7 +240,7 @@
 ### 3.0 前提
 
 - 第 1 節部署完成、索引「已啟用」。
-- 水果部的 PR 已合併（只把水果部改成 `source: "firestore"`，指向開發專案），等 1～2 分鐘。測試修正的 PR（分支 `tests-config-source`）排在它前面合併：不影響網站，只是不先合的話之後跑測試會失敗。行事曆修正（[STUSTSA/council#81](https://github.com/STUSTSA/council/pull/81)，測試部門不算進 `storeScopeOn`）也排在它前面。
+- 水果部的 PR 已合併（只把水果部改成 `source: "firestore"`，指向正式專案 `stustsa-council`），等 1～2 分鐘。測試修正的 PR（分支 `tests-config-source`）排在它前面合併：不影響網站，只是不先合的話之後跑測試會失敗。行事曆修正（[STUSTSA/council#81](https://github.com/STUSTSA/council/pull/81)，測試部門不算進 `storeScopeOn`）也排在它前面。
 - 第 2 節的總管理員已建立。
 - 網址一律用 https://stustsa.github.io/council/index.html?d=fruit （水果部不在總覽裡，只能用網址進）。
 - 準備：電腦（Chrome）、iPhone、Android 手機；三個 Google 帳號：A＝總管理員（你）、B＝一個沒有任何角色的帳號（個人 Gmail）、C＝學校帳號（R-02 用）。
@@ -253,7 +253,7 @@
 
 | # | 做什麼 | 看到什麼算過 | 失敗時截哪裡 |
 |---|---|---|---|
-| S-1 匯入頁 | 電腦 Chrome、帳號 A：水果部 → 設定 → 會長室管理 →「匯入」→ 清單裡水果部標「新資料庫」→ 點它 → 跳出「匯入 水果部（已切到新資料庫）」→ 按「匯入」 | 依序顯示讀取、寫入、檢查；報告最上面是 `stustsa-council-dev`，下一行 `data-fruit.json · STUSTSA/council · commit …`；表格每一列「相同」、V1～V4、V6「通過」（沒有 V5 是正常的，V5＝下一句的重跑）、最下面「結果：通過」「衝突 0」。再按「再匯入一次」：寫入 0、衝突 0、結果通過 | 整張報告（只有數量與代號，沒有機密）；失敗時的紅字 |
+| S-1 匯入頁 | 電腦 Chrome、帳號 A：水果部 → 設定 → 會長室管理 →「匯入」→ 清單裡水果部標「新資料庫」→ 點它 → 跳出「匯入 水果部（已切到新資料庫）」→ 按「匯入」 | 依序顯示讀取、寫入、檢查；報告最上面是 `stustsa-council`，下一行 `data-fruit.json · STUSTSA/council · commit …`；表格每一列「相同」、V1～V4、V6「通過」（沒有 V5 是正常的，V5＝下一句的重跑）、最下面「結果：通過」「衝突 0」。再按「再匯入一次」：寫入 0、衝突 0、結果通過 | 整張報告（只有數量與代號，沒有機密）；失敗時的紅字 |
 | S-2 匯入頁的權限 | 帳號 B（另一個瀏覽器或無痕視窗）登入水果部 → 設定 | 沒有「會長室管理」 | 設定清單 |
 
 S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫了卡片再匯入，報告的卡片數會「不同」（照遷移手冊，報告只在開放編輯前有意義）。
@@ -310,14 +310,14 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 |---|---|---|---|
 | D-1 卡片（有 4 個以上時間） | 新增卡片「刪除測試」，加 4 個時間 → 存。把這顆卡片（即時回報的膠囊）拖到左上角 → 確認「刪除『刪除測試』？」→ 再確認「一起刪掉 4 個時間標記？」 | 卡片消失、重新整理後不會回來；會長室管理 →「紀錄」最上面有一筆刪除卡片（標題「刪除測試」）；沒有任何「儲存失敗」（這一步會分好幾批，測正式環境每批 20 次讀取的上限） | 失敗的提示；F12 Console（`evaluation`、`limit` 字樣） |
 | D-2 議題 | 進度（甘特圖）→「+ 議題」→ 名稱打「議題刪除測試」→ Enter 存 → 在它的詳情按「刪除」→ 確認「刪除議題」 | 議題消失、重新整理後不會回來；「紀錄」有一筆「刪除議題」（議題「議題刪除測試」）。Q-1 之後、R-1 之前可以順便看：編輯者 B 的畫面上沒有議題的「刪除」鈕（只有部門管理員以上有） | 同上 |
-| D-3 主控台對照（可選） | https://console.firebase.google.com/project/stustsa-council-dev/firestore/databases/-default-/data → `auditLogs` | 有 `cards_fruit__…_purge_…` 與 `issues_fruit__…_delete_…` 兩份；`cards` 裡沒有「刪除測試」 | 文件清單（只截 ID 那一欄） |
+| D-3 主控台對照（可選） | https://console.firebase.google.com/project/stustsa-council/firestore/databases/-default-/data → `auditLogs` | 有 `cards_fruit__…_purge_…` 與 `issues_fruit__…_delete_…` 兩份；`cards` 裡沒有「刪除測試」 | 文件清單（只截 ID 那一欄） |
 
 ### 3.8 匯出（電腦 A；手機各試一次第 1 項）
 
 | # | 做什麼 | 看到什麼算過 | 失敗時截哪裡 |
 |---|---|---|---|
 | E-1 看板備份 | 水果部 → 設定 → 備份 →「匯出備份」 | 下載一個 JSON；用記事本打開搜尋「上限測試」找得到，內容 50 行 | 提示；下載列（只截檔名與大小） |
-| E-2 全部資料 | 會長室管理 →「匯出全部資料」 | 下載 `學生會看板_全部資料_stustsa-council-dev_日期.json`；檔案裡有 `roles`、`auditLogs`。這個檔有信箱，存在只有你看得到的地方，不要傳到群組 | 提示；檔名與大小 |
+| E-2 全部資料 | 會長室管理 →「匯出全部資料」 | 下載 `學生會看板_全部資料_stustsa-council_日期.json`；檔案裡有 `roles`、`auditLogs`。這個檔有信箱，存在只有你看得到的地方，不要傳到群組 | 提示；檔名與大小 |
 | E-3 手機 | iPhone Safari、Android Chrome 各做一次 E-1 | 檔案存得下來（iPhone 會跳分享選單或存到「檔案」） | 存檔時的畫面 |
 
 ### 3.9 全部做完之後
@@ -421,7 +421,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 
 | # | 事項 | 現在的做法 | 選項 |
 |---|---|---|---|
-| 1 | 彈出視窗被擋時的「整頁跳轉」登入，在新版 Safari、Chrome、Firefox 很可能回來仍是未登入：網站在 `stustsa.github.io`、登入用的 `authDomain` 在 `stustsa-council-dev.firebaseapp.com`，瀏覽器的第三方儲存隔離會讓跳轉的結果讀不回來（Firebase 官方文件「Best practices for using signInWithRedirect on browsers that block third-party storage」） | 不改程式，等 L-2、L-3 的實測結果 | (a) 接受只用彈出視窗，被擋時提示「請允許彈出式視窗」；(b) 把登入輔助頁放在同一個網域（要另一個 `stustsa.github.io` 根目錄的 repo，並改 OAuth 重新導向網址）；(c) 自訂網域 |
+| 1 | 彈出視窗被擋時的「整頁跳轉」登入，在新版 Safari、Chrome、Firefox 很可能回來仍是未登入：網站在 `stustsa.github.io`、登入用的 `authDomain` 在 `stustsa-council.firebaseapp.com`，瀏覽器的第三方儲存隔離會讓跳轉的結果讀不回來（Firebase 官方文件「Best practices for using signInWithRedirect on browsers that block third-party storage」） | 不改程式，等 L-2、L-3 的實測結果 | (a) 接受只用彈出視窗，被擋時提示「請允許彈出式視窗」；(b) 把登入輔助頁放在同一個網域（要另一個 `stustsa.github.io` 根目錄的 repo，並改 OAuth 重新導向網址）；(c) 自訂網域 |
 | 2 | 安裝成 App 從總覽開始，水果部不在總覽，iPhone 的 App 可能進不了水果部（L-4），Android 要靠連結在 App 裡打開（L-6） | 不改程式，照實記錄 | (a) 接受，App 的登入等第一個正式部門切換時再測；(b) 暫時讓水果部出現在總覽（所有人看得到一個「水果部」）；(c) 加一個只有網址參數才出現的測試入口 |
 | 3 | ~~（已決定 b，#81 已合併）~~ 水果部一切成 `firestore`，**其他八個部門**的通知頁行事曆「活動」「會議」會改去讀開發專案（`store.js` 的 `storeScopeOn`：只要有任何部門是 firestore 就讀，沒排除測試部門）。沒用 Google 登入的人會看到「登入後才看得到」（原本是空的）；主頁的全會行事曆會多連一次 Google（讀公開活動，開發專案裡沒有，畫面仍是空的）。不寫資料、不影響資料檔 | **已決定 b**（2026-11-19）：[STUSTSA/council#81](https://github.com/STUSTSA/council/pull/81) 讓測試部門不算進 `storeScopeOn`，排在水果部 PR 之前合併 | (a) 接受（實測期間的小差異）；(b) 讓測試部門不算進 `storeScopeOn`（一行程式，另開 PR） |
 | 4 | ~~正式專案的授權網域要不要拿掉 `localhost`~~ **已決定（2026-11-20）：拿掉**，也不加舊網域 | 清單建議拿掉；開發專案保留 | 留著的話任何人都能在自己電腦跑一份連正式專案的網站並登入（規則仍然擋權限，只是多一個入口） |
