@@ -2,7 +2,7 @@
    - 標題列的通知鈕進到這一頁（shell.js 的 .layout 裡的 .sg-noti；換的動畫跟換分頁同一套，render.js 的 secSwap）。
      標題列、工具列留在原地，工具列的鏡片留在原本的分頁（這一頁不是工具列的分頁）；沒有搜尋列、沒有新增圓鈕。
      返回原分頁：再按通知鈕、Esc、系統返回鍵（打開時推一筆瀏覽紀錄）；按工具列任一分頁＝到那個分頁。
-   - 由上到下：今日／明日 → 逾期 → 行事曆。
+   - 由上到下：今日／明日 → 清點區（已過期、本週到期、之後）→ 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
 /* 部門色：會長室「各部門編輯量」的折線與圖例在用（activity.js） */
@@ -23,18 +23,8 @@ const notiMine=()=>notiItems(state,CFG.deptId||"rights");
 const covers=(x,d)=>x.end?d>=x.date&&d<=x.end:x.date===d;
 const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
-/* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了。
-   有結束日看結束：結束日在今天以前，或結束是今天、有結束時刻而且時刻到了；沒有結束日看開始：開始日在今天以前，或開始是今天、有時刻而且時刻到了
-   （只有日期、沒有時刻的，過了那一天才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
-function notiLateItems(s=state){
-  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
-  const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
-  s.events.filter(e=>!e.doneAt).forEach(e=>{const tm=new Map((e.times||[]).map(x=>[x.id,x]));
-    (e.blocks||[]).forEach(b=>{const x=b.timeId&&tm.get(b.timeId);if(!x||b.check||!x.start)return;
-      const ed=(x.end||"").slice(0,10);
-      if(ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16)))out.push({ev:e,t:x,b})})});
-  return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
-}
+/* 標題列通知鈕上的紅色數字＝清點區「已過期」的件數（定義見 notiTodoItems：還沒結案的即時回報裡，時間行還沒勾、時間已經過了；舊時間標記也算） */
+const notiLateItems=(s=state)=>notiTodoItems(s).filter(x=>x.g==="late");
 const notiLate=(s=state)=>notiLateItems(s).length;
 function notiBadge(){
   const b=$("#notiBtn");if(!b)return;
@@ -306,58 +296,69 @@ document.addEventListener("keydown",e=>{
   const os=[...(calHost(c)?.querySelectorAll(".cal-pop [data-calset]")||[])],i=os.indexOf(document.activeElement),k={ArrowRight:1,ArrowDown:3,ArrowLeft:-1,ArrowUp:-3}[e.key];
   if(k&&i>=0){e.preventDefault();os[Math.max(0,Math.min(os.length-1,i+k))].focus()}
 },true);
-/* 這一頁的內容：今日／明日、逾期、行事曆 */
+/* 這一頁的內容：今日／明日、清點區、行事曆 */
 function notiInner(){
   const list=notiMine(),t=today();
   return `<div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
-    ${lateHTML()}
+    ${tallyHTML()}
     ${calHTML(NOTI)}`;
 }
-/* ---------- 逾期（DESIGN-next 第九節）：卡片堆只列逾期的時間（定義跟標題列通知鈕的數字一樣，notiLateItems） ----------
-   一次一張、後面露出兩張；最上面那張跟手指走並傾斜：左滑＝延後（明天同一時刻，notiPostpone）、右滑＝改成具體時間（打開那張卡片的時間頁，notiRetime）。
-   下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity。
-   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時卡片堆照樣看得到，但沒有延後／改時間鈕、卡片拖不動（ui-06 審查 P1-1） */
-function dkCardHTML(x,i){
-  const d=x.t.start.slice(0,10),en=(x.t.end||"").slice(0,10),tm=x.t.start.slice(11,16);
-  return `<div class="dk-card" data-dk="${esc(x.t.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':""}>
-    <span class="dk-stp r" aria-hidden="true">改時間</span><span class="dk-stp l" aria-hidden="true">延後</span>
-    <span class="dk-date"><b class="num">${+d.slice(8)}</b><small>${+d.slice(5,7)} 月・週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
-    <span class="dk-main"><b>${esc(x.t.label||x.b.text||x.ev.name||"（未命名）")}</b><small>${esc(x.ev.name||"")}${tm?`<span class="num">${esc(tm)}</span>`:""}</small></span>
-  </div>`;
+/* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分三段：已過期、本週到期、之後 ----------
+   收的是還沒結案的即時回報上、有開始時間而且核取框還沒勾的時間行；03 以前沒有連到任何一行的舊時間標記（沒有核取框）也收，當作還沒勾。
+   已過期的每一項只有兩個動作，沒有移除：完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
+   改期（打開那張卡片的時間頁，notiRetime）。本週到期、之後只列出來，不放動作。負責人＝整張卡的專員。
+   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有動作鈕。完成後那一列下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
+function notiTodoItems(s=state){
+  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
+  const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
+  const wkEnd=addDays(t,(7-pd(t).getDay())%7);   /* 本週的最後一天（週日） */
+  s.events.filter(e=>!e.doneAt).forEach(e=>{const bt=new Map((e.blocks||[]).filter(b=>b.timeId).map(b=>[b.timeId,b]));
+    (e.times||[]).forEach(x=>{if(!x.start)return;const b=bt.get(x.id)||null;if(b&&b.check)return;
+      const ed=(x.end||"").slice(0,10),due=ed&&ed>=x.start.slice(0,10)?ed:x.start.slice(0,10);
+      const late=ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16));
+      out.push({ev:e,t:x,b,due,g:late?"late":due<=wkEnd?"week":"later"})})});
+  return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
 }
-function lateHTML(){
-  const xs=notiLateItems(),ed=canEdit(),u=dkUndoHTML();if(!xs.length&&!u)return "";
-  return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="sec-h" id="ntLateH" data-en="OVERDUE">逾期</h3>
-    ${xs.length?`<div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
-    <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div>`:""}
-    ${u}</section>`;
+const TL_GROUPS=[["late","已過期"],["week","本週到期"],["later","之後"]],TL_LATER_MAX=5;
+function tlRowHTML(x,ed){
+  const d=x.t.start.slice(0,10),tm=x.t.start.slice(11,16),en=(x.t.end||"").slice(0,10),who=staffNames(x.ev.staff).join("、"),late=x.g==="late";
+  const sub=[x.ev.name||"",tm,x.t.place||"",who].filter(Boolean).map(esc).join("・");
+  return `<li class="tl-row" data-tl="${esc(x.t.id)}"><span class="tl-d"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
+    <span class="tl-x"><b>${esc(x.t.label||(x.b&&x.b.text)||x.ev.name||"（未命名）")}</b><small>${sub}</small></span>
+    ${late&&ed?`<span class="tl-act"><button type="button" class="tl-btn pri" data-tldone="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">完成</button><button type="button" class="tl-btn" data-tlre="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">改期</button></span>`:""}</li>`;
 }
-/* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著）。
-   存好後卡片堆下面一行「已延後到明天＋復原」（ui-06 審查 P1-2；樣式沿用即時回報卡的「已儲存＋復原」：.lc-save、.kp-st、.lc-undo）。
-   復原＝寫回延後前的開始／結束（一樣要能編輯、一樣經 settingSave 存檔）；那個時間在那之後被改過就不復原。關掉這一頁、再延後別張時「復原」消失 */
-let dkUndo=null;   /* {evId, tid, b（延後前 {start,end}）, a（延後後）} */
+function tallyHTML(){
+  const xs=notiTodoItems(),ed=canEdit(),u=tlUndoHTML();if(!xs.length&&!u)return "";
+  const gs=TL_GROUPS.map(([g,nm])=>{const L=xs.filter(x=>x.g===g);if(!L.length)return "";const cap=g==="later"?L.slice(0,TL_LATER_MAX):L;
+    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4><ul class="tl-list">${cap.map(x=>tlRowHTML(x,ed)).join("")}</ul>${L.length>cap.length?`<p class="tl-more">還有 ${L.length-cap.length} 項</p>`:""}</div>`}).join("");
+  return `<section class="nt-tally" id="notiTally" aria-labelledby="ntTallyH"><h3 class="sec-h" id="ntTallyH" data-en="CHECKLIST">清點</h3>${gs}${u}</section>`;
+}
+/* 完成：勾起那一行的核取框（舊時間標記補一行）。存好後「已完成＋復原」（經 settingSave）。
+   復原＝把剛勾的那一行改回沒勾（舊時間標記補的那一行拿掉）；那一行在這之後被改過就不復原。關掉這一頁、再完成別項時「復原」消失 */
+let tlUndo=null;   /* {evId, tid, bid（核取行）, made（這次補的）} */
 const tmOf=(evId,tid)=>{const ev=state.events.find(e=>e.id===evId);return {ev,t:ev&&(ev.times||[]).find(y=>y.id===tid)}};
-const dkUndoOn=()=>!!(dkUndo&&canEdit()&&tmOf(dkUndo.evId,dkUndo.tid).t);
-const dkUndoHTML=()=>dkUndoOn()?`<div class="lc-save dk-undo"><span class="kp-st" role="status" data-st="ok">已延後到明天</span><button type="button" class="lc-undo" data-dkundo>復原</button></div>`:"";
-async function notiPostpone(evId,tid){
+const tlUndoOn=()=>!!(tlUndo&&canEdit()&&tmOf(tlUndo.evId,tlUndo.tid).t);
+const tlUndoHTML=()=>tlUndoOn()?`<div class="lc-save tl-undo"><span class="kp-st" role="status" data-st="ok">已完成</span><button type="button" class="lc-undo" data-tlundo>復原</button></div>`:"";
+async function notiDone(evId,tid){
   if(!canEdit())return false;
-  const tm=addDays(today(),1),{t:t0}=tmOf(evId,tid),b=t0&&{start:t0.start,end:t0.end};let a=null;
+  let u=null;
   const ok=await settingSave(()=>{const {ev,t}=tmOf(evId,tid);if(!t)return false;
-    const sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
-    if(ed&&ed>sd)t.end=tm+t.end.slice(10);
-    else{t.start=tm+t.start.slice(10);if(t.end)t.end=tm+t.end.slice(10)}
-    a={start:t.start,end:t.end};evTouch(ev);syncLink(ev)},"已延後到明天");
-  dkUndo=ok&&b&&a?{evId,tid,b,a}:null;renderNoti();return ok;
+    let b=(ev.blocks||[]).find(x=>x.timeId===tid),made=false;
+    if(b){if(b.check)return false;b.check=true}
+    else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
+      b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
+    u={evId,tid,bid:b.id,made};evTouch(ev);syncLink(ev)},"已完成");
+  tlUndo=ok&&u?u:null;renderNoti();return ok;
 }
 async function notiUndo(){
-  const u=dkUndo;if(!u||!canEdit())return false;dkUndo=null;
-  const {t}=tmOf(u.evId,u.tid);
-  if(!t||t.start!==u.a.start||t.end!==u.a.end){toast("這個時間已有新的修改，無法復原");renderNoti();return false}
-  const ok=await settingSave(()=>{const {ev,t}=tmOf(u.evId,u.tid);if(!t||t.start!==u.a.start||t.end!==u.a.end)return false;
-    t.start=u.b.start;if(u.b.end===undefined)delete t.end;else t.end=u.b.end;evTouch(ev);syncLink(ev)},"已復原");
+  const u=tlUndo;if(!u||!canEdit())return false;tlUndo=null;
+  const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
+  if(!b||!b.check){toast("這一項已有新的修改，無法復原");renderNoti();return false}
+  const ok=await settingSave(()=>{const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);if(!b||!b.check)return false;
+    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);syncLink(ev)},"已復原");
   renderNoti();return ok;
 }
-/* 改成具體時間：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
+/* 改期：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
 async function notiRetime(evId,tid){
   if(!canEdit())return false;
   closeNoti(true,"live");
@@ -366,47 +367,6 @@ async function notiRetime(evId,tid){
   if(!canEdit()||!(await kpStart(evId,{focus:null})))return;
   lvPane="time";lvSeg={tid,k:"d",buf:""};render();
   document.querySelector(".lc-ed .sg.on")?.focus({preventScroll:true});lvBodyIn();
-}
-/* 最上面那張飛出去（dir：l 往左＝延後、r 往右＝改時間），播完才做 */
-function dkFly(card,dir,from={x:0,y:0}){
-  if(!card||card._gone||!canEdit())return;card._gone=true;
-  const W=card.offsetWidth||320,sx=dir==="r"?1:-1,tid=card.dataset.dk,x=notiLateItems().find(y=>y.t.id===tid);
-  const reset=()=>{if(!card.isConnected)return;card._gone=false;card.getAnimations().forEach(a=>a.cancel());card.classList.remove("go-l","go-r");card.style.transform="";card.style.transition="";card.style.setProperty("--l",0);card.style.setProperty("--r",0)};
-  const act=()=>{if(!x){reset();return}if(dir==="l")Promise.resolve(notiPostpone(x.ev.id,tid)).finally(reset);else{reset();notiRetime(x.ev.id,tid)}};
-  card.classList.add(dir==="r"?"go-r":"go-l");
-  if(reduceMotion()){act();return}
-  const next=card.parentElement.querySelector(`.dk-card[data-i="1"]`);
-  if(next)next.animate([{transform:getComputedStyle(next).transform},{transform:"none"}],{duration:MO.base,easing:MO.out,fill:"forwards"});
-  card.animate([{transform:`translate(${from.x}px,${from.y}px) rotate(${from.x/18}deg)`,opacity:1},{transform:`translate(${sx*W*1.3}px,${from.y+40}px) rotate(${sx*26}deg)`,opacity:0}],{duration:340,easing:MO.in,fill:"forwards"})
-    .finished.then(()=>{if(next)next.getAnimations().forEach(a=>a.cancel());act()}).catch(()=>{});
-}
-function dkBind(){
-  const st=$("#notiDeck");if(!st||st._dk||!canEdit())return;st._dk=true;   /* 不能編輯＝不綁（之後登入、重畫時才綁） */
-  ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".dk-card"))e.stopPropagation()},{passive:true}));
-  let d=null;
-  st.addEventListener("pointerdown",e=>{
-    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone||!canEdit())return;   /* 綁過之後才變成不能編輯（登出、唯讀） */
-    d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",vx:0,lx:e.clientX,lt:performance.now()};
-    c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
-  });
-  st.addEventListener("pointermove",e=>{
-    if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
-    if(!d.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;d.axis=Math.abs(dx)>=Math.abs(dy)?"x":"y";if(d.axis==="y"){d=null;return}d.c.style.transition="none"}
-    const now=performance.now();d.vx=(e.clientX-d.lx)/Math.max(8,now-d.lt);d.lx=e.clientX;d.lt=now;d.x=dx;d.y=dy*.35;
-    const W=d.c.offsetWidth||320,k=Math.min(1,Math.abs(dx)/(W*.3));
-    d.c.style.transform=`translate(${dx}px,${d.y}px) rotate(${dx/18}deg)`;d.c.style.setProperty("--r",dx>0?k:0);d.c.style.setProperty("--l",dx<0?k:0);
-    const nx=st.querySelector('.dk-card[data-i="1"]');if(nx){nx.style.transition="none";nx.style.transform=`translateY(${(1-k)*12}px) scale(${.95+.05*k})`}
-  });
-  const end=e=>{
-    if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
-    const nx=st.querySelector('.dk-card[data-i="1"]');
-    /* 甩出去：拖過卡片寬的 30%，或快甩（速度超過 0.6px/ms）而且至少拖了卡片寬的 15%（ui-06 審查 P1-2：原本 24px 就算，太容易誤觸） */
-    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>W*.15){if(nx){nx.style.transform="";nx.style.transition=""}dkFly(c,(x||v)>0?"r":"l",{x,y});return}
-    const from=c.style.transform;c.style.transform="";c.style.transition="";c.style.setProperty("--r",0);c.style.setProperty("--l",0);
-    if(nx){nx.style.transform="";nx.style.transition=""}
-    if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
-  };
-  st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
 /* ---------- 今日層（DESIGN-next 第九節） ----------
    點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
@@ -479,7 +439,6 @@ function closeToday(instant){
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
-  dkBind();
 }
 
 /* ---------- 進出這一頁 ----------
@@ -500,7 +459,7 @@ async function openNoti(){
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
   if(!notiOpen)return;if(!instant)Sfx.play("back");   /* 從工具列換分頁（to）時換頁音先響，這裡不會蓋過 */
-  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;dkUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;tlUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
@@ -523,8 +482,9 @@ document.addEventListener("click",e=>{
   if(t.closest("#notiBtn")){notiOpen?closeNoti():openNoti();return}
   if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
-  const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
-  if(t.closest("[data-dkundo]")){notiUndo();return}
+  const dn=t.closest("[data-tldone]");if(dn){if(dn.disabled)return;dn.disabled=true;dn.closest(".tl-row")?.classList.add("gone");notiDone(dn.dataset.tlev,dn.dataset.tldone);return}   /* 先把那一列淡出，存好重畫；失敗時重畫會把它放回來 */
+  const re=t.closest("[data-tlre]");if(re){notiRetime(re.dataset.tlev,re.dataset.tlre);return}
+  if(t.closest("[data-tlundo]")){notiUndo();return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!todayOpen&&!$("#dlg").open&&!setOpen&&!(typeof rptOpen!=="undefined"&&rptOpen)){e.preventDefault();closeNoti()}});

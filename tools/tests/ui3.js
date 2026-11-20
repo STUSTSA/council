@@ -10,7 +10,7 @@
    8. 同一頁重畫時位置變了的滑到新位置（FLIP，同一個節點）、新的由下浮現、不見的留分身淡出
    9. 設定清單、外觀合併頁、通知頁重畫：沒變的節點留著、外觀的分段切換不重建
    10. 關掉動態（reduced-motion）時換分頁、開關設定、重畫都沒有動畫
-   11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass；執行時的 go-l／go-r 重畫不拿掉（ui-06 改名）
+   11. 審查 P2-1：外觀的深淺色分段切換重畫兩次後仍有 .glass
    12. 審查 P2-2：編輯中游標在一行，點 label 包著的核取框、「報告」鈕不會失焦（ui-05：專員、標籤膠囊不在卡片上，改測核取行與報告鈕；桌面、手機觸控 412）
    13. 審查 P2-3：照順序配對時含焦點的節點只有 data-* 一樣才沿用（[a,b(焦點)]→[z,a,b]）；MORPH_KEYS 有 evfk iffk kplb lblname
    14. 審查 P2-4：HTML 寫過、後來不寫的 style 拿掉；程式在執行時設的 style 保留
@@ -184,16 +184,13 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     ok(r.an===0&&r.run===0,`關掉動態：沒有 animate() 動畫（${r.an}）、沒有在跑的程式動畫（${r.run}）`);
     await ctx.close()}
 
-  /* 11. 審查 P2-1：外觀的深淺色分段切換重畫（合併頁 draw 的同一段 HTML）兩次後仍是平面色塊（.glass 寫在 HTML 裡，不靠執行時加）；
-     卡片堆飛出去時加的 go-l／go-r（ui-06 以前叫 go-yes／go-no）是執行時的 class，重畫不拿掉 */
+  /* 11. 審查 P2-1：外觀的深淺色分段切換重畫（合併頁 draw 的同一段 HTML）兩次後仍是平面色塊（.glass 寫在 HTML 裡，不靠執行時加） */
   {await p.click('#setBtn');await p.waitForTimeout(1100);await p.click('#setOv [data-set="look"]');await p.waitForTimeout(1000);
     const r=await p.evaluate(()=>{const box=document.querySelector('#setOv .set-pane .set-hub'),sg=box.querySelector('.look-mode'),g0=sg.classList.contains('glass');
       for(let i=0;i<2;i++){morphTo(box,panelHead('外觀')+lookHTML(false));lookMount(box)}
       const sg2=box.querySelector('.look-mode');
-      const d=document.createElement('div');document.body.append(d);morphTo(d,'<div class="dk-card" data-dk="x">a</div>');d.firstChild.classList.add('go-l');morphTo(d,'<div class="dk-card" data-dk="x">b</div>');const gy=d.firstChild.classList.contains('go-l');d.remove();
-      return {g0,same:sg2===sg,glass:sg2.classList.contains('glass'),gy}});
+      return {g0,same:sg2===sg,glass:sg2.classList.contains('glass')}});
     ok(r.g0&&r.same&&r.glass,`外觀的分段切換重畫兩次後仍有 glass（重畫前 ${r.g0}、同一個節點 ${r.same}、重畫後 ${r.glass}）`);
-    ok(r.gy,'卡片堆飛出去時的 go-l 重畫後還在');
     await p.evaluate(()=>closeSettings(true));await p.waitForTimeout(400);}
   /* 12. 審查 P2-2：編輯中游標在一行的文字欄，點 label 包著的核取框、「報告」鈕：焦點不掉（桌面滑鼠、手機觸控） */
   for(const [w,h,touch] of [[1300,900,false],[412,800,true]]){
