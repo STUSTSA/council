@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-19 23:03",
+ "savedAt": "2026-11-20 11:20",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -378,7 +378,7 @@
    ],
    "round": 3,
    "touchedAt": "2026-11-19T23:03",
-   "report": true,
+   "report": false,
    "roundAt": "2026-11-16T17:33",
    "labels": [],
    "issueId": "imvpc3f0dcpi6",
