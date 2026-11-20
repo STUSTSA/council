@@ -24,9 +24,16 @@ function homeSync(){
   home.innerHTML=ico(deep?"back":"home","solo");
   if(!reduceMotion()&&home.isConnected)home.firstElementChild.animate([{opacity:0,transform:deep?"translateX(8px)":"scale(.8)"},{opacity:1,transform:"none"}],{duration:260,easing:"cubic-bezier(.2,.9,.25,1)"});
 }
-document.addEventListener("click",e=>{
-  const a=e.target.closest&&e.target.closest(".dhead .dh-home");if(!a||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||!homeDeep())return;
-  e.preventDefault();e.stopPropagation();homeUp();
+/* 左上鍵（首頁／上一頁）：更深的頁面＝退一層；主頁＝離開看板。設定面板裡改到一半的內容（標籤、人員…）退出時才存（nav.js 的 paneJob），
+   存檔還沒完成就離開頁面會丟掉，所以離開前先等 paneJob 結束；連按也一樣（第二下變成首頁鍵時，存檔還在跑）。 */
+let homeLeaving=false;
+document.addEventListener("click",async e=>{
+  const a=e.target.closest&&e.target.closest(".dhead .dh-home");if(!a||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  if(homeDeep()){e.preventDefault();e.stopPropagation();homeUp();return}
+  if(!paneJob)return;   /* 沒有未完成的存檔：照一般連結（pagefx.js 的站內換頁）離開 */
+  e.preventDefault();e.stopPropagation();if(homeLeaving)return;
+  homeLeaving=true;try{await paneJob}catch(_){}homeLeaving=false;
+  if(!homeDeep())PageFx.leave(a.href);   /* 等的時候又打開了別層：不離開 */
 },true);
 function renderHero(){
   const home=$(".dhead .dh-home"),eye=$("#peekBtn"),nb=$("#notiBtn");if(!home)return;
