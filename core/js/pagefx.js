@@ -40,9 +40,9 @@ const PageFx=(()=>{
     walk(el,0);return out;
   }
   /* 一段動畫：dir＝"out"（離開）或 "in"（進來）；back＝返回；fadeIn＝新頁在前幾成變成不透明；lag＝整段晚多久開始（期間區塊停在起始狀態） */
-  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false,rnd=false){
+  function run(el,dir,my,fadeIn=FADE_IN,back=false,lag=0,all=false,rnd=false,tap=false){
     if(!el)return Promise.resolve();
-    save(el);el.style.pointerEvents="none";(anims.get(el)||[]).forEach(a=>a.cancel());
+    save(el);if(!tap)el.style.pointerEvents="none";   /* tap＝蓋上來的疊層：浮上來的過程就要接得住點擊，不然點擊穿過去點到底下的卡片 */(anims.get(el)||[]).forEach(a=>a.cancel());
     const o=dir==="out",H=innerHeight||1,list=[];
     if(o){
       /* 離開：整個元素一起動（前進＝淡掉；返回＝往下滑並淡掉），不用拆塊 */
@@ -82,7 +82,7 @@ const PageFx=(()=>{
     if(from===to){await run(from,"out",my);M();reset(from);save(from);from.style.opacity="0";await run(to,"in",my)}
     else if(zt>zf){
       /* 疊層蓋上來（打開設定、編輯紀錄、工作報告、設定子頁）：底下那頁不動，疊層從後面浮上來、一開始就變不透明蓋住它（2026-11-05 使用者：不要閃現主頁） */
-      owner.delete(from);live.delete(from);hold(to);M();await run(to,"in",my,COVER_IN);
+      owner.delete(from);live.delete(from);hold(to);M();await run(to,"in",my,COVER_IN,false,0,false,false,true);
     }else if(zf>zt){
       /* 疊層退開（關閉，返回）：疊層的區塊朝你翻走、疊層淡掉；播到 BACK_OVER 時底下那頁的區塊從被翻開的位置轉回來（底下那頁本身一直是不透明的） */
       reset(to);M();await Promise.all([run(from,"out",my,FADE_IN,true),run(to,"in",my,0,true,Math.round(BOUT*BACK_OVER))]);
