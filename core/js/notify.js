@@ -110,7 +110,7 @@ const calPopHTML=c=>`<div class="cal-pop" role="listbox" aria-label="月份">${c
    本部門＝這個看板（state）；會長室、其他勾的部門＝讀那個單位的看板（follow.js 的 fwLoad：github 部門讀資料檔、firestore 部門讀新資料庫，只讀）；
    活動、會議＝scope 是 all-activity／all-meeting 的時間事件（store.js 的 storeScopeEvents，只有新資料庫有；都還在 github 時這兩類是空的）。
    讀取量：選到那一類（勾了那個部門）才讀，讀過的留在記憶體（CAL_DATA；重新打開這一頁時超過 5 分鐘、或讀失敗的重讀）；活動、會議只讀那個月前後的範圍。
-   公共版的活動、會議另外一組 key（pub:）：沒登入 Google 的人只讀得到公開事件，查詢改成 visibility=='public'（store-firestore.js 的 eventsByScope；ui-06 審查 P2-5） */
+   公共版的活動、會議另外一組 key（pub:）：沒登入 Google 的人讀不到時間事件（06：行事曆要登入），公共版顯示「登入後才看得到」；登入後所有人讀同一份（store-firestore.js 的 eventsByScope） */
 const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["meet","會議"],["other","其他"]],CAL_PMODES=[["all","全部"],["act","活動"],["meet","會議"]];
 const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM、公共版 pub:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
 const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");

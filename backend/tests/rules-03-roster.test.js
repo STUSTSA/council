@@ -69,13 +69,14 @@ describe('M-01～M-07 專員名單（03 F3）', () => {
     await assertFails(db('boss').doc('deptMembers/rights__nb').set(ent('rights', 'nb')));   // 總管理員也不能登記沒有角色的人
   });
   it('M-05 形狀：多帶欄位（信箱、角色、名字）、ID 跟內容不符、用戶端時間、不存在的部門：拒絕；不能改', async () => {
-    for (const o of [{ email: 'ed@example.test' }, { role: 'editor' }, { name: 'ed' }, { at: new Date() }])
+    // 05：role 可以帶、但要等於 roles（rules-05-members N5-01、N5-02）；這裡的 role 改測「寫成管理員」
+    for (const o of [{ email: 'ed@example.test' }, { role: 'admin' }, { name: 'ed' }, { at: new Date() }])
       await assertFails(db('ed').doc('deptMembers/rights__ed').set(ent('rights', 'ed', o)));
     await assertFails(db('ed').doc('deptMembers/rights__other').set(ent('rights', 'ed')));
     await assertFails(db('ed').doc('deptMembers/nowhere__ed').set(ent('nowhere', 'ed')));
     await assertSucceeds(db('ed').doc('deptMembers/rights__ed').set(ent('rights', 'ed')));
     await assertFails(db('ed').doc('deptMembers/rights__ed').update({ uid: 'adm' }));
-    await assertFails(db('boss').doc('deptMembers/rights__ed').set(ent('rights', 'ed')));   // 已存在＝改，誰都不行
+    await assertSucceeds(db('boss').doc('deptMembers/rights__ed').set(ent('rights', 'ed')));   // 05：已存在＝更新（補上或對齊 role、at），只有本人、總管理員、同部門部長；deptId、uid 不能改（上面的 update 拒絕）
   });
   it('M-06 刪除：本人、總管理員可以；同部門的人只能刪已經沒有角色的（過期）；別部門、沒有角色的不行', async () => {
     await put('rights', 'ed'); await put('rights', 'adm'); await put('rights', 'gone');

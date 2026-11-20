@@ -106,7 +106,7 @@ function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
   const inP=d=>!!d&&d>start&&d<=end;
   const dept=CFG.dept.name;
-  const live=liveOrder(),rep=live.filter(e=>e.report);
+  const live=liveOrder(),rep=live.filter(reportOn);
   /* 完成事項：每張卡只列一次、只寫標題（分段完成的紀錄 fromEv 與最後結案的那張算同一張，不帶「第 N 段」「結案」） */
   const dm=new Map(),add=(k,d,t)=>{const o=dm.get(k);if(!o)dm.set(k,{d,t});else if(d>o.d)o.d=d};
   state.issues.filter(i=>inP(i.doneAt)).forEach(i=>add("i:"+i.id,i.doneAt,i.title));
