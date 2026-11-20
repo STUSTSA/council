@@ -45,15 +45,15 @@ const BOARD_BASE = {
      切換一個部門＝合併一個只改這一個值的 PR（docs/architecture/migration.md 第 5 節）
    --------------------------------------------------------- */
 const BOARD_DEPTS = [
-  { id: "rights",      name: "權益部", path: "data.json", boardId: "board-main", logo: true, source: "frozen" },
-  { id: "president",   name: "會長室", follow: true, grant: true, ext: "會長室", extIcon: "flag", mergeDone: true, source: "frozen" },
-  { id: "secretariat", name: "秘書處", meeting: true, ext: "會議", extIcon: "calendar", mergeDone: true, source: "frozen" },
-  { id: "marketing",   name: "行銷部", source: "frozen" },
-  { id: "finance",     name: "財務部", source: "frozen" },
-  { id: "events",      name: "活動部", source: "frozen" },
-  { id: "affairs",     name: "社務部", source: "frozen" },
-  { id: "pr",          name: "公關部", source: "frozen" },
-  { id: "works",       name: "工務部", source: "frozen" },
+  { id: "rights",      name: "權益部", path: "data.json", boardId: "board-main", logo: true, source: "firestore" },
+  { id: "president",   name: "會長室", follow: true, grant: true, ext: "會長室", extIcon: "flag", mergeDone: true, source: "firestore" },
+  { id: "secretariat", name: "秘書處", meeting: true, ext: "會議", extIcon: "calendar", mergeDone: true, source: "firestore" },
+  { id: "marketing",   name: "行銷部", source: "firestore" },
+  { id: "finance",     name: "財務部", source: "firestore" },
+  { id: "events",      name: "活動部", source: "firestore" },
+  { id: "affairs",     name: "社務部", source: "firestore" },
+  { id: "pr",          name: "公關部", source: "firestore" },
+  { id: "works",       name: "工務部", source: "firestore" },
   { id: "fruit",       name: "水果部", test: true, source: "firestore" },
 ].map(d => ({ path: `data-${d.id}.json`, boardId: `board-${d.id}`, logo: false, follow: false, meeting: false, grant: false, test: false, ext: "", extIcon: "", mergeDone: false, source: "github", ...d }));
 
