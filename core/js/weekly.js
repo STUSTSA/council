@@ -100,21 +100,23 @@ function weekRange(){
   const start=state.reportBase?.date&&state.reportBase.date<end?state.reportBase.date:(lastWeek||addDays(end,-7));
   return {start,end};
 }
-/* 生成週報（2026-11-05 改；週報格式改版：開頭加統計期間與本期摘要）：只列兩區、只寫標題，不寫說明與議題進度
-   一、報告事項：還沒完成、標了「報告」（ev.report）的即時回報標題（照畫面順序）；一筆都沒標就寫一行說明
-   二、完成事項：完成紀錄裡這一整週（今天往前 7 天）完成、或完成後在這七天內編輯過（touchedAt）的項目標題（議題結案、即時回報結案、完成一段都算；議題沒有編輯時間，只看結案日），由新到舊 */
+/* 生成週報（2026-11-05 改；2026-11-21 改成議程式版面）：只列兩區、只寫標題，不寫說明與議題進度
+   （一）報告事項：還沒完成、標了「報告」（ev.report）的即時回報標題（照畫面順序）；一筆都沒標就寫一行說明
+   （二）完成事項：完成紀錄裡這一整週（今天往前 7 天）完成、或完成後在這七天內編輯過（touchedAt）的項目標題（議題結案、即時回報結案、完成一段都算；議題沒有編輯時間，只看結案日），由新到舊 */
 function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
   const inP=d=>!!d&&d>start&&d<=end;
   const dept=CFG.dept.name;
-  const dot=d=>d.replaceAll("-",".");
   const live=liveOrder(),rep=live.filter(e=>e.report);
-  const done=[...state.issues.filter(i=>inP(i.doneAt)).map(i=>({d:i.doneAt,t:i.title})),...state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).map(e=>({d:inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),t:evName(e)}))].sort((a,b)=>b.d.localeCompare(a.d));
-  /* 開頭照工作報告（report.js）：標題、日期、統計期間、本期摘要（數字都是下面兩區列出的筆數） */
-  const L=[`${dept} 本週例行回報`,`日期：【${dot(end)}】`,`統計期間：${dot(addDays(start,1))} – ${dot(end)}`,`本期摘要：報告事項 ${rep.length} 項・完成事項 ${done.length} 項`,""];
-  /* 骨架固定兩區：報告事項＝帶「報告」標記的卡片標題（沒標就寫一行說明，不再改列全部即時回報）；完成事項＝完成紀錄往前七天 */
-  L.push("一、報告事項",...(rep.length?rep.map(e=>`❏ ${e.name}`):["❏ 本週沒有標記報告的項目"]),"");
-  L.push("二、完成事項",...(done.length?done.map(x=>`❏ ${x.t}`):["❏ 本週沒有完成項目"]));
+  /* 完成事項：每張卡只列一次、只寫標題（分段完成的紀錄 fromEv 與最後結案的那張算同一張，不帶「第 N 段」「結案」） */
+  const dm=new Map(),add=(k,d,t)=>{const o=dm.get(k);if(!o)dm.set(k,{d,t});else if(d>o.d)o.d=d};
+  state.issues.filter(i=>inP(i.doneAt)).forEach(i=>add("i:"+i.id,i.doneAt,i.title));
+  state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).forEach(e=>add("e:"+(e.fromEv||e.id),inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),e.name));
+  const done=[...dm.values()].sort((a,b)=>b.d.localeCompare(a.d));
+  /* 議程式版面（秘書處行政會議議程的寫法，使用者 2026-11-21 給的標準）：部門標題一行（CFG.dept.agenda，例「三、學權部」；沒設就用部門名稱），
+     下面縮排：（一）週例行政工作回報＝有「報告」標記的卡片標題、（二）完成事項＝完成紀錄往前七天（標題後面不加說明，項目直接分行）；編號清單、只列標題，沒有符號與段數 */
+  const list=(items,none)=>items.length?items.map((x,i)=>`        ${i+1}. ${x}`):[`        ${none}`];
+  const L=[CFG.dept.agenda||dept,"    （一）週例行政工作回報","    說 明：本週行政工作相關執行狀況如下：",...list(rep.map(e=>e.name),"本週沒有標記報告的項目"),"    （二）完成事項",...list(done.map(x=>x.t),"本週沒有完成項目")];
   return {start,end,text:L.join("\n")};
 }
 
