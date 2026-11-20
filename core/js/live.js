@@ -436,7 +436,7 @@ async function kpSave(){
   if(fsMode())Sfx.result(ok);   /* github 模式的 persist 自己會響 */
   kpSaving=false;
   if(ok){const ev=state.events.find(e=>e.id===id);kpSt={id,st:"ok",before:undoable?draft.before:null,after:ev?JSON.stringify(ev):""};render();
-    if(!fsMode()&&CFG.meeting)mtPushAll();return true}
+    if(CFG.meeting)mtPushAll();return true}
   /* 失敗：草稿還在 state（firestore 模式的補寫也把畫面資料留著），回到編輯、把那張卡片打開 */
   if(!state.events.some(e=>e.id===id))state=normalize(JSON.parse(snap));
   editing=true;cardEdit=key;snapshot=snap;dirty=true;kp=draft;

@@ -45,8 +45,8 @@ const editBtnHTML=key=>boardLocked()?"":`<button type="button" class="icon card-
 const editBarHTML=()=>`<div class="card-edbar"><button type="button" data-edcancel>取消</button><button type="button" class="primary" data-edsave>${cloudOn()?"儲存並同步":"儲存"}</button></div>`;
 /* 開始編輯 key 那一張：then＝開始後馬上要做的事（例如新增一筆空白的、打開名稱欄） */
 /* 02D：firestore 模式整區編輯的限制——甘特圖時間軸、會長室追蹤、文件連結寫的是部門設定（部門管理員以上）；
-   秘書處會議編輯寫別的部門（還在 GitHub），firestore 模式不開放 */
-const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key!=="s:meetedit"&&fsAdmin());
+   秘書處會議編輯（2026-11-20 起 firestore 模式也開放）：秘書處的編輯者以上（會長室有沒有開放、能改哪些由 meeting.js 與規則判斷） */
+const fsSecOk=key=>!fsMode()||!/^s:/.test(key)||(key==="s:meetedit"?fsWriter():fsAdmin());
 async function startEdit(key,then){
   if(roView)return false;   /* 唯讀檢視中不開始編輯（圓鈕、編輯鈕正在消失的途中也一樣） */
   if(editing||kpBusy()||!fsSecOk(key)||!(await ensureLogin()))return false;

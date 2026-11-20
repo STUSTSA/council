@@ -33,10 +33,11 @@ function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG
 /* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、行事曆的「會長室」「其他」）跟著那個部門的資料來源：
    firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
    回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
-function storeDeptData(id){
+function storeDeptFull(id){   /* {data, src, orig}：秘書處的會議編輯要留著 src／orig 才能寫回（meeting.js） */
   if(!(CFG.firebase&&CFG.firebase.projectId))return Promise.reject(Object.assign(new Error("firebase"),{code:"unavailable"}));
-  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id)).then(r=>r.data);
+  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id));
 }
+const storeDeptData=id=>storeDeptFull(id).then(r=>r.data);
 /* ui-06：行事曆的「活動」「會議」（scope 是 all-activity／all-meeting 的時間事件）。只有新資料庫有 scope：
    有部門已切到 firestore 時才讀（要登入）；都還在 github／frozen 時讀不到這一類（storeScopeOn 為假，畫面顯示空的）。
    測試部門（test:true，例如實測 Google 登入時的水果部）切到 firestore 不算：不讓一個測試部門改變其他部門與主頁全會行事曆的行為（2026-11-19） */
@@ -59,6 +60,7 @@ function storeFsUse(r){state=normalize(r.data);storeFsBase={src:r.src,orig:r.ori
    02D 審查：前面的批已寫入、後面失敗（e.committed＞0）時，重新讀一次，用新讀到的內容當比對基準，只補寫這次要寫、還沒寫進去的文件
    （fsFinish；最多試 3 輪）。期間被別人改過的文件不寫，比對基準留在舊的那一份（下次儲存照樣被版本檢查擋下，不會蓋掉別人的）。 */
 let storeWriteMod=null,fsBusy=false,fsLastErr="";
+const storeWriteGet=()=>storeWriteMod||(storeWriteMod=storeModLoad("store-write.js","board-store-write-ready","BoardStoreWrite"));
 const FS_ERR={conflict:"資料剛被別人改過，沒有儲存","permission-denied":"沒有權限，沒有儲存",unavailable:"沒有連上網路，沒有儲存",badtime:"時間格式不正確，沒有儲存"};
 const FS_PART={conflict:"部分修改已寫入；有的資料剛被別人改過，那部分沒有儲存（還在畫面上）","permission-denied":"部分修改已寫入；其餘沒有權限、沒有儲存（還在畫面上）",
   unavailable:"部分修改已寫入；其餘因為沒有連上網路沒有儲存（還在畫面上）"};
@@ -71,8 +73,7 @@ async function fsPersist(msg,o={}){
   const opt={admin:fsAdmin(),super:fsRole()==="super"};
   let err=null,W=null;
   try{
-    if(!storeWriteMod)storeWriteMod=storeModLoad("store-write.js","board-store-write-ready","BoardStoreWrite");
-    W=await storeWriteMod;
+    W=await storeWriteGet();
     await W.saveDept(CFG.firebase,CFG.deptId,storeFsBase,state,opt);
   }catch(e){err=e}
   if(err&&err.committed>0&&err.draft){toast("部分修改已寫入，正在補寫其餘的修改…");err=await fsFinish(W,err,opt)}

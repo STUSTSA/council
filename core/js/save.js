@@ -44,7 +44,7 @@ function save(){
 async function fsSave(){
   const key=editing?cardEdit:"",snap=snapshot;
   editing=false;dirty=false;render();
-  if(await persist())return;
+  if(await persist()){if(CFG.meeting)mtPushAll();return}   /* 秘書處：改過的其他部門各自寫回（2026-11-20 起 firestore 模式也是） */
   if(!key){dirty=true;return}
   const id=key.slice(2),alive=key.startsWith("s:")||(key[0]==="e"?state.events:state.issues).some(x=>x.id===id);
   if(!alive){state=normalize(JSON.parse(snap));render();return}
