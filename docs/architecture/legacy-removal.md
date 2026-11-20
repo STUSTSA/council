@@ -134,7 +134,7 @@ HEAD 的欄位名稱（只讀名稱，沒讀值）：
 | `docs/architecture/migration.md` §5（120–142）、§7（158–168）、§9（175 起） | `source` 只剩 firestore（與 frozen）；回復表裡「改回 github」的列標成作廢後不適用。§1.1 欄位對照不動 |
 | `docs/architecture/github-ownership-migration.md` §5（211 起「現有 GitHub 寫入」）、12、59（`sync.owner`） | 標成已不適用 |
 | `docs/architecture/README.md` 90（R7）、96（D10）、105、127 | 待辦狀態更新 |
-| `docs/遷移步驟.md` 第 4 節（回復）、第 5 節表格最後一列 | D5 已改寫成切換手冊；作廢後「改回 GitHub、匯入備份寫回」標成不適用 |
+| `docs/遷移步驟.md` 第 4 節（退回方式）最後一列、附錄 A.4（回復）、附錄 A.5 表格最後一列 | D5 已改寫成切換手冊；作廢後「改回 GitHub、匯入備份寫回」標成不適用 |
 | 不用改 | `permissions.md`、`invitations-roles-audit.md`、`verification.md` 裡的「權杖」是 QR 邀請權杖，跟 GitHub 權杖無關 |
 
 確認：`F '全會密碼'`、`F '共用密碼'`、`F '個人密碼'`、`F '網站管理'`、`F '雲端同步'`、`F '?admin'` 只剩歷史章節。
