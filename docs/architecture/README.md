@@ -120,14 +120,14 @@
 
 | 項目 | 何時 | 誰 |
 |---|---|---|
-| 把規則與索引部署到開發專案 `stustsa-council-dev`（`firebase deploy --only firestore:rules,firestore:indexes`） | 你同意後 | 我執行或你執行 |
+| ~~把規則與索引部署到開發專案 `stustsa-council-dev`~~：已部署（2026-11-19～20）；正式專案 `stustsa-council` 也已部署（2026-11-20，規則 `76e470cb…`、22 個索引） | — | — |
 | 開發專案的 OAuth 同意畫面（Google Auth Platform → 目標對象）：使用者類型要是「外部」、發布狀態「正式版」，任何 Google 帳號才能登入。專案若在學校 Google 組織底下而且設成「內部」，只有學校帳號能登入（D1 要求任何帳號）。從外部查不到這個設定，見 [verification.md](verification.md) 第 8 節 | 部署前 | 你在主控台看 |
 | 開發專案的 `departments` 十個部門文件（邀請與申請的規則要求部門存在）：用遷移程式只匯入部門、或在主控台手動建 | 部署後、實測前 | 你決定方式 |
 | 第一位總管理員（[第 7 節](invitations-roles-audit.md)）：先登入一次取得 UID，再在主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1` | 實測前 | 你 |
 | ~~實機測試要一個 `source: "firestore"` 的部門~~：水果部切成 `firestore`（只改 `dept/config.js` 一行，指向開發專案；合併前要先部署規則與索引，步驟見 [`docs/Google登入上線準備.md`](../Google登入上線準備.md)）。水果部在開發專案要先用匯入頁匯入（資料檔是空的）；退回＝把那一行改回 | 2026-11-19 開 PR，等你部署後合併 | 你 |
 | ~~看板內容在 `firestore` 模式的寫入~~ | 02D D1 完成（模擬器）：[permissions.md](permissions.md) 第 5.1d 節 | |
 | 彈出視窗被擋時的轉址登入在 Safari／iPhone 安裝版是否可用（`authDomain` 與網站不同網域） | 實機測試 | 02 驗收 |
-| `dept/config.js` 現在填的是開發專案的網頁設定：這串 PR 合併進 main 之前要換成正式專案的設定（否則正式網站的 QR、角色會寫進開發專案） | 進 main 之前 | 你決定 |
+| ~~`dept/config.js` 現在填的是開發專案的網頁設定~~：2026-11-20 換成正式專案 `stustsa-council` 的 PR（[`docs/Google登入上線準備.md`](../Google登入上線準備.md) 第 4.8 節） | — | — |
 | 核銷後原始權杖會寫進 `invitations.token`（已核准設計第 2 節：規則靠它驗證；用過的權杖沒有作用）。驗收條件「資料庫不存權杖」若要照字面，要改成另一種驗證方式 | 方便時 | 你確認是否接受 |
 
 ### 02D 新增的待辦與待決定

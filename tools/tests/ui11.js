@@ -19,7 +19,7 @@ const c=require('./common');
 const SHOT=process.env.UI11SHOT||'';
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 const ISS='imvpc3f0dcpi6',EV='emvpd2q3bes2i';
-const USAGE='https://console.firebase.google.com/project/stustsa-council-dev/usage';
+const USAGE=`https://console.firebase.google.com/project/${require('fs').readFileSync(require('path').join(__dirname,'..','..','dept','config.js'),'utf8').match(/projectId: "([^"]+)"/)[1]}/usage`;   /* 專案 ID 照 dept/config.js（不寫死，換專案時不用改測試） */
 /* firestore 模式的替身：這個部門 source＝src、已登入的總管理員、acctLoad 不載入 Firebase */
 const fsFake=(p,src)=>p.evaluate(src=>{BOARD_DEPTS.find(d=>d.id===CFG.deptId).source=src;acct.ready=true;acct.user={uid:'u1',email:'a@example.com',name:'總管'};acct.roles={super:true,depts:{}};acctMod=Promise.resolve({})},src);
 const hubRows=async(p,sel)=>{await p.evaluate(()=>{if(setOpen)closeSettings(true)});await p.waitForTimeout(300);
