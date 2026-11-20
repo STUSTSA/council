@@ -57,16 +57,16 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
   {const r=await p.evaluate(([b2])=>{const a=document.activeElement;a.__m=1;const s=[a.selectionStart,a.selectionEnd,a.value];
       render();const r1=document.activeElement===a&&a.isConnected;
       state.events.find(e=>e.id===b2).name+='！';render();   /* 別張卡片的資料更新（像輪詢、別人存檔進來） */
-      const a2=document.activeElement;return {tag:a.dataset.kptx!==undefined,r1,same:a2===a&&a2.__m===1,s,s2:[a2.selectionStart,a2.selectionEnd,a2.value]}},[live[1]]);
+      const a2=document.activeElement;return {tag:a.dataset.kptx!==undefined||a.dataset.kpids!==undefined,r1,same:a2===a&&a2.__m===1,s,s2:[a2.selectionStart,a2.selectionEnd,a2.value]}},[live[1]]);
     ok(r.tag&&r.r1&&r.same,'原位編輯中重畫：activeElement 是同一個節點（render 兩次，第二次另一張卡片的資料變了）');
-    ok(r.s[0]===r.s2[0]&&r.s[1]===r.s2[1]&&r.s[0]===r.s[2].length-2,`選取範圍不變（${r.s.slice(0,2)} → ${r.s2.slice(0,2)}）`);
-    ok(r.s[2]===r.s2[2]&&/打字中$/.test(r.s2[2]),`值不變（${r.s2[2]}）`);}
+    ok(r.s[0]===r.s2[0]&&r.s[1]===r.s2[1]&&r.s[0]===r.s[2].split('\n')[0].length-2,`選取範圍不變（${r.s.slice(0,2)} → ${r.s2.slice(0,2)}）`);
+    ok(r.s[2]===r.s2[2]&&/打字中$/.test(r.s2[2].split('\n')[0]),`值不變（${r.s2[2]}）`);}
   /* 6. 編輯中按卡片上的按鈕：按下那一下不失焦；放開後照規則轉移 */
   {const btn=await p.$(`${L} [data-lctool="text"]`);   /* ui-05：「+ 一行」換成底部工具列的「文字」 */const bb=await btn.boundingBox();
     await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.mouse.down();
     const mid=await p.evaluate(()=>document.activeElement.__m===1);
     await p.mouse.up();await p.waitForTimeout(400);
-    const aft=await p.evaluate(i=>{const a=document.activeElement,ev=state.events.find(e=>e.id===i);return {kp:a.dataset.kptx,last:ev.blocks[ev.blocks.length-1].id}},id);
+    const aft=await p.evaluate(i=>{const a=document.activeElement,ev=state.events.find(e=>e.id===i);return {kp:a.dataset.kptx||(a.dataset.kpids||'').split(' ').pop(),last:ev.blocks[ev.blocks.length-1].id}},id);
     ok(mid,'編輯中按下工具列「文字」（新增一行）的那一下：輸入欄沒有失焦');
     ok(aft.kp===aft.last,'放開後：游標移到新的一行（照原本的規則）');
     await p.keyboard.type('第二行');
@@ -76,7 +76,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     await p.click(`${L} .ln[data-blk="${bid}"] textarea.tx`);await p.waitForTimeout(150);
     const ckb=await (await p.$(`${L} .ln[data-blk="${ck}"] [data-kpck]`)).boundingBox();
     await p.mouse.move(ckb.x+ckb.width/2,ckb.y+ckb.height/2);await p.mouse.down();
-    const mid2=await p.evaluate(b=>{const a=document.activeElement;return a.dataset.kptx===b},bid);
+    const mid2=await p.evaluate(b=>{const a=document.activeElement;return a.dataset.kptx===b||(' '+(a.dataset.kpids||'')+' ').includes(' '+b+' ')},bid);
     await p.mouse.up();await p.waitForTimeout(300);
     const aft2=await p.evaluate(([i,k])=>({kp:document.activeElement.dataset.kptx,on:state.events.find(e=>e.id===i).blocks.find(b=>b.id===k).check}),[id,ck]);
     ok(mid2,'編輯中按下核取框的那一下：輸入欄沒有失焦');
@@ -100,6 +100,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
   /* 7. 正在播的圖示動作不會被重畫打斷（ui-05：編輯中卡片一行右邊的刪除鈕；以前是右側詳情的「收起」） */
   await p.evaluate(i=>lcShow('live',i),live[2]);await p.waitForTimeout(800);
   await p.click('#evDetail .ln [data-kpgo]');await p.waitForTimeout(500);
+  await p.click('#evDetail [data-lctool="check"]');await p.waitForTimeout(300);   /* 文字行編輯中沒有 ×（大輸入框），改用新增的核取行的刪除鈕 */
   {await p.dispatchEvent('#evDetail .ln-x','pointerdown',{pointerType:'mouse'});await p.waitForTimeout(150);
     const r=await p.evaluate(()=>{const btn=document.querySelector('#evDetail .ln-x');btn.__m=1;
       const a=btn.getAnimations({subtree:true}).filter(x=>/^ico/.test(x.animationName||''));const t0=a.map(x=>x.currentTime);
@@ -201,13 +202,13 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     /* ui-05：負責人在「人」頁、標籤不在卡片上改，改測卡片上一樣是 label 包核取框的「核取行」與「報告」鈕 */
     await q.click(`${L} [data-lctool="check"]`);await q.waitForTimeout(300);await q.keyboard.type('要勾的');
     const bid=await q.evaluate(e=>state.events.find(x=>x.id===e).blocks[0].id,eid),ck=await q.evaluate(e=>{const b=state.events.find(x=>x.id===e).blocks;return b[b.length-1].id},eid);
-    await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);
+    await q.click(`${L} [data-kptx="${bid}"],${L} [data-kpids~="${bid}"]`);await q.waitForTimeout(200);
     {const sel=`${L} .ln[data-blk="${ck}"] label.ln-ck`;
       const pre=await q.evaluate(()=>{const a=document.activeElement;a.__k=1;return a.matches('textarea.tx')});
       if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
       const r=await q.evaluate(([e,ck])=>{const a=document.activeElement;return {to:a.dataset.kptx===ck,on:state.events.find(x=>x.id===e).blocks.find(b=>b.id===ck).check,act:a.tagName+'.'+a.className}},[eid,ck]);
       ok(pre&&r.to&&r.on===true,`${tag}：游標在一行時點核取框（label 包著）：勾起來、游標到那一行、沒有掉到 body（${r.act}）`);}
-    {await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);await q.evaluate(()=>{document.activeElement.__k=2});
+    {await q.click(`${L} [data-kptx="${bid}"],${L} [data-kpids~="${bid}"]`);await q.waitForTimeout(200);await q.evaluate(()=>{document.activeElement.__k=2});
       const sel=`${L} .lc-rep`;if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
       const r=await q.evaluate(e=>({same:document.activeElement.__k===2,rep:state.events.find(x=>x.id===e).report}),eid);
       ok(r.same&&r.rep===true,`${tag}：游標在一行時按「報告」：標記改了、activeElement 還是那一欄`);}

@@ -67,18 +67,18 @@ function dayCardHTML(d,lab,cls,list){
    選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體；底下一行「部門・學生會」。
    點日期：下面的清單換成那一天（舊的原地淡出、新的一列一列浮上來，calAfter）；右上的月份鈕點開選月份（自製選單，Esc、點外面關） */
 const MON_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],host:null}}
+function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],q:"",find:false,fp:[],fpn:1,host:null}}
 const NOTI=calState(false),CALS=[NOTI];
 /* 清單換內容的判斷：模式、勾的部門、月份、那一天 */
-const calKey=c=>[c.mode,c.oth.join(","),c.day].join("|");
-function posterHTML(c,list){
+const calKey=c=>[c.mode,c.oth.join(","),c.day,c.find?"f"+c.fp.join("+"):""].join("|");
+function posterHTML(c,list,ov){
   const m=c.month,first=pd(m+"-01"),y=first.getFullYear(),mi=first.getMonth(),dim=new Date(y,mi+1,0).getDate(),off=(first.getDay()+6)%7;
   const t=today(),ds=n=>`${m}-${pad(n)}`;
   const weeks=[];for(let n=1-off;n<=dim;n+=7)weeks.push(Array.from({length:7},(_,i)=>n+i));
   const body=weeks.map(w=>{
     const lo=Math.max(1,w[0]),hi=Math.min(dim,w[6]),a=ds(lo),b=ds(hi);
-    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),k=list.filter(x=>covers(x,d)).length;
-      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span></button>`}).join("");
+    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),k=list.filter(x=>covers(x,d)).length,om=ov&&ov.get(d)||0;
+      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k||om?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}${om?`，重疊 ${ovHours(om)} 小時`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span>${om?`<i class="pc-m" style="--f:${(om/(OV1-OV0)).toFixed(3)}" aria-hidden="true"></i>`:""}</button>`}).join("");
     const lanes=[];
     const evs=list.filter(x=>x.date<=b&&(x.end||x.date)>=a).map(x=>{
       const cl=x.date<a,cr=(x.end||x.date)>b,s=cl?lo:+x.date.slice(8),e=cr?hi:+(x.end||x.date).slice(8),i0=w.indexOf(s),i1=w.indexOf(e);
@@ -113,6 +113,7 @@ const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["me
 const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM、公共版 pub:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
 const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");
 function calKeys(c){
+  if(c.find)return c.fp.filter(id=>id&&id!==CFG.deptId).map(id=>"dept:"+id);   /* 找重疊：只讀選到的兩個部門（自己的用已載入的看板） */
   const sc=s=>storeScopeOn()?[`${c.pub?"pub":"scope"}:${s}:${c.month}`]:[];
   if(c.pub)return c.mode==="act"?sc("all-activity"):c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting")];
   if(c.mode==="pres")return CFG.deptId==="president"?[]:["dept:president"];
@@ -143,22 +144,88 @@ function calLoad(c){
 }
 /* 重新打開通知頁時：超過 5 分鐘或讀失敗的丟掉重讀 */
 function calStale(){CAL_DATA.forEach((v,k)=>{if(!v.loading&&(v.err||Date.now()-v.at>3e5))CAL_DATA.delete(k)})}
+/* ---------- 搜尋事件（DESIGN.md「行事曆」）：在已載入的行事曆資料裡找關鍵字 ----------
+   範圍＝本部門（看板）＋ CAL_DATA 裡已讀進來的（勾過的部門、會長室、活動、會議；公共版只有 pub: 開頭的）；不另外去讀。
+   比對事件標題、地點、所屬即時回報、部門名稱（不分大小寫）。每筆＝標題（命中的字反白）、部門・日期時刻；點了跳到那一天（月份、模式跟著換到看得到那件事的地方）。
+   輸入時只換結果那一塊（不重畫整個行事曆，輸入框的焦點與輸入法不會斷） */
+function calSearch(c){
+  const q=c.q.trim().toLowerCase(),seen=new Set(),out=[];if(!q)return out;
+  const all=[...(c.pub?[]:notiMine())];CAL_DATA.forEach((v,k)=>{if(v.items&&(c.pub?k.startsWith("pub:"):!k.startsWith("pub:")))all.push(...v.items)});
+  all.forEach(x=>{if(seen.has(x.key))return;seen.add(x.key);
+    if([x.title,x.place,x.ev,deptName(x.dept)].some(t=>t&&String(t).toLowerCase().includes(q)))out.push(x)});
+  return out.sort(byWhen);
+}
+function calMark(t,q){const i=q?String(t).toLowerCase().indexOf(q):-1;return i<0?esc(t):esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+esc(t.slice(i+q.length))}
+function calResHTML(c){
+  const q=c.q.trim().toLowerCase();if(!q)return "";
+  const xs=calSearch(c),MAX=50;
+  return xs.length?`<div class="dr-list">${xs.slice(0,MAX).map(x=>`<button type="button" class="dr-item" data-calgo="${esc(x.key)}"><b>${calMark(x.title,q)}</b><small class="num">${esc(deptName(x.dept))}・${esc(nmd(x.date))}${x.end?"–"+esc(nmd(x.end)):""}${x.time?" "+esc(x.time):""}</small></button>`).join("")}</div>${xs.length>MAX?`<p class="cal-none num">+${xs.length-MAX}</p>`:""}`
+    :`<p class="cal-none">沒有符合的事件。只找得到本部門和已經打開過的部門。</p>`;
+}
+/* 點結果：行事曆跳到那一天；模式換成看得到那件事的（本部門、會長室、活動／會議、「其他」勾上那個部門） */
+function calGo(c,key){
+  const x=calSearch(c).find(y=>y.key===key);if(!x)return;
+  c.find=false;c.month=x.date.slice(0,7);c.day=x.date;c.pop=false;
+  if(!c.pub){if(x.kind)c.mode=x.kind;else if(x.dept===CFG.deptId)c.mode="mine";else if(x.dept==="president")c.mode="pres";else{c.mode="other";if(!c.oth.includes(x.dept))c.oth=[...c.oth,x.dept]}}
+  calLoad(c);calPaint(c);
+  calHost(c)?.querySelector(".cal-list")?.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
+}
+/* ---------- 找重疊（DESIGN.md「行事曆」）：選兩個部門，兩邊都標記了的時間 ----------
+   只算有時刻的時間標記（單天：開始～結束，沒寫結束算 1 小時）；跨天的算那幾天 08–22 整段；只有日期、沒有時刻的不算。每天看 08:00–22:00。
+   資料＝本部門用已載入的看板、別的部門用 calLoad 讀（跟「其他」同一份 CAL_DATA，只讀選到的兩個、讀過不重讀） */
+const OV0=480,OV1=1320,ovMin=t=>+t.slice(0,2)*60+ +t.slice(3,5),ovHM=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`,ovHours=m=>(m/60).toFixed(1).replace(".0","");
+const ovMerge=xs=>xs.map(([a,b])=>[Math.max(OV0,a),Math.min(OV1,b)]).filter(([a,b])=>b>a).sort((p,q)=>p[0]-q[0]).reduce((o,x)=>{const z=o[o.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else o.push(x.slice());return o},[]);
+const ovBusy=(items,d)=>ovMerge(items.filter(x=>covers(x,d)).map(x=>x.end?[OV0,OV1]:x.time?[ovMin(x.time),x.etime&&x.etime>x.time?ovMin(x.etime):ovMin(x.time)+60]:[0,0]));
+function ovDay(a,b,d){const A=ovBusy(a,d),B=ovBusy(b,d),out=[];let i=0,j=0;
+  while(i<A.length&&j<B.length){const s=Math.max(A[i][0],B[j][0]),e=Math.min(A[i][1],B[j][1]);if(e>s)out.push([s,e]);if(A[i][1]<B[j][1])i++;else j++}
+  return {A,B,out}}
+const calFindData=id=>id===CFG.deptId?{items:notiMine()}:CAL_DATA.get("dept:"+id)||{loading:true};
+function calFind(c){
+  let loading=false;const errs=[],its=c.fp.map(id=>{const v=calFindData(id);if(v.loading)loading=true;else if(v.err)errs.push(`${deptName(id)}：${v.err}`);return v.items||[]}),byDay=new Map();
+  if(!loading&&!errs.length&&c.fp.length>1){const [y,mo]=c.month.split("-").map(Number),dim=new Date(y,mo,0).getDate();
+    for(let n=1;n<=dim;n++){const d=`${c.month}-${pad(n)}`,t=ovDay(its[0],its[1],d).out.reduce((s,[a,b])=>s+b-a,0);if(t)byDay.set(d,t)}}
+  return {its,loading,errs,byDay};
+}
+/* 那一天：08–22 的時間軸，上半實心＝第一個部門有事、下半外框＝第二個部門有事，重疊＝整格淡底加上緣一條焦點色；下面列出確切時段 */
+function calFindHTML(c,f){
+  const d=c.day,pc=v=>((v-OV0)/(OV1-OV0)*100).toFixed(2)+"%",bar=(k,[a,b])=>`<i class="${k}" style="left:${pc(a)};width:calc(${pc(b)} - ${pc(a)})"></i>`;
+  let body;
+  if(f.loading)body=`<p class="cal-none">讀取中…</p>`;
+  else if(f.errs.length)body=`<p class="cal-none">${esc(f.errs.join("；"))}</p>`;
+  else if(f.its.length<2)body=`<p class="cal-none">再選一個部門</p>`;
+  else{const r=ovDay(f.its[0],f.its[1],d),tot=r.out.reduce((s,[a,b])=>s+b-a,0);
+    body=`<div class="fnd"><div class="fnd-h"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}</small><span class="fnd-t num">${ovHours(tot)}<small>小時重疊</small></span></div>
+      <div class="fnd-k">${c.fp.map((id,i)=>`<span><i class="fnd-pm ${i?"b":"a"}"></i>${esc(deptName(id))}</span>`).join("")}</div>
+      <div class="fnd-ax num" aria-hidden="true">${[8,10,12,14,16,18,20,22].map(h=>`<span style="left:${pc(h*60)}">${h}</span>`).join("")}</div>
+      <div class="fnd-tr" aria-hidden="true">${r.out.map(x=>bar("o",x)).join("")}${r.A.map(x=>bar("a",x)).join("")}${r.B.map(x=>bar("b",x)).join("")}</div>
+      <div class="fnd-r">${r.out.length?r.out.map(([a,b])=>`<span class="num">${ovHM(a)}–${ovHM(b)}</span>`).join(""):`<span class="none num">沒有重疊</span>`}</div></div>`}
+  return `<div class="cal-list cal-find" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
+}
+function calFindToggle(c){
+  c.find=!c.find;
+  if(c.find&&c.fp.length<2){const own=CFG.deptId,ids=(window.BOARD_DEPTS||[]).map(x=>x.id);c.fp=[own,ids.includes("president")&&own!=="president"?"president":ids.find(x=>x!==own)].filter(Boolean)}
+  calLoad(c);calPaint(c);
+}
+function calFindPick(c,id){if(c.fp.includes(id))return;c.fp[c.fpn]=id;c.fpn=1-c.fpn;calLoad(c);calPaint(c)}
 function calModesHTML(c){
   const ms=c.pub?CAL_PMODES:CAL_MODES;
-  return `<div class="cal-modes"><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
-    ${!c.pub&&c.mode==="other"?`<div class="cal-oth" role="group" aria-label="其他部門">${calOthers().map(d=>`<button type="button" class="cal-chip" role="checkbox" data-caloth="${esc(d.id)}" aria-checked="${c.oth.includes(d.id)}">${esc(d.name)}</button>`).join("")}</div>`:""}`;
+  return `<div class="cal-modes"${c.find?" hidden":""}><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
+    ${c.find?`<div class="cal-oth cal-fp" role="group" aria-label="選兩個部門">${(window.BOARD_DEPTS||[]).map(d=>{const k=c.fp.indexOf(d.id);return `<button type="button" class="cal-chip" role="checkbox" data-calfp="${esc(d.id)}" aria-checked="${k>=0}">${k>=0?`<i class="fnd-pm ${k?"b":"a"}"></i>`:""}${esc(d.name)}</button>`}).join("")}</div>`:""}
+    ${!c.pub&&!c.find&&c.mode==="other"?`<div class="cal-oth" role="group" aria-label="其他部門">${calOthers().map(d=>`<button type="button" class="cal-chip" role="checkbox" data-caloth="${esc(d.id)}" aria-checked="${c.oth.includes(d.id)}">${esc(d.name)}</button>`).join("")}</div>`:""}`;
 }
 function calMode(c,k){if(c.mode===k)return;c.mode=k;calLoad(c);calPaint(c)}
 function calOth(c,id){c.oth=c.oth.includes(id)?c.oth.filter(x=>x!==id):[...c.oth,id];calLoad(c);calPaint(c)}
 /* 一個行事曆的 HTML（通知頁的 renderNoti 跟 calMount 共用） */
 function calHTML(c){
-  const r=calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
+  const f=c.find?calFind(c):null,r=f?{xs:[]}:calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
     <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
-      <span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+      ${c.pub?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+    <label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+    <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
-    <div class="pc">${posterHTML(c,r.xs)}</div></div>
-    ${calListHTML(c,r)}</section>`;
+    <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
+    ${f?calFindHTML(c,f):calListHTML(c,r)}</section>`;
 }
 /* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
 const calHost=c=>c===NOTI?$("#notiPage"):c.host;
@@ -214,7 +281,14 @@ document.addEventListener("click",e=>{
   const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
   const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
   const oth=t.closest("[data-caloth]");if(oth){calOth(c,oth.dataset.caloth);return}
+  const qx=t.closest("[data-calqx]");if(qx){c.q="";host.querySelector("[data-calq]").value="";calQ(c,host);host.querySelector("[data-calq]").focus({preventScroll:true});return}
+  const go=t.closest("[data-calgo]");if(go){calGo(c,go.dataset.calgo);return}
+  if(t.closest("[data-calfind]")){calFindToggle(c);return}
+  const fp=t.closest("[data-calfp]");if(fp){calFindPick(c,fp.dataset.calfp);return}
 });
+function calQ(c,host){const r=host.querySelector("[data-calres]"),x=host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+document.addEventListener("input",e=>{const i=e.target.closest&&e.target.closest("[data-calq]");if(!i)return;const host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c)return;c.q=i.value;calQ(c,host)});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!e.target.closest||!e.target.closest("[data-calq]"))return;const i=e.target,host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c||!c.q)return;e.preventDefault();e.stopImmediatePropagation();c.q="";i.value="";calQ(c,host)},true);
 /* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
 document.addEventListener("keydown",e=>{
   const c=CALS.find(x=>x.pop);if(!c)return;
