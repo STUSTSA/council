@@ -126,7 +126,7 @@ function secFxStop(groups){groups.forEach(g=>{g.getAnimations().forEach(a=>a.can
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
   const prev=curSec,ord=TABS().map(t=>t[0]),dir=ord.indexOf(k)>=ord.indexOf(prev)?1:-1;
-  curSec=k;if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
+  curSec=k;homeSync();if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
   secSwap(prev,k,dir,instant);
 }
 /* 從 prev 那一區換到 k 那一區（dir：1＝往工具列後面、-1＝往前；通知與行事曆 noti 也用這一套，notify.js 的 openNoti／closeNoti） */

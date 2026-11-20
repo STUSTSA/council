@@ -8,29 +8,34 @@ const Back=(()=>{
   if(history.state&&history.state.bl)history.replaceState(null,"");   /* 重新整理後殘留的紀錄 */
   function opened(name,close){
     if(stack.some(x=>x.name===name))return;
-    stack.push({name,close});history.pushState({bl:name},"");
+    stack.push({name,close});history.pushState({bl:name},"");sync();
   }
   function closed(name){
     const i=stack.findIndex(x=>x.name===name);if(i<0)return;
-    stack.splice(i,1);if(history.state&&history.state.bl){skip++;history.back()}   /* 最上面是我們推的紀錄就退一筆 */
+    stack.splice(i,1);sync();if(history.state&&history.state.bl){skip++;history.back()}   /* 最上面是我們推的紀錄就退一筆 */
   }
   /* 把某一層的紀錄直接換成另一層（不用先退一筆再推一筆，避免兩個非同步的瀏覽紀錄操作打架）：每週概述 → 返回設定時用 */
   function replace(name,next,close){
     const i=stack.findIndex(x=>x.name===name);if(i<0)return;
-    stack[i]={name:next,close};if(history.state&&history.state.bl===name)history.replaceState({bl:next},"");
+    stack[i]={name:next,close};sync();if(history.state&&history.state.bl===name)history.replaceState({bl:next},"");
   }
   addEventListener("popstate",e=>{
     if(skip){skip--;return}
     const top=stack.pop();if(!top)return;
     Sfx.play("back");
-    top.close(!!e.hasUAVisualTransition);   /* true＝不要動畫（瀏覽器已經播過） */
+    sync();top.close(!!e.hasUAVisualTransition);   /* true＝不要動畫（瀏覽器已經播過） */
   });
+  /* 標題列左上的首頁鍵／上一頁鍵（views.js 的 homeSync）：疊的層數一變就更新 */
+  function sync(){if(typeof homeSync==="function")homeSync()}
+  /* 標題列的「上一頁」：關掉最上面那一層（跟系統返回鍵同一套關法，各層自己的關閉動畫；沒有層了回傳 false） */
+  function up(){const t=stack[stack.length-1];if(!t)return false;t.close(false);return true}
+  const depth=()=>stack.length,top=()=>stack.length?stack[stack.length-1].name:"";
   /* 看板 → 各部門總覽：從總覽點進來的就用瀏覽器返回（保留總覽的捲動位置），否則直接開總覽（都有換頁動畫） */
   function home(){
     let fromHome=false;try{fromHome=!!document.referrer&&new URL(document.referrer).pathname.endsWith("/home.html")}catch(_){}
     if(fromHome&&history.length>1&&!stack.length)history.back();else PageFx.leave("home.html");
   }
-  return {opened,closed,replace,home};
+  return {opened,closed,replace,home,up,depth,top};
 })();
 /* 換頁動畫（pagefx.js）的「底下那一頁」：最上面還開著的全畫面層（skip 以外），沒有就是看板本身（#pager，含每週概述） */
 function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}

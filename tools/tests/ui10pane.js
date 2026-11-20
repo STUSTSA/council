@@ -105,7 +105,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await cselCheck(m,'#dlgForm','412 產生 QR');
   await countReads(m);
   /* A1 返回：回到系統管理清單，表單收掉、照取消結束 */
-  await m.click('#subBack');await m.waitForTimeout(900);
+  await m.click('.dh-home');await m.waitForTimeout(900);
   {const a=await lastAsk(m);
     ok(await reads(m,'inviteList')===0,`A 412 返回：取消的「產生 QR」沒有在面板收掉後重讀邀請清單（${await reads(m,'inviteList')} 次）`);
     ok(await formGone(m),'A 412 按「返回」回到系統管理：「產生 QR」表單收掉（不留在清單下面）');
@@ -117,28 +117,28 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await hubGo(m,'audit');
   ok(await formGone(m)&&await m.evaluate(()=>!!document.querySelector('#setSub .acct-panel:not([hidden]) .acct-log')),'A 412 再進「紀錄」：只有紀錄，沒有「產生 QR」表單');
   await cselCheck(m,'#setSub .acct-panel:not([hidden]) .acct-filter','412 紀錄篩選');
-  await m.click('#subBack');await m.waitForTimeout(900);
+  await m.click('.dh-home');await m.waitForTimeout(900);
   /* A3 系統返回（popstate） */
   await hubGo(m,'invite');await formOpen(m,'[data-new]','產生 QR');
   await m.evaluate(()=>history.back());await m.waitForTimeout(1000);
   {const a=await lastAsk(m);ok(await formGone(m)&&a.v===null,`A 412 系統返回：表單收掉、照取消結束（${JSON.stringify(a.v)}）`)}
   /* 申請編輯權限（帳號頁）：下拉 */
-  await m.click('#subBack');await m.waitForTimeout(900);
+  await m.click('.dh-home');await m.waitForTimeout(900);
   await row(m,'acct');
   ok(await formOpen(m,'[data-hub="req"]','申請編輯權限'),'412：帳號 →「申請編輯權限」表單');
   await cselCheck(m,'#dlgForm','412 申請編輯權限');
-  await m.click('#subBack');await m.waitForTimeout(900);
+  await m.click('.dh-home');await m.waitForTimeout(900);
   {const a=await lastAsk(m);ok(await formGone(m)&&a.v===null,'412 申請編輯權限按返回：表單收掉、照取消結束')}
   ok(await count('invitations')===0&&await count('roleRequests')===0,'A 412：離開時沒有送出（沒有建立邀請、申請）');
   /* A 競態 (b)：授予權限按確定，淡出中（200ms 內）按「返回」→ 照確定寫入一筆（第一次關閉的值算數） */
-  await m.click('#subBack');await m.waitForTimeout(900);   /* 帳號 → 設定清單 */
+  await m.click('.dh-home');await m.waitForTimeout(900);   /* 帳號 → 設定清單 */
   await row(m,'council');await hubGo(m,'people');
   ok(await formOpen(m,'.acct-panel:not([hidden]) [data-grant]','授予權限'),'412：人員 →「授予權限」表單');
   await m.evaluate(()=>{const f=document.querySelector('#dlgForm');f.querySelector('[name="uid"]').value='ben-uid';f.querySelector('[name="role"]').value='admin'});
   await m.evaluate(()=>document.querySelector('#dlg [data-act="ok"]').click());await m.waitForTimeout(60);
   ok(await m.evaluate(()=>{const x=document.querySelector('#dlg');return x.open&&!!x._fade}),'A 競態 (b) 412：按確定後還在淡出');
   {const r0=await reads(m,'rolesList');
-  await m.click('#subBack');await m.waitForTimeout(1500);
+  await m.click('.dh-home');await m.waitForTimeout(1500);
   ok(await reads(m,'rolesList')===r0,`A 競態 (b) 412：面板收掉後才寫完，不再重讀人員（rolesList ${r0}→${await reads(m,'rolesList')}）`)}
   {const a=await lastAsk(m),r=await roleOf('ben-uid');
     ok(a&&a.t==='授予權限'&&a.v&&a.v.uid==='ben-uid'&&a.v.role==='admin',`A 競態 (b) 412：確定後淡出中按返回，表單照確定結束（${JSON.stringify(a&&a.v)}）`);
@@ -185,11 +185,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* A8 收起設定（工具列的設定鍵） */
   await d.click('#setBtn');await d.waitForTimeout(900);
   {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!setOpen),'A 1300 收起設定：表單收掉、照取消結束')}
-  /* A9 首頁鍵（離開看板前先收起設定） */
+  /* A9 標題列左上鍵：設定開著時是「上一頁」（不離開看板），先退一層 */
   await openSet(d);await row(d,'council');await hubGo(d,'invite');await formOpen(d,'[data-new]','產生 QR');
   await d.evaluate(()=>{PageFx.leave=()=>{window.__left=true}});
   await d.click('.dhead .dh-home');await d.waitForTimeout(900);
-  {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>window.__left===true),'A 1300 首頁鍵：表單收掉、照取消結束，再離開看板')}
+  {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>window.__left!==true),'A 1300 上一頁鍵：表單收掉、照取消結束，不離開看板')}
   /* 設定外面跳出的表單（不在面板裡）：下拉一樣點得到 */
   await d.evaluate(()=>{ask('測試',[{name:'a',label:'部門',type:'select',value:'fruit',options:acctDeptOpts()},{name:'b',label:'角色',type:'select',value:'editor',options:[['editor','編輯者'],['admin','管理員']]},{name:'c',label:'備註'}])});
   await d.waitForTimeout(700);
