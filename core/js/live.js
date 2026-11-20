@@ -57,12 +57,18 @@ function lnHTML(b,t,ed,ro){
     :`<span class="tx"${ro?"":` data-kpgo="${esc(b.id)}" tabindex="0" role="button"`}>${esc(b.text)}</span>`;
   return `<div class="ln${k==="time"?" tm":k==="check"?" ck":""}${b.check?" done":""}" data-blk="${esc(b.id)}" data-k="${k}">${ck}${tm}${tx}${t&&t.place?`<span class="pl">${esc(t.place)}</span>`:""}${ed?`<button type="button" class="ln-x" data-kpdel="${esc(b.id)}" aria-label="刪除這一行">${ico("close","solo")}</button>`:""}</div>`;
 }
+/* 編輯中連續的純文字行合成一個大輸入框（像備忘錄）：每個換行＝一筆，存檔格式不變。
+   data-kpids＝這個框裡每一行的行 ID（用空白隔開、跟框裡的換行一一對應），data-kpgrp＝第一行的 ID（重畫後游標放回用）。
+   框的內容前面多放一個換行：HTML 會吞掉 textarea 開頭的一個換行，第一行是空行時才不會少一行 */
+const kpGrpHTML=g=>`<div class="ln" data-blk="${esc(g[0].id)}" data-k="text"><textarea class="tx" rows="1" data-kpgrp="${esc(g[0].id)}" data-kpids="${g.map(b=>esc(b.id)).join(" ")}" aria-label="內容">\n${esc(g.map(b=>b.text).join("\n"))}</textarea></div>`;
 /* 沒有連到行的舊時間標記：時間線的樣子，圓點不能按（沒有勾選狀態）；編輯中名稱可以改、可以刪 */
 function freeHTML(t,ed){const when=evTimeText(t).when;
   return `<div class="ln tm free" data-tfree="${esc(t.id)}" data-k="time"><span class="ln-dot" aria-hidden="true"></span>${ed?`<button type="button" class="tmc num" data-kptm="${esc(t.id)}">${esc(when)}</button><textarea class="tx" rows="1" data-kplb="${esc(t.id)}" maxlength="${StoreMap.TXT_MAX}" aria-label="時間標記名稱">${esc(t.label)}</textarea><button type="button" class="ln-x" data-kptdel="${esc(t.id)}" aria-label="刪除這個時間標記">${ico("close","solo")}</button>`:`<span class="tmc num">${esc(when)}</span><span class="tx">${esc(t.label)}</span>`}${t.place?`<span class="pl">${esc(t.place)}</span>`:""}</div>`}
 /* 逐行內容＋超連結（檢視是膠囊、編輯中是名稱與網址兩欄） */
 function lcLinesHTML(ev,ed,ro){
-  const tm=new Map((ev.times||[]).map(t=>[t.id,t])),rows=(ev.blocks||[]).map(b=>lnHTML(b,tm.get(b.timeId),ed,ro)).join("")+evFreeTimes(ev).map(t=>freeHTML(t,ed)).join("");
+  const tm=new Map((ev.times||[]).map(t=>[t.id,t])),out=[];let g=[];const flush=()=>{if(g.length)out.push(kpGrpHTML(g));g=[]};
+  (ev.blocks||[]).forEach(b=>{if(ed&&kpType(b)==="text")g.push(b);else{flush();out.push(lnHTML(b,tm.get(b.timeId),ed,ro))}});flush();
+  const rows=out.join("")+evFreeTimes(ev).map(t=>freeHTML(t,ed)).join("");
   const empty=rows?"":ed?"":ro?`<p class="ln-empty">沒有說明</p>`:`<button type="button" class="ln-empty" data-kpgo="">沒有說明</button>`;
   const links=ed?(ev.links||[]).map(l=>`<div class="lk kp-lk" data-lk="${esc(l.id)}"><input data-e="name" value="${esc(l.name)}" maxlength="60" placeholder="按鈕名稱" aria-label="按鈕名稱"><input data-e="url" value="${esc(l.url)}" maxlength="2000" placeholder="https://" aria-label="網址" inputmode="url"><button type="button" class="ln-x" data-kplkdel aria-label="刪除這個超連結">${ico("close","solo")}</button></div>`).join("")
     :(ev.links||[]).length?`<div class="lnks">${ev.links.map(l=>`<a class="lnk" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`).join("")}</div>`:"";
@@ -253,12 +259,15 @@ function kpFitAll(){document.querySelectorAll(".lc-ed textarea.tx").forEach(kpFi
 window.addEventListener("resize",()=>{if(kp)kpFitAll()});
 /* 游標放到某一行（或名稱）的文字最後；sel＝true 時全選（新卡片的名稱） */
 function kpFocus(id,sel){
-  const el=id==="title"?document.querySelector(".lc-ed [data-kptitle]"):document.querySelector(`.lc-ed [data-kptx="${CSS.escape(id)}"]`);if(!el)return;
-  el.focus({preventScroll:true});if(sel)el.select();else{const n=el.value.length;el.setSelectionRange(n,n)}
-  el.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
+  const el=id==="title"?document.querySelector(".lc-ed [data-kptitle]"):document.querySelector(`.lc-ed [data-kptx="${CSS.escape(id)}"]`)||document.querySelector(`.lc-ed [data-kpids~="${CSS.escape(id)}"]`);if(!el)return;
+  el.focus({preventScroll:true});
+  if(sel)el.select();
+  else if(el.dataset.kpids){const i=el.dataset.kpids.split(" ").indexOf(id),n=el.value.split("\n").slice(0,i+1).join("\n").length;el.setSelectionRange(n,n)}   /* 大輸入框：游標放到那一行的最後 */
+  else{const n=el.value.length;el.setSelectionRange(n,n)}
+  if(!el.dataset.kpids)el.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
 }
 function kpFocusGet(){const a=document.activeElement;if(!kp||!a||!a.closest||!a.closest(".lc-ed"))return null;
-  const k=["kptx","kplb","tepl","sg"].find(x=>a.dataset[x]!==undefined),lk=a.dataset.e&&a.closest(".kp-lk");
+  const k=["kptx","kpgrp","kplb","tepl","sg"].find(x=>a.dataset[x]!==undefined),lk=a.dataset.e&&a.closest(".kp-lk");
   return {sel:a.dataset.kptitle!==undefined?"[data-kptitle]":k==="sg"?`[data-sg="${CSS.escape(a.dataset.sg)}"][data-tid="${CSS.escape(a.dataset.tid)}"]`:k?`[data-${k}="${CSS.escape(a.dataset[k])}"]`:lk?`[data-lk="${CSS.escape(lk.dataset.lk)}"] [data-e="${CSS.escape(a.dataset.e)}"]`:null,s:a.selectionStart,e:a.selectionEnd}}
 function kpFocusSet(f){if(!f||!f.sel||!kp)return;const el=document.querySelector(".lc-ed "+f.sel);if(!el||el===document.activeElement)return;
   el.focus({preventScroll:true});try{if(f.s!=null)el.setSelectionRange(f.s,f.e)}catch(_){}}
@@ -362,16 +371,38 @@ function kpKey(e){
     return false}
   if(e.key==="Enter"&&a.dataset.kptitle!==undefined){e.preventDefault();lvPane=null;if(ev.blocks.length){render();kpFocus(ev.blocks[0].id)}else kpAdd(ev,0);return true}
   if(e.key==="Enter"&&a.dataset.kplb!==undefined&&a.tagName==="TEXTAREA"){e.preventDefault();return true}   /* 沒連到行的時間標記名稱：一樣不能換行（折行只是視覺） */
+  if(a.dataset.kpgrp!==undefined){   /* 大輸入框：Enter 就是換行（多一筆，滿了就擋）；整個框空了按 Backspace＝刪掉這個框唯一的空行 */
+    if(e.key==="Enter"&&ev.blocks.length>=StoreMap.BLK_MAX){e.preventDefault();kpSay("bad",`最多 ${StoreMap.BLK_MAX} 行`);return true}
+    if(e.key==="Backspace"&&!a.value&&ev.blocks.length>1){e.preventDefault();kpDel(ev,a.dataset.kpgrp);return true}
+    return false}
   const id=a.dataset.kptx;if(id===undefined||a.closest(".te"))return false;
   const i=ev.blocks.findIndex(b=>b.id===id);
   if(e.key==="Enter"){e.preventDefault();kpAdd(ev,i+1,ev.blocks[i]);return true}
   if(e.key==="Backspace"&&!a.value&&ev.blocks.length>1){e.preventDefault();kpDel(ev,id);return true}
   return false;
 }
+/* 大輸入框打字：照換行拆回逐行（blocks），前面、後面沒變的行沿用原本的行 ID，中間改過的依序沿用、多的新增、少的刪掉。
+   每行最多 TXT_MAX 字（多的切掉）、全部最多 BLK_MAX 行（超過的行接在最後一行後面、提示）。空行＝空的一筆，行尾空白存檔時照舊 trim（kpTidy） */
+function kpGrpIn(a,ev){
+  const ids=a.dataset.kpids.split(" "),i0=ev.blocks.findIndex(b=>b.id===ids[0]),old=ids.map(id=>ev.blocks.find(b=>b.id===id));
+  if(i0<0||old.some((b,n)=>!b||ev.blocks[i0+n]!==b))return;   /* 對不上（別處改了這幾行）：不動，等重畫 */
+  let lines=a.value.replace(/\r\n?/g,"\n").split("\n"),fix=lines.some(x=>x.length>StoreMap.TXT_MAX);
+  const room=StoreMap.BLK_MAX-(ev.blocks.length-old.length);
+  if(lines.length>room){lines=[...lines.slice(0,room-1),lines.slice(room-1).join(" ")];fix=true;kpSay("bad",`最多 ${StoreMap.BLK_MAX} 行`)}
+  lines=lines.map(x=>x.slice(0,StoreMap.TXT_MAX));
+  if(fix){const c=a.selectionStart;a.value=lines.join("\n");a.setSelectionRange(Math.min(c,a.value.length),Math.min(c,a.value.length))}
+  let p=0;while(p<old.length&&p<lines.length&&old[p].text===lines[p])p++;
+  let q=0;while(q<old.length-p&&q<lines.length-p&&old[old.length-1-q].text===lines[lines.length-1-q])q++;
+  const mid=lines.slice(p,lines.length-q).map((t,n)=>{const b=old[p+n]&&p+n<old.length-q?old[p+n]:{id:uid("b"),text:"",check:null,timeId:null};b.text=t;return b});
+  const res=[...old.slice(0,p),...mid,...old.slice(old.length-q)];
+  ev.blocks.splice(i0,old.length,...res);
+  a.dataset.kpids=res.map(b=>b.id).join(" ");a.dataset.kpgrp=res[0].id;const ln=a.closest(".ln");if(ln)ln.dataset.blk=res[0].id;
+}
 document.addEventListener("input",e=>{
   const a=e.target,ev=kp&&a.closest&&a.closest(".lc-ed")&&kpEv();if(!ev)return;
-  if(a.tagName==="TEXTAREA"&&a.classList.contains("tx")){if(/[\r\n]/.test(a.value)){const c=a.selectionStart;a.value=a.value.replace(/[\r\n]+/g," ");a.setSelectionRange(c,c)}kpFit(a)}   /* 貼上多行文字＝接成一行；高度跟著內容 */
-  if(a.dataset.kptitle!==undefined)ev.name=a.value;
+  if(a.tagName==="TEXTAREA"&&a.classList.contains("tx")&&a.dataset.kpgrp===undefined){if(/[\r\n]/.test(a.value)){const c=a.selectionStart;a.value=a.value.replace(/[\r\n]+/g," ");a.setSelectionRange(c,c)}kpFit(a)}   /* 貼上多行文字＝接成一行；高度跟著內容 */
+  if(a.dataset.kpgrp!==undefined){kpGrpIn(a,ev);kpFit(a)}
+  else if(a.dataset.kptitle!==undefined)ev.name=a.value;
   else if(a.dataset.kptx!==undefined){const b=ev.blocks.find(x=>x.id===a.dataset.kptx);if(b){b.text=a.value.replace(/[\r\n]+/g," ");const t=b.timeId&&ev.times.find(x=>x.id===b.timeId);if(t)t.label=b.text}}
   else if(a.dataset.kplb!==undefined){const t=ev.times.find(x=>x.id===a.dataset.kplb);if(t)t.label=a.value}
   else if(a.dataset.tepl!==undefined){const t=ev.times.find(x=>x.id===a.dataset.tepl);if(t)t.place=a.value}

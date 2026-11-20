@@ -95,6 +95,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* 1. 申請頁與等待說明 */
   const hub=async p=>{await openSet(p);return meText(p)};
   let me=await hub(P.g1);
+  ok(await P.g1.evaluate(()=>!!document.querySelector('#setOv [data-set="apply"]')),'沒有權限：設定最上面有「申請編輯權限」一列');
+  ok(await P.adm.evaluate(()=>!document.querySelector('#setOv [data-set="apply"]')),'有部門角色的人：沒有這一列');
   {const w=await paneText(P.g1);ok(w.includes('還沒有編輯權限'),`沒有權限：帳號頁說明還沒有編輯權限（${w.replace(/\n/g,' / ')}）`)}
   const form=async p=>{await p.evaluate(()=>{const b=[...document.querySelectorAll('#setOv .set-pane button,#setOv .set-pane .set-row')].find(x=>x.textContent.includes('申請加入部門'));b&&b.click()});await dlg(p);
     return p.evaluate(()=>[...document.querySelectorAll('#dlgForm [name="rank"] option')].map(o=>o.textContent).join('|'))};

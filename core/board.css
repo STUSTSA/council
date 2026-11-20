@@ -1775,6 +1775,46 @@ body.set-open #pageMain{overflow:hidden}
 .cal-chip:active{transform:scale(.94)}
 .cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
 @media (prefers-reduced-motion:reduce){.cal-chip{transition:none}.cal-oth .cal-chip{animation:none}}
+/* ===== 行事曆：搜尋事件（notify.js 的 calSearch；搜尋列沿用看板的 .dsearch，結果沿用 .dr-list／.dr-item） =====
+   搜尋列在標題下面；有輸入才出現結果（.cal-res，在搜尋列跟模式切換之間，月曆不動），一筆一顆膠囊，點了跳到那一天 */
+.cal-q{margin:0;background:var(--blk2);box-shadow:none}
+.cal-res:empty{display:none}
+.cal-res .dr-item{background:var(--blk2);box-shadow:none}
+.cal-res .cal-none{padding:6px 4px 0}
+/* ===== 行事曆：找重疊時間（notify.js 的 calFindHTML；DESIGN.md「行事曆」） =====
+   標題列右邊的圓鈕（.cal-fb，外框圓；開著＝實心 --ink）切到「找重疊」：模式切換換成部門膠囊（選兩個，a＝實心方塊、b＝外框方塊）。
+   月曆上不畫事件，有重疊的那天日期下一條短條（.pc-m，填滿的比例＝重疊時數／14 小時）。下面＝選到那一天的時間軸（.fnd）：
+   08–22，上半實心＝第一個部門有事、下半外框＝第二個，重疊＝整格淡底加上緣焦點色；再下面列確切時段。 */
+.cal-fb{flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out)}
+.cal-fb .ico{width:22px;height:22px;margin:0}
+.cal-fb[aria-pressed="true"]{background:var(--ink);color:var(--blk);box-shadow:none}
+.fnd-pm{display:inline-block;flex:none;width:10px;height:10px;margin-right:7px;border-radius:3px;background:currentColor;vertical-align:-1px}
+.fnd-pm.b{background:transparent;box-shadow:inset 0 0 0 1.5px currentColor}
+.pc-m{position:absolute;left:50%;top:calc(100% + 2px);width:24px;height:4px;margin-left:-12px;border-radius:2px;background:var(--hair);overflow:hidden;pointer-events:none}
+.pc-m::after{content:"";position:absolute;left:0;top:0;bottom:0;width:calc(var(--f) * 100%);border-radius:2px;background:var(--acc2)}
+.cal-find .cal-none{padding:22px 4px}
+.fnd{display:grid;gap:10px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+.fnd-h{display:flex;align-items:baseline;gap:10px}
+.fnd-h b{font-size:26px;font-weight:300}
+.fnd-h small{font-size:12.5px;color:var(--muted)}
+.fnd-t{margin-left:auto;font-size:26px;font-weight:300}
+.fnd-t small{margin-left:4px}
+.fnd-k{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.fnd-k .fnd-pm{color:var(--ink)}
+.fnd-ax{position:relative;height:16px;font-size:10.5px;color:var(--muted)}
+.fnd-ax span{position:absolute;transform:translateX(-50%)}
+.fnd-ax span:first-child{transform:none}
+.fnd-ax span:last-child{transform:translateX(-100%)}
+.fnd-tr{position:relative;height:64px;border-radius:12px;background:linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/calc(100% / 7) 100% var(--blk2);overflow:hidden}
+.fnd-tr i{position:absolute;min-width:4px;border-radius:5px}
+.fnd-tr i.o{top:0;bottom:0;border-radius:0;background:color-mix(in srgb,var(--acc) 22%,transparent);box-shadow:inset 0 4px 0 var(--acc)}
+.fnd-tr i.a{top:10px;height:19px;background:var(--ink)}
+.fnd-tr i.b{bottom:10px;height:19px;background:color-mix(in srgb,var(--ink) 8%,var(--blk));box-shadow:inset 0 0 0 1.5px var(--ink)}
+.fnd-r{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
+.fnd-r span{display:inline-flex;align-items:center;height:32px;padding:0 13px;border-radius:999px;background:color-mix(in srgb,var(--acc) 28%,transparent);font-size:13.5px}
+.fnd-r .none{padding:0;background:transparent;color:var(--muted)}
+@media (max-width:700px){.cal-fb{width:46px;height:46px}.fnd{padding:16px}}
+@media (prefers-reduced-motion:reduce){.cal-fb{transition:none}}
 
 /* ===== 海報月曆（notify.js 的 posterHTML；DESIGN-next 第九節） =====
    超大月份（細體數字＋粗體英文縮寫）、右上兩行年份；週一開頭、MON–SUN 下一條實線；日期只有數字、沒有格線。

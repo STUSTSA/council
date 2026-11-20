@@ -109,7 +109,9 @@ function acctSettingsInner(){
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")
       +setRow("backup","download","備份")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
-  return setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
+  /* 06 登入了但還沒有任何部門角色：設定最上面一列「申請編輯權限」，點進帳號頁（有說明與申請）；看板內容照常可看，不強制跳頁 */
+  const apply=!acctSuper()&&!Object.keys(acctDepts()).length?setSec(setRow("apply","edit","申請編輯權限")):"";
+  return apply+setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
     +setSec(setRow("acct","people","帳號")+(fsWriter()?setRow("members","people","部門成員"):""))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
@@ -117,6 +119,7 @@ function acctSettingsInner(){
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
   acct:()=>acctHub(),
+  apply:()=>acctHub(),
   members:()=>membersPanel(),
   council:()=>councilHub(),
 };

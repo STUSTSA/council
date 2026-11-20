@@ -157,7 +157,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
     await setRole(edUid,{});await until(()=>p.evaluate(()=>boardLocked()));
     await outside(p);
     const f3=await p.evaluate(()=>({editing,kp:!!document.querySelector('.lc-ed'),st:(document.querySelector('.lc-ed .lc-save .kp-st')||{dataset:{}}).dataset.st,txt:(document.querySelector('.lc-ed .lc-save .kp-st')||{}).textContent,
-      draft:[...document.querySelectorAll('.lc-ed [data-kptx]')].map(x=>x.value),dlg:!!document.querySelector('#dlg[open]')}));
+      draft:[...document.querySelectorAll('.lc-ed [data-kptx],.lc-ed [data-kpgrp]')].flatMap(x=>x.dataset.kpgrp!==undefined?x.value.split('\n'):[x.value]),dlg:!!document.querySelector('#dlg[open]')}));
     ok(f3.editing&&f3.kp&&f3.st==='fail'&&/儲存失敗/.test(f3.txt)&&f3.draft.includes('乙（草稿）')&&!f3.dlg,`${T} 3：儲存失敗不收合、保留草稿、顯示「${f3.txt}」、不跳對話框`);
     ok((await read(C(k1))).version===v3,`${T} 3：規則擋下、沒有寫入`);
     await setRole(edUid,{[DEPT]:'editor'});await until(()=>p.evaluate(()=>!boardLocked()));
@@ -201,7 +201,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
     if(o.sc==='dark'){
       /* 深色：對比、白底殘留（桌面右側詳情卡＋編輯中；再縮到 412 看展開的膠囊） */
       const K=['.lc-title','.ln .tx','.lc-meta .ev-st','.lc-tag','.lc-meta .num'];
-      const KE=['.lc-title','.lc-ed [data-kptx]','.lc-meta .ev-st','.lc-pa span','.lc-tl button','.lk input','.lc-rep','.lc-tri'];
+      const KE=['.lc-title','.lc-ed [data-kptx],.lc-ed [data-kpgrp]','.lc-meta .ev-st','.lc-pa span','.lc-tl button','.lk input','.lc-rep','.lc-tri'];
       let cs=await contrast(p,K,S(p,k2));ok(cs.length>=4&&!low(cs).length,`深色 檢視（右側詳情）對比都夠（一般 ≥ 4.5、重點紅 ≥ 3；${cs.length} 個，不夠的：${JSON.stringify(low(cs))}）`);
       await goLine(p,k2,(await evOf(p,k2)).blocks[1].id);
       cs=await contrast(p,KE,S(p,k2));ok(cs.length>=8&&!low(cs).length,`深色 編輯中對比都夠（${cs.length} 個，不夠的：${JSON.stringify(low(cs))}）`);
@@ -293,7 +293,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
     const stf=await p.evaluate(sc=>[...document.querySelectorAll(`${sc} .pg-ppl .chip span`)].map(e=>e.textContent),sc);
     await p.click(`${sc} [data-lctool=staff]`);await p.waitForTimeout(300);
     const edv=await p.evaluate(sc=>{const v=s=>[...document.querySelectorAll(`${sc} ${s}`)].map(e=>e.value);const t=s=>[...document.querySelectorAll(`${sc} ${s}`)].map(e=>e.textContent);
-      return {title:(document.querySelector(`${sc} [data-kptitle]`)||{}).value,lines:v('.ln:not(.free) [data-kptx]'),free:v('[data-kplb]'),issue:t('.lc-pa span'),
+      return {title:(document.querySelector(`${sc} [data-kptitle]`)||{}).value,lines:[...document.querySelectorAll(`${sc} .ln:not(.free) [data-kptx],${sc} .ln:not(.free) [data-kpgrp]`)].flatMap(e=>e.dataset.kpgrp!==undefined?e.value.split('\n'):[e.value]),free:v('[data-kplb]'),issue:t('.lc-pa span'),
         lbl:t('.lbl-chip'),lkn:[...document.querySelectorAll(`${sc} .kp-lk [data-e=name]`)].map(e=>e.value),lku:[...document.querySelectorAll(`${sc} .kp-lk [data-e=url]`)].map(e=>e.value),editing}},sc);edv.issueOpts=opts;edv.staff=stf;
     ok(x.x===undefined&&!x.extra.length&&!x.onAttr.length,`${T} 編輯：沒有執行、沒有多出元素或 on 屬性（${JSON.stringify(x)}）`);
     ok(edv.editing&&edv.title===X1+X2+X3&&JSON.stringify(edv.lines)===JSON.stringify([X1,X2,X3,'時間行']),`${T} 編輯：標題、每行文字在輸入框裡原樣`);
