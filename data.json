@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-20 11:20",
+ "savedAt": "2026-11-20 17:06",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -1334,9 +1334,7 @@
    "name": "衛生棉補給站點",
    "desc": "目前補給盒已見底\n\n11/12前往衛保組確認",
    "createdAt": "2026-11-10",
-   "staff": [
-    "mmvz4b7d5emiy"
-   ],
+   "staff": [],
    "links": [],
    "times": [],
    "round": 1,
@@ -2192,18 +2190,13 @@
   "repo": "-",
   "branch": "main",
   "path": "data.json",
-  "tokenEnc": {
-   "s": "/NUTU+hXv4evBWDh/KtxLQ==",
-   "i": "0X8VFuE47eL5iayN",
-   "c": "8Hh4DyZJ+lqHEKTPZX1pPl1EggomqyDXqqla6zDffsw5Zd8L/Tv6fcK/MP76qHj1QzsHnKmgcUW2d/v40pNpJGWIZJf/EaK/n98RE0YIc+oewnJuoWO8/pyctfShmmf0YAXfVcYN7HaHpEM55Q=="
-  },
   "tokenAll": {
    "s": "Dt0dxgLoR2ZWHOD4XA/jmg==",
    "i": "O2Kev3fyzYV0N7C7",
    "c": "aN2uc+MrRSeLAx6OmD6FxQRVtbxQap15uH+/7IuBBWF5wBCp0pB+eP97mjNih4iaU/RZIvdA0hSLmNorwfw+yIXYWcbPX3FZAmkDIJoN8vwAiCO5sTsn9DfMIn4Qj5TOpGrfJQKdW9cQX7lapA=="
   }
  },
- "pwKdf": "rQfwjiQjTGPRWifOAuO0bw==:vsYYW5+doH1lk3vytEhM89Wm9AuZDXTvwdShkCssLXs=",
+ "pwKdf": "QLFAaR51uhtPxzMcBVMsDQ==:Wi+JGOK+VZUiiIYi/9BtdlfdQrkawcmVDt5qmVtGVi4=",
  "schemaVersion": 14,
  "members": [
   {
@@ -2216,18 +2209,6 @@
     "s": "WAEGN3YWpYkX/Y4iUqv8jQ==",
     "i": "CasvY+1Xa3Zh+bPK",
     "c": "6cBQQgQaMc19S27fQQj6536b3z73lQ9TUFuG6uAauHK+r/p6F/QGP0xzUNrhnLOnLPlr+8eQ4s575sKg5N2qMMWGb2PgkbLLZn9iW9+IiUNA60lFListl8bTRW8OTRLYJaDnVDGxpXFeap8nlA=="
-   }
-  },
-  {
-   "id": "mmvz4b7d5emiy",
-   "name": "雜草",
-   "role": "member",
-   "kdf": "QAW2U8DAzGrC2Z4jIrB+Lg==:R7PDCU57PE8xHCknL4e1GxEGDkLIiCDOv/JGv0Na5fQ=",
-   "createdAt": "2026-11-02 18:30",
-   "tok": {
-    "s": "dicTBUumoIR9HYaPzBvKAg==",
-    "i": "PS8/34qijvZs9d8b",
-    "c": "YfPUNRQLUVD4+obl6x2Vf79oMhMYidyr1/yGn0wQ+6JbpJSrAXbhsnkOvj6eSAFVAHQGUsyAwziUAQ1KHy+Xp4k8ueUXPfPq4y8z7cqGkflhaM5at0bxB8HD4mqSjuPpNRCMHtjaiwGQSIYz7w=="
    }
   }
  ],
