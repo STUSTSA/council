@@ -80,6 +80,7 @@
 `deptId`、`role`（`admin`｜`editor`；02A 拿掉 `viewer`）、`legacyRef`、`boundEmail`（選填）、`note`、`status`（`active`｜`used`｜`revoked`）、`createdBy`、`createdAt`、`expiresAt`（預設與上限都是建立後 10 分鐘，01A-R）、`usedBy`、`usedAt`、`token`（核銷時才寫入）、`revokedBy`、`revokedAt`、`rev`。詳見 [invitations-roles-audit.md](invitations-roles-audit.md)。
 
 ### `legacyIdentities/{deptId}__{舊身分ID}`：L1 讀、L4 寫（核銷時本人可認領）
+新建時規則檢查（2026-11-20）：文件 ID 的部門前綴等於 `deptId`、舊身分 ID 是英數、底線、連字號（最多 80 字）、`name` 最多 60 字、`oldRole` 只有 `admin`／`member`。
 `deptId`、`name`、`oldRole`（`admin`｜`member`）、`createdAt`（原字串）、`claimedBy`（UID 或 null）、`claimedAt`、`rev`。**不搬** `kdf`、`tok`。
 
 ### `auditLogs/{集合}_{文件ID}_{rev}`：L4 讀；只能新增

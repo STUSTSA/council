@@ -36,7 +36,8 @@ export function loadSources({ commit, dir, dept } = {}) {
     const state = JSON.parse(raw.toString('utf8'));
     return { dept: d.id, path: d.path, sha256: createHash('sha256').update(raw).digest('hex'), state };
   });
-  return { depts, commit: head, dir: dir ? path.resolve(dir) : null, only: dept || null, files };
+  // 04：讀進來先整理日期、時刻的格式（migrate-core.js 的 tidySource，跟網頁匯入頁同一個；雜湊仍是原始檔案的）
+  return CORE.tidySource({ depts, commit: head, dir: dir ? path.resolve(dir) : null, only: dept || null, files });
 }
 
 // 02D D-a：匯入、批次狀態、驗證、筆數報告的邏輯搬到 core/js/migrate-core.js（網頁匯入頁共用同一份）；這裡只把 compat Firestore 包成它要的 io。

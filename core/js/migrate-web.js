@@ -1,6 +1,7 @@
 /* 核心｜網頁匯入頁的資料操作（02D D-a；正式切換用，取代命令列）。ES module：總管理員在「會長室管理 → 匯入」按下匯入時才由 account.js 載入。
-   - 讀這個部門的資料檔（只讀）：網站在 github.io 時用 GitHub 讀 dept/config.js 設定的 repo、分支最新的 commit（記下 commit SHA），不用權杖；
-     本機開發（不是 github.io）讀網站上的同一個檔案。算 SHA-256，跟操作手冊第 B 步抄下來的比對。
+   - 讀這個部門的資料檔（只讀，不用權杖）：操作的人先輸入操作手冊第 B 步抄下來的 commit 與檔案 SHA-256（04）；網站在 github.io 時讀 dept/config.js 設定的 repo
+     那個 commit 的資料檔，SHA-256 不符、或分支最新的同一個檔已經跟它不同，就不寫入；本機開發（不是 github.io）讀網站上的同一個檔案、只核對 SHA-256。
+   - 核對過之後先給畫面一份摘要（會產生幾份文件、舊身分名單、超過上限的項目、整理掉的日期欄位），確認後才寫入；寫入的就是核對過的那一份（不重讀）。
    - 照 migrate-core.js（跟命令列同一份）寫進這個網站設定的 Firebase 專案（dept/config.js 的 firebase：開發專案或正式專案），
      走正式規則的匯入分支（importing()：只有總管理員、批次是 running）；不是總管理員一定被規則拒絕。
    - 重跑：新的批次號；內容相同的文件跳過、少的補上、被改過的列為衝突不覆寫，所以重跑結果不變。
@@ -31,41 +32,67 @@ function io(db) {
 }
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 
-/* 讀來源：gh＝{owner, repo, branch}（沒有 owner／repo＝讀網站上的檔案）；depts＝完整的部門清單（含測試部門，順序＝departments 的 order） */
-async function loadSource(gh, depts, dept) {
+/* 讀來源並核對（04）：expect＝{commit, sha256}，操作手冊第 B 步抄下來的來源版本。任何一項不符就丟 mismatch，不寫入任何文件。
+   gh＝{owner, repo, branch}：
+     1. 讀「expect.commit 那個版本」的資料檔，SHA-256 要等於 expect.sha256（匯入的就是這一份內容）
+     2. 再讀分支最新 commit 的同一個檔：內容要跟第 1 步相同（不同＝那個 commit 之後資料檔又被改過）
+   沒有 owner／repo（本機開發）：讀網站上的檔案，SHA-256 要等於 expect.sha256（沒有 commit 可核對）。
+   depts＝完整的部門清單（含測試部門，順序＝departments 的 order）。讀完先整理日期格式（migrate-core.js 的 tidySource） */
+const HEX40 = /^[0-9a-f]{40}$/, HEX64 = /^[0-9a-f]{64}$/;
+const mismatch = (what, o) => Object.assign(new Error("來源跟預期的不同"), { code: "mismatch", what, ...o });
+async function loadSource(gh, depts, dept, expect) {
   const d = depts.find(x => x.id === dept);
   if (!d) throw Object.assign(new Error("沒有這個部門"), { code: "dept" });
-  let raw, commit = "";
+  const want = { commit: String((expect && expect.commit) || "").trim().toLowerCase(), sha256: String((expect && expect.sha256) || "").trim().toLowerCase() };
+  const remote = !!(gh && gh.owner && gh.repo);
+  if (!HEX64.test(want.sha256) || (remote && !HEX40.test(want.commit))) throw mismatch("expect", {});
+  const sha = async buf => hex(await crypto.subtle.digest("SHA-256", buf));
+  let raw, commit = "", head = "";
   try {
-    if (gh && gh.owner && gh.repo) {
+    if (remote) {
       const base = `https://api.github.com/repos/${encodeURIComponent(gh.owner)}/${encodeURIComponent(gh.repo)}`;
+      const file = async ref => { const r = await fetch(`${base}/contents/${d.path.split("/").map(encodeURIComponent).join("/")}?ref=${ref}`, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+        if (r.status === 404) return null; if (!r.ok) throw new Error("file " + r.status); return r.arrayBuffer(); };
+      commit = want.commit;
+      raw = await file(commit);
+      if (!raw) throw mismatch("commit", { commit });
       const c = await fetch(`${base}/commits/${encodeURIComponent(gh.branch || "main")}`, { headers: { Accept: "application/vnd.github.sha" }, cache: "no-store" });
       if (!c.ok) throw new Error("commit " + c.status);
-      commit = (await c.text()).trim();
-      if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error("commit");
-      const r = await fetch(`${base}/contents/${d.path.split("/").map(encodeURIComponent).join("/")}?ref=${commit}`, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
-      if (!r.ok) throw new Error("file " + r.status);
-      raw = await r.arrayBuffer();
+      head = (await c.text()).trim();
+      if (!HEX40.test(head)) throw new Error("commit");
+      if (head !== commit) { const now = await file(head); if (!now || await sha(now) !== await sha(raw)) throw mismatch("changed", { commit, head }); }
     } else {
       const r = await fetch(d.path, { cache: "no-store" });
       if (!r.ok) throw new Error("file " + r.status);
       raw = await r.arrayBuffer();
     }
-  } catch (e) { console.error(e); throw Object.assign(new Error("讀不到資料檔"), { code: "source", cause: e }); }
-  const sha256 = hex(await crypto.subtle.digest("SHA-256", raw));
+  } catch (e) { if (e && e.code === "mismatch") throw e; console.error(e); throw Object.assign(new Error("讀不到資料檔"), { code: "source", cause: e }); }
+  const sha256 = await sha(raw);
+  if (sha256 !== want.sha256) throw mismatch("sha256", { commit, sha256 });
   let state;
   try { state = JSON.parse(new TextDecoder().decode(raw)); } catch (_) { throw Object.assign(new Error("資料檔不是 JSON"), { code: "source" }); }
-  return { depts: depts.map(x => ({ id: x.id, name: x.name, path: x.path, test: !!x.test })), commit, dir: null, only: dept,
-    files: [{ dept, path: d.path, sha256, state }] };
+  return C().tidySource({ depts: depts.map(x => ({ id: x.id, name: x.name, path: x.path, test: !!x.test })), commit, head, dir: null, only: dept,
+    files: [{ dept, path: d.path, sha256, state }] });
 }
 
-/* 匯入一個部門＋筆數報告。onStep(文字)：進度。回傳 {batch, src, result, report}；失敗丟出帶 code 的錯誤（permission-denied、source…） */
-async function importDept(cfg, gh, depts, dept, onStep = () => {}) {
+/* 匯入前的確認資料（04，不寫入）：核對過的來源＋會產生幾份文件、舊身分名單、超過上限的項目、整理掉的欄位。
+   回傳 {src, repo, commit, head, sha256, path, preview}；畫面確認後把 src 原樣交給 importDept（不重讀，匯入的就是核對過的那一份） */
+async function prepare(cfg, gh, depts, dept, expect) {
   await authReady(cfg);
   const f = fb(cfg), uid = f.auth.currentUser && f.auth.currentUser.uid;
   if (!uid) throw Object.assign(new Error("未登入"), { code: "permission-denied" });
-  onStep("read");
-  const src = await loadSource(gh, depts, dept);
+  const src = await loadSource(gh, depts, dept, expect);
+  return { src, repo: gh && gh.owner ? `${gh.owner}/${gh.repo}@${gh.branch || "main"}` : "", commit: src.commit, head: src.head, sha256: src.files[0].sha256, path: src.files[0].path,
+    preview: C().preview(src, uid) };
+}
+
+/* 匯入一個部門＋筆數報告。src＝prepare 回傳的那一份。onStep(文字)：進度。回傳 {batch, src, result, report}；失敗丟出帶 code 的錯誤（permission-denied…） */
+async function importDept(cfg, pre, dept, onStep = () => {}) {
+  await authReady(cfg);
+  const f = fb(cfg), uid = f.auth.currentUser && f.auth.currentUser.uid;
+  if (!uid) throw Object.assign(new Error("未登入"), { code: "permission-denied" });
+  const src = pre && pre.src;
+  if (!src || src.only !== dept || !src.files || src.files.length !== 1) throw Object.assign(new Error("沒有核對過的來源"), { code: "mismatch", what: "expect" });
   const X = io(f.db), batch = `web-${dept}-${Date.now()}`;
   onStep("write");
   let result, report;
@@ -81,7 +108,7 @@ async function importDept(cfg, gh, depts, dept, onStep = () => {}) {
   const ok = report.ok && !result.conflicts.length;
   await C().setMigrationStatus(X, batch, uid, ok ? "done" : "failed",
     { written: result.written, skipped: result.skipped, conflicts: result.conflicts, verify: report.verify, rows: report.rows });
-  return { batch, repo: gh && gh.owner ? `${gh.owner}/${gh.repo}@${gh.branch || "main"}` : "", commit: src.commit, sha256: src.files[0].sha256, path: src.files[0].path, result, report, ok };
+  return { batch, repo: pre.repo, commit: src.commit, sha256: src.files[0].sha256, path: src.files[0].path, result, report, ok };
 }
 
 /* ---------- 匯出全部資料（02D D-c，migration.md 第 8 節） ----------
@@ -117,5 +144,5 @@ async function exportAll(cfg, depts) {
     unreadable, counts: Object.fromEntries(Object.entries(collections).map(([k, v]) => [k, v.length])), collections, boards };
 }
 
-window.BoardMigrate = { loadSource, importDept, exportAll };
+window.BoardMigrate = { prepare, importDept, exportAll };
 dispatchEvent(new Event("board-migrate-ready"));

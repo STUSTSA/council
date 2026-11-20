@@ -1,6 +1,6 @@
 // 04 欄位的型別、格式與長度（permissions.md 第 5.1i 節）：
 //   F-01～F-08 看板內容（議題、週報、標籤、時間標記、卡片與版本、部門設定）；A-01～A-03 稽核紀錄的欄位；
-//   U-01 個人資料的圖片網址；Q-01～Q-04 權限申請每人每個部門一份。
+//   G-01 舊身分的名字、部門與文件 ID；U-01 個人資料的圖片網址；Q-01～Q-04 權限申請每人每個部門一份。
 // 原則：新建一律檢查；修改時欄位沒變不重新檢查（04 之前的文件照常能改其他欄位）；合格的值、網頁與遷移寫出來的形狀都要能寫。
 import { describe, it, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -251,6 +251,25 @@ describe('A-01～A-03 稽核紀錄的欄位', () => {
       [auditId('grants', 'meetingEdit', 1), audit('grants', 'meetingEdit', 1, 'boss', { action: 'import', ...ao })]];
     await assertFails(commit(x, grant({ after: { x: S(100) } })));
     await assertSucceeds(commit(x, grant({})));
+  });
+});
+
+// ---------- 舊身分 ----------
+describe('G-01 舊身分', () => {
+  it('G-01 新建：文件 ID 要是「部門＋兩個底線＋英數、底線、連字號」而且部門相符；名字是字串、最多 60 字；舊角色只有 admin／member；createdAt 最多 40 字', async () => {
+    const x = db('boss');
+    const leg = (id, o = {}) => [[`legacyIdentities/${id}`, { deptId: 'rights', name: '舊身分', oldRole: 'member', createdAt: '2026-11-01 10:00', claimedBy: null, claimedAt: null, rev: 1, updatedAt: NOW(), updatedBy: 'boss', ...o }],
+      [auditId('legacyIdentities', id, 1), audit('legacyIdentities', id, 1, 'boss', { action: 'import' })]];
+    await each(['rights__a b', 'rights__a.b', 'rights__', 'rights_m1', 'events__m1', 'm1', 'rights__' + S(81)], id => assertFails(commit(x, leg(id))));
+    await assertFails(commit(x, leg('rights__m1', { deptId: 'nope' })));
+    await assertFails(commit(x, leg('rights__m1', { deptId: 5 })));
+    await each([S(61), 5, ['a'], { a: 1 }, null], v => assertFails(commit(x, leg('rights__m1', { name: v }))));
+    await each(['super', 'editor', '', 5, null], v => assertFails(commit(x, leg('rights__m1', { oldRole: v }))));
+    await each([S(41), 5, { a: 1 }], v => assertFails(commit(x, leg('rights__m1', { createdAt: v }))));
+    await assertFails(commit(db('adm'), leg('rights__m1')));
+    await assertSucceeds(commit(x, leg('rights__m1', { name: S(60), oldRole: 'admin', createdAt: S(40) })));
+    await assertSucceeds(commit(x, leg('events__m-2_x', { deptId: 'events', name: '' })));
+    await assertSucceeds(commit(x, leg('rights__' + S(80))));
   });
 });
 

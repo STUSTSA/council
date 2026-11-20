@@ -7,3 +7,23 @@ tools/tests/*_report.txt
 backend/node_modules/
 backend/*.log
 backend/migrate/out/
+
+# 產生的預覽檔（tools/build-preview.js）：只在自己的電腦用 file:// 打開，不放進 repo（repo 的內容會被 GitHub Pages 發布）
+docs/預覽/03-即時回報.html
+
+# 憑證與本機設定：一律不進 repo（這個 repo 是公開的）
+.env
+.env.*
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+.firebaserc
+*.pem
+*.key
+
+# 切換時的資料檔備份與匯出檔（含信箱、雲端設定與密碼雜湊；存在學生會的雲端硬碟，不放進 repo）。
+# 正式的 data.json、data-*.json 不受影響（下面的樣式都帶「切換前」「備份」「全部資料」字樣）
+*切換前*.json
+*_備份_*.json
+*全部資料*.json
+看板備份/

@@ -325,6 +325,33 @@ describe('02D 逐部門切換：筆數報告、匯出、往返、命令列', () 
     assert.equal(r.written.cards, 2, JSON.stringify(r.written));
   });
 
+  it('04：資料檔讀進來先整理日期格式（整理掉的欄位列在 fixed）；舊身分的名字或 ID 不合規則時在寫入前停下', async () => {
+    const d3 = mkdtempSync(join(tmpdir(), 'mig-tidy-'));                        // 暫存的工務部複本（不碰正式資料檔）
+    const st = JSON.parse(readFileSync(join(ROOT, 'data-works.json'), 'utf8'));
+    st.issues = [...(st.issues || []), { id: 'tdI', title: '議題', tags: ['a'], cur: 0, start: '2026/11/01', end: 5, doneAt: 'x', note: '', staff: [], labels: [], links: [],
+      markers: [{ id: 'tdM', date: 'bad', text: 't', at: 10 }] }];
+    st.weeks = [...(st.weeks || []), { id: 'tdW', date: 'bad', text: '週報' }];
+    st.events = [...(st.events || []), { id: 'tdE', name: '卡', desc: 'a', createdAt: '2026-11-01', staff: [], links: [], round: 1, touched: ['x', '2026-11-02'], touchedAt: 'bad', roundAt: 7,
+      times: [{ id: 'tdT', label: 'L', start: '2026-11-20T10:00', end: 'bad', place: '' }] }];
+    st.members = [...(st.members || []), { id: 'bad id!', name: '甲', role: 'member', createdAt: '2026-11-01 10:00' }, { id: 'tdLong', name: 'x'.repeat(61), role: 'admin' }];
+    writeFileSync(join(d3, 'data-works.json'), JSON.stringify(st));
+    const s = loadSources({ dir: d3, dept: 'works' });
+    const got = s.files[0].state, gi = got.issues.find(x => x.id === 'tdI'), ge = got.events.find(x => x.id === 'tdE');
+    assert.deepEqual([gi.start, gi.end, gi.doneAt, gi.markers[0].date, got.weeks.find(x => x.id === 'tdW').date], ['', '', null, '', '']);
+    assert.deepEqual([ge.touched, ge.touchedAt, ge.roundAt, ge.times[0].start, ge.times[0].end], [['2026-11-02'], '', '', '2026-11-20T10:00', '']);
+    assert.ok(s.fixed.length >= 8 && s.fixed.some(x => /data-works\.json\.issues\[\d+\]\.start$/.test(x)) && s.fixed.some(x => /\.weeks\[\d+\]\.date$/.test(x)), s.fixed.join(' | '));
+    assert.equal(loadSources({ dept: 'works' }).fixed.length, 0, '正式資料檔沒有需要整理的欄位');
+    await assert.rejects(runImport(sdb(), FV, TS, s, { batch: 'd-tidy', uid: SU }), /有 2 筆舊身分的名字或 ID 不合規則[\s\S]*bad id![\s\S]*英數、底線、連字號[\s\S]*tdLong[\s\S]*名字 61 字/);
+    assert.ok(!(await readDoc(t, 'migrations/d-tidy')), '停在寫入之前：連批次紀錄都沒有寫');
+    st.members = [{ id: 'tdOk', name: 'x'.repeat(60), role: 'admin', createdAt: '2026-11-01 10:00' }];
+    writeFileSync(join(d3, 'data-works.json'), JSON.stringify(st));
+    await runImport(sdb(), FV, TS, loadSources({ dir: d3, dept: 'works' }), { batch: 'd-tidy2', uid: SU });
+    const fi = await readDoc(t, 'issues/works__tdI'), fc = await readDoc(t, 'cards/works__tdE'), fe = await readDoc(t, 'events/works__tdT');
+    assert.deepEqual([fi.start, fi.end, fi.doneAt, fi.markers[0].date, (await readDoc(t, 'weeks/works__tdW')).date], ['', '', null, '', '']);
+    assert.deepEqual([fc.touched, fc.touchedAt, fc.roundAt, fe.startRaw, fe.endRaw], [['2026-11-02'], '', '', '2026-11-20T10:00', '']);
+    assert.equal((await readDoc(t, 'legacyIdentities/works__tdOk')).name.length, 60);
+  });
+
   it('匯出位置檢查（02D 審查）：大小寫不分、解開符號連結（檔案或資料夾）；只在暫存的假 repo 裡測，不碰正式資料檔', () => {
     const root = mkdtempSync(join(tmpdir(), 'blk-root-')), other = mkdtempSync(join(tmpdir(), 'blk-other-'));
     mkdirSync(join(root, 'archive')); writeFileSync(join(root, 'data-fruit.json'), '{}'); writeFileSync(join(root, 'data.json'), '{}');

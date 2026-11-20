@@ -41,6 +41,8 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     for(const p of [`deptSettings/${dept}`,`departments/${dept}`]){const s=await d.doc(p).get();if(s.exists)out[p]=s.data()}});
     return {n:Object.keys(out).length,h:crypto.createHash('sha256').update(stable(out)).digest('hex')}};
   const fileSha=f=>crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT,f))).digest('hex');
+  const OLD='b'.repeat(40),oldFile=f=>Buffer.concat([fs.readFileSync(path.join(ROOT,f)),Buffer.from('\n')]),oldSha=f=>crypto.createHash('sha256').update(oldFile(f)).digest('hex');
+  const pathOf=dept=>dept==='rights'?'data.json':`data-${dept}.json`;
 
   const b=await chromium.launch();const cfgSrc=fs.readFileSync(path.join(ROOT,'dept/config.js'),'utf8').replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1');   /* 每個部門先回到預設的 github，下面再照這支測試要的切換（不依賴正式網站目前哪些部門已切換，例如水果部實測時是 firestore） */
   const gh={commits:0,files:[]};
@@ -55,6 +57,8 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
       if(/\/repos\/test-owner\/test-repo\/commits\/main$/.test(u.pathname)){gh.commits++;return r.fulfill({status:200,contentType:'text/plain',headers:{'Access-Control-Allow-Origin':'*'},body:SHA})}
       const m=u.pathname.match(/\/repos\/test-owner\/test-repo\/contents\/(.+)$/);
       if(m&&u.searchParams.get('ref')===SHA&&/^data(-[a-z]+)?\.json$/.test(decodeURIComponent(m[1]))){gh.files.push(decodeURIComponent(m[1]));return r.fulfill({status:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:fs.readFileSync(path.join(ROOT,decodeURIComponent(m[1])))})}
+      /* 04：比較舊的 commit（OLD），那時候的資料檔跟現在的不一樣 */
+      if(m&&u.searchParams.get('ref')===OLD&&/^data(-[a-z]+)?\.json$/.test(decodeURIComponent(m[1])))return r.fulfill({status:200,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:oldFile(decodeURIComponent(m[1]))});
       r.fulfill({status:404,body:'{}'})});
     await ctx.route(`${BASE}/dept/config.js*`,r=>{let s=cfgSrc;for(const x of frozen)s=s.replace(new RegExp(`(\\{ id: "${x}",[^\\n]*?)( \\},?\\n)`),`$1, source: "frozen"$2`);
       s=s.replace(/data: \{ owner: "", repo: ""/,'data: { owner: "test-owner", repo: "test-repo"');
@@ -76,13 +80,18 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   const dlg=p=>p.waitForSelector('#dlg[open]',{timeout:8000}).then(()=>p.evaluate(()=>document.querySelector('#dlgForm b').textContent));
   const dlgAct=async(p,a)=>{await p.click(`#dlg [data-act="${a}"]`);await p.waitForTimeout(400)};
   const panel=p=>p.evaluate(()=>{const b=[...document.querySelectorAll('.acct-panel')].filter(x=>!x.hidden).pop();return b?b.innerText:''});
-  /* 會長室管理 → 匯入 → 部門 → 確認 → 等報告 */
-  const importVia=async(p,dept,first=true)=>{
+  /* 04：匯入前先輸入預期的 commit 與資料檔 SHA-256（對話框）→ 核對 → 確認畫面（筆數、舊身分名單）→ 按「確認匯入」才寫入 */
+  const DONE=/結果：|失敗（|讀不到|沒有權限|沒有寫入|超過規則的上限/;
+  const fillExpect=async(p,dept,x={})=>{await p.evaluate(o=>{for(const [k,v] of Object.entries(o)){const i=document.querySelector(`#dlgForm [name="${k}"]`);if(i)i.value=v}},{commit:x.commit||SHA,sha:x.sha||fileSha(pathOf(dept))});await dlgAct(p,'ok')};
+  /* 等到確認畫面（有「確認匯入」）或錯誤 */
+  const checked=async p=>{await until(async()=>!!(await p.$('.acct-panel [data-go]'))||DONE.test(await panel(p)),60000);return panel(p)};
+  const go=async p=>{if(await p.$('.acct-panel [data-go]'))await p.click('.acct-panel [data-go]');await until(async()=>DONE.test(await panel(p)),90000);return panel(p)};
+  /* 會長室管理 → 匯入 → 部門 → 輸入來源版本 → 核對 → 確認匯入 → 等報告 */
+  const importVia=async(p,dept,first=true,x={})=>{
     if(first){await openSet(p);await p.click('[data-set="council"]');await p.waitForTimeout(800);await p.click('[data-hub="import"]');await p.waitForSelector(`[data-imp="${dept}"]`,{timeout:8000})}
-    if(first)await p.click(`[data-imp="${dept}"]`);else await p.click('.acct-panel [data-run]');
-    if(first){await dlg(p);await dlgAct(p,'delete')}
-    await until(async()=>/結果：|失敗（|讀不到|沒有權限/.test(await panel(p)),60000);
-    return panel(p)};
+    if(first){await p.click(`[data-imp="${dept}"]`);await dlg(p);await fillExpect(p,dept,x)}else await p.click('.acct-panel [data-run]');
+    await checked(p);
+    return go(p)};
 
   /* ---------- 1. 凍結中的部門：登入入口、誰看得到會長室管理 ---------- */
   const su=await open('fruit');
@@ -102,6 +111,29 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   const before=await deptDocs('fruit');
   ok(before.n===0,'匯入前：模擬器裡沒有水果部的資料');
   const reads0=su.siteReads.length;
+  /* 04：來源跟輸入的不同＝不寫入（SHA-256 不同、這個 commit 之後資料檔又改過、沒有這個 commit） */
+  {const nMig=()=>q(async d=>(await d.collection('migrations').get()).size);
+    await openSet(su);await su.click('[data-set="council"]');await su.waitForTimeout(800);await su.click('[data-hub="import"]');await su.waitForSelector('[data-imp="fruit"]',{timeout:8000});
+    await su.click('[data-imp="fruit"]');await dlg(su);
+    await su.evaluate(()=>{document.querySelector('#dlgForm [name="commit"]').value='abc';document.querySelector('#dlgForm [name="sha"]').value='123'});await dlgAct(su,'ok');
+    ok(await su.evaluate(()=>{const e=document.querySelector('#dlgForm .dlg-err');return !!e&&!e.hidden&&/40 碼/.test(e.textContent)}),'04 來源版本：格式不對時對話框裡提示、不往下');
+    await fillExpect(su,'fruit',{sha:'0'.repeat(64)});let s=await checked(su);
+    ok(/SHA-256 跟輸入的不同/.test(s)&&/沒有寫入/.test(s)&&!(await su.$('.acct-panel [data-go]')),'04 來源版本：SHA-256 不同，停下、沒有確認匯入的按鈕');
+    ok(!s.includes(fileSha('data-fruit.json')),'04 來源版本：畫面不印出讀到的完整雜湊');
+    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit',{commit:OLD,sha:oldSha('data-fruit.json')});s=await checked(su);
+    ok(/這個 commit 之後資料檔又被改過/.test(s)&&/沒有寫入/.test(s)&&!(await su.$('.acct-panel [data-go]')),'04 來源版本：那個 commit 之後資料檔又改過，停下');
+    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit',{commit:'c'.repeat(40)});s=await checked(su);
+    ok(/這個 commit 沒有這個資料檔/.test(s)&&/沒有寫入/.test(s),'04 來源版本：沒有這個 commit，停下');
+    ok((await nMig())===0&&(await deptDocs('fruit')).n===0,'04 來源版本：三種不符都沒有建立批次、沒有寫入任何文件');
+    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    /* 核對通過：停在確認畫面，還沒寫入 */
+    await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit');s=await checked(su);
+    ok(!!(await su.$('.acct-panel [data-go]'))&&s.includes(fileSha('data-fruit.json'))&&/舊身分 \d+ 筆/.test(s)&&s.includes('會寫入'),'04 確認畫面：列出來源、會寫入的筆數、舊身分');
+    ok((await nMig())===0&&(await deptDocs('fruit')).n===0,'04 確認畫面：按「確認匯入」之前沒有寫入');
+    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.evaluate(()=>closeSettings(true));await su.waitForTimeout(300);}
   const t1=await importVia(su,'fruit');
   ok(t1.includes('結果：通過'),'水果部：結果通過');
   ok(t1.includes(`test-owner/test-repo@main · commit ${SHA.slice(0,12)}`)&&t1.includes(fileSha('data-fruit.json')),'水果部：報告上的 repo＠分支是 dept/config.js 設定的（不是資料檔裡的 sync）、commit 是最新的、SHA-256＝資料檔的雜湊');
@@ -124,8 +156,10 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
 
   /* ---------- 4. 權益部（資料最多）：從頁面匯入、命令列的報告也通過 ---------- */
   await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="rights"]');
-  await su.click('[data-imp="rights"]');ok((await dlg(su))==='匯入 權益部（還沒凍結）','權益部：確認的標題標出還沒凍結');await dlgAct(su,'delete');
-  await until(async()=>/結果：|失敗（|讀不到|沒有權限/.test(await panel(su)),90000);const t3=await panel(su);
+  await su.click('[data-imp="rights"]');ok((await dlg(su))==='匯入 權益部（還沒凍結）','權益部：確認的標題標出還沒凍結');await fillExpect(su,'rights');
+  {const s=await checked(su),mem=JSON.parse(fs.readFileSync(path.join(ROOT,'data.json'),'utf8')).members||[];
+    ok(s.includes(`舊身分 ${mem.length} 筆`)&&mem.every(m=>s.includes(m.name)),`04 確認畫面（權益部）：舊身分 ${mem.length} 筆的名字都列出來`);}
+  const t3=await go(su);
   {const rows=await su.evaluate(()=>[...document.querySelectorAll('.acct-panel .imp-tbl tbody tr')].map(r=>[...r.cells].map(c=>c.textContent)));
     ok(t3.includes('結果：通過')&&rows.find(r=>r[0].startsWith('卡片'))[1]===String(JSON.parse(fs.readFileSync(path.join(ROOT,'data.json'),'utf8')).events.length),'權益部（還沒凍結，確認時標出）：卡片數＝資料檔的筆數，匯入通過');   /* release-03：資料會增加，不寫死筆數 */}
   {const mig=await import(path.join(ROOT,'backend/migrate/run.js'));
@@ -135,7 +169,9 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   /* ---------- 5. 不是總管理員：規則拒絕；讀不到資料檔 ---------- */
   {const p=await open('fruit');const uid=await signIn(p,'adm2');await setRole(uid,{rights:'admin',fruit:'admin'});await p.waitForTimeout(1200);
     const n0=(await q(async d=>(await d.collection('migrations').get()).size));
-    const r=await p.evaluate(async()=>{const B=await migLoad();try{await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,'works');return 'ok'}catch(e){return e.code||e.message}});
+    const r=await p.evaluate(async x=>{const B=await migLoad();try{const pre=await B.prepare(CFG.firebase,impRepo(),BOARD_DEPTS,'works',x);await B.importDept(CFG.firebase,pre,'works');return 'ok'}catch(e){return e.code||e.message}},{commit:SHA,sha256:fileSha('data-works.json')});
+    const r0=await p.evaluate(async()=>{const B=await migLoad();try{await B.importDept(CFG.firebase,null,'works');return 'ok'}catch(e){return e.code||e.message}});
+    ok(r0==='mismatch','04 沒有核對過的來源：匯入不執行');
     const n1=(await q(async d=>(await d.collection('migrations').get()).size));
     ok(r==='permission-denied'&&n1===n0&&(await deptDocs('works')).n===0,`部門管理員直接呼叫匯入：規則拒絕（${r}），沒有寫進任何東西`);
     const x=await p.evaluate(async()=>{const B=await migLoad();try{await B.exportAll(CFG.firebase,BOARD_DEPTS);return 'ok'}catch(e){return e.code}});
@@ -153,13 +189,12 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     /* 匯入程式一批一批寫（writeBatch 走寫入串流，不能用 route 擋）：在頁面上把第 3 次寫入換成斷線錯誤 */
     await p.evaluate(()=>migLoad());await p.evaluate(()=>{const orig=MigrateCore.runImport;window.__restore=()=>{MigrateCore.runImport=orig};
       MigrateCore.runImport=(io,src,o)=>{let n=0;const c=io.commit;io.commit=w=>++n===3?Promise.reject(Object.assign(new Error('test'),{code:'unavailable'})):c(w);return orig(io,src,o)}});
-    await p.click('[data-imp="events"]');await dlg(p);await dlgAct(p,'delete');
-    await until(async()=>/結果：|失敗（|讀不到|沒有權限/.test(await panel(p)),60000);const s2=await panel(p);
+    await p.click('[data-imp="events"]');await dlg(p);await fillExpect(p,'events');await checked(p);const s2=await go(p);
     const ms=await q(async d=>(await d.collection('migrations').get()).docs.map(x=>x.data()).filter(m=>m.fileHashes&&m.fileHashes.events));
     ok(/沒有連上網路/.test(s2)&&ms.length===1&&ms[0].status==='failed',`寫到一半失敗：顯示錯誤、批次改成 failed（${ms.map(m=>m.status).join(',')}）`);
     await p.evaluate(()=>window.__restore());
-    await p.click('.acct-panel [data-run]');await until(async()=>/結果：/.test(await panel(p)),60000);
-    ok((await panel(p)).includes('結果：通過'),'寫到一半失敗後按「再試一次」：補完、結果通過');
+    await p.click('.acct-panel [data-run]');await checked(p);await go(p);
+    ok((await panel(p)).includes('結果：通過'),'寫到一半失敗後按「再試一次」：重新核對、確認後補完，結果通過');
     await p.ctx.close();}
 
   /* ---------- 6. 匯出全部資料 ---------- */

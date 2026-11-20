@@ -37,13 +37,40 @@
 
   /* 03 審查（P2-2）：超過規則上限的卡片（store-map.js 的 report.tooBig），一行一張 */
   const tooBigLines = reports => reports.flatMap(r => (r.tooBig || []).map(x => `${r.dept}／${x.id}「${x.name}」：${x.why.join("、")}`));
+  /* 04：名字或 ID 不合規則的舊身分（report.badMembers），一行一筆 */
+  const badMemberLines = reports => reports.flatMap(r => (r.badMembers || []).map(x => `${r.dept}／舊身分 ${x.id}「${x.name}」：${x.why.join("、")}`));
+
+  /* 04 來源整理：資料檔讀進來先經 store-map.js 的 tidy（日期、時刻只收固定格式，型別不對的欄位換成空的；跟看板讀資料檔時同一個函式），
+     之後的匯入、驗證、筆數報告都用整理過的內容。src.fixed＝被換掉的欄位位置（最多 FIX_MAX 筆，給匯入前的確認畫面；合格的資料檔是空的）。
+     讀來源的兩個地方（backend/migrate/run.js 的 loadSources、core/js/migrate-web.js 的 loadSource）讀完就呼叫，雜湊仍然是原始檔案的 */
+  const FIX_MAX = 50;
+  function changed(a, b, at, out) {
+    if (out.length >= FIX_MAX || a === b) return;
+    const oa = a && typeof a === "object", ob = b && typeof b === "object";
+    if (!oa || !ob || Array.isArray(a) !== Array.isArray(b)) { out.push(at); return; }
+    if (Array.isArray(a) && a.length !== b.length) { out.push(at); return; }
+    for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) changed(a[k], b[k], Array.isArray(a) ? `${at}[${k}]` : `${at}.${k}`, out);
+  }
+  function tidySource(src) {
+    src.fixed = [];
+    for (const f of src.files) { const before = JSON.parse(JSON.stringify(f.state)); f.state = MAP.tidy(f.state); changed(before, f.state, f.path, src.fixed); }
+    return src;
+  }
+  /* 04 匯入前的摘要（不寫入）：每一類會產生幾份文件、舊身分名單（名字、角色）、超過上限的卡片、不合規則的舊身分、整理掉的欄位 */
+  function preview(src, uid) {
+    const p = plan(src, { batch: "preview", uid }), counts = {};
+    p.docs.forEach(d => counts[d.kind] = (counts[d.kind] || 0) + 1);
+    return { counts, members: src.files.flatMap(f => (f.state.members || []).map(m => ({ dept: f.dept, id: String(m.id), name: String(m.name || ""), role: m.role === "admin" ? "admin" : "member" }))),
+      tooBig: tooBigLines(p.reports), badMembers: badMemberLines(p.reports), fixed: (src.fixed || []).slice() };
+  }
 
   /* 匯入：先建 migrations/{batch}（running＋稽核），再分批寫；重跑時已存在且內容相同就跳過，不同的不覆寫、列為衝突 */
   async function runImport(io, src, { batch, uid, log = () => {} }) {
     const p = plan(src, { batch, uid });
     /* 有卡片超過規則上限：寫入任何文件（含批次紀錄）之前就停，列出是哪幾張（不讓整個部門寫到一半被規則擋下才發現） */
-    const big = tooBigLines(p.reports);
+    const big = tooBigLines(p.reports), mem = badMemberLines(p.reports);
     if (big.length) throw Object.assign(new Error(`有 ${big.length} 張卡片超過上限，請先在看板上改短再匯入（沒有寫入任何文件）：\n${big.join("\n")}`), { code: "too-big", tooBig: big });
+    if (mem.length) throw Object.assign(new Error(`有 ${mem.length} 筆舊身分的名字或 ID 不合規則，請先在看板的「身分與專員」改好再匯入（沒有寫入任何文件）：\n${mem.join("\n")}`), { code: "too-big", tooBig: mem });
     const counts = {}, written = {}, skipped = {}, conflicts = [];
     p.docs.forEach(d => counts[d.kind] = (counts[d.kind] || 0) + 1);
     const existing = await io.get(`migrations/${batch}`);
@@ -207,7 +234,7 @@
     return { dept, path: f.path, sha256: f.sha256, commit: src.commit, tooBig, rows, verify: v.items, pending: v.pending, ok: !tooBig.length && v.ok && rows.every(r => r.ok) };
   }
 
-  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport, tooBigLines };
+  const api = { SENSITIVE_KEYS, PROTECTED, ORDER, COST, IGNORE, contentKey, plan, runImport, setMigrationStatus, verify, REPORT_ROWS, sourceCounts, deptReport, tooBigLines, badMemberLines, tidySource, preview };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.MigrateCore = api;
 })(typeof window !== "undefined" ? window : globalThis);
