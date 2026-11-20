@@ -8,6 +8,7 @@
    - 部門設定：Firebase 網頁設定拿掉（firebase: null）、每個部門的資料來源都是 github、雲端位置空白 → 雲端關閉，存檔只寫 localStorage
    - 開頁就是登入狀態：內嵌一行預覽專用的 script，把目前身分設成「預覽」（正式網站沒有這一行）
    - 頁面上不加任何說明文字
+   - 產生的檔案不進 repo（.gitignore；2026-11-20 從 main 拿掉）：repo 的內容會被 GitHub Pages 發布，這個檔案只給自己的電腦用 file:// 打開
    產生後會檢查：不能有 http(s):// 的資源載入（src／href／@import／url()）、不能出現權杖、密碼、Firebase 設定的字樣，不合格就不寫檔、以非 0 結束。 */
 const fs = require("fs"), path = require("path"), crypto = require("crypto");
 const ROOT = path.resolve(__dirname, ".."), OUT = path.join(ROOT, "docs", "預覽", "03-即時回報.html");
