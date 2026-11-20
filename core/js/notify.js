@@ -46,14 +46,16 @@ function dayWhen(x,d){
   const k=Math.round((pd(d)-pd(x.date))/864e5)+1,n=Math.round((pd(x.end)-pd(x.date))/864e5)+1;
   return k===1&&x.time?x.time:`${k}／${n} 天`;
 }
-/* 一張卡片：大日期、今日／明日・星期、件數；下面最多四列（時刻、名稱、地點・所屬即時回報），多的寫 +N；沒有事＝一條短細線。
+/* 一張卡片：大日期、今日／明日、星期；下面最多四列，每列＝標題（最多兩行、換行平均，不斷成孤字）＋一行小字（當天開始的時刻、多天的「到 M/D」，沒有就不寫），多的寫 +N；沒有事＝一條短細線。
+   不寫件數、地點、所屬即時回報、「第 k／N 天」（地點與所屬在今日層與行事曆看得到）。
    今日＝主要動作色（--pri）底；點今日＝放大成全螢幕的「今日」層（openToday），點明日＝行事曆選到那一天（notiOpenDay） */
 const daySub=x=>[x.place,x.ev].filter(Boolean).join("・");
+const dayNote=(x,d)=>[x.date===d&&x.time?x.time:"",x.end?`到 ${nmd(x.end)}`:""].filter(Boolean).join("・");
 function dayCardHTML(d,lab,cls,list){
   const xs=list.filter(x=>covers(x,d)),MAX=4;
   return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件">
-    <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}<i>・</i>週${WD[pd(d).getDay()]}</b><small class="num">${xs.length?`${xs.length} 件`:""}</small></span></span>
-    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>`<span class="nd-row"><span class="nd-t num">${esc(dayWhen(x,d))}</span><span class="nd-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></span>`).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
+    <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}</b><small>週${WD[pd(d).getDay()]}</small></span></span>
+    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>{const n=dayNote(x,d);return `<span class="nd-row"><b>${esc(x.title)}</b>${n?`<small class="num">${esc(n)}</small>`:""}</span>`}).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
       :`<span class="nd-empty" aria-hidden="true"><i></i></span>`}
   </button>`;
 }
