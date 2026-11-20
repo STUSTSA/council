@@ -109,7 +109,11 @@ function buildWeekly(){
   const dept=CFG.dept.name;
   const dot=d=>d.replaceAll("-",".");
   const live=liveOrder(),rep=live.filter(e=>e.report);
-  const done=[...state.issues.filter(i=>inP(i.doneAt)).map(i=>({d:i.doneAt,t:i.title})),...state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).map(e=>({d:inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),t:evName(e)}))].sort((a,b)=>b.d.localeCompare(a.d));
+  /* 完成事項：每張卡只列一次、只寫標題（分段完成的紀錄 fromEv 與最後結案的那張算同一張，不帶「第 N 段」「結案」） */
+  const dm=new Map(),add=(k,d,t)=>{const o=dm.get(k);if(!o)dm.set(k,{d,t});else if(d>o.d)o.d=d};
+  state.issues.filter(i=>inP(i.doneAt)).forEach(i=>add("i:"+i.id,i.doneAt,i.title));
+  state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).forEach(e=>add("e:"+(e.fromEv||e.id),inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),e.name));
+  const done=[...dm.values()].sort((a,b)=>b.d.localeCompare(a.d));
   /* 開頭照工作報告（report.js）：標題、日期、統計期間、本期摘要（數字都是下面兩區列出的筆數） */
   const L=[`${dept} 本週例行回報`,`日期：【${dot(end)}】`,`統計期間：${dot(addDays(start,1))} – ${dot(end)}`,`本期摘要：報告事項 ${rep.length} 項・完成事項 ${done.length} 項`,""];
   /* 骨架固定兩區：報告事項＝帶「報告」標記的卡片標題（沒標就寫一行說明，不再改列全部即時回報）；完成事項＝完成紀錄往前七天 */
