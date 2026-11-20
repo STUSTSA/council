@@ -114,9 +114,9 @@ function buildWeekly(){
   state.events.filter(e=>e.doneAt&&(inP(e.doneAt)||inP((e.touchedAt||"").slice(0,10))&&e.touchedAt.slice(0,10)>e.doneAt)).forEach(e=>add("e:"+(e.fromEv||e.id),inP(e.doneAt)?e.doneAt:e.touchedAt.slice(0,10),e.name));
   const done=[...dm.values()].sort((a,b)=>b.d.localeCompare(a.d));
   /* 議程式版面（秘書處行政會議議程的寫法，使用者 2026-11-21 給的標準）：部門標題一行（CFG.dept.agenda，例「三、學權部」；沒設就用部門名稱），
-     下面縮排：（一）週例行政工作回報＝有「報告」標記的卡片標題、（二）完成事項＝完成紀錄往前七天；編號清單、只列標題，沒有符號與段數 */
-  const sec=(t,items,none)=>[`    ${t}`,`    說 明：${t==="（一）週例行政工作回報"?"本週行政工作相關執行狀況如下：":"本週完成事項如下："}`,...(items.length?items.map((x,i)=>`        ${i+1}. ${x}`):[`        ${none}`])];
-  const L=[CFG.dept.agenda||dept,...sec("（一）週例行政工作回報",rep.map(e=>e.name),"本週沒有標記報告的項目"),...sec("（二）完成事項",done.map(x=>x.t),"本週沒有完成項目")];
+     下面縮排：（一）週例行政工作回報＝有「報告」標記的卡片標題、（二）完成事項＝完成紀錄往前七天（標題後面不加說明，項目直接分行）；編號清單、只列標題，沒有符號與段數 */
+  const list=(items,none)=>items.length?items.map((x,i)=>`        ${i+1}. ${x}`):[`        ${none}`];
+  const L=[CFG.dept.agenda||dept,"    （一）週例行政工作回報","    說 明：本週行政工作相關執行狀況如下：",...list(rep.map(e=>e.name),"本週沒有標記報告的項目"),"    （二）完成事項",...list(done.map(x=>x.t),"本週沒有完成項目")];
   return {start,end,text:L.join("\n")};
 }
 
