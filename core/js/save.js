@@ -59,7 +59,7 @@ async function exportBackup(){
   const doc=JSON.stringify(s,null,1);
   await saveJsonFile(`${state.title.replace(/[\\/:*?"<>|]/g,"_")}_備份_${today()}.json`,doc,"備份");
 }
-/* 存一個 JSON 檔：看板「匯出備份」與會長室管理「匯出全部資料」（02D D-c）共用 */
+/* 存一個 JSON 檔：看板「匯出備份」與系統管理「匯出全部資料」（02D D-c）共用 */
 async function saveJsonFile(name,doc,label){
   const kind={mime:"application/json",ext:".json",desc:"JSON"};
   if(HOSTED){

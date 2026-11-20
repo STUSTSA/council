@@ -104,13 +104,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await formOpen(m,'[data-new]','產生 QR'),'412：QR 邀請 →「產生 QR」表單畫在子頁裡');
   await cselCheck(m,'#dlgForm','412 產生 QR');
   await countReads(m);
-  /* A1 返回：回到會長室管理清單，表單收掉、照取消結束 */
+  /* A1 返回：回到系統管理清單，表單收掉、照取消結束 */
   await m.click('#subBack');await m.waitForTimeout(900);
   {const a=await lastAsk(m);
     ok(await reads(m,'inviteList')===0,`A 412 返回：取消的「產生 QR」沒有在面板收掉後重讀邀請清單（${await reads(m,'inviteList')} 次）`);
-    ok(await formGone(m),'A 412 按「返回」回到會長室管理：「產生 QR」表單收掉（不留在清單下面）');
+    ok(await formGone(m),'A 412 按「返回」回到系統管理：「產生 QR」表單收掉（不留在清單下面）');
     ok(a&&a.t==='產生 QR'&&a.v===null,`A 412 返回：表單的 Promise 照取消結束（${JSON.stringify(a&&a.v)}）`);
-    ok(await m.evaluate(()=>!!document.querySelector('#setSub .set-hub:not([hidden]) [data-hub="export"]')),'A 412 返回：回到會長室管理清單');
+    ok(await m.evaluate(()=>!!document.querySelector('#setSub .set-hub:not([hidden]) [data-hub="export"]')),'A 412 返回：回到系統管理清單');
     ok(await onTop(m,'#setSub [data-hub="export"]'),'A 412 返回：最後一列「匯出全部資料」沒有被別的東西壓住');
     if(SHOT){fs.mkdirSync(SHOT,{recursive:true});await m.screenshot({path:path.join(SHOT,'A-412-dark.png')})}}
   /* A2 再進「紀錄」：不會看到上一個表單 */
@@ -143,7 +143,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   {const a=await lastAsk(m),r=await roleOf('ben-uid');
     ok(a&&a.t==='授予權限'&&a.v&&a.v.uid==='ben-uid'&&a.v.role==='admin',`A 競態 (b) 412：確定後淡出中按返回，表單照確定結束（${JSON.stringify(a&&a.v)}）`);
     ok(!!r&&r.rev===1&&JSON.stringify(r.depts)==='{"fruit":"admin"}',`A 競態 (b) 412：照確定寫入一筆角色（${JSON.stringify(r&&{depts:r.depts,rev:r.rev})}）`);
-    ok(await formGone(m)&&await m.evaluate(()=>!!document.querySelector('#setSub .set-hub:not([hidden]) [data-hub="export"]')),'A 競態 (b) 412：表單收掉、回到會長室管理清單');}
+    ok(await formGone(m)&&await m.evaluate(()=>!!document.querySelector('#setSub .set-hub:not([hidden]) [data-hub="export"]')),'A 競態 (b) 412：表單收掉、回到系統管理清單');}
   ok(m.ctx.ext.length===0,`412：沒有模擬器與本機以外的請求${m.ctx.ext.length?'：'+m.ctx.ext.slice(0,5).join(' | '):''}`);
   ok(m.errs.length===0,`412：沒有頁面錯誤${m.errs.length?'：'+m.errs.join(' | '):''}`);
   await m.ctx.close();
@@ -163,7 +163,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* A5 Esc */
   await row(d,'council');await hubGo(d,'invite');await formOpen(d,'[data-new]','產生 QR');
   await d.keyboard.press('Escape');await d.waitForTimeout(900);
-  {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!!document.querySelector('#setOv .set-pane .set-hub:not([hidden]) [data-hub="export"]')),'A 1300 Esc：表單收掉、回到會長室管理清單')}
+  {const a=await lastAsk(d);ok(await formGone(d)&&a.v===null&&await d.evaluate(()=>!!document.querySelector('#setOv .set-pane .set-hub:not([hidden]) [data-hub="export"]')),'A 1300 Esc：表單收掉、回到系統管理清單')}
   /* A6 離開後立刻打開另一個表單：新表單留著、不被舊表單的關閉收掉 */
   await hubGo(d,'invite');await formOpen(d,'[data-new]','產生 QR');
   await row(d,'title');await d.waitForTimeout(600);

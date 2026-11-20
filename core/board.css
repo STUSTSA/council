@@ -1523,8 +1523,8 @@ body.set-open #pageMain{overflow:hidden}
 .sr-chev{color:var(--muted);display:grid}
 .set-p{margin:0;color:var(--muted);font-size:14px;line-height:1.85;padding:0}
 
-/* ===== 帳號與會長室管理（02B，account.js）=====
-   新資料庫的部門：設定頁的 Google 登入、帳號、會長室管理（人員、QR 邀請、申請、紀錄）。面板畫在設定頁右側面板／手機子頁，
+/* ===== 帳號與系統管理（02B，account.js）=====
+   新資料庫的部門：設定頁的 Google 登入、帳號、系統管理（人員、QR 邀請、申請、紀錄）。面板畫在設定頁右側面板／手機子頁，
    外框沿用 .set-hub、.set-list、.set-row；這裡只有面板裡新增的列、膠囊、QR 卡片與紀錄清單。不放說明文字（2026-11-13 使用者） */
 .acct-err{margin:4px 0 0;color:var(--red);font-size:13.5px}
 .acct-empty{padding:16px 20px}
