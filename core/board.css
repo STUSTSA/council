@@ -753,7 +753,7 @@ a.doc-pill:active{scale:.96}
    一張卡片：右上「匯入名冊」「+ 場次」；場次膠囊一排（沿用週報的 .wk-d）；四個數字（出席、請假、缺席、還沒點）；下面一個部門一段，每人一顆按鈕，點一下換狀態。
    狀態材質照 DESIGN-next 第三節：出席＝實心、請假＝外框、缺席＝斜紋、還沒點＝平面。手機兩欄、桌面自動多欄，按鈕高 52px 方便單手連點；顏色全用變數，深色不另寫。 */
 .at-panel[hidden]{display:none}
-.at-tools{display:flex;gap:8px}
+.at-tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .at-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
 .at-pick{margin-bottom:12px}
 .at-sum{display:flex;gap:24px;padding:4px 0 14px;margin-bottom:4px;border-bottom:1px solid var(--hair)}
