@@ -34,7 +34,7 @@ const done=()=>{try{fs.rmSync(DIR,{recursive:true,force:true})}catch(_){}};
       ok(await p.evaluate(()=>document.querySelectorAll('#evDetail .ln').length>1),`${tag}：打開卡片，逐行內容畫在右邊`);
       const bid=await p.evaluate(i=>state.events.find(e=>e.id===i).blocks[0].id,id);
       await p.click(`#evDetail [data-kpgo="${bid}"]`);await p.waitForTimeout(500);
-      ok(await p.evaluate(()=>editing&&!!document.querySelector('#evDetail [data-kptx]')),`${tag}：點一行就在原位編輯`);
+      ok(await p.evaluate(()=>editing&&!!document.querySelector('#evDetail [data-kptx],#evDetail [data-kpgrp]')),`${tag}：點一行就在原位編輯`);
       await p.keyboard.press('End');await p.keyboard.type('（預覽）');
       await p.click('#evH');await p.waitForTimeout(2500);
       const s1=await p.evaluate(id=>{const e=state.events.find(x=>x.id===id);let l=null;try{l=JSON.parse(localStorage.getItem('workboard:preview-03'))}catch(_){}

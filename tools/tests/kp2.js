@@ -80,7 +80,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     /* b. 行首、行尾有空白 → 點外面 */
     await p.click(`${C} [data-kpgo="a1"]`);await p.waitForTimeout(400);
     await p.keyboard.press('Home');await p.keyboard.type('  ');await p.keyboard.press('End');await p.keyboard.type('  ');
-    await p.click(`${C} [data-kptx="a3"]`);await p.keyboard.press('End');await p.keyboard.type(' ');
+    await p.evaluate(()=>kpFocus('a3'));await p.keyboard.type(' ');
     await sv();g=await got();
     ok(want(g.e,[true,false],['買水','開會','純文字'])&&want(g.n,[true,false],['買水','開會','純文字']),`P0-1 行首行尾加空白後點外面：去掉空白、種類與行 ID 不變；重新讀回來一樣（${show(g.e)}）`);
     /* c. 時間行切換勾選 → 點外面 */
@@ -131,7 +131,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     await p.click(`${S} [data-lctool="link"]`);await p.waitForTimeout(300);await p.fill(`${S} .kp-lk:last-of-type [data-e=url]`,'https://example.com/noname');await out();
     ok(await p.evaluate(()=>editing)&&await st()==='請填按鈕名稱','P2-6 超連結沒填名稱點外面：不存、提示「請填按鈕名稱」');
     await p.fill(`${S} .kp-lk:last-of-type [data-e=name]`,'有名稱了');
-    await p.click(`${S} [data-kptx="a1"]`);await p.keyboard.press('End');await p.keyboard.type('  ');
+    await p.evaluate(()=>kpFocus('a1'));await p.keyboard.type('  ');
     await out();await p.waitForTimeout(2000);await p.click('#dlg[open] [data-act=cancel]').catch(()=>{});await p.waitForTimeout(300);
     await out();
     ok(await p.evaluate(()=>!editing&&!lvOpen),'P2-6 填好後點外面：存好、再點一次外面收回');
@@ -225,7 +225,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'通過 ':'失敗 ')+m);if(
     const staffE=await g.evaluate(sc=>[...document.querySelectorAll(`${sc} .pg-ppl .chip span`)].map(e=>e.textContent),sc);
     await g.click(`${sc} [data-lctool="staff"]`);await g.waitForTimeout(400);
     const e=await g.evaluate(sc=>{const v=s=>[...document.querySelectorAll(`${sc} ${s}`)].map(e=>e.value),t=s=>[...document.querySelectorAll(`${sc} ${s}`)].map(e=>e.textContent);
-      return {editing,title:(document.querySelector(`${sc} [data-kptitle]`)||{}).value,lines:v('.ln:not(.free) [data-kptx]'),free:v('[data-kplb]'),issue:t('.lc-pa span'),
+      return {editing,title:(document.querySelector(`${sc} [data-kptitle]`)||{}).value,lines:[...document.querySelectorAll(`${sc} .ln:not(.free) [data-kptx],${sc} .ln:not(.free) [data-kpgrp]`)].flatMap(e=>e.dataset.kpgrp!==undefined?e.value.split('\n'):[e.value]),free:v('[data-kplb]'),issue:t('.lc-pa span'),
         lbl:t('.lbl-chip'),lkn:v('.kp-lk [data-e=name]'),lku:v('.kp-lk [data-e=url]'),tm:t('.ln:not(.free) [data-kptm]').length}},sc);e.staff=staffE;
     ok(x.x===undefined&&!x.extra.length&&!x.on,`${tag} 編輯：沒有執行、沒有多出元素或 on 屬性（${JSON.stringify(x)}）`);
     ok(e.editing&&e.title===X1+X2+X3&&JSON.stringify(e.lines)===JSON.stringify([X1,X2,X3,'時間行'])&&e.tm===1&&e.free.includes(X2+X1),`${tag} 編輯：標題、每行文字、時間行、沒連到行的時間標記原樣（${JSON.stringify(e)}）`);
