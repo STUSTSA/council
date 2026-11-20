@@ -275,24 +275,40 @@ function impRepo(){
   if(!owner&&/\.github\.io$/i.test(location.hostname)){owner=location.hostname.split(".")[0];const seg=location.pathname.split("/").filter(Boolean)[0];repo=seg&&!/\.html?$/i.test(seg)?seg:location.hostname}
   return {owner,repo,branch:CFG.data.branch||"main"};
 }
-const IMP_STEP={read:"讀取資料檔",write:"寫入",check:"檢查"};
+const IMP_STEP={read:"讀取並核對資料檔",write:"寫入",check:"檢查"};
 const IMP_ERR={source:"讀不到資料檔","permission-denied":"沒有權限",unavailable:"沒有連上網路"};
-const impBig=lines=>lines&&lines.length?`<ol class="acct-log imp-big">${lines.map(x=>`<li><span class="acct-log-b"><small>${esc(x)}</small></span></li>`).join("")}</ol>`:"";   /* 超過規則上限的卡片（03 審查 P2-2） */
+const IMP_KIND={departments:"部門",org:"學年設定",legacyIdentities:"舊身分",deptSettings:"部門設定",grants:"會議授權",labels:"標籤",issues:"議題",weeks:"週報",cards:"卡片",versions:"版本",events:"時間標記",meetingMinutes:"會議紀錄"};
+/* 04：來源跟輸入的 commit／SHA-256 不符時的說明（都沒有寫入）。讀到的雜湊只顯示前 12 碼：要回操作手冊第 B 步重新確認，不是照畫面抄 */
+const impMismatch=e=>({expect:"commit 要 40 碼、SHA-256 要 64 碼",commit:"這個 commit 沒有這個資料檔",
+  sha256:`資料檔的 SHA-256 跟輸入的不同（讀到的開頭是 ${String(e.sha256||"").slice(0,12)}）`,
+  changed:`這個 commit 之後資料檔又被改過（分支現在是 ${String(e.head||"").slice(0,12)}）`}[e.what]||"來源跟輸入的不同")+"，沒有寫入";
+const impBig=lines=>lines&&lines.length?`<ol class="acct-log imp-big">${lines.map(x=>`<li><span class="acct-log-b"><small>${esc(x)}</small></span></li>`).join("")}</ol>`:"";   /* 超過規則上限的卡片（03 審查 P2-2）、不合規則的舊身分、整理掉的欄位 */
+/* 流程（04）：選部門 → 輸入第 B 步的 commit 與 SHA-256 → 讀取並核對（不符就停，不寫入）→ 列出會寫入的筆數與舊身分名單 → 按「確認匯入」才寫入 → 筆數報告 */
 function importPanel(){
   return acctPanel("匯入",async p=>{
-    let busy=false,res=null,err="",errBig=null,step="",dept="";
+    let busy=false,pre=null,res=null,err="",errBig=null,step="",dept="",expect=null;
     const nm=id=>deptNameOf(id);
     const rowsHTML=r=>`<table class="imp-tbl"><thead><tr><th>項目</th><th>資料檔</th><th>Firestore</th><th>結果</th></tr></thead><tbody>${r.report.rows.map(x=>
       `<tr${x.ok?"":' class="bad"'}><td>${esc(x.label)}</td><td class="num">${x.source}</td><td class="num">${x.firestore}</td><td>${x.ok?"相同":"不同"}</td></tr>`).join("")}</tbody></table>`;
+    const srcHTML=x=>`<div class="acct-person"><small>${esc(x.path)} · ${x.commit?`${esc(x.repo)} · commit ${esc(x.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(x.sha256)}</small></div>`;
+    /* 匯入前的確認：會寫入的筆數、舊身分名單（名字與角色）、擋下匯入的項目、整理掉的欄位 */
+    const preHTML=()=>{const v=pre.preview,stop=[...v.tooBig,...v.badMembers];
+      return srcHTML(pre)
+        +`<table class="imp-tbl"><thead><tr><th>會寫入</th><th>筆數</th></tr></thead><tbody>${Object.entries(v.counts).map(([k,n])=>`<tr><td>${esc(IMP_KIND[k]||k)}</td><td class="num">${+n}</td></tr>`).join("")}</tbody></table>`
+        +`<div class="acct-person"><b>舊身分 ${v.members.length} 筆</b></div>`
+        +(v.members.length?`<ol class="acct-log">${v.members.map(m=>`<li><span class="acct-log-t">${m.role==="admin"?"管理員":"成員"}</span><span class="acct-log-b"><b>${esc(m.name)}</b></span></li>`).join("")}</ol>`:"")
+        +(v.fixed.length?`<div class="acct-person"><small>格式不合、匯入時會清空的欄位 ${v.fixed.length} 個</small></div>${impBig(v.fixed)}`:"")
+        +(stop.length?`<p class="acct-err" role="alert">有 ${stop.length} 項超過規則的上限，要先在看板上改好才能匯入</p>${impBig(stop)}`:"")
+        +`<div class="acct-acts">${stop.length?"":`<button type="button" class="primary" data-go>確認匯入</button>`}<button type="button" class="add-row" data-back>返回</button></div>`};
     const draw=()=>{
       if(!p.alive)return;
       if(dept){
         const head=`<div class="acct-person"><b>${esc(nm(dept))}</b><small>${esc(CFG.firebase.projectId)}</small></div>`;
         if(busy){p.html=p.head()+head+`<p class="set-p imp-step" role="status">${esc(step)}</p>`;return}
         if(err){p.html=p.head()+head+`<p class="acct-err" role="alert">${esc(err)}</p>${impBig(errBig)}<div class="acct-acts"><button type="button" class="add-row" data-run>再試一次</button><button type="button" class="add-row" data-back>返回</button></div>`;return}
+        if(!res){p.html=p.head()+head+preHTML();return}
         const w=res.result,n=o=>Object.values(o).reduce((a,b)=>a+b,0);
-        p.html=p.head()+head
-          +`<div class="acct-person"><small>${esc(res.path)} · ${res.commit?`${esc(res.repo)} · commit ${esc(res.commit.slice(0,12))}`:"網站上的檔案"}</small><small class="imp-hash">SHA-256 ${esc(res.sha256)}</small></div>`
+        p.html=p.head()+head+srcHTML(res)
           +impBig(res.report.tooBig)+rowsHTML(res)
           +`<ol class="acct-log">${res.report.verify.map(i=>`<li><span class="acct-log-t">${i.ok?"通過":"失敗"}</span><span class="acct-log-b"><b>${esc(i.id)}</b><small>${esc(i.msg)}</small></span></li>`).join("")}</ol>`
           +`<div class="acct-line imp-sum"><span><b class="imp-res${res.ok?"":" bad"}">${res.ok?"結果：通過":"結果：不通過"}</b><small>寫入 ${n(w.written)} · 跳過 ${n(w.skipped)} · 衝突 ${w.conflicts.length}${w.conflicts.length?`（${esc(w.conflicts.join("、"))}）`:""}</small></span></div>`
@@ -300,21 +316,36 @@ function importPanel(){
         return}
       p.html=p.head()+`<div class="set-list">${BOARD_DEPTS.map(d=>`<button type="button" class="set-row acct-row" data-imp="${esc(d.id)}"><span class="acct-rt"><b>${esc(d.name)}</b><span class="acct-chips"><span class="acct-chip${deptSourceOf(d.id)==="frozen"?" on":""}">${SRC_T[deptSourceOf(d.id)]}</span></span></span>${SR_CHEV}</button>`).join("")}</div>`;
     };
+    const fail=e=>{console.error(e);errBig=null;
+      err=e&&e.code==="mismatch"?impMismatch(e):e&&e.code==="too-big"?`有 ${e.tooBig.length} 項超過規則的上限，沒有寫入`:IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`;
+      if(e&&e.code==="too-big")errBig=e.tooBig};
+    /* 讀取並核對（不寫入）：成功就停在確認畫面 */
+    const check=async()=>{
+      if(busy)return;busy=true;err="";errBig=null;pre=null;res=null;step=IMP_STEP.read;draw();
+      try{const B=await migLoad();pre=await B.prepare(CFG.firebase,impRepo(),BOARD_DEPTS,dept,expect)}catch(e){fail(e)}
+      busy=false;draw();
+    };
+    /* 寫入核對過的那一份 */
     const run=async()=>{
-      if(busy)return;busy=true;err="";errBig=null;res=null;step=IMP_STEP.read;draw();
+      if(busy||!pre)return;busy=true;err="";errBig=null;step=IMP_STEP.write;draw();
       try{
         const B=await migLoad();
-        res=await B.importDept(CFG.firebase,impRepo(),BOARD_DEPTS,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
-      }catch(e){console.error(e);err=e&&e.code==="too-big"?`有 ${e.tooBig.length} 張卡片超過上限，沒有寫入`:IMP_ERR[e&&e.code]||`失敗（${(e&&e.code)||(e&&e.message)||"error"}）`;if(e&&e.code==="too-big")errBig=e.tooBig}
+        res=await B.importDept(CFG.firebase,pre,dept,(k,i,n)=>{step=IMP_STEP[k]+(n?` ${i}/${n}`:"");if(p.alive){const el=p.box.querySelector(".imp-step");if(el)el.textContent=step}});
+      }catch(e){fail(e)}
       busy=false;draw();
     };
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b||busy)return;
-      if(b.dataset.imp){const id=b.dataset.imp,src=deptSourceOf(id);
-        const v=await ask(`匯入 ${nm(id)}${src==="frozen"?"":src==="firestore"?"（已切到新資料庫）":"（還沒凍結）"}`,[],{danger:"匯入"});if(v!=="delete")return;
-        dept=id;await run();return}
-      if(b.hasAttribute("data-run")){await run();return}
-      if(b.hasAttribute("data-back")){dept="";res=null;err="";draw()}
+      if(b.dataset.imp){const id=b.dataset.imp,src=deptSourceOf(id),gh=impRepo(),remote=!!(gh.owner&&gh.repo);
+        const v=await ask(`匯入 ${nm(id)}${src==="frozen"?"":src==="firestore"?"（已切到新資料庫）":"（還沒凍結）"}`,[
+          ...(remote?[{name:"commit",label:"commit（40 碼）",value:""}]:[]),
+          {name:"sha",label:"資料檔的 SHA-256（64 碼）",value:""}],
+          {validate:o=>remote&&!/^[0-9a-f]{40}$/i.test((o.commit||"").trim())?"commit 要 40 碼（0–9、a–f）":!/^[0-9a-f]{64}$/i.test((o.sha||"").trim())?"SHA-256 要 64 碼（0–9、a–f）":""});
+        if(!v)return;
+        dept=id;expect={commit:(v.commit||"").trim(),sha256:(v.sha||"").trim()};await check();return}
+      if(b.hasAttribute("data-go")){await run();return}
+      if(b.hasAttribute("data-run")){await check();return}
+      if(b.hasAttribute("data-back")){dept="";pre=null;res=null;err="";expect=null;draw()}
     });
     draw();
   });

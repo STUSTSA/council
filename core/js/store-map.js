@@ -91,6 +91,7 @@
   /* 03 審查（P1-1）：卡片最多 LNK_MAX 個超連結；超連結、議題註記的顏色只收 #rrggbb（畫面把顏色放進 style，規則 linksOk 也檢查卡片的超連結）。
      讀回來時不合格的超連結顏色換成預設色（＝util.js 的 COLORS[0]）、註記拿掉顏色（畫面用預設色）；網頁 normalize 時再清一次（state.js 的 linksFix） */
   const LNK_MAX = 10, HEX = /^#[0-9a-f]{6}$/i, LINK_COLOR = "#6a4fd8";
+  const MEM_ID_MAX = 80, MEM_NAME_MAX = 60, MEM_ID = /^[A-Za-z0-9_-]{1,80}$/;   /* 舊身分（legacyIdentities）的 ID 與名字上限，跟規則相同 */
   const linksIn = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x === "object").map(x => ({ ...copy(x), color: HEX.test(x.color) ? x.color : LINK_COLOR }));
   const lineOf = b => (b && typeof b.check === "boolean" ? (b.check ? CHK.done : CHK.todo) : "") + String((b && b.text) || "");
   const descOf = blocks => (blocks || []).map(lineOf).join("\n");
@@ -154,7 +155,7 @@
      回傳 {docs:[{path, data, kind}], report}；kind 決定寫入順序與分批（遷移程式用） */
   function toDocs(dept, state, opt) {
     const B = opt.batch, U = opt.uid;
-    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {}, tooBig: [] };
+    const docs = [], report = { dept, broken: [], badTimes: [], multiline: 0, counts: {}, tooBig: [], badMembers: [] };
     const add = (kind, path, data) => { docs.push({ kind, path, data: clean(data) }); report.counts[kind] = (report.counts[kind] || 0) + 1; };
     const stamp = { updatedAt: NOW, updatedBy: U };
     const evIds = new Set((state.events || []).map(e => e.id));
@@ -164,9 +165,17 @@
     const memIds = new Set((state.members || []).map(m => m.id));
     const link = (what, from, id, ok) => { if (id != null && id !== "" && !ok) report.broken.push({ what, from, id }); };
 
-    (state.members || []).forEach(m => add("legacyIdentities", `legacyIdentities/${nid(dept, m.id)}`, {
-      deptId: dept, name: String(m.name || ""), oldRole: m.role === "admin" ? "admin" : "member", createdAt: String(m.createdAt || ""),
-      claimedBy: null, claimedAt: null, rev: 1, ...stamp }));
+    /* 舊身分：ID 只能是英數、底線、連字號（最多 MEM_ID_MAX 字）、名字最多 MEM_NAME_MAX 字（跟規則 legacyIdentities 的檢查相同）；
+       不合的先列出來（report.badMembers），匯入在寫入前停下，不要寫到一半被規則擋下才發現 */
+    (state.members || []).forEach(m => {
+      const name = String(m.name || ""), why = [];
+      if (!MEM_ID.test(String(m.id))) why.push(`ID 只能是英數、底線、連字號（最多 ${MEM_ID_MAX} 字）`);
+      if (name.length > MEM_NAME_MAX) why.push(`名字 ${name.length} 字（最多 ${MEM_NAME_MAX} 字）`);
+      if (why.length) report.badMembers.push({ id: String(m.id).slice(0, 30), name: name.slice(0, 30), why });
+      add("legacyIdentities", `legacyIdentities/${nid(dept, m.id)}`, {
+        deptId: dept, name, oldRole: m.role === "admin" ? "admin" : "member", createdAt: String(m.createdAt || "").slice(0, 40),
+        claimedBy: null, claimedAt: null, rev: 1, ...stamp });
+    });
 
     (state.labels || []).forEach(l => add("labels", `labels/${nid(dept, l.id)}`, { deptId: dept, kind: l.kind, name: l.name, importBatch: B, ...stamp }));
 
