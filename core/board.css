@@ -728,6 +728,22 @@ a.doc-pill:active{scale:.96}
 .meet-edit>.grant-st{margin:0 0 12px;font-size:13px}
 .meet-edit{margin-top:var(--gap,16px)}
 
+/* ===== 會長預約（會長室分頁的 #bkPanel，booking.js；06） =====
+   一張卡片三段：待審申請、已核准的預約、開放時段。每段小標題＋件數，下面每筆一列（左邊時間與申請人、右邊按鈕）；列與列之間只用細線隔開。
+   按鈕沿用 .icon（次要）與 .primary（核准）；處理中按鈕停用（disabled 的外觀沿用全站）。沒有深色／手機專用規則：顏色全用變數，列在窄螢幕自動換行 */
+.bk-panel[hidden]{display:none}
+.bk-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
+.bk-h{display:flex;align-items:baseline;gap:8px;margin:18px 0 6px;font-size:13.5px;font-weight:600;letter-spacing:.06em}
+.bk-h:first-of-type{margin-top:0}
+.bk-h .num{font-size:12px;font-weight:400;color:var(--muted)}
+.bk-none{margin:0 0 4px;font-size:12.5px}
+.bk-row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--hair)}
+.bk-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 200px}
+.bk-t b{font-size:14px;font-weight:600;letter-spacing:.03em}
+.bk-t .sub{overflow-wrap:anywhere}
+.bk-b{display:flex;gap:8px;flex:none}
+.bk-foot{margin-top:10px;border-top:1px solid var(--hair);padding-top:10px}
+
 /* ===== 時間甘特圖 ===== */
 /* 進度頁標題列（shell.js 的 .pg-head；DESIGN-next 第八節、模擬頁 TIMELINE；ui-09）：英文小標＋「進度」，右邊全部／上學期／下學期（液態分段切換，樣式在「液態分段切換」段）、
    實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
