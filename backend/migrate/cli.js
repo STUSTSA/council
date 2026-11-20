@@ -30,6 +30,8 @@ const src = exportId ? null : loadSources({ commit: opt('commit'), dir: opt('dir
 if (src) {
   console.log(`來源 commit ${src.commit}${src.dir ? `（讀 ${src.dir} 裡的複本）` : ''}`);
   src.files.forEach(f => console.log(`  ${f.path.padEnd(22)} ${f.sha256}`));
+  // 04：讀進來時整理掉的欄位（日期、時刻不是固定格式；合格的資料檔不會有）
+  if (src.fixed && src.fixed.length) { console.log(`格式不合、匯入時會清空的欄位 ${src.fixed.length} 個：`); src.fixed.forEach(x => console.log('  ' + x)); }
 }
 
 if (has('dry-run')) {

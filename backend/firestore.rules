@@ -379,8 +379,12 @@ service cloud.firestore {
     // ===================== 舊身分（決定 A4） =====================
     match /legacyIdentities/{ref} {
       allow get, list: if internalReader();
+      // 04：ID＝{部門}__{舊身分 ID}（英數、底線、連字號，最多 80 字，跟申請的 legacyOk 同一個形狀）、部門要跟 ID 的前綴相同；
+      // 名字是字串、最多 60 字；舊角色只有 admin／member；createdAt（原本的文字）最多 40 字。之後的修改只能改認領欄位（onlyChanged）
       allow create: if isSuper()
         && d().keys().hasOnly(['deptId', 'name', 'oldRole', 'createdAt', 'claimedBy', 'claimedAt', 'rev', 'updatedAt', 'updatedBy'])
+        && d().deptId in deptIds() && ref.matches(d().deptId + '__[A-Za-z0-9_-]{1,80}')
+        && short(d().name, 60) && d().oldRole in ['admin', 'member'] && short(d().get('createdAt', ''), 40)
         && d().rev == 1 && d().claimedBy == null && stamped() && auditAfter('legacyIdentities', ref, 1);
       allow update: if revNext() && auditAfter('legacyIdentities', ref, d().rev) && stamped()
         && onlyChanged(['claimedBy', 'claimedAt', 'rev', 'updatedAt', 'updatedBy'])

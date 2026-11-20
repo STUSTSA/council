@@ -107,6 +107,12 @@ function importing() {
 - 模擬器演練時用測試身分直接跑同一支匯入程式。
 - **02D 現況**：命令列（`backend/migrate/cli.js`）只連模擬器。正式匯入＝**網頁匯入頁**（02D D-a）：總管理員在看板 → 設定 → 會長室管理 → 匯入，選部門；網頁讀 GitHub 上 `dept/config.js` 的 `data` 設定的 repo（owner／repo 留空＝從 github.io 網址推）與分支（`main`）最新 commit 的資料檔（只讀、不用權杖；不看資料檔或本機暫存裡的 `sync`；本機開發讀網站上的檔案），報告印出 `owner/repo@分支 · commit`，照 `core/js/migrate-core.js`（命令列 `run.js` 也改成呼叫它，邏輯只有一份）寫進 `dept/config.js` 設定的 Firebase 專案，批次號 `web-{部門}-{毫秒}`，完成後改成 `done`（報告不通過或有衝突＝`failed`）並顯示筆數報告；中途失敗也改成 `failed`（不留在 `running`），按「再試一次」用新批次補完。凍結中的部門的設定頁也有 Google 登入，總管理員從那裡進會長室管理。測試：`tools/tests/im1.js`。
 
+- **匯入前的核對與確認（2026-11-20）**：
+  - 來源版本：操作的人先輸入操作手冊第 B 步的 commit 與資料檔 SHA-256。網頁讀「那個 commit」的資料檔，SHA-256 不符就停；再讀分支最新 commit 的同一個檔，內容不同（那個 commit 之後又被改過）也停。兩種都不寫入任何文件（連批次紀錄都沒有）。本機開發（不是 github.io）只核對 SHA-256。
+  - 整理：資料檔讀進來先經 `store-map.js` 的 `tidy`（`migrate-core.js` 的 `tidySource`；命令列的 `loadSources` 也是），日期、時刻不是固定格式的換成空值，整理掉的欄位位置列在 `src.fixed`（合格的資料檔是空的；十個資料檔目前都是空的）。之後的匯入、驗證、筆數報告都用整理過的內容；雜湊仍然是原始檔案的。
+  - 確認畫面（`migrate-core.js` 的 `preview`，不寫入）：會寫入的筆數、舊身分名單（名字與角色）、整理掉的欄位、擋下匯入的項目（超過上限的卡片；名字超過 60 字或 ID 不是英數、底線、連字號的舊身分）。按「確認匯入」才寫入，寫入的就是核對過的那一份（不重讀）。
+  - 程式：`core/js/migrate-web.js` 的 `prepare`／`importDept`、`core/js/account.js` 的匯入面板；測試 `tools/tests/im1.js`、`backend/tests/migrate.test.js`。
+
 ## 4. 舊身分對照（決定 A4）
 
 - 11 個舊身分搬成 `legacyIdentities/{dept}__{id}`：`name`、`oldRole`、`createdAt`，`claimedBy: null`。

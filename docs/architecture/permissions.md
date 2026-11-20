@@ -340,12 +340,13 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 | `profiles` | `photoURL`＝沒有、null 或 https 網址（≤ 500 字、只收可見的 ASCII 字元） |
 | `auditLogs` | `action`＝一個英文單字（≤ 20 字）；`ref`＝字串（≤ 200 字）；有狀態的集合（`invitations`、`roleRequests`、`bookings`、`migrations`）`before`／`after` 只能是 `{}` 或 `{status}`；`grants`、`legacyIdentities`、`deptSettings` 的 `before` 是 `{}`、`after` 是 `{}` 或部門設定的 `{fields: [這次改了哪些設定欄位]}`。`roles`、卡片刪除、議題／週報／標籤刪除的內容原本就要逐欄相等 |
 | `roleRequests` | 每人每個部門一份，見 [invitations-roles-audit.md](invitations-roles-audit.md) 第 9.7 節 |
+| `legacyIdentities`（新建；2026-11-20） | 文件 ID＝`{部門}__{英數、底線、連字號，最多 80 字}` 而且 `deptId` 跟前綴相同；`name` 是字串、≤ 60 字；`oldRole` 只有 `admin`／`member`；`createdAt` ≤ 40 字。修改只能改認領欄位（原本就是）。匯入在寫入前先檢查同樣的條件（`store-map.js` 的 `badMembers`） |
 
 **卡片的檢查放在版本的規則**（`versions` 的 `cardFieldsOk(cardAfter())`）：卡片自己的規則（`cardShape`＋`blocksOk`＋`linksOk`）已經接近每份文件 1000 個運算式的上限——模擬器實測，滿載的卡片（50 行、10 個超連結）遷移匯入時只剩大約 8 個簡單條件的餘裕，直接加在卡片上會讓匯入失敗。新建卡片、改內容（`editorEdit`、`meetingEdit`）、遷移匯入都一定同批新建一個版本（`verAfter`），所以這些欄位每次變動都會經過版本的規則；只換順序、永久刪除不建版本，那幾步也改不到這些欄位（`onlyChanged`）。版本的規則加完之後的餘裕（同一種量法）：一般新建約 30、遷移匯入約 12。正式環境的上限是否跟模擬器一樣仍是〔待驗證〕（[verification.md](verification.md)）。
 
 已知限制（04 之前就有，沒有在這次處理）：滿載的卡片在秘書處會議編輯裡同時拿掉時間標記，卡片的規則會超過運算式上限（只改內容可以；部門編輯者、總管理員拿掉 3 個時間都可以）。記在 [README.md](README.md) 的待辦。
 
-測試（`rules-04.test.js`，17 項）：F-01～F-04 議題、週報、標籤；F-05 時間標記；F-06～F-08 卡片與版本（含滿載卡片的新建、匯入、修改不超過上限）；F-09 部門設定；A-01～A-03 稽核紀錄；U-01 個人資料；Q-01～Q-04 權限申請。每一組都有「04 之前的文件照常能改其他欄位」。
+測試（`rules-04.test.js`，18 項）：F-01～F-04 議題、週報、標籤；F-05 時間標記；F-06～F-08 卡片與版本（含滿載卡片的新建、匯入、修改不超過上限）；F-09 部門設定；A-01～A-03 稽核紀錄；G-01 舊身分；U-01 個人資料；Q-01～Q-04 權限申請。每一組都有「04 之前的文件照常能改其他欄位」。
 
 ### 5.2 時間事件
 

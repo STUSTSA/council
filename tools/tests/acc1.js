@@ -202,7 +202,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);   /* 收起 */
   await hub(boss,'requests');
   ok(await until(async()=>(await paneText(boss)).includes('公關部編輯者')&&(await paneText(boss)).includes('公關部新幹部')),'核准：待審清單顯示申請人、部門、角色、備註');
+  ok(await boss.evaluate(()=>{const b=document.querySelector('.acct-req b');return !!b&&b.textContent.startsWith('u2@example.test')}),'04 核准：清單粗體那一行以信箱開頭');
   await boss.click('[data-ok]');
+  {const title=await dlg(boss),note=await boss.evaluate(()=>{const n=document.querySelector('#dlgForm .dlg-note');return n?n.innerText:''});
+    ok(title==='核准 u2@example.test 的申請'&&note.includes('帳號：u2@example.test')&&note.includes('公關部・編輯者'),'04 核准：先確認，寫出信箱、部門與角色');
+    await dlgAct(boss,'cancel');await boss.waitForTimeout(500);
+    ok(!(await read(`roles/${u2Uid}`)),'04 核准：按取消不寫入');
+    await boss.click('[data-ok]');await dlg(boss);await dlgAct(boss,'delete');}
   ok(await until(async()=>{const r=await read(`roles/${u2Uid}`);return r&&r.depts.pr==='editor'&&r.lastVia==='request'}),'核准：同一批寫入角色');
   ok(await until(async()=>(await meText(u2)).includes('公關部・編輯者')),'核准：申請人的帳號頁即時顯示新角色');
   /* 撤權 */
@@ -252,13 +258,28 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     await hub(boss,'requests');
     ok(await until(async()=>(await paneText(boss)).includes('工務部編輯者')),'04 核准：待審清單顯示工務部編輯者');
     await admin(d=>d.doc(`roleRequests/${u2Uid}_works`).update({role:'admin',rev:3}));
-    await boss.click('[data-ok]');
+    await boss.click('[data-ok]');await dlg(boss);await dlgAct(boss,'delete');
     ok(await toastHas(boss,'這筆申請剛被改過'),'04 核准：清單讀出來之後被改過的申請，提示再看一次');
     const r2=await read(`roles/${u2Uid}`),q2=await read(`roleRequests/${u2Uid}_works`);
     ok(!((r2&&r2.depts)||{}).works&&q2.status==='pending','04 核准：沒有寫入角色、申請仍是待審');
     ok(await until(async()=>(await paneText(boss)).includes('工務部管理員')),'04 核准：清單更新成現在的內容');
     await boss.click('[data-no]');await dlg(boss);await dlgAct(boss,'delete');
     ok(await until(async()=>(await read(`roleRequests/${u2Uid}_works`)).status==='rejected'),'04 拒絕：照畫面上那一版拒絕');
+    /* 人員：改成管理員先確認（寫出信箱）；取消不寫入；降成編輯者不用確認 */
+    await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);
+    await hub(boss,'people');await boss.click(`[data-who="${u2Uid}"]`);await boss.waitForTimeout(500);
+    const prRole=async()=>((await read(`roles/${u2Uid}`)).depts||{}).pr;
+    if(await prRole()==='editor'){
+      await boss.click('[data-swap="pr"]');
+      const title=await dlg(boss),note=await boss.evaluate(()=>{const n=document.querySelector('#dlgForm .dlg-note');return n?n.innerText:''});
+      ok(title==='把 u2 同學 改成公關部管理員'&&note.includes('帳號：u2@example.test'),'04 人員：改成管理員先確認，寫出信箱');
+      await dlgAct(boss,'cancel');await boss.waitForTimeout(500);
+      ok(await prRole()==='editor','04 人員：按取消不寫入');
+      await boss.click('[data-swap="pr"]');await dlg(boss);await dlgAct(boss,'delete');
+      ok(await until(async()=>await prRole()==='admin'),'04 人員：確認後改成管理員');
+      await boss.waitForTimeout(600);await boss.click('[data-swap="pr"]');
+      ok(await until(async()=>await prRole()==='editor'),'04 人員：改回編輯者不用確認');
+    }else ok(false,`04 人員：u2 應該是公關部編輯者（現在是 ${await prRole()}）`);
   }
   /* 登出 */
   await meText(gen);await gen.click('[data-hub="out"]');   /* 帳號頁在第 2 段已經打開（meText），再點那一列會收起 */
