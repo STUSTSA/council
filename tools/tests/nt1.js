@@ -17,7 +17,7 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const
     const b=$('#notiBtn .noti-n').textContent;e.times=e.times.filter(x=>x.id!=='tZ');e.blocks=e.blocks.filter(x=>x.id!=='bZ');render();return [a,b,$('#notiBtn .noti-n').textContent]});
   say(bd[0]===''&&bd[1]==='1'&&bd[2]==='',`${w} badge 逾期數：時間標記沒有連到行時是空的（${JSON.stringify(bd[0])}），加一行過期沒勾的變 ${bd[1]}，拿掉回到空的`)}
  await p.click('#notiBtn');await p.waitForTimeout(900);
- const cards=await p.evaluate(()=>[...document.querySelectorAll('#notiPage .nd-card')].map(c=>c.querySelectorAll('.nd-row').length+':'+c.classList.contains('today')));
+ const cards=await p.evaluate(()=>[...document.querySelectorAll('#notiPage .nd-card')].map(c=>(c.querySelector('.nd-count')?.textContent||'0')+':'+c.classList.contains('today')));
  say(cards.join()==='2:true,2:false',`${w} cards ${cards}`);
  const po=await p.evaluate(()=>[$('.pc-mon').textContent.replace(/^\d+/,''),document.querySelectorAll('.pc-e.span').length,Math.max(...[...document.querySelectorAll('.pc-week')].map(x=>+x.style.getPropertyValue('--lanes')))]);
  say(/^[A-Z]{3}$/.test(po[0])&&po[1]>=2&&po[2]>=2,`${w} poster ${po}`);
