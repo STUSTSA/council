@@ -67,9 +67,10 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
   {await p.click('#notiBtn');await p.waitForTimeout(900);
     const r=await p.evaluate(()=>{const cs=[...document.querySelectorAll('#notiPage .nd-card')],pri=getComputedStyle(document.documentElement).getPropertyValue('--pri').trim();
       const probe=document.createElement('i');probe.style.color=pri;document.body.append(probe);const pc=getComputedStyle(probe).color;probe.remove();
-      return {n:cs.length,today:cs[0].classList.contains('today'),bg:getComputedStyle(cs[0]).backgroundColor,pc,rows:cs.map(c=>c.querySelectorAll('.nd-row').length),t2:cs[1].textContent}});
+      return {n:cs.length,today:cs[0].classList.contains('today'),bg:getComputedStyle(cs[0]).backgroundColor,pc,rows:cs.map(c=>c.querySelectorAll('.nd-row').length),cnt:cs.map(c=>c.querySelector('.nd-count')?.textContent),first:cs.map(c=>c.querySelector('.nd-row b')?.textContent),t2:cs[1].textContent}});
     ok(r.n===2&&r.today&&r.bg===r.pc,`兩張並排卡片，今日＝--pri 底（${r.bg} / ${r.pc}）`);
-    ok(r.rows[0]===1&&r.rows[1]===3&&/明天的事/.test(r.t2),`今日 1 件、明日 3 件（${r.rows}）`);
+    ok(r.rows[0]===1&&r.rows[1]===1&&r.cnt[0]==='1'&&r.cnt[1]==='3',`每張卡只有一項、右下角是當天總件數：今日 1、明日 3（${r.rows}、${r.cnt}）`);
+    ok(r.first[1]==='明天的事',`明日挑有時刻的最早一筆（明天的事 08:00；${r.first[1]}）`);
     await p.click('#notiPage .nd-card.today');await p.waitForTimeout(1300);
     const t=await p.evaluate(()=>({open:todayOpen,vis:!$('#todayOv').hidden,secs:[...document.querySelectorAll('#todayOv .td-sec h3')].map(h=>h.textContent.replace(/\d+/g,'').trim()),rows:document.querySelectorAll('#todayOv .td-row').length,
       big:$('#todayOv .td-num').textContent==String(+today().slice(8)),close:!!$('#todayOv [data-tdclose]'),label:$('#todayOv .td-lab').textContent}));
@@ -262,10 +263,10 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
       {id:'tX',label:'註解今天',start:'2026-11-30T<!--x',end:'',place:''},{id:'tY',label:'註解過期',start:'2026-11-29T<!--x',end:'',place:''}];
       e.blocks=[{id:'bW',text:'跨月',check:false,timeId:'tW'},{id:'bH',text:'跨週',check:false,timeId:'tH'},{id:'bX',text:'註解今天',check:false,timeId:'tX'},{id:'bY',text:'註解過期',check:false,timeId:'tY'}];render()});
     await q.click('#notiBtn');await q.waitForTimeout(900);
-    const h=await q.evaluate(()=>{const d=today(),n=notiMine().filter(x=>covers(x,d)).length;return {today:d,rows:document.querySelectorAll('#notiPage .nd-card.today .nd-row').length,er:Math.min(4,n),
+    const h=await q.evaluate(()=>{const d=today(),n=notiMine().filter(x=>covers(x,d)).length;return {today:d,rows:+($('#notiPage .nd-card.today .nd-count')||{}).textContent||0,er:n,
       dk:document.querySelectorAll('#notiDeck .tl-card').length,ed:Math.min(3,notiLateItems().length),ev:document.querySelectorAll('#notiPage .cal-list .cal-ev').length,en:n,
       cal:!!$('#notiPage .pc-foot'),txt:$('#notiPage').textContent.split('<!--x').length-1}});
-    ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日 ${h.rows}/${h.er} 列、已過期 ${h.dk}/${h.ed} 張、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
+    ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日件數 ${h.rows}/${h.er}、已過期 ${h.dk}/${h.ed} 張、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
     await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=e.times.filter(t=>/^t[WH]$/.test(t.id));e.blocks=e.blocks.filter(b=>/^b[WH]$/.test(b.id));render()});await q.waitForTimeout(400);   /* 下面各項跟跳脫分開測 */
     const w=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-30"]').parentElement,e=[...wk.querySelectorAll('.pc-e')].find(x=>x.style.getPropertyValue('--i0')==='0'&&x.style.getPropertyValue('--i1')==='0'&&/cont-r/.test(x.className));
       const cell=$('.pc-d[data-calday="2026-11-30"]').getBoundingClientRect(),b=e&&getComputedStyle(e,'::before'),a=e&&getComputedStyle(e,'::after');
