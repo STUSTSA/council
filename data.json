@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-20 17:18",
+ "savedAt": "2026-11-20 17:21",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -354,7 +354,7 @@
   {
    "id": "emvt1pwvqrhyw",
    "name": "停車場冷氣機報廢後續",
-   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考\n☐ ",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考\n☐ 處室大亂鬥",
    "createdAt": "2026-10-29",
    "staff": [],
    "touched": [
@@ -363,21 +363,22 @@
     "2026-11-05",
     "2026-11-09",
     "2026-11-16",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
    ],
    "links": [],
    "times": [
     {
      "id": "tmwnoj7tb2p91",
-     "label": "",
-     "start": "2026-11-23T20:00",
+     "label": "處室大亂鬥",
+     "start": "2026-12-03T14:00",
      "end": "",
      "place": "",
      "toIssue": false
     }
    ],
    "round": 3,
-   "touchedAt": "2026-11-19T23:03",
+   "touchedAt": "2026-11-20T17:21",
    "report": false,
    "roundAt": "2026-11-16T17:33",
    "labels": [],
@@ -403,7 +404,7 @@
     },
     {
      "id": "bmwnoj7tbf47q",
-     "text": "",
+     "text": "處室大亂鬥",
      "check": false,
      "timeId": "tmwnoj7tb2p91"
     }
