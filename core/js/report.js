@@ -11,9 +11,16 @@ function rptData(from,to){
   const extra=state.issues.filter(i=>!act.includes(i)&&!done.includes(i)&&i.markers.some(m=>inP(m.date)));
   const issues=[...act,...done,...extra];
   const evNew=state.events.filter(e=>!e.fromEv&&inP(e.createdAt)),evDone=state.events.filter(e=>inP(e.doneAt));
-  return {from,to,inP,issues,nDone:issues.filter(i=>i.doneAt&&inP(i.doneAt)).length,nAct:issues.filter(i=>!(i.doneAt&&inP(i.doneAt))).length,evNew,evDone,evLinked:evDone.filter(e=>e.issueId).length,
-    marks:issues.reduce((n,i)=>n+i.markers.filter(m=>inP(m.date)).length,0),weeks:state.weeks.filter(w=>inP(w.date))};
+  return {from,to,inP,issues,nDone:issues.filter(i=>i.doneAt&&inP(i.doneAt)).length,evNew,evDone,
+    acts:rptActs(from,to),prevActs:rptActs(addDays(from,-rptDays(from,to)),addDays(from,-1)),
+    waits:act.filter(i=>!i.doneAt&&rptWaiting(i)).map(i=>({it:i,days:rptWaitDays(i,to)}))};
 }
+/* 本期「具體行動」＝期間內有日期的處理紀錄，加上沒併入議題的完成的即時回報（併入議題的完成已經在處理紀錄裡，不重複算）；上期＝緊接在前、一樣長的一段 */
+const rptDays=(a,b)=>Math.round((pd(b)-pd(a))/864e5)+1;
+const rptActs=(a,b)=>state.issues.reduce((n,i)=>n+i.markers.filter(m=>m.date&&m.date>=a&&m.date<=b).length,0)+state.events.filter(e=>!e.issueId&&e.doneAt&&e.doneAt>=a&&e.doneAt<=b).length;
+/* 等待回覆：目前階段是「待回覆」的議題；等待天數＝從最後一筆處理紀錄（沒有就從開始日）到期間結束 */
+const rptWaiting=i=>/待回覆|等待/.test(i.tags[i.cur]||"");
+const rptWaitDays=(i,to)=>{const last=i.markers.map(m=>m.date).filter(x=>x&&x<=to).sort().pop()||i.start;return last?Math.max(0,Math.round((pd(to)-pd(last))/864e5)):0};
 
 /* ---------- 期間甘特圖（只畫這段期間，超出的部分切掉） ---------- */
 /* 報告裡的期間甘特圖（2026-11-06 使用者：套看板最新的樣子）：跟看板甘特圖同一種細刻度（views.js 的 ticksHTML、board.css 的 .tk），
@@ -26,9 +33,9 @@ function rptGantt(d){
   while(m.getTime()<t1){ms.push(ymd(m));m.setMonth(m.getMonth()+1)}
   const td=today(),tn=td>=d.from&&td<=d.to?P(td):td>d.to?101:-1;
   /* 月份與「今天」的位置給 --p（0～100）：靠右放不下的往左對齊，不超出紙寬（board.css 的 .rg-axis） */
-  const axis=`<div class="rg-row rg-head"><span></span><span></span><div class="rg-axis">${ms.map(s=>`<span style="--p:${P(s).toFixed(2)}">${pd(s).getMonth()+1}月</span>`).join("")}${tn>=0&&tn<=100?`<span class="rg-now" style="--p:${tn.toFixed(2)}">今天 ${fmt(td).slice(5)}</span>`:""}</div></div>`;
+  const axis=`<div class="rg-row rg-head"><span></span><div class="rg-axis">${ms.map(s=>`<span style="--p:${P(s).toFixed(2)}">${pd(s).getMonth()+1}月</span>`).join("")}${tn>=0&&tn<=100?`<span class="rg-now" style="--p:${tn.toFixed(2)}">今天 ${fmt(td).slice(5)}</span>`:""}</div></div>`;
   const body=rows.map(it=>{const s=it.start<it.end?it.start:it.end,e=it.start<it.end?it.end:it.start;
-    return `<div class="rg-row"><span class="rg-t">${esc(it.title)}</span><span class="rg-p num">${schedPct(it,d.to)}%</span><div class="rg-bar">${ticksHTML(84,P(s),P(e),tn)}</div></div>`}).join("");
+    return `<div class="rg-row"><span class="rg-t">${esc(it.title)}</span><div class="rg-bar">${ticksHTML(84,P(s),P(e),tn)}</div></div>`}).join("");
   return `<figure class="rpt-gantt" contenteditable="false">${axis}${body}</figure>`;
 }
 
@@ -37,48 +44,88 @@ function rptGantt(d){
    每一章是一張紙（列印時從新的一頁開始）：章首＝細體大數字＋章名＋右上角章節索引（I II III…，目前這章實心）。
    章裡是一個個「圖塊」：文字（段落小工具）、圖片（上傳、調大小與位置）、卡片（分項說明）、看板自動產生的內容（摘要數字、甘特圖、議題逐案）。
    編輯（加章節、加圖塊、上傳圖片、改字）都只用在這一份報告，不存進看板、不上傳（使用者決定）。 */
-const RPT_IMG_W=[33,50,66,100];   /* 圖片寬度的快速選項（％，以內文寬為準）；拖曳右下角可在 25～100％ 之間調，每 5％ 一格 */
+/* 圖片（2026-11-20 改成自由編輯）：一個「版框」（.rpt-img-frame，寬＝內文寬、高＝寬×--far）佔版面一格（斷頁當成不切開的一塊），圖在版框裡可以拖到任何位置、四個角拖曳等比例縮放、
+   拖版框下緣調高度；位置與大小一律用「版框寬的百分比」（--x --y --w，CSS 用 cqw），所以預覽、手機縮小、列印都在同一個位置。圖片高度不超過一頁內文（--far 最大 0.82＝149mm）。
+   淡出（data-fade＝none｜all｜l｜r｜t｜b，--f＝淡出範圍佔圖的％）用遮罩把邊緣漸漸透明，圖就融進紙的底色。 */
+const RPT_IMG_W=[33,50,66,100],RPT_IMG_MAXF=.82,RPT_IMG_FADE=[["none","無"],["all","四周"],["l","左"],["r","右"],["t","上"],["b","下"]],RPT_IMG_F=[[12,"柔"],[24,"中"],[40,"強"]];
 const rptBlk=(kind,inner,tools="")=>`<div class="rpt-blk" data-blk="${kind}" tabindex="-1"><div class="rpt-bt" contenteditable="false">${tools}<button type="button" data-bmv="-1" aria-label="上移">${ico("prev","solo")}</button><button type="button" data-bmv="1" aria-label="下移">${ico("next","solo")}</button><button type="button" data-bx aria-label="移除這個圖塊">移除</button></div>${inner}</div>`;
 const rptTextBlk=(ph="在這裡輸入內容…",html="")=>rptBlk("text",`<div class="rpt-text" contenteditable="true" data-ph="${ph}">${html}</div>`);
 const rptCardHTML=()=>`<div class="rpt-card"><button type="button" class="rpt-card-x" contenteditable="false" data-cx aria-label="移除這張卡片">${ico("close","solo")}</button><b contenteditable="true" data-ph="項目名稱"></b><div class="rpt-card-t" contenteditable="true" data-ph="說明"></div></div>`;
 const rptCardsBlk=()=>rptBlk("cards",`<div class="rpt-cards" data-cols="2">${rptCardHTML()}${rptCardHTML()}</div><button type="button" class="rpt-card-add" contenteditable="false" data-cadd>＋ 卡片</button>`,
   `<button type="button" data-cols="2" class="on">兩欄</button><button type="button" data-cols="3">三欄</button>`);
-const rptImgBlk=src=>rptBlk("img",`<figure class="rpt-img" data-al="c" style="--w:66%"><div class="rpt-img-box"><img src="${src}" alt=""><span class="rpt-img-h" contenteditable="false" aria-hidden="true"></span></div><figcaption contenteditable="true" data-ph="圖說（可留白）"></figcaption></figure>`,
-  RPT_IMG_W.map(w=>`<button type="button" data-iw="${w}"${w===66?' class="on"':""}>${w===100?"滿版":w+"%"}</button>`).join("")+`<i class="rpt-bt-sep"></i>`+[["l","靠左"],["c","置中"],["r","靠右"]].map(([k,n])=>`<button type="button" data-ia="${k}"${k==="c"?' class="on"':""}>${n}</button>`).join(""));
+const rptImgBlk=(src,ar=.75)=>{
+  let w=66;if(w*ar>RPT_IMG_MAXF*100)w=RPT_IMG_MAXF*100/ar;   /* 一放進來：置中、版框剛好包住圖 */
+  const st=`--w:${w.toFixed(2)};--x:${((100-w)/2).toFixed(2)};--y:0;--far:${(w*ar/100).toFixed(4)};--f:24`;
+  const hs=["tl","tr","bl","br"].map(k=>`<span class="rpt-img-h" data-h="${k}" contenteditable="false" aria-hidden="true"></span>`).join("");
+  return rptBlk("img",`<figure class="rpt-img" data-fade="none" data-ar="${ar.toFixed(4)}" style="${st}"><div class="rpt-img-frame"><div class="rpt-img-box"><img src="${src}" alt="" draggable="false">${hs}</div><span class="rpt-img-h" data-h="fh" contenteditable="false" aria-hidden="true"></span></div><figcaption contenteditable="true" data-ph="圖說（可留白）"></figcaption></figure>`,
+    RPT_IMG_W.map(w=>`<button type="button" data-iw="${w}">${w===100?"滿版":w+"%"}</button>`).join("")+`<i class="rpt-bt-sep"></i>`+[["l","靠左"],["c","置中"],["r","靠右"]].map(([k,n])=>`<button type="button" data-ia="${k}">${n}</button>`).join("")+`<button type="button" data-ifit>貼合</button>`
+    +`<i class="rpt-bt-sep"></i><span class="rpt-bt-lb">淡出</span>`+RPT_IMG_FADE.map(([k,n])=>`<button type="button" data-fd="${k}"${k==="none"?' class="on"':""}>${n}</button>`).join("")+RPT_IMG_F.map(([v,n])=>`<button type="button" data-fs="${v}"${v===24?' class="on"':""}>${n}</button>`).join(""));
+};
 const rptAuto=html=>rptBlk("auto",html);   /* 看板自動產生的內容：可以移除、排順序，字可以直接改 */
 const rptCh=(k,title,blocks)=>`<section class="rpt-page rpt-sec rpt-ch" data-k="${k}">
     <header class="rpt-ch-h"><span class="rpt-ch-n num" contenteditable="false"></span><h2 contenteditable="true" data-ph="章節名稱">${esc(title)}</h2><span class="rpt-tabs" contenteditable="false" aria-hidden="true"></span>
       <span class="rpt-ct" contenteditable="false"><button type="button" data-cmv="-1" aria-label="章節上移">${ico("prev","solo")}</button><button type="button" data-cmv="1" aria-label="章節下移">${ico("next","solo")}</button><button type="button" data-chx aria-label="移除這一章">移除這章</button></span></header>
     <div class="rpt-blocks">${blocks}</div>
     <div class="rpt-ins" contenteditable="false"><span>在這章加入</span><button type="button" data-ins="text">＋ 文字</button><button type="button" data-ins="img">＋ 圖片</button><button type="button" data-ins="cards">＋ 卡片</button></div></section>`;
+/* 表格（div 排成格線，一列一個「不切開的塊」，比一整頁高時換頁會在列與列之間）：auto＝看板自動產生、plan＝手填（下期規劃）。格子都能直接改 */
+const rptTd=(html,ph="")=>`<div class="rpt-td" contenteditable="true"${ph?` data-ph="${ph}"`:""}>${html}</div>`;
+const rptTr=(cells,x=false)=>`<div class="rpt-tr">${cells}${x?`<button type="button" class="rpt-tr-x" contenteditable="false" data-rx aria-label="移除這一列">${ico("close","solo")}</button>`:""}</div>`;
+const rptTh=heads=>`<div class="rpt-tr rpt-th" contenteditable="false">${heads.map(h=>`<span>${h}</span>`).join("")}</div>`;
+const rptPlanTbl=()=>rptBlk("table",`<h3 class="rpt-subh" contenteditable="false">下期規劃</h3><div class="rpt-tbl" data-t="plan">${rptTh(["事項","預定日期","負責人"])}${[1,2,3].map(()=>rptTr(rptTd("","事項")+rptTd("","例：12/20")+rptTd("","姓名"),true)).join("")}</div><button type="button" class="rpt-card-add" contenteditable="false" data-radd>＋ 一列</button>`);
 function rptHTML(d){
-  const dept=CFG.dept.name;
+  const dept=CFG.dept.name,en=DEPT_EN[CFG.deptId]||"";
   const staffJoin=ids=>staffNames(ids).join("、");
   const dot=s=>esc(fmt(s).replaceAll("/","."));
-  const cover=`<section class="rpt-page rpt-cover">
-    <div class="cv-top"><div class="cv-org"><span class="cv-logo">${suLogoColor("南臺科大學生會")}</span><b contenteditable="true">${esc(dept)}</b></div><span class="cv-date num" contenteditable="true">${dot(today())}</span></div>
+  const md=s=>esc(fmt(s).slice(5));
+  /* 封面（data-cv：band 斜帶｜curve 曲線｜stripe 條紋；顏色是 --cv-c＝設定檔的部門主色，只用這一個顏色的深淺）。圖案 .cv-art 只是背景，不能編輯、不影響斷頁 */
+  const cover=`<section class="rpt-page rpt-cover" data-cv="band">
+    <div class="cv-art" contenteditable="false" aria-hidden="true">${rptCoverArt()}</div>
+    <div class="cv-top"><div class="cv-org"><span class="cv-logo">${suLogoColor("南臺科大學生會")}</span><span class="cv-name"><b contenteditable="true">${esc(dept)}</b>${en?`<small class="num" contenteditable="true">${esc(en)}</small>`:""}</span></div><span class="cv-date num" contenteditable="true">${dot(today())}</span></div>
     <div class="cv-mid"><p class="cv-k num">WORK REPORT</p><h1 contenteditable="true">工作報告</h1><p class="cv-sub" contenteditable="true">${termCfg().yearLabel?esc(termCfg().yearLabel)+"・":""}${dot(d.from)} – ${dot(d.to)}</p></div>
     <div class="cv-foot"><div class="cv-col"><span contenteditable="true">${esc(meName())}</span><span contenteditable="true" data-ph="職稱（可留白）"></span><span contenteditable="true">南臺科技大學學生會　${esc(dept)}</span></div>
-      <div class="cv-col"><span>看板即時動態</span><a class="rpt-live num" href="${esc(boardURL())}" target="_blank" rel="noopener">${esc(boardURL().replace(/^https?:\/\//,""))}</a><span class="num">製表 ${dot(today())}</span></div></div></section>`;
+      <div class="cv-col"><span>看板即時動態</span><a class="rpt-live num" href="${esc(boardURL())}" target="_blank" rel="noopener">${esc(boardURL().replace(/^https?:\/\//,""))}</a><span class="num">製表 ${dot(today())}</span></div></div>
+    <span class="rpt-ct cv-tools" contenteditable="false" role="group" aria-label="封面樣式">${[["band","斜帶"],["curve","曲線"],["stripe","條紋"]].map(([k,n])=>`<button type="button" data-cvs="${k}"${k==="band"?' class="on"':""}>${n}</button>`).join("")}</span></section>`;
   const toc=`<section class="rpt-page rpt-toc"><header class="toc-h"><span class="num">CONTENTS</span><h2>目錄</h2></header><ol class="toc-list"></ol></section>`;
+  /* 一、本期重點：一句結論＋四格數字（每格附對照；數字都是從看板資料算的，可以直接改字） */
   const stat=(n,t,s)=>`<div><b class="num">${n}</b><span>${t}</span><small>${s}</small></div>`;
-  const sum=rptCh("sum","本期摘要",rptAuto(`<div class="rpt-stats" contenteditable="true">${stat(d.issues.length,"處理議題",`完成 ${d.nDone}・進行中 ${d.nAct}`)}${stat(d.marks,"處理紀錄","期間內的議題註記")}${stat(d.evNew.length,"新增即時回報",`完成 ${d.evDone.length}・併入議題 ${d.evLinked}`)}${stat(d.weeks.length,"每週概述","期間內的週報")}</div>`)+(rptGantt(d)?rptAuto(rptGantt(d)):""));
+  const nOpen=d.issues.length-d.nDone,diff=d.acts-d.prevActs,maxW=d.waits.reduce((m,w)=>Math.max(m,w.days),0);
+  const lead=d.issues.length?`共 ${d.issues.length} 件議題，${nOpen} 件進行中${d.nDone?`、${d.nDone} 件本期結案`:""}；本期完成 ${d.acts} 項具體行動（上期 ${d.prevActs} 項）${d.waits.length?`；${d.waits.length} 件正在等待回覆，最久已 ${maxW} 天`:""}。`:"這段期間沒有處理中的議題。";
+  const sum0=`<p class="rpt-lead" contenteditable="true">${esc(lead)}</p><div class="rpt-stats" contenteditable="true">${stat(d.issues.length,"處理議題",`進行中 ${nOpen}・本期結案 ${d.nDone}`)}${stat(d.acts,"完成行動",`上期 ${d.prevActs} 項（${diff>0?"多":diff<0?"少":"持平"}${diff?" "+Math.abs(diff):""}）`)}${stat(d.waits.length,"等待回覆",d.waits.length?`最久 ${maxW} 天`:"目前沒有")}${stat(d.evDone.length,"完成即時回報",`期間新增 ${d.evNew.length}`)}</div>`;
+  /* 二、議題進度：每件議題一列（階段、本期完成、目前狀況或卡點、下一步），下面接期間時程 */
+  const row=it=>{
+    const mk=sortedMarkers(it).filter(m=>m.date&&d.inP(m.date)),closed=it.doneAt&&it.doneAt<=d.to,n=it.tags.length||1,w=d.waits.find(x=>x.it===it);
+    return rptTr(rptTd(`<b>${esc(it.title)}</b>${hasDates(it)?`<small class="num">${esc(fmt(it.start))} – ${esc(fmt(it.end))}</small>`:""}`)
+      +rptTd(closed?`已結案<small class="num">${md(it.doneAt)}</small>`:`${esc(it.tags[it.cur]||"未設階段")}<small class="num">${it.cur+1} / ${n}</small>`)
+      +rptTd(mk.length?mk.map(m=>`<div><span class="rpt-d num">${md(m.date)}</span>${esc(m.text||"")}</div>`).join(""):'<span class="rpt-none">本期沒有紀錄</span>')
+      +rptTd(`${it.note?`<div>${esc(it.note)}</div>`:""}${w?`<div class="rpt-wait">等待回覆，已 ${w.days} 天</div>`:""}`,"目前狀況")
+      +rptTd("","下一步"));
+  };
+  const sum=rptCh("sum","本期重點與議題進度",rptAuto(sum0)+(d.issues.length?rptAuto(`<h3 class="rpt-subh" contenteditable="false">議題進度</h3><div class="rpt-tbl" data-t="issue">${rptTh(["議題","階段","本期完成","目前狀況／卡點","下一步"])}${d.issues.map(row).join("")}</div>`):""));
+  /* 附錄：每件議題的處理經過（原本的逐案寫法，細節放這裡，正文只留上面的表） */
   const issue=it=>{
     const meta=[hasDates(it)?`期間 ${fmt(it.start)} – ${fmt(it.end)}`:"",it.tags[it.cur]?`目前階段：${it.tags[it.cur]}`:"",staffJoin(it.staff)?`專員：${staffJoin(it.staff)}`:""].filter(Boolean).join("　｜　");
     const mk=sortedMarkers(it).filter(m=>!m.date||d.inP(m.date));
     const evs=state.events.filter(e=>e.issueId===it.id&&(!e.doneAt||d.inP(e.doneAt)||d.inP(e.createdAt)));
-    return `<article class="rpt-issue" data-tone="hi"><h3>${esc(it.title)}<span class="rpt-st">${it.doneAt&&it.doneAt<=d.to?`已結案 ${esc(fmt(it.doneAt))}`:`進行中・${hasDates(it)?`時程 ${schedPct(it,d.to)}%`:"未排程"}`}</span></h3>
-      ${meta?`<p class="rpt-meta2">${esc(meta)}</p>`:""}<div class="rpt-prog" contenteditable="false"><i style="width:${schedPct(it,d.to)||0}%"></i></div>
+    return `<article class="rpt-issue" data-tone="hi"><h3>${esc(it.title)}<span class="rpt-st">${it.doneAt&&it.doneAt<=d.to?`已結案 ${esc(fmt(it.doneAt))}`:"進行中"}</span></h3>
+      ${meta?`<p class="rpt-meta2">${esc(meta)}</p>`:""}
       <h4>處理經過</h4>${mk.length?`<ul class="rpt-tl">${mk.map(m=>`<li><span class="rpt-d">${m.date?esc(fmt(m.date).slice(5)):"未標日期"}</span>${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text||"")}</li>`).join("")}</ul>`:`<p class="rpt-none">這段期間沒有處理紀錄</p>`}
       ${it.note?`<h4>目前進度</h4><p>${esc(it.note)}</p>`:""}
       ${evs.length?`<h4>相關即時回報</h4><p>${evs.map(e=>`${esc(evName(e))}（${e.doneAt?esc(fmt(e.doneAt).slice(5))+" 完成":"處理中"}）`).join("、")}</p>`:""}
       ${it.links.length?`<h4>相關連結</h4><p>${it.links.map(l=>`<a href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`).join("、")}</p>`:""}</article>`};
-  const iss=rptCh("issues","議題處理情形",rptAuto(`<div class="rpt-body" contenteditable="true">${d.issues.map(issue).join("")||'<p class="rpt-none">這段期間沒有處理中的議題</p>'}</div>`));
-  return cover+toc+sum+iss+rptCh("free","工作檢討",rptTextBlk("在這裡輸入這段期間的工作檢討…"))+rptCh("free","下期規劃",rptTextBlk("在這裡輸入下一期的規劃…"));
+  const app=d.issues.length?rptCh("app","附錄：期間時程與處理經過",(rptGantt(d)?rptAuto(`<h3 class="rpt-subh" contenteditable="false">期間時程</h3>`+rptGantt(d)):"")+rptAuto(`<h3 class="rpt-subh" contenteditable="false">處理經過</h3><div class="rpt-body" contenteditable="true">${d.issues.map(issue).join("")}</div>`)):"";
+  return cover+toc+sum+rptCh("free","檢討、需要支援與下期規劃",rptTextBlk("工作檢討、需要支援（沒有就留白，空白不會印出）…")+rptPlanTbl())+app;
+}
+/* 封面圖案（三款都是 svg，顏色 currentColor＝部門主色；顯示哪一款由 .rpt-cover 的 data-cv 決定，board.css 的封面段） */
+function rptCoverArt(){
+  const bars=Array.from({length:76},(_,i)=>{const t=i/75,h=10+150*Math.pow(t,1.7);return `<rect x="${(i*2.75).toFixed(2)}" y="${(297-h).toFixed(1)}" width=".5" height="${h.toFixed(1)}" fill="url(#cvg-s)"/>`}).join("");
+  return `<svg data-k="band" viewBox="0 0 210 297" preserveAspectRatio="none"><defs><linearGradient id="cvg-b" gradientUnits="userSpaceOnUse" x1="105" y1="244" x2="145" y2="336"><stop offset="0" stop-color="currentColor"/><stop offset=".06" stop-color="currentColor"/><stop offset=".22" stop-color="currentColor" stop-opacity=".5"/><stop offset=".5" stop-color="currentColor" stop-opacity=".1"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><polygon points="0,293 210,197 210,297 0,297" fill="url(#cvg-b)"/></svg>`
+    +`<svg data-k="curve" viewBox="0 0 210 297" preserveAspectRatio="xMidYMid slice" fill="none" stroke="currentColor"><circle cx="196" cy="286" r="60" stroke-width="16"/><circle cx="196" cy="286" r="90" stroke-width="7" opacity=".62"/><circle cx="196" cy="286" r="112" stroke-width="3" opacity=".42"/><circle cx="196" cy="286" r="128" stroke-width="1" opacity=".55"/></svg>`
+    +`<svg data-k="stripe" viewBox="0 0 210 297" preserveAspectRatio="none"><defs><linearGradient id="cvg-s" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="currentColor"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>${bars}</svg>`;
 }
 /* 空白判斷：列印時空白的圖塊、整章都空白的章不印，目錄與章節號跟著跳過 */
 const rptBlank=el=>{
   const k=el.dataset.blk;if(k==="img"||k==="auto")return false;
+  if(k==="table")return !![...el.querySelectorAll(".rpt-td")].every(c=>!c.textContent.trim());
   if(k==="cards")return ![...el.querySelectorAll(".rpt-card [contenteditable]")].some(c=>c.textContent.trim());
   return ![...el.querySelectorAll('[contenteditable="true"]')].some(c=>c.textContent.trim());   /* 只看能打字的地方，不算工具鈕上的字 */
 };
@@ -282,15 +329,41 @@ function rptPickImg(ch){
     im.onload=()=>{const k=Math.min(1,2000/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
       c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
       const src=c.toDataURL(/png|gif|webp/.test(f.type)?"image/png":"image/jpeg",.88);
-      ch.querySelector(".rpt-blocks").insertAdjacentHTML("beforeend",rptImgBlk(src));const b=ch.querySelector(".rpt-blocks").lastElementChild;rptIn(b);rptSync();b.focus({preventScroll:true})};
+      ch.querySelector(".rpt-blocks").insertAdjacentHTML("beforeend",rptImgBlk(src,c.height/c.width));const b=ch.querySelector(".rpt-blocks").lastElementChild;rptIn(b);rptImgSync(b.querySelector(".rpt-img"));rptSync();b.focus({preventScroll:true})};
     im.onerror=()=>{URL.revokeObjectURL(url);toast("這個檔案讀不出圖片")};im.src=url};
   inp.click();
 }
-/* 圖片寬度：拖曳右下角（25～100％，每 5％ 一格，不會超出內文寬；高度另有上限，見 CSS 的 .rpt-img img） */
-function rptImgDrag(h,e){
-  const fig=h.closest(".rpt-img"),col=fig.parentElement.getBoundingClientRect().width,box=h.parentElement.getBoundingClientRect(),x0=e.clientX,w0=box.width,al=fig.dataset.al;
-  const k=al==="c"?2:al==="r"?-1:1;   /* 置中時兩邊一起長，拖一下要算兩倍 */
-  const mv=ev=>{const w=Math.max(25,Math.min(100,Math.round((w0+(ev.clientX-x0)*k)/col*20)*5));fig.style.setProperty("--w",w+"%");rptTools(fig.closest(".rpt-blk")).querySelectorAll("[data-iw]").forEach(b=>b.classList.toggle("on",+b.dataset.iw===w))};
+/* 圖片的位置、大小、版框高度一次改好：全部夾在版框裡（圖不出框、不超過一頁高），版框不夠高時自己長高（最高 RPT_IMG_MAXF）。單位都是版框寬的％ */
+const rptNum=(fig,k)=>parseFloat(fig.style.getPropertyValue("--"+k));
+function rptImgSet(fig,v){
+  const ar=+fig.dataset.ar||.75;
+  let w=Math.max(10,Math.min(100,v.w??rptNum(fig,"w")));
+  if(w*ar>RPT_IMG_MAXF*100)w=RPT_IMG_MAXF*100/ar;
+  const hb=w*ar;let far=Math.max(v.far??rptNum(fig,"far"),hb/100);
+  let x=Math.max(0,Math.min(100-w,v.x??rptNum(fig,"x"))),y=Math.max(0,v.y??rptNum(fig,"y"));
+  if(far*100<y+hb)far=Math.min(RPT_IMG_MAXF,(y+hb)/100);
+  y=Math.min(y,far*100-hb);
+  [["w",w],["x",x],["y",y]].forEach(([k,n])=>fig.style.setProperty("--"+k,n.toFixed(2)));fig.style.setProperty("--far",far.toFixed(4));
+  rptImgSync(fig);rptPaginateSoon();
+}
+/* 工具列上「現在是哪一個」：寬度、靠左／置中／靠右、淡出方向與範圍 */
+function rptImgSync(fig){
+  const blk=fig.closest(".rpt-blk"),T=rptTools(blk),w=rptNum(fig,"w"),x=rptNum(fig,"x"),on=(sel,f)=>T.querySelectorAll(sel).forEach(b=>b.classList.toggle("on",f(b)));
+  on("[data-iw]",b=>Math.abs(+b.dataset.iw-w)<.6);
+  on("[data-ia]",b=>Math.abs(x-({l:0,c:(100-w)/2,r:100-w})[b.dataset.ia])<.6);
+  on("[data-fd]",b=>b.dataset.fd===fig.dataset.fade);on("[data-fs]",b=>+b.dataset.fs===rptNum(fig,"f"));
+}
+/* 拖曳：mv＝移動圖片、tl／tr／bl／br＝從那個角等比例縮放（對角固定不動）、fh＝版框下緣調高度。滑鼠直接拖；觸控要先點一下選取那張圖（不然是在捲頁） */
+function rptImgDrag(el,e){
+  const fig=el.closest(".rpt-img"),R=fig.querySelector(".rpt-img-frame").getBoundingClientRect(),U=R.width/100,ar=+fig.dataset.ar||.75,
+    w0=rptNum(fig,"w"),x0=rptNum(fig,"x"),y0=rptNum(fig,"y"),far0=rptNum(fig,"far"),kind=el.dataset.h||"mv",px=e.clientX,py=e.clientY;
+  const mv=ev=>{const dx=(ev.clientX-px)/U,dy=(ev.clientY-py)/U;
+    if(kind==="mv")return rptImgSet(fig,{x:x0+dx,y:y0+dy});
+    if(kind==="fh")return rptImgSet(fig,{far:Math.max((y0+w0*ar)/100,far0+dy/100)});   /* 最矮到圖的下緣 */
+    const sx=kind[1]==="r"?1:-1,sy=kind[0]==="b"?1:-1,ax=sx>0?x0:x0+w0,ay=sy>0?y0:y0+w0*ar;   /* 固定不動的對角 */
+    const w=Math.max(10,Math.min(w0+sx*dx,sx>0?100-ax:ax,((sy>0?far0*100-ay:ay)/ar)));
+    rptImgSet(fig,{w,x:sx>0?ax:ax-w,y:sy>0?ay:ay-w*ar});
+  };
   const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up);removeEventListener("pointercancel",up);fig.classList.remove("sizing")};
   fig.classList.add("sizing");addEventListener("pointermove",mv);addEventListener("pointerup",up);addEventListener("pointercancel",up);e.preventDefault();
 }
@@ -304,13 +377,21 @@ function rptBind(ov){
     const bm=t.closest("[data-bmv]");if(bm&&blk){rptSwap(blk,+bm.dataset.bmv);return}
     if(t.closest("[data-chx]")&&ch){ov._undock();rptOut(ch,rptSync);return}
     const cm=t.closest("[data-cmv]");if(cm&&ch){rptSwap(ch,+cm.dataset.cmv);rptSync();return}
-    const iw=t.closest("[data-iw]");if(iw&&blk){blk.querySelector(".rpt-img").style.setProperty("--w",iw.dataset.iw+"%");rptTools(blk).querySelectorAll("[data-iw]").forEach(b=>b.classList.toggle("on",b===iw));return}
-    const ia=t.closest("[data-ia]");if(ia&&blk){blk.querySelector(".rpt-img").dataset.al=ia.dataset.ia;rptTools(blk).querySelectorAll("[data-ia]").forEach(b=>b.classList.toggle("on",b===ia));return}
+    const fig=blk&&blk.querySelector(".rpt-img");
+    const iw=t.closest("[data-iw]");if(iw&&fig){const w0=rptNum(fig,"w"),w=+iw.dataset.iw;rptImgSet(fig,{w,x:rptNum(fig,"x")+w0/2-w/2});return}   /* 以圖的中心點縮放 */
+    const ia=t.closest("[data-ia]");if(ia&&fig){const w=rptNum(fig,"w");rptImgSet(fig,{x:({l:0,c:(100-w)/2,r:100-w})[ia.dataset.ia]});return}
+    if(t.closest("[data-ifit]")&&fig){rptImgSet(fig,{y:0,far:rptNum(fig,"w")*(+fig.dataset.ar||.75)/100});return}   /* 版框貼合圖片（上方空白去掉、高度剛好） */
+    const fd=t.closest("[data-fd]");if(fd&&fig){fig.dataset.fade=fd.dataset.fd;rptImgSync(fig);return}
+    const fs=t.closest("[data-fs]");if(fs&&fig){fig.style.setProperty("--f",fs.dataset.fs);if(fig.dataset.fade==="none")fig.dataset.fade="all";rptImgSync(fig);return}
     const co=t.closest("[data-cols]");if(co&&blk&&co.tagName==="BUTTON"){blk.querySelector(".rpt-cards").dataset.cols=co.dataset.cols;rptTools(blk).querySelectorAll("button[data-cols]").forEach(b=>b.classList.toggle("on",b===co));return}
     if(t.closest("[data-cadd]")&&blk){const g=blk.querySelector(".rpt-cards");g.insertAdjacentHTML("beforeend",rptCardHTML());const c=g.lastElementChild;rptIn(c);c.querySelector("b").focus();return}
+    const cvs=t.closest("[data-cvs]");if(cvs){const cv=cvs.closest(".rpt-cover");cv.dataset.cv=cvs.dataset.cvs;cvs.parentElement.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b===cvs));return}
+    if(t.closest("[data-radd]")&&blk){const g=blk.querySelector(".rpt-tbl"),n=g.querySelector(".rpt-tr:not(.rpt-th)");g.insertAdjacentHTML("beforeend",rptTr([...n.querySelectorAll(".rpt-td")].map(c=>rptTd("",c.dataset.ph||"")).join(""),true));const r=g.lastElementChild;rptIn(r);r.querySelector(".rpt-td").focus();return}
+    const rx=t.closest("[data-rx]");if(rx){const r=rx.closest(".rpt-tr");if(r.parentElement.querySelectorAll(".rpt-tr:not(.rpt-th)").length>1)rptOut(r,rptPaginateSoon);return}
     const cx=t.closest("[data-cx]");if(cx){const c=cx.closest(".rpt-card");if(c.parentElement.children.length>1)rptOut(c);return}
   });
-  ov.addEventListener("pointerdown",e=>{const h=e.target.closest(".rpt-img-h");if(h)rptImgDrag(h,e)});
+  ov.addEventListener("pointerdown",e=>{const h=e.target.closest(".rpt-img-h");if(h)return rptImgDrag(h,e);
+    const im=e.target.closest(".rpt-img-box img"),blk=im&&im.closest(".rpt-blk");if(im&&(e.pointerType==="mouse"||blk.matches(":focus-within")))rptImgDrag(im,e)});   /* 觸控：第一下只是選取（讓頁面照常捲動），選取後才能拖 */
   ov.addEventListener("input",e=>{if(e.target.closest&&e.target.closest(".rpt-ch-h h2"))rptSync()});
 }
 /* ---------- 段落小工具（自訂區塊：工作檢討、下期規劃、新區塊） ----------
