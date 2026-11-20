@@ -7,6 +7,8 @@
      看板代號改成 preview-03（存檔寫進這個瀏覽器 localStorage 的 workboard:preview-03，不會碰到正式看板的暫存）
    - 部門設定：Firebase 網頁設定拿掉（firebase: null）、每個部門的資料來源都是 github、雲端位置空白 → 雲端關閉，存檔只寫 localStorage
    - 開頁就是登入狀態：內嵌一行預覽專用的 script，把目前身分設成「預覽」（正式網站沒有這一行）
+   - 部門標誌：dept/icons/ 的部門 SVG（九個部門與 favicon.svg，deptLogo 會用到的全部）內嵌成一張表；pagefx.js 後面接一段預覽專用的 script，
+     讓 PageFx.svg 讀表裡的路徑時改讀 data: 網址（file:// 不能 fetch 檔案），解析仍走 PageFx.svg 原本那一套。網址加 ?d=代號 換部門，標誌跟著換
    - 頁面上不加任何說明文字
    - 產生的檔案不進 repo（.gitignore；2026-11-20 從 main 拿掉）：repo 的內容會被 GitHub Pages 發布，這個檔案只給自己的電腦用 file:// 打開
    產生後會檢查：不能有 http(s):// 的資源載入（src／href／@import／url()）、不能出現權杖、密碼、Firebase 設定的字樣，不合格就不寫檔、以非 0 結束。 */
@@ -29,6 +31,15 @@ let cfg = rd("dept/config.js").replace(/firebase:\s*\{[^}]*\}/, "firebase: null"
 if (/firebase:\s*\{/.test(cfg)) fail("dept/config.js 的 firebase 設定沒有拿掉");
 cfg = cfg.replace(/source:\s*"[a-z]+"/g, 'source: "github"');
 
+/* 部門標誌：deptLogo（core/js/config.js）會用到的 SVG 全部內嵌 */
+const logos = {};
+for (const f of fs.readdirSync(path.join(ROOT, "dept", "icons")).filter(f => /^(?:dept-[a-z]+|favicon)\.svg$/.test(f)).sort())
+  logos["dept/icons/" + f] = rd("dept/icons/" + f);
+if (!logos["dept/icons/favicon.svg"] || Object.keys(logos).length < 2) fail("dept/icons/ 的部門標誌沒有讀到");
+const logoJSON = JSON.stringify(logos).replace(/</g, "\\u003c");
+const logoJS = `<script>/* 預覽專用：部門標誌內嵌（正式網站讀 dept/icons/ 的檔案） */(()=>{const M=${logoJSON},o=PageFx.svg;` +
+  `PageFx.svg=u=>Object.prototype.hasOwnProperty.call(M,u)?o("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(M[u])):o(u)})();</script>`;
+
 const html = rd("index.html");
 const js = p => (p === "dept/config.js" ? cfg : rd(p)).replace(/<\/script/gi, "<\\/script");
 const css = p => rd(p).replace(/<\/style/gi, "<\\/style");
@@ -39,7 +50,8 @@ let out = html
   .replace(/<link rel="stylesheet" href="([^"]+)">/g, (_, p) => `<style>\n${css(p)}\n</style>`)
   .replace(/<script id="state" type="application\/json">\{\}<\/script>/, () => `<script id="state" type="application/json">${dataJSON}</script>`)
   .replace(/<script src="([^"]+)"><\/script>/g, (_, p) => `<script>\n${js(p)}\n</script>` +
-    (p === "core/js/team.js" ? '\n<script>/* 預覽專用：開頁就是「預覽」身分（正式網站沒有這一行） */meId="mpv";</script>' : ""));
+    (p === "core/js/team.js" ? '\n<script>/* 預覽專用：開頁就是「預覽」身分（正式網站沒有這一行） */meId="mpv";</script>' : "") +
+    (p === "core/js/pagefx.js" ? "\n" + logoJS : ""));
 out = out.replace("<title>", "<title>03 即時回報預覽｜");
 
 /* 檢查 */
@@ -51,6 +63,7 @@ for (const bad of [/AIza[0-9A-Za-z_-]{20,}/, /stustsa-council/, /firebaseapp\.co
 for (const bad of [/"sync"/, /"tokenEnc"/, /"tokenAll"/, /"pwHash"/, /"pwKdf"/, /"kdf"\s*:/, /"tok"\s*:/, /"owner"\s*:\s*"[^"]/, /apiKey/])
   if (bad.test(dataJSON) || bad.test(cfg)) fail("內嵌的資料或設定出現不該有的欄位：" + bad);   /* 程式碼本身會提到這些欄位名稱，只檢查資料與設定 */
 if (!out.includes('"id":"preview-03"')) fail("資料沒有內嵌");
+if (!out.includes(logoJS)) fail("部門標誌沒有內嵌");
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, out);
