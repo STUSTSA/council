@@ -13,8 +13,8 @@ const WD="日一二三四五六";
 function notiItems(s,dept){
   const out=[];
   (s.events||[]).filter(e=>!e.doneAt).forEach(e=>(e.times||[]).forEach(t=>{if(!t.start)return;
-    const d=t.start.slice(0,10),en=(t.end||"").slice(0,10);
-    out.push({key:`${dept}:t:${t.id}`,date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
+    const d=t.start.slice(0,10),en=(t.end||"").slice(0,10),b=(e.blocks||[]).find(x=>x.timeId===t.id);
+    out.push({key:`${dept}:t:${t.id}`,evId:e.id,tid:t.id,done:!!(b&&b.check),date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
   return out.sort(byWhen);
 }
 const byWhen=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
@@ -100,8 +100,10 @@ const calWhen=x=>x.end?`${nmd(x.date)}–${nmd(x.end)}`:x.time?x.time+(x.etime&&
 const calPill=(c,x)=>c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);
 const calKind=(c,x)=>x.kind==="meet"?" line":x.kind==="act"||c.mode==="mine"?" pri":c.mode==="pres"?" acc":"";
 function calListHTML(c,r){
-  const d=c.day,xs=r.xs.filter(x=>covers(x,d));
-  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div><div class="ce-n">${esc(x.title)}</div>
+  const d=c.day,xs=r.xs.filter(x=>covers(x,d)),ed=!c.pub&&canEdit();
+  /* 勾選：只有本部門看板上的時間（x.tid；別的部門、活動、會議沒有）而且有編輯權的人看得到框；已勾的留在清單裡、標題淡化加刪除線。勾＝清點「完成」同一個函式 notiDone */
+  const ck=x=>ed&&x.tid&&x.dept===(CFG.deptId||"rights");
+  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div>${ck(x)?`<div class="ce-n ck${x.done?" done":""}"><label class="fld-check"><input type="checkbox" data-calck="${esc(x.evId)}" data-caltid="${esc(x.tid)}"${x.done?" checked":""} aria-label="完成"></label><span>${esc(x.title)}</span></div>`:`<div class="ce-n${x.done?" done":""}">${esc(x.title)}</div>`}
       <div class="ce-b">${x.place?`<span class="ce-pl">${ico("pin","solo")}${esc(x.place)}</span>`:""}<span class="ce-k${calKind(c,x)}">${esc(calPill(c,x))}</span></div></div>`).join("")
     :r.loading?`<p class="cal-none">讀取中…</p>`:r.err?`<p class="cal-none">${esc(r.err)}</p>`:`<p class="cal-none num">${nmd(d)}</p>`;
   return `<div class="cal-list" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
@@ -401,17 +403,24 @@ let tlUndo=null;   /* {evId, tid, bid（核取行）, made（這次補的）} */
 const tmOf=(evId,tid)=>{const ev=state.events.find(e=>e.id===evId);return {ev,t:ev&&(ev.times||[]).find(y=>y.id===tid)}};
 const tlUndoOn=()=>!!(tlUndo&&canEdit()&&tmOf(tlUndo.evId,tlUndo.tid).t);
 const tlUndoHTML=()=>tlUndoOn()?`<div class="lc-save tl-undo"><span class="kp-st" role="status" data-st="ok">已完成</span><button type="button" class="lc-undo" data-tlundo>復原</button></div>`:"";
-async function notiDone(evId,tid){
+async function notiDone(evId,tid,on=true,cal=false){   /* on＝false：取消勾（行事曆的勾選框用，保留那一行）；cal＝從行事曆勾的，不出現清點的「復原」 */
   if(!canEdit())return false;
   let u=null;
   const ok=await settingSave(()=>{const {ev,t}=tmOf(evId,tid);if(!t)return false;
     let b=(ev.blocks||[]).find(x=>x.timeId===tid),made=false;
+    if(!on){if(!b||!b.check)return false;b.check=false;evTouch(ev);kpSync(ev);return}
     if(b){if(b.check)return false;b.check=true}
     else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
       b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
-    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},"已完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
-  tlUndo=ok&&u?u:null;renderNoti();return ok;
+    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},on?"已完成":"已取消完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
+  if(!cal)tlUndo=ok&&u?u:null;
+  renderNoti();return ok;
 }
+document.addEventListener("change",async e=>{
+  const i=e.target.closest&&e.target.closest("[data-calck]");if(!i)return;
+  i.disabled=true;const ok=await notiDone(i.dataset.calck,i.dataset.caltid,i.checked,true);
+  if(ok===false)renderNoti();   /* 沒寫成：框回到實際狀態（存檔失敗的原因由存檔本身提示） */
+});
 async function notiUndo(){
   const u=tlUndo;if(!u||!canEdit())return false;tlUndo=null;
   const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
