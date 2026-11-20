@@ -1287,19 +1287,23 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
    桌面：一排橫向色塊（.hm-rail），焦點那張放大 1.13、其他半透明，整列共用一個焦點框（.hm-ring，只用 transform 滑過去）。
    色塊＝平面 --blk（柔光主題帶 --blk-sh）；英文小標、部門名、標誌（.hm-lg，board.css「部門標誌」段）、進行中的張數（.hm-n，大數字 Jost 300） */
 .hm{--hm-pl:max(clamp(16px,4vw,56px),env(safe-area-inset-left));--hm-pr:max(clamp(16px,4vw,56px),env(safe-area-inset-right));   /* 左右內距（下排要用來算回整個畫面寬） */
-  --hm-dot:44px;   /* 下排圓鈕的直徑（「下排」那一塊） */
-  position:fixed;inset:0;display:flex;flex-direction:column;padding:calc(26px + env(safe-area-inset-top)) var(--hm-pr) calc(28px + env(safe-area-inset-bottom)) var(--hm-pl);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.hm-top{flex:none;display:flex;align-items:center;gap:14px}
+  --hm-t:clamp(160px,min(30vh,24vw),340px);   /* 桌面色塊的邊長：跟著視窗高度走（大螢幕變大），窄而高的視窗改看寬度 */
+  --hm-dot:calc(var(--hm-t)*.28);--hm-gap:calc(var(--hm-dot)*.42);   /* 下排圓鈕的直徑（色塊邊長的 0.28）與間距（「下排」那一塊）；手機 44／10 */
+  --hm-fill:var(--blk);   /* 下排編輯中輸入框、返回鍵的底：桌面沒有膠囊，用色塊的底才看得出來；手機在膠囊（--blk）上，用 --bg */
+  /* 桌面的垂直配置照 Switch 主畫面：上排、色塊列、下排三段，中間的留白用 fr 分（色塊列上面 18、色塊與下排之間 11、下排下面 11）：
+     色塊列中心落在畫面高度 45% 左右（略高於中線），下排在色塊與畫面底緣中間；視窗矮到放不下時留白縮到 12px（最後一段到 0） */
+  position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(12px,18fr) auto minmax(12px,11fr) auto minmax(0,11fr);padding:calc(26px + env(safe-area-inset-top)) var(--hm-pr) calc(28px + env(safe-area-inset-bottom)) var(--hm-pl);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.hm-top{grid-row:1;flex:none;display:flex;align-items:center;gap:14px}
 .hm-sp{flex:1}
 .hm-me{display:flex;align-items:center;height:52px}   /* 只有標誌本身，不加底（ui-08）；深色、各主題的顏色在 core/splash.css「學生會標誌」段 */
 .hm-su{display:block;height:32px;width:auto;overflow:visible}
 .hm-clock{font-size:28px;font-weight:300;letter-spacing:.02em;line-height:1}
 .hm-round{display:grid;place-items:center;flex:none;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink)}
 .hm-round .ico{width:22px;height:22px}
-.hm-stage{position:relative;flex:none;min-height:0;display:flex;flex-direction:column;margin-top:clamp(24px,9vh,110px)}   /* 桌面：色塊列在上半部、下排緊接在下面（照模擬頁） */
-.hm-rail{position:relative;flex:none;display:flex;gap:34px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));padding:40px clamp(34px,4vw,56px)}
+.hm-stage{grid-row:3;position:relative;flex:none;min-height:0;display:flex;flex-direction:column}   /* 桌面：色塊列在中間那一段（.hm 的 grid），手機：卡片堆佔滿剩下的高度 */
+.hm-rail{position:relative;flex:none;display:flex;gap:calc(var(--hm-t)*.16);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));padding:40px clamp(34px,4vw,56px)}
 .hm-rail::-webkit-scrollbar{display:none}
-.hm-tile{position:relative;flex:none;display:block;width:clamp(150px,17vw,214px);aspect-ratio:1;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;-webkit-user-drag:none;
+.hm-tile{position:relative;flex:none;display:block;width:var(--hm-t);aspect-ratio:1;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;-webkit-user-drag:none;
   transition:transform var(--mo-slow) cubic-bezier(.3,1.45,.45,1),opacity var(--mo-base) var(--mo-out)}
 .hm-rail .hm-tile:not(.on){opacity:.82}
 .hm-tile.on{z-index:1;transform:scale(1.13)}
@@ -1320,60 +1324,63 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
 .hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}
 /* ---------- 主頁：下排（home.html 的 #hmDock，home.js 的 dkPaint；桌面與手機的下排規則都在這一塊） ----------
-   寬度跟著內容、以整個畫面寬置中（不是以主頁的內容區：左右安全區不一樣時也在正中間）；浮在上面（帶陰影）。
-   .hm-dock＝跟畫面一樣寬的一條（左右用負邊距抵掉 .hm 的內距，本身不接點擊；左右超出畫面的底板分身在這裡裁掉），.hm-dk＝膠囊，在那一條的正中間。
+   寬度跟著內容、以整個畫面寬置中（不是以主頁的內容區：左右安全區不一樣時也在正中間）。
+   桌面（ui-12，像 Switch 主畫面）：一顆一顆分開的圓鈕，沒有共用的底（底板 .hm-dk-bg 不畫），圓鈕直徑跟著色塊（--hm-dot）、間距拉開（--hm-gap）；
+   手機：圓鈕 44px 放在浮在上面（帶陰影）的膠囊裡。
+   .hm-dock＝跟畫面一樣寬的一條（左右用負邊距抵掉 .hm 的內距，本身不接點擊；左右超出畫面的底板分身在這裡裁掉），.hm-dk＝整排（手機是膠囊），在那一條的正中間。
    內容：全會行事曆圓鈕（主要動作色）、細線、個人常用連結（網站圖示；網站與 Google 圖示服務都要不到時是網域第一個字母，跟其他圓鈕一樣大的圓鈕、字置中）、最後「+」；編輯中「+」換成返回鍵、網址、名稱、加入，連結右上角紅色 ×。
-   底板＝左右兩半（.hm-dk-bg，各自從膠囊的一邊延伸到中線、在中線裁掉；裡面那條很長的膠囊帶陰影）：寬度改變時兩半各自用 transform 滑到新的邊（中線不動），
+   手機的底板＝左右兩半（.hm-dk-bg，各自從膠囊的一邊延伸到中線、在中線裁掉；裡面那條很長的膠囊帶陰影）：寬度改變時兩半各自用 transform 滑到新的邊（中線不動），
    不動 width。內容放不下（手機、編輯中）時 .hm-dk-in 自己橫捲（.sc），放得下時不裁切（滑動中的按鈕不會被切掉） */
-.hm-dock{flex:none;display:flex;justify-content:center;margin:clamp(14px,4vh,40px) calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));overflow-x:clip;pointer-events:none}
+.hm-dock{grid-row:5;flex:none;display:flex;justify-content:center;margin:0 calc(-1*var(--hm-pr)) 0 calc(-1*var(--hm-pl));overflow-x:clip;pointer-events:none}
 .hm-dk{position:relative;display:flex;max-width:calc(100% - 32px);pointer-events:auto}
-.hm-dk-bg{position:absolute;top:-48px;bottom:-48px;overflow:hidden;pointer-events:none}
+.hm-dk-bg{display:none;position:absolute;top:-48px;bottom:-48px;overflow:hidden;pointer-events:none}
 .hm-dk-l{left:-100vw;right:50%}
 .hm-dk-r{left:50%;right:-100vw}
 .hm-dk-bg>span{position:absolute;top:48px;bottom:48px;border-radius:999px;background:var(--blk);box-shadow:0 12px 30px -8px var(--wal-sh)}
 .hm-dk-l>span{left:100vw;right:-100vw}
 .hm-dk-r>span{left:-100vw;right:100vw}
-.hm-dk-in{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:8px;border-radius:999px;scrollbar-width:none}
+.hm-dk-in{position:relative;display:flex;align-items:center;gap:var(--hm-gap);min-width:0;padding:8px;border-radius:999px;scrollbar-width:none}
 .hm-dk-in.sc{overflow-x:auto;overscroll-behavior-x:contain}
 .hm-dk-in::-webkit-scrollbar{display:none}
 .hm-dk-in>*{flex:none}
 /* 下排圓鈕：全會行事曆（.hm-pub）、連結（.hm-lkc，<a>）、「+」（.hm-lkadd）同一個大小 --hm-dot（在 .hm 上），編輯中的返回鍵（.hm-lkb）小 4px；
-   下面各自只給顏色與圖示大小。連結圓鈕的首字母與網站圖示共用同一顆圓，底色 --blk2（只用主題變數，深色、各主題跟著變）；字或圖示都在圓的正中間 */
+   下面各自只給顏色與圖示大小；圖示、首字母都照直徑等比例（以 44px 時的大小為準：行事曆圖示 20、「+」與返回鍵 18、網站圖示 26、首字母 16）。連結圓鈕的首字母與網站圖示共用同一顆圓，底色 --blk2（只用主題變數，深色、各主題跟著變）；字或圖示都在圓的正中間 */
 .hm-pub,.hm-lkc,.hm-lkadd,.hm-lkb{display:grid;place-items:center;min-height:0;padding:0;border:0;border-radius:50%}
 .hm-pub,.hm-lkc,.hm-lkadd{width:var(--hm-dot);height:var(--hm-dot)}
 .hm-lkb{width:calc(var(--hm-dot) - 4px);height:calc(var(--hm-dot) - 4px)}
 .hm-pub{background:var(--pri);color:var(--pri-ink)}
-.hm-pub .ico{width:20px;height:20px}
+.hm-pub .ico{width:calc(var(--hm-dot)*20/44);height:calc(var(--hm-dot)*20/44)}
 .hm-lkc{position:relative;background:var(--blk2);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--ease)}
 .hm-lkadd{box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
-.hm-lkadd .ico{width:18px;height:18px}
-.hm-lkb{background:var(--bg);color:var(--ink)}
-.hm-lkb .ico{width:18px;height:18px}
+.hm-lkadd .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44)}
+.hm-lkb{background:var(--hm-fill);color:var(--ink)}
+.hm-lkb .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44)}
 /* 滑過、按下：按鈕（行事曆、「+」、返回鍵）吃全站 button 那一套（board.css 開頭「被指到放大、按下縮回」）；連結圓鈕是 <a>，在這裡給同一套：
    transform 放大 1.05／縮 .96、同一條過渡曲線；關掉動態時不動。離開就回到 none */
 @media (hover:hover){.hm-lkc:hover{transform:scale(1.05)}}
 .hm-lkc:active{transform:scale(.96)}
 @media (prefers-reduced-motion:reduce){.hm-lkc:hover,.hm-lkc:active{transform:none}}
-.hm-dv{width:1px;height:22px;background:var(--hair)}
+.hm-dv{width:1px;height:calc(var(--hm-dot)/2);background:var(--hair)}
 .hm-lk{position:relative;display:flex}
-.hm-lkl{display:block;width:var(--hm-dot);height:var(--hm-dot);font-family:"Jost","Noto Sans TC",sans-serif;font-size:16px;font-weight:700;line-height:var(--hm-dot);text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母：字形置中——行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照圓鈕大小的行高置中（字框置中，大寫字會偏上一點） */
-.hm-lki{position:absolute;width:26px;height:26px;border-radius:6px;object-fit:contain;opacity:0;-webkit-user-drag:none}   /* 網站圖示：26px、不裁成圓、不變形；載到前透明且不佔位（首字母先顯示） */
+.hm-lkl{display:block;width:var(--hm-dot);height:var(--hm-dot);font-family:"Jost","Noto Sans TC",sans-serif;font-size:calc(var(--hm-dot)*16/44);font-weight:700;line-height:var(--hm-dot);text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母：字形置中——行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照圓鈕大小的行高置中（字框置中，大寫字會偏上一點） */
+.hm-lki{position:absolute;width:calc(var(--hm-dot)*26/44);height:calc(var(--hm-dot)*26/44);border-radius:calc(var(--hm-dot)*6/44);object-fit:contain;opacity:0;-webkit-user-drag:none}   /* 網站圖示：44px 圓鈕時 26px（跟著直徑等比例）、不裁成圓、不變形；載到前透明且不佔位（首字母先顯示） */
 .hm-lk.fav .hm-lkl{display:none}   /* 載到網站圖示（home.js 的 lkIco 加 .fav；不用 .ico，那是全站 SVG 圖示的 class，會把連結框改成 1.15em 大小） */
 .hm-lk.fav .hm-lki{position:static;opacity:1}
 .hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */
-.hm-lkx{position:absolute;right:-4px;top:-4px;display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:var(--lite)}
+.hm-lkx{position:absolute;right:calc(var(--hm-dot)*.15 - 10.6px);top:calc(var(--hm-dot)*.15 - 10.6px);display:grid;place-items:center;width:20px;height:20px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--late);color:var(--lite)}   /* 紅色 ×（20px）：中心落在圓鈕右上 45° 的圓周附近（44px 時 -4px），圓鈕變大也貼著圓 */
 .hm-lkx .ico{width:10px;height:10px}
 .hm-lkf{display:flex;align-items:center;gap:8px}
-.hm-lkf input{width:110px;height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--bg);font-size:14px}
+.hm-lkf input{width:110px;height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--hm-fill);font-size:14px}
 .hm-lkf .hm-lku{width:190px}
 .hm-lkf .primary{min-height:36px;padding:0 16px;font-size:14px}
 /* 連結名稱的小膠囊（#hmTip，放在 body 下，不會被下排裁到）：桌面滑鼠停在連結上時浮在圖示上方，淡入 fast；手機（沒有 hover）不出現 */
 .hm-tip{position:fixed;left:0;top:0;z-index:50;max-width:min(320px,80vw);padding:5px 11px;border-radius:999px;background:var(--ink);color:var(--blk);font-size:12.5px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
 .hm-tip.on{opacity:1}
 @media (hover:none){.hm-tip{display:none}}
-/* 下排（手機 640px 以下）：固定在畫面底部、陰影朝上；輸入框 16px（iPhone：16px 以下聚焦時會整頁放大），寬度讓返回鍵到「加入」在 412 寬放得下 */
+/* 下排（手機 640px 以下）：固定在畫面底部、膠囊底板（陰影朝上）；輸入框 16px（iPhone：16px 以下聚焦時會整頁放大），寬度讓返回鍵到「加入」在 412 寬放得下 */
 @media (max-width:640px){
   .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0}
+  .hm-dk-bg{display:block}
   .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
   .hm-lkf input{width:88px;font-size:16px}
   .hm-lkf .hm-lku{width:140px}
@@ -1385,13 +1392,13 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-ly-bar{display:flex;justify-content:flex-end}
 .hm-ly .look{padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 @media (max-width:640px){
-  .hm{--hm-pl:max(16px,env(safe-area-inset-left));--hm-pr:max(16px,env(safe-area-inset-right));padding:calc(16px + env(safe-area-inset-top)) var(--hm-pr) 0 var(--hm-pl)}
+  .hm{--hm-pl:max(16px,env(safe-area-inset-left));--hm-pr:max(16px,env(safe-area-inset-right));--hm-dot:44px;--hm-gap:10px;--hm-fill:var(--bg);display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top)) var(--hm-pr) 0 var(--hm-pl)}
   .hm-top{gap:10px}
   .hm-me{height:48px}
   .hm-su{height:28px}
   .hm-clock{font-size:22px}
   .hm-round{width:48px;height:48px}
-  .hm-stage{flex:1;margin-top:0}
+  .hm-stage{flex:1}
 }
 
 /* 進部門、回主頁的過場（home.js 的 tileExpand／walFlip／hmCollapse；DESIGN-next 第五節「整頁過場」）：都是蓋在畫面上的分身，只動 transform／opacity。

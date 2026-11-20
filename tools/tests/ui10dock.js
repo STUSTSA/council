@@ -6,7 +6,7 @@
    1. 兩個連結真的顯示網站圖示（img 載到、不透明），一個顯示首字母圓鈕
    2. 每個元素的垂直中心都跟全會行事曆圓鈕（.hm-pub）相差 1px 內：有圖示的連結量 img 的框，並從截圖找出圖示顏色實際畫出來的範圍再量一次；
       首字母圓鈕量 .hm-lkl；「+」量 .hm-lkadd
-   3. 連結框（.hm-lk）跟圓鈕一樣是 44×44；圖示水平也在連結框正中間（1px 內）
+   3. 連結框（.hm-lk）跟圓鈕一樣大（手機 44×44；桌面跟著色塊，ui-12 起直徑＝--hm-dot，下面的 44、26、6px 都照直徑等比例）；圖示水平也在連結框正中間（1px 內）
    4. 編輯中（點「+」）：行事曆圓鈕、各連結、返回鍵的中心仍在同一條線（1px 內）；紅色 × 相對於自己那顆 44px 圓鈕的位置，有圖示和首字母的連結一樣（1px 內）
    5. 圓鈕（DievE 11/19 定）：有圖示的連結也是 44px 的圓（.hm-lkc），底色跟首字母圓鈕同一個（--blk2）；圖示 26×26、object-fit:contain、不裁成圓
    6. 關掉動態（這一段都用 reducedMotion:reduce）：滑鼠停在連結上不動（transform 維持 none），跟行事曆圓鈕一樣
@@ -46,7 +46,7 @@ const LINKS=[{u:'https://drive.example/',n:'雲端硬碟'},{u:'https://none.exam
     const pub=R(document.getElementById('hmPub')),y0=cy(pub);
     const links=[...document.querySelectorAll('.hm-dk-in>.hm-lk')].map(l=>{const i=l.querySelector('img.hm-lki'),lab=l.querySelector('.hm-lkl'),x=l.querySelector('.hm-lkx'),box=R(l);
       const icon=!!i&&i.complete&&i.naturalWidth>2&&getComputedStyle(i).opacity==='1'&&getComputedStyle(lab).display==='none';
-      const vis=icon?R(i):R(lab),circle={left:cx(box)-22,top:cy(box)-22};
+      const vis=icon?R(i):R(lab),circle={left:cx(box)-box.width/2,top:cy(box)-box.height/2};
       const c=l.querySelector('.hm-lkc'),cs=getComputedStyle(c),cr=R(c),is=i&&getComputedStyle(i);
       return {nm:l.dataset.nm,icon,dy:cy(vis)-y0,dx:cx(vis)-cx(box),w:box.width,h:box.height,vw:vis.width,vh:vis.height,
         cw:cr.width,ch:cr.height,cbr:parseFloat(cs.borderTopLeftRadius)||0,cbg:cs.backgroundColor,fit:is&&is.objectFit,ibr:is&&is.borderRadius,
@@ -74,16 +74,17 @@ const LINKS=[{u:'https://drive.example/',n:'雲端硬碟'},{u:'https://none.exam
     const r=await read(p);
     ok(done&&r.links.filter(l=>l.icon).length===2&&r.links[1]&&!r.links[1].icon,`${T} 兩個連結顯示網站圖示（64×64 PNG）、一個顯示首字母圓鈕：${r.links.map(l=>l.nm+(l.icon?'＝圖示':'＝字母')).join('、')}`);
     const ic=r.links.filter(l=>l.icon),lt=r.links.filter(l=>!l.icon);
+    const D=r.pub.w,k=D/44,eq=(a,b)=>Math.abs(a-b)<.05,E=v=>f2(v*k);   /* 圓鈕直徑：手機 44；桌面跟著色塊（ui-12，--hm-dot），圖示照 44px 時的大小等比例 */
     ok(ic.length&&ic.every(l=>near(l.dy)),`${T} 有圖示的連結：圖示框中心跟全會行事曆圓鈕在同一條線（差 ${ic.map(l=>f2(l.dy)).join('、')}px，要 1px 內）`);
     const dr=[];for(const l of ic)dr.push(await drawn(p,l.clip,COL[l.nm==='雲端硬碟'?'drive.example':'threads.example']));
-    ok(dr.length&&dr.every(d=>d&&near(d.dy)&&Math.abs(d.h-26)<=1.5),`${T} 有圖示的連結：截圖裡圖示實際畫出來的範圍中心也在同一條線（差 ${dr.map(d=>d?f2(d.dy)+'px／高 '+f2(d.h):'找不到').join('、')}）`);
-    ok(lt.length&&lt.every(l=>near(l.dy)&&l.vw===44&&l.vh===44),`${T} 首字母圓鈕：中心在同一條線（差 ${lt.map(l=>f2(l.dy)).join('、')}px）、44×44`);
+    ok(dr.length&&dr.every(d=>d&&near(d.dy)&&Math.abs(d.h-26*k)<=1.5),`${T} 有圖示的連結：截圖裡圖示實際畫出來的範圍中心也在同一條線（差 ${dr.map(d=>d?f2(d.dy)+'px／高 '+f2(d.h):'找不到').join('、')}）`);
+    ok(lt.length&&lt.every(l=>near(l.dy)&&eq(l.vw,D)&&eq(l.vh,D)),`${T} 首字母圓鈕：中心在同一條線（差 ${lt.map(l=>f2(l.dy)).join('、')}px）、跟行事曆圓鈕一樣大（${f2(D)}；手機 44）`);
     ok(near(r.add),`${T} 「+」圓鈕：中心在同一條線（差 ${f2(r.add)}px）`);
-    ok(r.links.every(l=>l.w===44&&l.h===44)&&r.pub.w===44&&r.pub.h===44,`${T} 連結框跟行事曆圓鈕一樣 44×44（連結框 ${r.links.map(l=>f2(l.w)+'×'+f2(l.h)).join('、')}）`);
-    ok(ic.every(l=>near(l.dx)&&l.vw===26&&l.vh===26),`${T} 圖示 26×26、水平在連結框正中間（差 ${ic.map(l=>f2(l.dx)).join('、')}px）`);
+    ok(r.links.every(l=>eq(l.w,D)&&eq(l.h,D))&&eq(r.pub.h,D)&&(!touch||D===44),`${T} 連結框跟行事曆圓鈕一樣大（${f2(D)}，手機 44；連結框 ${r.links.map(l=>f2(l.w)+'×'+f2(l.h)).join('、')}）`);
+    ok(ic.every(l=>near(l.dx)&&eq(l.vw,26*k)&&eq(l.vh,26*k)),`${T} 圖示 ${E(26)}×${E(26)}（44px 圓鈕時 26）、水平在連結框正中間（差 ${ic.map(l=>f2(l.dx)).join('、')}px）`);
     const bg0=r.links.find(l=>!l.icon);
-    ok(ic.length&&ic.every(l=>l.cw===44&&l.ch===44&&l.cbr>=22&&/^rgb/.test(l.cbg)&&l.cbg!=='rgba(0, 0, 0, 0)'&&bg0&&l.cbg===bg0.cbg),`${T} 有圖示的連結是 44px 的圓、底色跟首字母圓鈕同一個（${ic.map(l=>f2(l.cw)+'×'+f2(l.ch)+' 圓角 '+f2(l.cbr)+' '+l.cbg).join('、')}；首字母 ${bg0&&bg0.cbg}）`);
-    ok(ic.every(l=>l.fit==='contain'&&l.ibr==='6px'),`${T} 圖示 object-fit:contain、圓角 6px（不裁成圓）：${ic.map(l=>l.fit+' '+l.ibr).join('、')}`);
+    ok(ic.length&&ic.every(l=>eq(l.cw,D)&&eq(l.ch,D)&&l.cbr>=D/2&&/^rgb/.test(l.cbg)&&l.cbg!=='rgba(0, 0, 0, 0)'&&bg0&&l.cbg===bg0.cbg),`${T} 有圖示的連結是跟行事曆一樣大的圓、底色跟首字母圓鈕同一個（${ic.map(l=>f2(l.cw)+'×'+f2(l.ch)+' 圓角 '+f2(l.cbr)+' '+l.cbg).join('、')}；首字母 ${bg0&&bg0.cbg}）`);
+    ok(ic.every(l=>l.fit==='contain'&&Math.abs(parseFloat(l.ibr)-6*k)<.05),`${T} 圖示 object-fit:contain、圓角 ${E(6)}px（44px 時 6，不裁成圓）：${ic.map(l=>l.fit+' '+l.ibr).join('、')}`);
     if(!touch){await p.hover('.hm-dk-in>.hm-lk.fav .hm-lkc, .hm-dk-in>.hm-lk:first-of-type .hm-lkc');await p.waitForTimeout(350);
       const hv=await p.evaluate(()=>getComputedStyle(document.querySelector('.hm-dk-in>.hm-lk .hm-lkc')).transform);
       await p.hover('#hmPub');await p.waitForTimeout(350);const hp=await p.evaluate(()=>getComputedStyle(document.getElementById('hmPub')).transform);
