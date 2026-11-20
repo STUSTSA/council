@@ -279,7 +279,6 @@ function renderCards(){
   const it=progOpen&&activeIssues().find(i=>i.id===progOpen);
   if(progOpen&&!it)progOpen=null;
   $("#ganttEdBtn").hidden=!!it||!fsSecOk("s:gantt");   /* 甘特圖時間軸的「編輯」只在看甘特圖時出現；firestore 模式要部門管理員以上（render.js 的 fsSecOk） */
-  morphTo($("#pvBack"),ico("prev","sm")+"返回甘特圖");
   const b0=$("#cardDetail .sl"),was=b0&&b0.closest("[data-issue]").dataset.issue===(it&&it.id)?b0.dataset.p:"";
   morphTo($("#cardDetail"),it?cardHTML(it):"");   /* 原位更新（morph.js）：議題詳情編輯中的欄位不失焦 */
   if(was!=="")slAnim($("#cardDetail .sl"),cssNum(was));   /* 同一個議題的時程變了（改了期間）：把手滑到新位置 */

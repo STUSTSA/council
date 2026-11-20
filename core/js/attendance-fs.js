@@ -1,13 +1,13 @@
 /* 核心｜點名的資料讀寫（07，docs/architecture/data-model.md 第 5 節）。ES module：只有秘書處看板在 firestore 模式、attendance.js 要用時才載入。
    授權一律由 Security Rules 判斷（backend/firestore.rules 的 attendanceMembers／attendanceSessions／attendanceRecords：秘書處編輯者以上與總管理員；刪除只有總管理員），
    這裡只管讀寫。三個集合：
-   - attendanceMembers/{id}：名冊 {name, dept（部門名稱）, role（職稱）, active}
+   - attendanceMembers/{id}：名冊 {name, dept（部門名稱）, role（職稱）, active}；停用＝active:false（不刪）
    - attendanceSessions/{id}：場次 {title, date（YYYY-MM-DD，台灣時間）, at（那天 00:00 的時間戳，排序用）}
    - attendanceRecords/{場次ID}_{成員ID}：每人每場一份 {sessionId, memberId, status: present｜leave｜absent, sessionAt}；ID 決定性，快速連點只會覆寫同一份
    規則不讓秘書處刪除文件，所以點過的人只能在三種狀態間改，不能退回「未點」。
    錯誤一律丟出帶 code 的 Error（permission-denied、unavailable…）。 */
 import { fb, authReady } from "./fb-app.js";
-import { doc, collection, query, where, orderBy, limit, getDocs, setDoc, writeBatch, serverTimestamp, Timestamp }
+import { doc, collection, query, where, orderBy, limit, getDocs, setDoc, updateDoc, writeBatch, serverTimestamp, Timestamp }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const NOW = () => serverTimestamp();
@@ -25,6 +25,15 @@ async function addMembers(cfg, rows) {
   for (let i = 0; i < rows.length; i += 400) {
     const b = writeBatch(db);
     rows.slice(i, i + 400).forEach(r => b.set(doc(db, "attendanceMembers", "m" + rand(8)), { name: r.name, dept: r.dept, role: r.role, active: true, updatedAt: NOW(), updatedBy: me }));
+    await b.commit();
+  }
+}
+/* 停用／恢復（不刪文件：規則只讓總管理員刪）：changes＝[{id, active}] */
+async function setActive(cfg, changes) {
+  const { db, me } = await ctx(cfg);
+  for (let i = 0; i < changes.length; i += 400) {
+    const b = writeBatch(db);
+    changes.slice(i, i + 400).forEach(c => b.update(doc(db, "attendanceMembers", c.id), { active: c.active, updatedAt: NOW(), updatedBy: me }));
     await b.commit();
   }
 }
@@ -50,5 +59,5 @@ async function mark(cfg, session, mid, status) {
   await setDoc(doc(db, "attendanceRecords", `${session.id}_${mid}`), { sessionId: session.id, memberId: mid, status, sessionAt: dayStart(session.date), updatedAt: NOW(), updatedBy: me });
 }
 
-window.BoardAttendance = { members, addMembers, sessions, addSession, records, mark };
+window.BoardAttendance = { members, addMembers, setActive, sessions, addSession, records, mark };
 dispatchEvent(new Event("board-attendance-ready"));
