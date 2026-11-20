@@ -46,9 +46,17 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
   const p=await mk(1300,900,'light',false);
   await p.context().route('https://console.firebase.google.com/**',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><title>usage</title>'}));
 
+  /* E1. 沒登入（github 模式）：照舊 */
+  {const t=await p.evaluate(()=>{state.issues.forEach(i=>i._keep=i.doneAt);state.issues.forEach(i=>i.doneAt=i.doneAt||'2026-01-01');render();return $('#gantt .empty')&&$('#gantt .empty').textContent});
+    ok(t==='還沒有議題，登入後按「+ 議題」開始。',`沒登入的空狀態照舊（${t}）`);}
 
   await login(p);await p.waitForTimeout(400);
 
+  /* E2. 已登入＋可編輯：只寫狀態；E3. 唯讀：照舊 */
+  {const t=await p.evaluate(()=>{render();return $('#gantt .empty').textContent});
+    ok(t==='還沒有議題。',`已登入的空狀態：「還沒有議題。」，不叫人登入（${t}）`);
+    const t2=await p.evaluate(()=>{state.locked=true;render();const v=$('#gantt .empty').textContent;state.locked=false;state.issues.forEach(i=>{i.doneAt=i._keep||null;delete i._keep});render();return v});
+    ok(t2==='目前沒有進行中的議題。',`唯讀的空狀態照舊（${t2}）`);}
 
   /* B. 母議題處理紀錄的半透明 */
   await seedB(p);await p.waitForTimeout(400);

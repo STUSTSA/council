@@ -71,7 +71,8 @@ function renderGantt(){
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
-  if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
+  /* 空狀態：唯讀＝「目前沒有進行中的議題」；已登入＝只寫狀態（DESIGN.md「介面不放教學說明文字」；ui-11）；github 模式還沒登入的照舊 */
+  if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":loggedIn()?"還沒有議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
   else if(!all.length)h+=`<p class="empty">這段期間沒有議題。</p>`;
   morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、刻度、註記都是同一個節點 */
 }
