@@ -154,7 +154,11 @@
 
 ## 5. 點名（07）
 
-只定集合與分級，欄位在 07 開工時定稿：`attendanceMembers/{id}`、`attendanceSessions/{id}`、`attendanceRecords/{sessionId}_{memberId}`，全部 L3（秘書處管理員／編輯者與會長室）。記錄用「場次＿成員」決定性 ID，快速連點時只會覆寫同一份，不會重複。
+全部 L3（秘書處管理員／編輯者與總管理員；刪除只有總管理員）。欄位（07 第一個 PR 定稿）：
+- `attendanceMembers/{id}`：`name`、`dept`（部門名稱）、`role`（職稱）、`active`、`updatedAt`、`updatedBy`。名冊由秘書處貼上匯入，不從帳號帶。
+- `attendanceSessions/{id}`：`title`、`date`（YYYY-MM-DD，台灣時間）、`at`（那天 00:00 的時間戳，排序用）、`createdAt/By`、`updatedAt/By`。
+- `attendanceRecords/{sessionId}_{memberId}`：`sessionId`、`memberId`、`status`（`present`｜`leave`｜`absent`，沒有文件＝還沒點）、`sessionAt`（Q29 用）、`updatedAt/By`。決定性 ID，快速連點只會覆寫同一份。
+規則目前只擋「誰能讀寫」，不檢查欄位形狀與紀錄 ID（待辦，另開規則 PR）。
 
 ## 6. 遷移管理
 

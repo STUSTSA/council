@@ -35,6 +35,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="panel-head"><h2 class="sec-h" id="bkH" data-en="BOOKING">會長預約</h2></div>
         <div id="bkBody"></div>
       </section>
+      <!-- 秘書處：點名（07，attendance.js）：名冊、場次、逐人點名；只有秘書處編輯者以上與總管理員看得到 -->
+      <section class="panel at-panel" id="attPanel" aria-labelledby="atH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="atH" data-en="ATTENDANCE">點名</h2><span class="at-tools"><button type="button" class="icon" data-at="import">匯入名冊</button><button type="button" class="icon" data-at="addsess" disabled>+ 場次</button></span></div>
+        <div id="attBody"></div>
+      </section>
       <section class="panel act-panel" id="actPanel" aria-labelledby="acH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="acH" data-en="ACTIVITY">各部門編輯量</h2><button type="button" class="icon" id="actRefresh">重新整理</button></div>
         <p class="sub ac-info" id="actInfo"></p>
@@ -158,7 +163,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#docsPanel","#grantPanel","#bkPanel","#followPanel","#actPanel","#meetEdPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
+    ["#docsPanel","#grantPanel","#bkPanel","#followPanel","#actPanel","#meetEdPanel","#attPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();

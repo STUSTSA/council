@@ -101,7 +101,7 @@ function render(){
   try{
     document.body.classList.toggle("edit",editing);
     document.body.classList.toggle("locked",boardLocked());
-    renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();renderBooking();layoutAll();flowWatch();
+    renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();renderBooking();renderAttendance();layoutAll();flowWatch();
   }finally{rendering=false}
   kpFitAll();kpFocusSet(kf);
   Anim.play(flip);Anim.syncPings();
