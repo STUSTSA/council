@@ -20,7 +20,7 @@ await p.evaluate(()=>openSettings());await p.waitForTimeout(900);
 ok(await p.evaluate(()=>!$('#setOv [data-set=term]')&&!$('#setOv [data-set=year]')),'權益部設定清單沒有學年（跟著秘書處）');
 await p.click('#setOv [data-set=team]');await p.waitForTimeout(900);
 ok(await p.evaluate(()=>!$('#setSub').hidden&&subOpen),'人員進到子頁');
-await p.click('#subBack');await p.waitForTimeout(1500);
+await p.click('.dh-home');await p.waitForTimeout(1500);
 ok(await p.evaluate(()=>$('#setSub').hidden&&setOpen),'「返回」回到設定清單');
 await p.click('#setOv [data-set=labels]');await p.waitForTimeout(900);
 ok(await p.evaluate(()=>!$('#setSub').hidden&&!!$('#setSub .set-sub-body #dlg[open]')),'標籤的表單在子頁裡');
@@ -47,7 +47,7 @@ ok(await s.textContent('#dlgForm .stepper-n')===String(n0+1),'＋兩次、−一
 await s.click('#dlgForm [data-act=ok]');await s.waitForTimeout(2200);
 ok(await s.evaluate(()=>state.yearLabel)===`${n0+1}學年`,'學年存成「'+(n0+1)+'學年」');
 ok(await s.evaluate(()=>subOpen&&!$('#setSub').hidden&&!!$('#setSub .set-hub:not([hidden]) [data-hub=year]')),'確定後回到合併頁');
-await s.click('#subBack');await s.waitForTimeout(1500);
+await s.click('.dh-home');await s.waitForTimeout(1500);
 ok(await s.evaluate(()=>$('#setSub').hidden&&!subOpen&&setOpen),'「返回」回到設定清單');
 ok(!s.errs.length,'手機（秘書處）沒有錯誤 '+s.errs.join('|'));
 /* 桌面：仍是右側面板 */

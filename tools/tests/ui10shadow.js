@@ -79,7 +79,7 @@ const withOld=async(p,fn)=>{await p.evaluate(css=>{const s=document.createElemen
     const openSet=async()=>{if(!await p.evaluate(()=>setOpen)){await p.click('#setBtn');await W(700)}await p.mouse.move(1,h-1)};
     const closeSet=async()=>{if(await p.evaluate(()=>setOpen)){await p.click('#setBtn');await W(700)}};
     const openItem=async k=>{await p.click(`#setOv [data-set="${k}"]`);await W(1000);await p.mouse.move(1,h-1)};
-    const closeItem=async k=>{if(touch){for(let i=0;i<3&&await p.evaluate(()=>subOpen);i++){await p.click('#subBack');await W(800)}}else if(await p.evaluate(()=>!!paneKey)){await p.click(`#setOv [data-set="${k}"]`);await W(800)}};
+    const closeItem=async k=>{if(touch){for(let i=0;i<3&&await p.evaluate(()=>subOpen);i++){await p.click('.dh-home');await W(800)}}else if(await p.evaluate(()=>!!paneKey)){await p.click(`#setOv [data-set="${k}"]`);await W(800)}};
     /* 標題列圓鈕：截圖（正下方的暗面陰影）＋疊層（設定層暫時拉到最上緣，圓鈕中心點到的還是圓鈕） */
     const headCheck=async T=>{const bg=await bgOf(p);
       const bt=await p.evaluate(()=>[...document.querySelectorAll('.dhead .dh-btn')].filter(x=>x.getClientRects().length).map(x=>{const r=x.getBoundingClientRect();return {id:x.id||x.className.split(' ')[1]||'home',x:r.left+r.width/2,y:r.top+r.height/2,bot:r.bottom}}));
