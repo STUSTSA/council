@@ -1,6 +1,8 @@
 /* 核心｜點名，秘書處端（07，docs/architecture/data-model.md 第 5 節；設定檔 meeting:true 的秘書處看板、firestore 模式）
    「會議」分頁的一張卡片 #attPanel：
    - 名冊：「匯入名冊」貼上一行一人（部門 職稱 姓名）。名冊由秘書處自己維護，不從帳號帶（帳號的角色不是會議出席名單）；已有的（同部門同姓名）略過，不會重複。
+   - 整理名冊：「名冊」列出全部人（部門＋姓名），取消勾選＝停用（不再出現在點名；過去的紀錄還在），勾回來＝恢復。不刪文件。
+   - 複製結果：「複製結果」把這一場的出席數與請假、缺席、還沒點的名單複製成文字。
    - 場次：「+ 場次」新增一次點名（名稱＋日期）；上面一排場次膠囊（最近 40 場，新的在前），一次點一場。
    - 點名：每個人一顆按鈕，點一下依序換 出席→請假→缺席→出席（實心＝出席、外框＝請假、斜紋＝缺席、平面＝還沒點，DESIGN-next 第三節）。
      畫面先換、背景寫入；寫入失敗就換回來並提示。點過的人不能退回「還沒點」（規則不讓秘書處刪除）。
@@ -51,6 +53,8 @@ function renderAttendance(force){
   p.hidden=!atSee();if(p.hidden)return;
   const h=atHTML();if(h!==AT.html||force){AT.html=h;$("#attBody").innerHTML=h}
   p.querySelector("[data-at=addsess]").disabled=!AT.members||!AT.members.some(m=>m.active);
+  p.querySelector("[data-at=roster]").disabled=!AT.members||!AT.members.length;
+  p.querySelector("[data-at=copy]").disabled=!atSess()||!AT.members||!AT.members.some(m=>m.active);
 }
 /* 匯入名冊：一行一人，部門、職稱、姓名用逗號、Tab 或空白隔開，順序不拘；認得出部門的才收，職稱沒寫當成部員 */
 function atParse(txt){
@@ -79,6 +83,20 @@ async function atImport(){
   if(!fresh.length){toast("名單裡的人都已經在名冊裡");return}
   await atRun(async()=>(await atMod()).addMembers(CFG.firebase,fresh),`已加入 ${fresh.length} 人${skip?`，略過 ${skip} 行`:""}`);
 }
+async function atRoster(){
+  const all=[...AT.members].sort((a,b)=>a.dept.localeCompare(b.dept,"zh-Hant")||atRank(a.role)-atRank(b.role)||a.name.localeCompare(b.name,"zh-Hant"));
+  const v=await ask("整理名冊",[{name:"on",type:"multi",label:"取消勾選＝停用（不再出現在點名）",options:all.map(m=>[m.id,`${m.dept} ${m.name}`]),value:all.filter(m=>m.active).map(m=>m.id)}],
+    {wide:true,note:"停用不會刪除過去的點名紀錄，之後可以再勾回來。"});
+  if(!v)return;
+  const on=new Set(v.on),ch=all.filter(m=>on.has(m.id)!==m.active).map(m=>({id:m.id,active:on.has(m.id)}));
+  if(!ch.length)return;
+  await atRun(async()=>(await atMod()).setActive(CFG.firebase,ch),`已更新名冊（停用 ${ch.filter(c=>!c.active).length}、恢復 ${ch.filter(c=>c.active).length}）`);
+}
+function atText(){
+  const s=atSess(),ms=atSorted();if(!s)return "";
+  const c=atCount(ms),by=k=>ms.filter(m=>(AT.recs[m.id]||"none")===k).map(m=>`${m.dept}${m.name}`).join("、")||"無";
+  return `${s.title}（${s.date.replaceAll("-","/")}）點名\n出席 ${c.present}　請假 ${c.leave}　缺席 ${c.absent}　還沒點 ${c.none}\n請假：${by("leave")}\n缺席：${by("absent")}\n還沒點：${by("none")}`;
+}
 async function atAddSession(){
   const v=await ask("新增點名場次",[{name:"title",label:"名稱",value:"行政會議"},{name:"date",label:"日期",type:"date",value:today()}],{
     validate:o=>!o.title?"請填名稱":!o.date?"請選日期":o.title.length>30?"名稱最多 30 字":""});
@@ -97,6 +115,8 @@ document.addEventListener("click",async ev=>{
   const k=t.dataset.at;
   if(k==="import")return atImport();
   if(k==="addsess")return atAddSession();
+  if(k==="roster")return atRoster();
+  if(k==="copy")return navigator.clipboard.writeText(atText()).then(()=>toast("已複製點名結果"),()=>toast("複製失敗"));
   if(k==="mark")return atMark(t.dataset.id);
   if(k==="pick"&&t.dataset.id!==AT.sel){AT.sel=t.dataset.id;AT.recs={};renderAttendance(true);
     try{const id=AT.sel,r=await (await atMod()).records(CFG.firebase,id);if(AT.sel===id){AT.recs=r;renderAttendance(true)}}catch(e){console.error(e);toast("讀取點名結果失敗，請稍後再試")}}
