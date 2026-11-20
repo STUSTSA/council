@@ -58,7 +58,7 @@ const Sfx=(()=>{
 
   /* 點擊的預設音：由上往下第一個符合的。""＝不響（功能自己決定，或等儲存結果） */
   const CLICK=[
-    [".hm-wc,.hm-tile,#dlg [data-act],[data-dkgo],[data-edsave],[aria-disabled='true']",""],
+    [".hm-wc,.hm-tile,#dlg [data-act],[data-tldone],[data-edsave],[aria-disabled='true']",""],
     ["#setBtn[aria-expanded='true'],#notiBtn[aria-pressed='true'],.csel.open>.csel-btn,[data-calmon][aria-expanded='true'],[data-lcback],#pvBack,#backMain,[data-tdclose],.hm-ly-x,.dh-home,[data-back]","back"],
     ["#tabbar .tab,#notiBtn,[role='tab'],[data-lctool],[data-lcstep],[data-kptm]","tab"],
     ["[data-cp],[data-jump],[data-set],[data-hub]","enter"],

@@ -84,7 +84,7 @@ const seed=(p,id)=>p.evaluate(id=>{const ev=state.events.find(e=>e.id===id);
 
   /* 5. Keep 式編輯 */
   {await p.click('#evDetail [data-blk="bD"] .tx');await p.waitForTimeout(500);
-    const a=await p.evaluate(()=>({ed:editing,foc:document.activeElement&&document.activeElement.dataset.kptx,lock:document.body.classList.contains('lc-lock'),ov:getComputedStyle($('#pageMain')).overflowY,
+    const a=await p.evaluate(()=>({ed:editing,foc:document.activeElement&&(document.activeElement.dataset.kptx||((' '+(document.activeElement.dataset.kpids||'')+' ').includes(' bD ')?'bD':'')),lock:document.body.classList.contains('lc-lock'),ov:getComputedStyle($('#pageMain')).overflowY,
       btns:[...document.querySelectorAll('#evDetail .lc button')].map(b=>b.textContent.trim()).filter(t=>/儲存|取消|編輯/.test(t))}));
     ok(a.ed&&a.foc==='bD',`點一行＝原位進入編輯，游標在那一行`);
     ok(a.lock&&a.ov==='hidden',`寬螢幕編輯中鎖住整頁捲動`);

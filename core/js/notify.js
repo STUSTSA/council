@@ -2,7 +2,7 @@
    - 標題列的通知鈕進到這一頁（shell.js 的 .layout 裡的 .sg-noti；換的動畫跟換分頁同一套，render.js 的 secSwap）。
      標題列、工具列留在原地，工具列的鏡片留在原本的分頁（這一頁不是工具列的分頁）；沒有搜尋列、沒有新增圓鈕。
      返回原分頁：再按通知鈕、Esc、系統返回鍵（打開時推一筆瀏覽紀錄）；按工具列任一分頁＝到那個分頁。
-   - 由上到下：今日／明日 → 逾期 → 行事曆。
+   - 由上到下：今日／明日 → 清點區（已過期、本週到期、之後）→ 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
 /* 部門色：會長室「各部門編輯量」的折線與圖例在用（activity.js） */
@@ -23,18 +23,8 @@ const notiMine=()=>notiItems(state,CFG.deptId||"rights");
 const covers=(x,d)=>x.end?d>=x.date&&d<=x.end:x.date===d;
 const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
-/* 標題列通知鈕上的紅色數字＝逾期（DESIGN-next 第六節）：還沒結案的即時回報裡，連到時間的那一行還沒勾、時間已經過了。
-   有結束日看結束：結束日在今天以前，或結束是今天、有結束時刻而且時刻到了；沒有結束日看開始：開始日在今天以前，或開始是今天、有時刻而且時刻到了
-   （只有日期、沒有時刻的，過了那一天才算）。沒有連到行的舊時間標記沒有勾選狀態，不算 */
-function notiLateItems(s=state){
-  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
-  const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
-  s.events.filter(e=>!e.doneAt).forEach(e=>{const tm=new Map((e.times||[]).map(x=>[x.id,x]));
-    (e.blocks||[]).forEach(b=>{const x=b.timeId&&tm.get(b.timeId);if(!x||b.check||!x.start)return;
-      const ed=(x.end||"").slice(0,10);
-      if(ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16)))out.push({ev:e,t:x,b})})});
-  return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
-}
+/* 標題列通知鈕上的紅色數字＝清點區「已過期」的件數（定義見 notiTodoItems：還沒結案的即時回報裡，時間行還沒勾、時間已經過了；舊時間標記也算） */
+const notiLateItems=(s=state)=>notiTodoItems(s).filter(x=>x.g==="late");
 const notiLate=(s=state)=>notiLateItems(s).length;
 function notiBadge(){
   const b=$("#notiBtn");if(!b)return;
@@ -77,18 +67,18 @@ function dayCardHTML(d,lab,cls,list){
    選到的日期＝選中色實心圓（直徑 40）、今天＝焦點色粗體；底下一行「部門・學生會」。
    點日期：下面的清單換成那一天（舊的原地淡出、新的一列一列浮上來，calAfter）；右上的月份鈕點開選月份（自製選單，Esc、點外面關） */
 const MON_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],host:null}}
+function calState(pub){const t=today();return {pub:!!pub,month:t.slice(0,7),day:t,pop:false,mode:pub?"all":"mine",oth:[],q:"",find:false,fp:[],fpn:1,host:null}}
 const NOTI=calState(false),CALS=[NOTI];
 /* 清單換內容的判斷：模式、勾的部門、月份、那一天 */
-const calKey=c=>[c.mode,c.oth.join(","),c.day].join("|");
-function posterHTML(c,list){
+const calKey=c=>[c.mode,c.oth.join(","),c.day,c.find?"f"+c.fp.join("+"):""].join("|");
+function posterHTML(c,list,ov){
   const m=c.month,first=pd(m+"-01"),y=first.getFullYear(),mi=first.getMonth(),dim=new Date(y,mi+1,0).getDate(),off=(first.getDay()+6)%7;
   const t=today(),ds=n=>`${m}-${pad(n)}`;
   const weeks=[];for(let n=1-off;n<=dim;n+=7)weeks.push(Array.from({length:7},(_,i)=>n+i));
   const body=weeks.map(w=>{
     const lo=Math.max(1,w[0]),hi=Math.min(dim,w[6]),a=ds(lo),b=ds(hi);
-    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),k=list.filter(x=>covers(x,d)).length;
-      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span></button>`}).join("");
+    const nums=w.map(n=>{if(n<1||n>dim)return `<span class="pc-d pc-pad" aria-hidden="true"></span>`;const d=ds(n),k=list.filter(x=>covers(x,d)).length,om=ov&&ov.get(d)||0;
+      return `<button type="button" class="pc-d${d===t?" is-today":""}${d===c.day?" sel":""}${k||om?" has":""}" data-calday="${d}" aria-label="${fmt(d)}${k?`，${k} 件`:""}${om?`，重疊 ${ovHours(om)} 小時`:""}" aria-pressed="${d===c.day}"><span class="pc-n num">${n}</span>${om?`<i class="pc-m" style="--f:${(om/(OV1-OV0)).toFixed(3)}" aria-hidden="true"></i>`:""}</button>`}).join("");
     const lanes=[];
     const evs=list.filter(x=>x.date<=b&&(x.end||x.date)>=a).map(x=>{
       const cl=x.date<a,cr=(x.end||x.date)>b,s=cl?lo:+x.date.slice(8),e=cr?hi:+(x.end||x.date).slice(8),i0=w.indexOf(s),i1=w.indexOf(e);
@@ -123,6 +113,7 @@ const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["me
 const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM、公共版 pub:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
 const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");
 function calKeys(c){
+  if(c.find)return c.fp.filter(id=>id&&id!==CFG.deptId).map(id=>"dept:"+id);   /* 找重疊：只讀選到的兩個部門（自己的用已載入的看板） */
   const sc=s=>storeScopeOn()?[`${c.pub?"pub":"scope"}:${s}:${c.month}`]:[];
   if(c.pub)return c.mode==="act"?sc("all-activity"):c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting")];
   if(c.mode==="pres")return CFG.deptId==="president"?[]:["dept:president"];
@@ -153,22 +144,88 @@ function calLoad(c){
 }
 /* 重新打開通知頁時：超過 5 分鐘或讀失敗的丟掉重讀 */
 function calStale(){CAL_DATA.forEach((v,k)=>{if(!v.loading&&(v.err||Date.now()-v.at>3e5))CAL_DATA.delete(k)})}
+/* ---------- 搜尋事件（DESIGN.md「行事曆」）：在已載入的行事曆資料裡找關鍵字 ----------
+   範圍＝本部門（看板）＋ CAL_DATA 裡已讀進來的（勾過的部門、會長室、活動、會議；公共版只有 pub: 開頭的）；不另外去讀。
+   比對事件標題、地點、所屬即時回報、部門名稱（不分大小寫）。每筆＝標題（命中的字反白）、部門・日期時刻；點了跳到那一天（月份、模式跟著換到看得到那件事的地方）。
+   輸入時只換結果那一塊（不重畫整個行事曆，輸入框的焦點與輸入法不會斷） */
+function calSearch(c){
+  const q=c.q.trim().toLowerCase(),seen=new Set(),out=[];if(!q)return out;
+  const all=[...(c.pub?[]:notiMine())];CAL_DATA.forEach((v,k)=>{if(v.items&&(c.pub?k.startsWith("pub:"):!k.startsWith("pub:")))all.push(...v.items)});
+  all.forEach(x=>{if(seen.has(x.key))return;seen.add(x.key);
+    if([x.title,x.place,x.ev,deptName(x.dept)].some(t=>t&&String(t).toLowerCase().includes(q)))out.push(x)});
+  return out.sort(byWhen);
+}
+function calMark(t,q){const i=q?String(t).toLowerCase().indexOf(q):-1;return i<0?esc(t):esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+q.length))+"</mark>"+esc(t.slice(i+q.length))}
+function calResHTML(c){
+  const q=c.q.trim().toLowerCase();if(!q)return "";
+  const xs=calSearch(c),MAX=50;
+  return xs.length?`<div class="dr-list">${xs.slice(0,MAX).map(x=>`<button type="button" class="dr-item" data-calgo="${esc(x.key)}"><b>${calMark(x.title,q)}</b><small class="num">${esc(deptName(x.dept))}・${esc(nmd(x.date))}${x.end?"–"+esc(nmd(x.end)):""}${x.time?" "+esc(x.time):""}</small></button>`).join("")}</div>${xs.length>MAX?`<p class="cal-none num">+${xs.length-MAX}</p>`:""}`
+    :`<p class="cal-none">沒有符合的事件。只找得到本部門和已經打開過的部門。</p>`;
+}
+/* 點結果：行事曆跳到那一天；模式換成看得到那件事的（本部門、會長室、活動／會議、「其他」勾上那個部門） */
+function calGo(c,key){
+  const x=calSearch(c).find(y=>y.key===key);if(!x)return;
+  c.find=false;c.month=x.date.slice(0,7);c.day=x.date;c.pop=false;
+  if(!c.pub){if(x.kind)c.mode=x.kind;else if(x.dept===CFG.deptId)c.mode="mine";else if(x.dept==="president")c.mode="pres";else{c.mode="other";if(!c.oth.includes(x.dept))c.oth=[...c.oth,x.dept]}}
+  calLoad(c);calPaint(c);
+  calHost(c)?.querySelector(".cal-list")?.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"});
+}
+/* ---------- 找重疊（DESIGN.md「行事曆」）：選兩個部門，兩邊都標記了的時間 ----------
+   只算有時刻的時間標記（單天：開始～結束，沒寫結束算 1 小時）；跨天的算那幾天 08–22 整段；只有日期、沒有時刻的不算。每天看 08:00–22:00。
+   資料＝本部門用已載入的看板、別的部門用 calLoad 讀（跟「其他」同一份 CAL_DATA，只讀選到的兩個、讀過不重讀） */
+const OV0=480,OV1=1320,ovMin=t=>+t.slice(0,2)*60+ +t.slice(3,5),ovHM=m=>`${pad(Math.floor(m/60))}:${pad(m%60)}`,ovHours=m=>(m/60).toFixed(1).replace(".0","");
+const ovMerge=xs=>xs.map(([a,b])=>[Math.max(OV0,a),Math.min(OV1,b)]).filter(([a,b])=>b>a).sort((p,q)=>p[0]-q[0]).reduce((o,x)=>{const z=o[o.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else o.push(x.slice());return o},[]);
+const ovBusy=(items,d)=>ovMerge(items.filter(x=>covers(x,d)).map(x=>x.end?[OV0,OV1]:x.time?[ovMin(x.time),x.etime&&x.etime>x.time?ovMin(x.etime):ovMin(x.time)+60]:[0,0]));
+function ovDay(a,b,d){const A=ovBusy(a,d),B=ovBusy(b,d),out=[];let i=0,j=0;
+  while(i<A.length&&j<B.length){const s=Math.max(A[i][0],B[j][0]),e=Math.min(A[i][1],B[j][1]);if(e>s)out.push([s,e]);if(A[i][1]<B[j][1])i++;else j++}
+  return {A,B,out}}
+const calFindData=id=>id===CFG.deptId?{items:notiMine()}:CAL_DATA.get("dept:"+id)||{loading:true};
+function calFind(c){
+  let loading=false;const errs=[],its=c.fp.map(id=>{const v=calFindData(id);if(v.loading)loading=true;else if(v.err)errs.push(`${deptName(id)}：${v.err}`);return v.items||[]}),byDay=new Map();
+  if(!loading&&!errs.length&&c.fp.length>1){const [y,mo]=c.month.split("-").map(Number),dim=new Date(y,mo,0).getDate();
+    for(let n=1;n<=dim;n++){const d=`${c.month}-${pad(n)}`,t=ovDay(its[0],its[1],d).out.reduce((s,[a,b])=>s+b-a,0);if(t)byDay.set(d,t)}}
+  return {its,loading,errs,byDay};
+}
+/* 那一天：08–22 的時間軸，上半實心＝第一個部門有事、下半外框＝第二個部門有事，重疊＝整格淡底加上緣一條焦點色；下面列出確切時段 */
+function calFindHTML(c,f){
+  const d=c.day,pc=v=>((v-OV0)/(OV1-OV0)*100).toFixed(2)+"%",bar=(k,[a,b])=>`<i class="${k}" style="left:${pc(a)};width:calc(${pc(b)} - ${pc(a)})"></i>`;
+  let body;
+  if(f.loading)body=`<p class="cal-none">讀取中…</p>`;
+  else if(f.errs.length)body=`<p class="cal-none">${esc(f.errs.join("；"))}</p>`;
+  else if(f.its.length<2)body=`<p class="cal-none">再選一個部門</p>`;
+  else{const r=ovDay(f.its[0],f.its[1],d),tot=r.out.reduce((s,[a,b])=>s+b-a,0);
+    body=`<div class="fnd"><div class="fnd-h"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}</small><span class="fnd-t num">${ovHours(tot)}<small>小時重疊</small></span></div>
+      <div class="fnd-k">${c.fp.map((id,i)=>`<span><i class="fnd-pm ${i?"b":"a"}"></i>${esc(deptName(id))}</span>`).join("")}</div>
+      <div class="fnd-ax num" aria-hidden="true">${[8,10,12,14,16,18,20,22].map(h=>`<span style="left:${pc(h*60)}">${h}</span>`).join("")}</div>
+      <div class="fnd-tr" aria-hidden="true">${r.out.map(x=>bar("o",x)).join("")}${r.A.map(x=>bar("a",x)).join("")}${r.B.map(x=>bar("b",x)).join("")}</div>
+      <div class="fnd-r">${r.out.length?r.out.map(([a,b])=>`<span class="num">${ovHM(a)}–${ovHM(b)}</span>`).join(""):`<span class="none num">沒有重疊</span>`}</div></div>`}
+  return `<div class="cal-list cal-find" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
+}
+function calFindToggle(c){
+  c.find=!c.find;
+  if(c.find&&c.fp.length<2){const own=CFG.deptId,ids=(window.BOARD_DEPTS||[]).map(x=>x.id);c.fp=[own,ids.includes("president")&&own!=="president"?"president":ids.find(x=>x!==own)].filter(Boolean)}
+  calLoad(c);calPaint(c);
+}
+function calFindPick(c,id){if(c.fp.includes(id))return;c.fp[c.fpn]=id;c.fpn=1-c.fpn;calLoad(c);calPaint(c)}
 function calModesHTML(c){
   const ms=c.pub?CAL_PMODES:CAL_MODES;
-  return `<div class="cal-modes"><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
-    ${!c.pub&&c.mode==="other"?`<div class="cal-oth" role="group" aria-label="其他部門">${calOthers().map(d=>`<button type="button" class="cal-chip" role="checkbox" data-caloth="${esc(d.id)}" aria-checked="${c.oth.includes(d.id)}">${esc(d.name)}</button>`).join("")}</div>`:""}`;
+  return `<div class="cal-modes"${c.find?" hidden":""}><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
+    ${c.find?`<div class="cal-oth cal-fp" role="group" aria-label="選兩個部門">${(window.BOARD_DEPTS||[]).map(d=>{const k=c.fp.indexOf(d.id);return `<button type="button" class="cal-chip" role="checkbox" data-calfp="${esc(d.id)}" aria-checked="${k>=0}">${k>=0?`<i class="fnd-pm ${k?"b":"a"}"></i>`:""}${esc(d.name)}</button>`}).join("")}</div>`:""}
+    ${!c.pub&&!c.find&&c.mode==="other"?`<div class="cal-oth" role="group" aria-label="其他部門">${calOthers().map(d=>`<button type="button" class="cal-chip" role="checkbox" data-caloth="${esc(d.id)}" aria-checked="${c.oth.includes(d.id)}">${esc(d.name)}</button>`).join("")}</div>`:""}`;
 }
 function calMode(c,k){if(c.mode===k)return;c.mode=k;calLoad(c);calPaint(c)}
 function calOth(c,id){c.oth=c.oth.includes(id)?c.oth.filter(x=>x!==id):[...c.oth,id];calLoad(c);calPaint(c)}
 /* 一個行事曆的 HTML（通知頁的 renderNoti 跟 calMount 共用） */
 function calHTML(c){
-  const r=calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
+  const f=c.find?calFind(c):null,r=f?{xs:[]}:calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
     <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
-      <span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+      ${c.pub?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+    <label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+    <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
-    <div class="pc">${posterHTML(c,r.xs)}</div></div>
-    ${calListHTML(c,r)}</section>`;
+    <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
+    ${f?calFindHTML(c,f):calListHTML(c,r)}</section>`;
 }
 /* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
 const calHost=c=>c===NOTI?$("#notiPage"):c.host;
@@ -224,7 +281,14 @@ document.addEventListener("click",e=>{
   const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
   const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
   const oth=t.closest("[data-caloth]");if(oth){calOth(c,oth.dataset.caloth);return}
+  const qx=t.closest("[data-calqx]");if(qx){c.q="";host.querySelector("[data-calq]").value="";calQ(c,host);host.querySelector("[data-calq]").focus({preventScroll:true});return}
+  const go=t.closest("[data-calgo]");if(go){calGo(c,go.dataset.calgo);return}
+  if(t.closest("[data-calfind]")){calFindToggle(c);return}
+  const fp=t.closest("[data-calfp]");if(fp){calFindPick(c,fp.dataset.calfp);return}
 });
+function calQ(c,host){const r=host.querySelector("[data-calres]"),x=host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+document.addEventListener("input",e=>{const i=e.target.closest&&e.target.closest("[data-calq]");if(!i)return;const host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c)return;c.q=i.value;calQ(c,host)});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!e.target.closest||!e.target.closest("[data-calq]"))return;const i=e.target,host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c||!c.q)return;e.preventDefault();e.stopImmediatePropagation();c.q="";i.value="";calQ(c,host)},true);
 /* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
 document.addEventListener("keydown",e=>{
   const c=CALS.find(x=>x.pop);if(!c)return;
@@ -232,58 +296,69 @@ document.addEventListener("keydown",e=>{
   const os=[...(calHost(c)?.querySelectorAll(".cal-pop [data-calset]")||[])],i=os.indexOf(document.activeElement),k={ArrowRight:1,ArrowDown:3,ArrowLeft:-1,ArrowUp:-3}[e.key];
   if(k&&i>=0){e.preventDefault();os[Math.max(0,Math.min(os.length-1,i+k))].focus()}
 },true);
-/* 這一頁的內容：今日／明日、逾期、行事曆 */
+/* 這一頁的內容：今日／明日、清點區、行事曆 */
 function notiInner(){
   const list=notiMine(),t=today();
   return `<div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
-    ${lateHTML()}
+    ${tallyHTML()}
     ${calHTML(NOTI)}`;
 }
-/* ---------- 逾期（DESIGN-next 第九節）：卡片堆只列逾期的時間（定義跟標題列通知鈕的數字一樣，notiLateItems） ----------
-   一次一張、後面露出兩張；最上面那張跟手指走並傾斜：左滑＝延後（明天同一時刻，notiPostpone）、右滑＝改成具體時間（打開那張卡片的時間頁，notiRetime）。
-   下面一排：延後鈕、剩幾件、改時間鈕。沒有逾期就整區不出現。動畫只動 transform／opacity。
-   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時卡片堆照樣看得到，但沒有延後／改時間鈕、卡片拖不動（ui-06 審查 P1-1） */
-function dkCardHTML(x,i){
-  const d=x.t.start.slice(0,10),en=(x.t.end||"").slice(0,10),tm=x.t.start.slice(11,16);
-  return `<div class="dk-card" data-dk="${esc(x.t.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':""}>
-    <span class="dk-stp r" aria-hidden="true">改時間</span><span class="dk-stp l" aria-hidden="true">延後</span>
-    <span class="dk-date"><b class="num">${+d.slice(8)}</b><small>${+d.slice(5,7)} 月・週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
-    <span class="dk-main"><b>${esc(x.t.label||x.b.text||x.ev.name||"（未命名）")}</b><small>${esc(x.ev.name||"")}${tm?`<span class="num">${esc(tm)}</span>`:""}</small></span>
-  </div>`;
+/* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分三段：已過期、本週到期、之後 ----------
+   收的是還沒結案的即時回報上、有開始時間而且核取框還沒勾的時間行；03 以前沒有連到任何一行的舊時間標記（沒有核取框）也收，當作還沒勾。
+   已過期的每一項只有兩個動作，沒有移除：完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
+   改期（打開那張卡片的時間頁，notiRetime）。本週到期、之後只列出來，不放動作。負責人＝整張卡的專員。
+   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有動作鈕。完成後那一列下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
+function notiTodoItems(s=state){
+  const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
+  const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
+  const wkEnd=addDays(t,(7-pd(t).getDay())%7);   /* 本週的最後一天（週日） */
+  s.events.filter(e=>!e.doneAt).forEach(e=>{const bt=new Map((e.blocks||[]).filter(b=>b.timeId).map(b=>[b.timeId,b]));
+    (e.times||[]).forEach(x=>{if(!x.start)return;const b=bt.get(x.id)||null;if(b&&b.check)return;
+      const ed=(x.end||"").slice(0,10),due=ed&&ed>=x.start.slice(0,10)?ed:x.start.slice(0,10);
+      const late=ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16));
+      out.push({ev:e,t:x,b,due,g:late?"late":due<=wkEnd?"week":"later"})})});
+  return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
 }
-function lateHTML(){
-  const xs=notiLateItems(),ed=canEdit(),u=dkUndoHTML();if(!xs.length&&!u)return "";
-  return `<section class="nt-late" id="notiLate" aria-labelledby="ntLateH"><h3 class="sec-h" id="ntLateH" data-en="OVERDUE">逾期</h3>
-    ${xs.length?`<div class="dk-stack${ed?"":" ro"}" id="notiDeck">${xs.slice(0,3).map((x,i)=>dkCardHTML(x,i)).reverse().join("")}</div>
-    <div class="dk-ctl">${ed?`<button type="button" class="dk-btn" data-dkgo="l" aria-label="延後到明天">${ico("go","solo")}</button>`:""}<span class="dk-n num" aria-label="逾期 ${xs.length} 件">${xs.length}</span>${ed?`<button type="button" class="dk-btn pri" data-dkgo="r" aria-label="改時間">${ico("clock","solo")}</button>`:""}</div>`:""}
-    ${u}</section>`;
+const TL_GROUPS=[["late","已過期"],["week","本週到期"],["later","之後"]],TL_LATER_MAX=5;
+function tlRowHTML(x,ed){
+  const d=x.t.start.slice(0,10),tm=x.t.start.slice(11,16),en=(x.t.end||"").slice(0,10),who=staffNames(x.ev.staff).join("、"),late=x.g==="late";
+  const sub=[x.ev.name||"",tm,x.t.place||"",who].filter(Boolean).map(esc).join("・");
+  return `<li class="tl-row" data-tl="${esc(x.t.id)}"><span class="tl-d"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
+    <span class="tl-x"><b>${esc(x.t.label||(x.b&&x.b.text)||x.ev.name||"（未命名）")}</b><small>${sub}</small></span>
+    ${late&&ed?`<span class="tl-act"><button type="button" class="tl-btn pri" data-tldone="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">完成</button><button type="button" class="tl-btn" data-tlre="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">改期</button></span>`:""}</li>`;
 }
-/* 延後：明天同一時刻。單天的（含同一天的結束時刻）整個搬到明天；跨天的只把結束日改成明天。寫回那張即時回報（evTouch、母議題的處理紀錄跟著）。
-   存好後卡片堆下面一行「已延後到明天＋復原」（ui-06 審查 P1-2；樣式沿用即時回報卡的「已儲存＋復原」：.lc-save、.kp-st、.lc-undo）。
-   復原＝寫回延後前的開始／結束（一樣要能編輯、一樣經 settingSave 存檔）；那個時間在那之後被改過就不復原。關掉這一頁、再延後別張時「復原」消失 */
-let dkUndo=null;   /* {evId, tid, b（延後前 {start,end}）, a（延後後）} */
+function tallyHTML(){
+  const xs=notiTodoItems(),ed=canEdit(),u=tlUndoHTML();if(!xs.length&&!u)return "";
+  const gs=TL_GROUPS.map(([g,nm])=>{const L=xs.filter(x=>x.g===g);if(!L.length)return "";const cap=g==="later"?L.slice(0,TL_LATER_MAX):L;
+    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4><ul class="tl-list">${cap.map(x=>tlRowHTML(x,ed)).join("")}</ul>${L.length>cap.length?`<p class="tl-more">還有 ${L.length-cap.length} 項</p>`:""}</div>`}).join("");
+  return `<section class="nt-tally" id="notiTally" aria-labelledby="ntTallyH"><h3 class="sec-h" id="ntTallyH" data-en="CHECKLIST">清點</h3>${gs}${u}</section>`;
+}
+/* 完成：勾起那一行的核取框（舊時間標記補一行）。存好後「已完成＋復原」（經 settingSave）。
+   復原＝把剛勾的那一行改回沒勾（舊時間標記補的那一行拿掉）；那一行在這之後被改過就不復原。關掉這一頁、再完成別項時「復原」消失 */
+let tlUndo=null;   /* {evId, tid, bid（核取行）, made（這次補的）} */
 const tmOf=(evId,tid)=>{const ev=state.events.find(e=>e.id===evId);return {ev,t:ev&&(ev.times||[]).find(y=>y.id===tid)}};
-const dkUndoOn=()=>!!(dkUndo&&canEdit()&&tmOf(dkUndo.evId,dkUndo.tid).t);
-const dkUndoHTML=()=>dkUndoOn()?`<div class="lc-save dk-undo"><span class="kp-st" role="status" data-st="ok">已延後到明天</span><button type="button" class="lc-undo" data-dkundo>復原</button></div>`:"";
-async function notiPostpone(evId,tid){
+const tlUndoOn=()=>!!(tlUndo&&canEdit()&&tmOf(tlUndo.evId,tlUndo.tid).t);
+const tlUndoHTML=()=>tlUndoOn()?`<div class="lc-save tl-undo"><span class="kp-st" role="status" data-st="ok">已完成</span><button type="button" class="lc-undo" data-tlundo>復原</button></div>`:"";
+async function notiDone(evId,tid){
   if(!canEdit())return false;
-  const tm=addDays(today(),1),{t:t0}=tmOf(evId,tid),b=t0&&{start:t0.start,end:t0.end};let a=null;
+  let u=null;
   const ok=await settingSave(()=>{const {ev,t}=tmOf(evId,tid);if(!t)return false;
-    const sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
-    if(ed&&ed>sd)t.end=tm+t.end.slice(10);
-    else{t.start=tm+t.start.slice(10);if(t.end)t.end=tm+t.end.slice(10)}
-    a={start:t.start,end:t.end};evTouch(ev);syncLink(ev)},"已延後到明天");
-  dkUndo=ok&&b&&a?{evId,tid,b,a}:null;renderNoti();return ok;
+    let b=(ev.blocks||[]).find(x=>x.timeId===tid),made=false;
+    if(b){if(b.check)return false;b.check=true}
+    else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
+      b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
+    u={evId,tid,bid:b.id,made};evTouch(ev);syncLink(ev)},"已完成");
+  tlUndo=ok&&u?u:null;renderNoti();return ok;
 }
 async function notiUndo(){
-  const u=dkUndo;if(!u||!canEdit())return false;dkUndo=null;
-  const {t}=tmOf(u.evId,u.tid);
-  if(!t||t.start!==u.a.start||t.end!==u.a.end){toast("這個時間已有新的修改，無法復原");renderNoti();return false}
-  const ok=await settingSave(()=>{const {ev,t}=tmOf(u.evId,u.tid);if(!t||t.start!==u.a.start||t.end!==u.a.end)return false;
-    t.start=u.b.start;if(u.b.end===undefined)delete t.end;else t.end=u.b.end;evTouch(ev);syncLink(ev)},"已復原");
+  const u=tlUndo;if(!u||!canEdit())return false;tlUndo=null;
+  const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
+  if(!b||!b.check){toast("這一項已有新的修改，無法復原");renderNoti();return false}
+  const ok=await settingSave(()=>{const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);if(!b||!b.check)return false;
+    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);syncLink(ev)},"已復原");
   renderNoti();return ok;
 }
-/* 改成具體時間：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
+/* 改期：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
 async function notiRetime(evId,tid){
   if(!canEdit())return false;
   closeNoti(true,"live");
@@ -292,47 +367,6 @@ async function notiRetime(evId,tid){
   if(!canEdit()||!(await kpStart(evId,{focus:null})))return;
   lvPane="time";lvSeg={tid,k:"d",buf:""};render();
   document.querySelector(".lc-ed .sg.on")?.focus({preventScroll:true});lvBodyIn();
-}
-/* 最上面那張飛出去（dir：l 往左＝延後、r 往右＝改時間），播完才做 */
-function dkFly(card,dir,from={x:0,y:0}){
-  if(!card||card._gone||!canEdit())return;card._gone=true;
-  const W=card.offsetWidth||320,sx=dir==="r"?1:-1,tid=card.dataset.dk,x=notiLateItems().find(y=>y.t.id===tid);
-  const reset=()=>{if(!card.isConnected)return;card._gone=false;card.getAnimations().forEach(a=>a.cancel());card.classList.remove("go-l","go-r");card.style.transform="";card.style.transition="";card.style.setProperty("--l",0);card.style.setProperty("--r",0)};
-  const act=()=>{if(!x){reset();return}if(dir==="l")Promise.resolve(notiPostpone(x.ev.id,tid)).finally(reset);else{reset();notiRetime(x.ev.id,tid)}};
-  card.classList.add(dir==="r"?"go-r":"go-l");
-  if(reduceMotion()){act();return}
-  const next=card.parentElement.querySelector(`.dk-card[data-i="1"]`);
-  if(next)next.animate([{transform:getComputedStyle(next).transform},{transform:"none"}],{duration:MO.base,easing:MO.out,fill:"forwards"});
-  card.animate([{transform:`translate(${from.x}px,${from.y}px) rotate(${from.x/18}deg)`,opacity:1},{transform:`translate(${sx*W*1.3}px,${from.y+40}px) rotate(${sx*26}deg)`,opacity:0}],{duration:340,easing:MO.in,fill:"forwards"})
-    .finished.then(()=>{if(next)next.getAnimations().forEach(a=>a.cancel());act()}).catch(()=>{});
-}
-function dkBind(){
-  const st=$("#notiDeck");if(!st||st._dk||!canEdit())return;st._dk=true;   /* 不能編輯＝不綁（之後登入、重畫時才綁） */
-  ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".dk-card"))e.stopPropagation()},{passive:true}));
-  let d=null;
-  st.addEventListener("pointerdown",e=>{
-    const c=e.target.closest(".dk-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone||!canEdit())return;   /* 綁過之後才變成不能編輯（登出、唯讀） */
-    d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",vx:0,lx:e.clientX,lt:performance.now()};
-    c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
-  });
-  st.addEventListener("pointermove",e=>{
-    if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
-    if(!d.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;d.axis=Math.abs(dx)>=Math.abs(dy)?"x":"y";if(d.axis==="y"){d=null;return}d.c.style.transition="none"}
-    const now=performance.now();d.vx=(e.clientX-d.lx)/Math.max(8,now-d.lt);d.lx=e.clientX;d.lt=now;d.x=dx;d.y=dy*.35;
-    const W=d.c.offsetWidth||320,k=Math.min(1,Math.abs(dx)/(W*.3));
-    d.c.style.transform=`translate(${dx}px,${d.y}px) rotate(${dx/18}deg)`;d.c.style.setProperty("--r",dx>0?k:0);d.c.style.setProperty("--l",dx<0?k:0);
-    const nx=st.querySelector('.dk-card[data-i="1"]');if(nx){nx.style.transition="none";nx.style.transform=`translateY(${(1-k)*12}px) scale(${.95+.05*k})`}
-  });
-  const end=e=>{
-    if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
-    const nx=st.querySelector('.dk-card[data-i="1"]');
-    /* 甩出去：拖過卡片寬的 30%，或快甩（速度超過 0.6px/ms）而且至少拖了卡片寬的 15%（ui-06 審查 P1-2：原本 24px 就算，太容易誤觸） */
-    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>W*.15){if(nx){nx.style.transform="";nx.style.transition=""}dkFly(c,(x||v)>0?"r":"l",{x,y});return}
-    const from=c.style.transform;c.style.transform="";c.style.transition="";c.style.setProperty("--r",0);c.style.setProperty("--l",0);
-    if(nx){nx.style.transform="";nx.style.transition=""}
-    if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
-  };
-  st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
 /* ---------- 今日層（DESIGN-next 第九節） ----------
    點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
@@ -405,7 +439,6 @@ function closeToday(instant){
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
-  dkBind();
 }
 
 /* ---------- 進出這一頁 ----------
@@ -426,7 +459,7 @@ async function openNoti(){
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
   if(!notiOpen)return;if(!instant)Sfx.play("back");   /* 從工具列換分頁（to）時換頁音先響，這裡不會蓋過 */
-  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;dkUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;tlUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
@@ -449,8 +482,9 @@ document.addEventListener("click",e=>{
   if(t.closest("#notiBtn")){notiOpen?closeNoti():openNoti();return}
   if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
-  const g=t.closest("[data-dkgo]");if(g){const c=$('#notiDeck .dk-card[data-i="0"]');if(c)dkFly(c,g.dataset.dkgo);return}
-  if(t.closest("[data-dkundo]")){notiUndo();return}
+  const dn=t.closest("[data-tldone]");if(dn){if(dn.disabled)return;dn.disabled=true;dn.closest(".tl-row")?.classList.add("gone");notiDone(dn.dataset.tlev,dn.dataset.tldone);return}   /* 先把那一列淡出，存好重畫；失敗時重畫會把它放回來 */
+  const re=t.closest("[data-tlre]");if(re){notiRetime(re.dataset.tlev,re.dataset.tlre);return}
+  if(t.closest("[data-tlundo]")){notiUndo();return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&notiOpen&&!todayOpen&&!$("#dlg").open&&!setOpen&&!(typeof rptOpen!=="undefined"&&rptOpen)){e.preventDefault();closeNoti()}});
