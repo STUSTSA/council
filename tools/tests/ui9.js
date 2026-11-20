@@ -33,7 +33,7 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
     if(touch){await p.evaluate(()=>document.querySelector('#setOv [data-set="labels"]').click());await p.waitForTimeout(1100);
       const s=await p.evaluate(()=>{const s=$('#setSub').getBoundingClientRect(),h=document.querySelector('.dhead').getBoundingClientRect();return {open:subOpen,t:s.top,hb:h.bottom,b:s.bottom,H:innerHeight}});
       ok(s.open&&Math.abs(s.t-s.hb)<1.5&&Math.abs(s.b-s.H)<1.5,`412 子頁也從標題列下緣開始（${s.t.toFixed(0)}／${s.hb.toFixed(0)}）`);
-      await p.evaluate(()=>$('#subBack').click());await p.waitForTimeout(900)}
+      await p.evaluate(()=>$('.dh-home').click());await p.waitForTimeout(900)}
     await p.click('#setBtn');await p.waitForTimeout(900);
     const e=await p.evaluate(()=>({open:setOpen,hid:$('#setOv').hidden,ovf:getComputedStyle($('#pageMain')).overflowY,same:document.querySelector('.dhead')===window.__dh}));
     ok(!e.open&&e.hid&&e.ovf==='auto'&&e.same,`${w} 再按設定鍵關掉：頁面可以捲、標題列同一個節點`);

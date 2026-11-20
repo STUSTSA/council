@@ -77,7 +77,7 @@ const teDay=d=>d?`${+d.slice(5,7)}/${+d.slice(8,10)} 週${TE_WD[pd(d).getDay()]}
 const teSplit=t=>{const s=t.start||today(),e=t.end||"",ed=e.slice(0,10);return {d:s.slice(0,10),h:s.slice(11,16),ed:ed&&ed!==s.slice(0,10)?ed:"",eh:e.slice(11,16)}};
 function teJoin(t,o){t.start=o.d+(o.h?"T"+o.h:"");const e2=o.ed||(o.eh?o.d:"");t.end=e2?e2+(o.eh?"T"+o.eh:""):""}
 const lvTimes=ev=>{const tm=new Map((ev.times||[]).map(t=>[t.id,t]));return [...(ev.blocks||[]).filter(b=>b.timeId&&tm.get(b.timeId)).map(b=>[tm.get(b.timeId),b]),...evFreeTimes(ev).map(t=>[t,null])]};
-const teName=(t,b)=>b?`<input class="te-nm" data-kptx="${esc(b.id)}" value="${esc(b.text)}" maxlength="${StoreMap.TXT_MAX}" aria-label="名稱">`:`<input class="te-nm" data-kplb="${esc(t.id)}" value="${esc(t.label)}" maxlength="${StoreMap.TXT_MAX}" aria-label="名稱">`;
+const teName=(t,b)=>b?`<input class="te-nm" data-kptx="${esc(b.id)}" value="${esc(b.text)}" maxlength="${StoreMap.TXT_MAX}" placeholder="標題（例如：協商會議）" aria-label="名稱">`:`<input class="te-nm" data-kplb="${esc(t.id)}" value="${esc(t.label)}" maxlength="${StoreMap.TXT_MAX}" placeholder="標題（例如：協商會議）" aria-label="名稱">`;
 function lcTimeHTML(ev){const par=parentOf(ev);
   return lvTimes(ev).map(([t,b])=>{const o=teSplit(t),id=esc(t.id),on=k=>lvSeg&&lvSeg.tid===t.id&&lvSeg.k===k;
     const sg=(k,v,l)=>`<button type="button" class="sg num${on(k)?" on":""}" data-sg="${k}" data-tid="${id}" aria-label="${l}">${esc(v)}</button>`;

@@ -9,9 +9,35 @@ function renderHeader(){
 
 /* 標題列（shell.js 的 .dhead）：只改有變的地方，節點一直留著。
    唯讀標籤＝沒有編輯權限的單位或唯讀檢視中；眼睛鈕＝可編輯的單位才有（render.js 的 deptCan、roView）；通知鈕＝沒有權限、唯讀檢視時不出現（DESIGN-next 第十四節） */
+/* 標題列左上角：部門主頁是「首頁」（去各部門總覽），比部門主頁更深的頁面（Back 疊著任何一層：設定與它底下的各子頁、通知與行事曆、卡片詳情、工作報告、編輯紀錄；或進度的議題詳情）
+   自動換成「上一頁」，按了關掉最上面一層；一路退回部門主頁才變回首頁。切換底部分頁不算更深（切換時設定、通知會先收起來）。圖示與無障礙名稱一起換。 */
+function homeUp(){
+  if(typeof setOpen!=="undefined"&&setOpen&&Back.top()==="settings"){if(paneKey)paneClose();else closeSettings();return}   /* 桌面設定的右側面板：先收面板，再關設定（跟 Esc 一樣） */
+  if(Back.up())return;
+  if(progOpen&&curSec==="progress")progShow(null);
+}
+const homeDeep=()=>Back.depth()>0||(!!progOpen&&curSec==="progress");
+function homeSync(){
+  const home=$(".dhead .dh-home");if(!home)return;
+  const deep=homeDeep();if(home.classList.contains("up")===deep&&home.firstElementChild)return;
+  home.classList.toggle("up",deep);home.setAttribute("aria-label",deep?"上一頁":"首頁");
+  home.innerHTML=ico(deep?"back":"home","solo");
+  if(!reduceMotion()&&home.isConnected)home.firstElementChild.animate([{opacity:0,transform:deep?"translateX(8px)":"scale(.8)"},{opacity:1,transform:"none"}],{duration:260,easing:"cubic-bezier(.2,.9,.25,1)"});
+}
+/* 左上鍵（首頁／上一頁）：更深的頁面＝退一層；主頁＝離開看板。設定面板裡改到一半的內容（標籤、人員…）退出時才存（nav.js 的 paneJob），
+   存檔還沒完成就離開頁面會丟掉，所以離開前先等 paneJob 結束；連按也一樣（第二下變成首頁鍵時，存檔還在跑）。 */
+let homeLeaving=false;
+document.addEventListener("click",async e=>{
+  const a=e.target.closest&&e.target.closest(".dhead .dh-home");if(!a||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  if(homeDeep()){e.preventDefault();e.stopPropagation();homeUp();return}
+  if(!paneJob)return;   /* 沒有未完成的存檔：照一般連結（pagefx.js 的站內換頁）離開 */
+  e.preventDefault();e.stopPropagation();if(homeLeaving)return;
+  homeLeaving=true;try{await paneJob}catch(_){}homeLeaving=false;
+  if(!homeDeep())PageFx.leave(a.href);   /* 等的時候又打開了別層：不離開 */
+},true);
 function renderHero(){
   const home=$(".dhead .dh-home"),eye=$("#peekBtn"),nb=$("#notiBtn");if(!home)return;
-  if(!home.firstElementChild)home.innerHTML=ico("home","solo");   /* 骨架（shell.js）載入時還沒有 icon 可用，第一次畫時補上 */
+  homeSync();   /* 骨架（shell.js）載入時還沒有 icon 可用，第一次畫時補上；之後依層級換首頁／上一頁 */
   if(!eye.firstElementChild)eye.innerHTML=ico("eye","solo");
   if(!nb.querySelector(".ico"))nb.insertAdjacentHTML("afterbegin",ico("bell","solo"));
   if(roView&&!deptCan())roView=false;   /* 登出、權限被撤掉：唯讀檢視跟著結束 */
@@ -266,7 +292,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
   if(id===progOpen&&!then&&!$(id?"#pvDetail":"#pvGantt").hidden)return;   /* 已經在那一頁（例如新增的議題沒有命名、點返回時已經回到甘特圖） */
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
-  const swap=()=>{if(tok!==pvTok)return;progOpen=id;if(id)ganttSel=id;renderCards();if(!id)renderGantt();layoutAll();   /* 回到甘特圖：剛看過的議題是選中的那一列 */
+  const swap=()=>{if(tok!==pvTok)return;progOpen=id;homeSync();if(id)ganttSel=id;renderCards();if(!id)renderGantt();layoutAll();   /* 回到甘特圖：剛看過的議題是選中的那一列 */
     const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
     pvIn($(id?"#pvDetail":"#pvGantt"));
     if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */

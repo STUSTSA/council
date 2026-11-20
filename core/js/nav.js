@@ -218,13 +218,6 @@ function settingsInner(){
    打開時頁面捲回頂端（跟換分頁一樣，render.js 的 secSwap），底下的頁面鎖住不捲（board.css body.set-open）；--set-top＝標題列下緣，視窗大小變了重量 */
 function setTopSync(){const h=$(".dhead"),b=h&&!h.hidden?Math.max(0,Math.round(h.getBoundingClientRect().bottom)):0;document.documentElement.style.setProperty("--set-top",b+"px")}
 addEventListener("resize",()=>{if(setOpen)setTopSync()});
-/* 設定開著時按標題列的首頁鍵（ui-09 審查）：先把設定收起來——面板裡改到一半的（標籤、人員）照「離開這一頁」存——等存完才離開看板；
-   直接換頁的話沒存的會不見。捕獲階段攔下，pagefx.js 的站內換頁不會先動手 */
-document.addEventListener("click",async e=>{
-  const a=e.target.closest&&e.target.closest(".dhead .dh-home");if(!a||!setOpen||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
-  e.preventDefault();e.stopPropagation();const job=paneJob;closeSettings(true);
-  if(job)await job;PageFx.leave(a.href);
-},true);
 /* 設定頁沒有自己的標題列（DESIGN-next 第十二節）：沒有 logo 與「關閉」，進出都用工具列的設定鍵（再按＝關閉；系統返回、Esc 關最上層）。
    所以 #setOv 不設 aria-modal：設成強制回應的話，報讀器會把外面的工具列（唯一的關閉控制）當成不可用（ui-08 審查） */
 function settingsHTML(){
@@ -275,8 +268,8 @@ function setPaneHost(){if(weekPaneEnd)return null;   /* 每週概述開著：生
 let subOpen=false;
 function subEl(){
   let s=$("#setSub");if(s)return s;
-  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="set-sub-top" data-fx-keep><button type="button" id="subBack" aria-label="返回設定清單">${ico("prev","solo")}返回</button></div><div class="set-sub-body"></div></div>`);
-  $("#subBack").onclick=()=>paneDismiss();return $("#setSub");
+  document.body.insertAdjacentHTML("beforeend",`<div class="set-ov set-sub" id="setSub" role="dialog" aria-modal="true" aria-label="設定" hidden><div class="set-sub-body"></div></div>`);
+  return $("#setSub");
 }
 async function subRun(fn){
   const s=subEl(),ov=$("#setOv");if(subOpen)return;

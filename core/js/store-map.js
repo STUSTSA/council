@@ -281,6 +281,9 @@
     /* 會議紀錄（秘書處；2026-11-20）：一天一份 meetingMinutes/{日期}，items 是那一天的會議。讀不到（沒有權限）時 src.minutes 是 null：不設，保留原本的 */
     if (Array.isArray(src.minutes)) s.minutes = src.minutes.flatMap(m => Array.isArray(m.items) ? m.items.filter(x => x && typeof x === "object").map(copy) : [])
       .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    /* 行政會議議程的定版（2026-11-21）：存在同一天的 meetingMinutes/{日期} 文件的 agenda 欄位（規則不用改：秘書處與總管理員讀寫）；沒有 agenda 的日子不設 */
+    if (Array.isArray(src.minutes)) s.agendas = src.minutes.filter(m => m && m.agenda && typeof m.agenda === "object" && Array.isArray(m.agenda.items)).map(m => copy(m.agenda))
+      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     s.members = (src.legacy || []).filter(m => m.deptId === dept).map(m => ({ id: oid(dept, m.id), name: m.name, role: m.oldRole, createdAt: m.createdAt }));
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
