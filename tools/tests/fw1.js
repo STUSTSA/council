@@ -3,7 +3,7 @@
    1. 未登入、一般登入者：唯讀（沒有編輯鈕、儲存不寫入）
    2. 編輯者（角色即時生效）：新增卡片、改內容、加／拿掉時間標記、結案、完成這一段（時間標記換卡片）、新增議題／週報／標籤、
       永久刪除有時間標記的卡片（兩次確認、刪除紀錄有標題）；看不到管理員與總管理員才有的項目
-   3. 管理員：改看板名稱（deptSettings rev＋稽核紀錄）
+   3. 管理員：設定頁沒有看板名稱（標題固定用部門名稱，不寫 deptSettings）
    4. 衝突（別人剛存過）：不寫入、畫面上的修改留著、可以重新載入
    5. 撤權：畫面即時變回唯讀；編輯中按儲存被規則擋下、修改留著；直接呼叫寫入也被拒
    6. 其他部門的 Firestore 文件前後完全相同；沒有頁面錯誤
@@ -193,15 +193,14 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const left2=await Promise.all([read(C(mid)),...[5,6,7,8,9].map(i=>read(`events/${DEPT}__tmany${i}`)),...[1,2,3,4,5].map(v=>read(`${C(mid)}/versions/${v}`))]);
   ok(left2.every(x=>!x),'刪除 5 個時間標記、5 個版本的卡片：全部清掉（分批）');
 
-  /* ---------- 3. 管理員：看板名稱 ---------- */
+  /* ---------- 3. 管理員：沒有看板名稱 ---------- */
   const ad=await open();const adUid=await signIn(ad,'ad');await setRole(adUid,{[DEPT]:'admin'});
   await until(async()=>!(await ui(ad)).locked);
   ok(await ad.evaluate(()=>!document.querySelector('#ganttEdBtn').hidden),'管理員：甘特圖時間軸可以編輯');
-  await openSet(ad);ok(await until(async()=>(await setText(ad)).includes('看板名稱')),'管理員：設定頁有看板名稱');
-  await ad.click('[data-set="title"]');await dlg(ad);await dlgSet(ad,{v:'FW 權益部看板'});await dlgAct(ad,'ok');await settled(ad);
-  const st=await read(`deptSettings/${DEPT}`),al=await read(`auditLogs/deptSettings_${DEPT}_2`);
-  ok(st.title==='FW 權益部看板'&&st.rev===2&&st.updatedBy===adUid&&al&&al.actor===adUid&&al.after.fields.includes('title'),'看板名稱：deptSettings rev 2＋稽核紀錄');
-  ok(await ad.evaluate(()=>state.title==='FW 權益部看板'),'看板名稱：畫面更新');
+  await openSet(ad);ok(await until(async()=>(await setText(ad)).includes('標籤')),'管理員：設定頁開啟');
+  ok(!(await setText(ad)).includes('看板名稱')&&await ad.evaluate(()=>!document.querySelector('[data-set="title"]')),'管理員：設定頁沒有看板名稱（看板標題固定用部門名稱）');
+  ok(await ad.evaluate(()=>document.title===CFG.dept.name),'分頁標題＝部門名稱');
+  ok((await read(`deptSettings/${DEPT}`)).rev===1,'沒有看板名稱的寫入：deptSettings 維持 rev 1');
   await closeSet(ad);
   /* 3b. 管理員刪除議題、週報、標籤（02D D-d）：刪除鈕跟著權限出現；同一批寫刪除紀錄（誰、類型、標題）；編輯者直接呼叫刪除被規則擋下 */
   {const delLogs=async col=>{let out=[];await admin(async d=>{out=(await d.collection('auditLogs').where('col','==',col).where('action','==','delete').get()).docs.map(x=>({id:x.id,...x.data()}))});return out};
@@ -284,7 +283,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(await gen.evaluate(async()=>{try{await (await storeFsGet()).versionsPage(CFG.firebase,CFG.deptId,null,5);return 'ok'}catch(e){return e.code}})==='permission-denied','一般登入者：直接查版本歷史被規則拒絕');
   const su2=await open();const suUid=await signIn(su2,'su2');await setRole(suUid,{},true);await until(async()=>!(await ui(su2)).locked);
   {const r=await logText(su2);
-    ok(r.t.includes('設定\n看板名稱')&&r.t.includes(`即時回報\n刪除｜${del.name}`)&&r.t.includes('即時回報\n修改｜FW 新卡片'),'編輯紀錄（總管理員）：加上稽核紀錄（看板名稱、卡片刪除）');}
+    ok(r.t.includes(`即時回報\n刪除｜${del.name}`)&&r.t.includes('即時回報\n修改｜FW 新卡片'),'編輯紀錄（總管理員）：加上稽核紀錄（卡片刪除、修改）');}
   /* 2026-11-20：開發專案缺索引時編輯紀錄只寫「讀取失敗」、console 沒有訊息 → 原始錯誤進 console.error，畫面仍只有簡短原因（不放含專案網址的訊息） */
   {const cons=[];const h=m=>{if(m.type()==='error')cons.push(m.text())};su2.on('console',h);
     await su2.evaluate(()=>{const F=window.BoardFirestore;F.__vp=F.versionsPage;F.versionsPage=async()=>{throw Object.assign(new Error('The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/demo-x/firestore/indexes?create_composite=Q9b'),{code:'failed-precondition'})}});

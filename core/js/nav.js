@@ -207,8 +207,7 @@ function settingsInner(){
     :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec()+lookSec();
   if(readOnly())return setSec(setRow("week","doc","每週概述")+setRow("log","history","編輯紀錄"))+devSec()+lookSec();
   return setSec(setRow("report","doc","報告")+setRow("log","history","編輯紀錄"))+
-    setSec(setRow("title","edit","看板名稱")+
-      setRow("team","people","人員")+
+    setSec(setRow("team","people","人員")+
       setRow("labels","tag","標籤")+
       (termOwn()?setRow("term","calendar","學年與開學日"):""))+
     setSec(setRow("backup","download","備份")+
@@ -335,7 +334,6 @@ PANE_MQ.addEventListener("change",()=>{if(!PANE_MQ.matches&&paneKey){paneSeq++;p
 
 /* 學年與開學日（2026-11-06 起只有秘書處能改，全會共用，見 state.js 的 termCfg）：學年、甘特圖預設學期、開學日各自修改 */
 const BOARD_INFO={
-  title:["看板名稱",()=>[{name:"v",label:"看板名稱",value:state.title}],v=>{if(!v){toast("看板名稱不能空白");return false}state.title=v}],
   /* 學年：用上下按鈕改數字（不用打字）；存成「115學年」。原本的文字裡沒有數字就從今天推算（8 月起算新學年） */
   year:["學年",()=>{const m=String(state.yearLabel||"").match(/\d+/),d=new Date(),roc=d.getFullYear()-1911-(d.getMonth()<7?1:0);
     return [{name:"v",label:"學年",type:"stepper",value:m?+m[0]:roc,min:100,max:200,suffix:"學年"},
@@ -345,7 +343,7 @@ const BOARD_INFO={
 async function editBoardInfo(k){
   const [t,fields,apply]=BOARD_INFO[k];
   const v=await ask(t,fields());if(!v)return;
-  const key={title:"title",year:"yearLabel",term:"termStart"}[k];
+  const key={year:"yearLabel",term:"termStart"}[k];
   if(k==="year"){if(`${v.v}學年`===(state.yearLabel||"")&&(v.sem||"")===(state.semester||""))return;await settingSave(()=>apply(v),`已更新${t}`);return}
   if((v.v||"")===(state[key]||""))return;
   await settingSave(()=>apply(v.v),`已更新${t}`);
@@ -418,7 +416,6 @@ const SET_FLOWS={
   log:()=>openLog(setPaneHost()),
   team:()=>teamSettings(),
   labels:()=>labelSettings(),
-  title:()=>editBoardInfo("title"),
   ...SET_HUBS,
   ...ACCT_FLOWS,
 };

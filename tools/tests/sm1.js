@@ -1,5 +1,5 @@
 /* sm1：手機版設定的下一層（nav.js 的 subRun）、學年上下按鈕（dialog.js 的 stepper）、手機版膠囊格不會被長標題撐出畫面。固定 8300 埠。
-   手機 412（權益部）：人員 → 子頁 →「返回」回清單；看板名稱 → 系統返回鍵回清單；再返回關掉設定；完成紀錄放一筆很長的標題，膠囊右緣不超出區塊。
+   手機 412（權益部）：人員 → 子頁 →「返回」回清單；標籤 → 系統返回鍵回清單；再返回關掉設定；完成紀錄放一筆很長的標題，膠囊右緣不超出區塊。
    手機 412（秘書處）：學年與開學日（合併頁，在子頁裡）→ 學年 → 表單在子頁裡 → 按＋兩次、−一次 → 確定 → 回到合併頁、學年＋1 →「返回」回設定清單；
    桌面 1300（秘書處）：學年仍在右側面板。
    2026-11-11 改寫：學年從 2026-11-06 起只在秘書處（state.js 的 termCfg，nav.js 的 SET_HUBS.term）；秘書處用下面這份測試資料（沒有身分、共用密碼 0000），
@@ -22,8 +22,8 @@ await p.click('#setOv [data-set=team]');await p.waitForTimeout(900);
 ok(await p.evaluate(()=>!$('#setSub').hidden&&subOpen),'人員進到子頁');
 await p.click('#subBack');await p.waitForTimeout(1500);
 ok(await p.evaluate(()=>$('#setSub').hidden&&setOpen),'「返回」回到設定清單');
-await p.click('#setOv [data-set=title]');await p.waitForTimeout(900);
-ok(await p.evaluate(()=>!$('#setSub').hidden&&!!$('#setSub .set-sub-body #dlg[open]')),'看板名稱的表單在子頁裡');
+await p.click('#setOv [data-set=labels]');await p.waitForTimeout(900);
+ok(await p.evaluate(()=>!$('#setSub').hidden&&!!$('#setSub .set-sub-body #dlg[open]')),'標籤的表單在子頁裡');
 await p.goBack();await p.waitForTimeout(1500);
 ok(await p.evaluate(()=>$('#setSub').hidden&&setOpen),'系統返回鍵回到設定清單（設定還開著）');
 await p.goBack();await p.waitForTimeout(1200);

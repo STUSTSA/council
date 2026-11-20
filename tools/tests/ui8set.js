@@ -3,7 +3,7 @@
    2. 登入前：.set-gate 裡只有標題（b）與按鈕，沒有說明句；定型版唯讀只有標題
    3. 每一列（設定清單、合併頁）：除了名稱（.sr-t，裡面沒有別的元素）沒有其他文字；沒有 small
    4. 相鄰的列留縫（下一列的上緣 > 上一列的下緣），每列四個角都是 14 的圓角、各自有底色
-   5. 十項功能都有入口、點得開：每週概述、工作報告、編輯紀錄、看板名稱、人員、標籤、備份、這台裝置、網站管理、外觀
+   5. 九項功能都有入口、點得開：每週概述、工作報告、編輯紀錄、人員、標籤、備份、這台裝置、網站管理、外觀
    6. 1300：點了清單在左、面板在右；412：進全畫面子頁（上方只有「返回」），返回回到清單
    7. 設定頁、子頁裡沒有 title 屬性 */
 const {setup}=require('./common.js');
@@ -63,9 +63,9 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     await p.evaluate(()=>{localStorage.setItem('workboard:siteadmin','1')});
     await p.click('#setBtn');await W(900);
     const rows=await p.evaluate(()=>[...document.querySelectorAll('#setOv .set-inner .set-row')].map(r=>r.dataset.set));
-    ok(['report','log','title','team','labels','backup','device','site','look'].every(k=>rows.includes(k)),'登入後清單有全部入口 '+rows);
-    rc=await rowCheck(p);ok(rc.n>=9&&!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'登入後列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
-    /* 5. 十項功能（＋ 6. 兩欄） */
+    ok(['report','log','team','labels','backup','device','site','look'].every(k=>rows.includes(k)),'登入後清單有全部入口 '+rows);
+    rc=await rowCheck(p);ok(rc.n>=8&&!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'登入後列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
+    /* 5. 九項功能（＋ 6. 兩欄） */
     const pane=()=>p.evaluate(()=>{const b=$('#setOv .set-body'),sc=b.querySelector('.set-scroll').getBoundingClientRect(),pn=b.querySelector('.set-pane'),pr=pn.getBoundingClientRect();
       return {split:b.classList.contains('split'),paneShown:!pn.hidden,left:sc.right<=pr.left,cur:(document.querySelector('#setOv .set-row[aria-current="true"]')||{dataset:{}}).dataset.set,
         hub:[...pn.querySelectorAll('.set-hub:not([hidden]) [data-hub]')].map(x=>x.dataset.hub),dlg:$('#dlg').open&&$('#dlg').classList.contains('in-pane')&&pn.contains($('#dlg'))?$('#dlgForm>b')?.textContent:'',
@@ -81,7 +81,6 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     if(s.dlg){await p.click('#dlgForm [data-act=ok]');await W(1500);seen['工作報告']=seen['工作報告']&&await p.evaluate(()=>!!$('#rptOv')&&!$('#rptOv').hidden);await p.click('#rptClose');await W(900)}
     await shut('report');
     s=await open('log');seen['編輯紀錄']=s.log;c=await noChrome(p);ok(!c.close,'1300 編輯紀錄面板沒有「關閉」');await shut('log');
-    s=await open('title');seen['看板名稱']=s.dlg==='看板名稱';await shut('title');
     s=await open('team');seen['人員']=s.dlg==='身分與專員';await shut('team');
     s=await open('labels');seen['標籤']=s.dlg==='標籤';
     const lblNote=await p.evaluate(()=>[...document.querySelectorAll('#dlgForm .sub,#dlgForm .tm-note')].map(x=>x.textContent).filter(t=>/例如|按「完成」|需要管理員/.test(t)));
@@ -92,7 +91,7 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     s=await open('look');seen['外觀']=s.look;
     c=await noChrome(p);ok(c.title===0,'設定頁沒有 title 屬性');
     await shut('look');
-    ok(Object.keys(seen).length===10&&Object.values(seen).every(Boolean),'十項功能都點得開（1300）'+JSON.stringify(seen));
+    ok(Object.keys(seen).length===9&&Object.values(seen).every(Boolean),'九項功能都點得開（1300）'+JSON.stringify(seen));
     const back=await pane();ok(!back.split&&!back.paneShown,'再點一次選到的項目＝收起面板');
     ok(!p.errs.length,'1300 沒有錯誤 '+p.errs.join(' | '));
     await b.close()}
@@ -104,7 +103,7 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     let g=await gearSt(p);ok(g.open&&g.on,'412 設定鍵選中');
     await p.evaluate(()=>closeSettings(true));await login(p);
     await p.click('#setBtn');await W(900);
-    let rc=await rowCheck(p);ok(rc.n>=8&&!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'412 列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
+    let rc=await rowCheck(p);ok(rc.n>=7&&!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'412 列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
     const sub=()=>p.evaluate(()=>{const s=$('#setSub'),r=s&&s.getBoundingClientRect();return {sub:subOpen,shown:!!s&&!s.hidden,full:!!r&&r.left===0&&Math.abs(r.top-document.querySelector('.dhead').getBoundingClientRect().bottom)<1.5&&r.top>20&&r.width===innerWidth&&r.bottom===innerHeight,listHidden:$('#setOv').hidden,
       top:s?[...s.querySelector('.set-sub-top').children].map(x=>x.id):[],logo:!!s&&!!s.querySelector('.logo,.set-logo'),hub:s?[...s.querySelectorAll('.set-hub:not([hidden]) [data-hub]')].map(x=>x.dataset.hub):[],
       dlg:$('#dlg').open&&!!s&&s.contains($('#dlg'))?$('#dlgForm>b')?.textContent:'',log:!!s&&!!s.querySelector('#logOv:not([hidden])'),week:!!s&&!!s.querySelector('#weekWrap:not([hidden])'),look:!!s&&!!s.querySelector('.look')}});
@@ -117,7 +116,6 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     await p.click('#setSub [data-hub="report"]');await W(1000);seen['工作報告']=(await sub()).dlg==='匯出工作報告';await leave();
     s=await sub();ok(!s.sub&&!s.listHidden,'412 返回回到設定清單');
     s=await go('log');seen['編輯紀錄']=s.log;c=await noChrome(p);ok(!c.close,'412 編輯紀錄子頁沒有「關閉」');await leave();
-    s=await go('title');seen['看板名稱']=s.dlg==='看板名稱';await leave();
     s=await go('team');seen['人員']=s.dlg==='身分與專員';await leave();
     s=await go('labels');seen['標籤']=s.dlg==='標籤';await leave();
     s=await go('backup');seen['備份']=s.hub.includes('export');await leave();
@@ -125,7 +123,7 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     s=await go('look');seen['外觀']=s.look;
     c=await noChrome(p);ok(c.title===0&&!c.logo&&!c.close,'412 子頁沒有 title、logo、關閉 '+JSON.stringify(c));
     await leave();
-    ok(Object.values(seen).every(Boolean)&&Object.keys(seen).length===9,'412 九項（網站管理只給後台管理員）都點得開 '+JSON.stringify(seen));
+    ok(Object.values(seen).every(Boolean)&&Object.keys(seen).length===8,'412 八項（網站管理只給後台管理員）都點得開 '+JSON.stringify(seen));
     /* 子頁開著時按設定鍵＝整個關掉 */
     await go('labels');await p.click('#setBtn');await W(1200);
     s=await sub();g=await gearSt(p);ok(!g.open&&!s.sub&&!s.shown&&!g.on,'412 子頁開著時按設定鍵＝關閉設定 '+JSON.stringify({g,s}));
