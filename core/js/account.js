@@ -233,6 +233,8 @@ function peoplePanel(){
       if(b.hasAttribute("data-hist")){await auditPanel({roles:who});return}
       const nm=who&&nameOf(who);
       if(b.dataset.swap){const d=b.dataset.swap,to=(roles.find(x=>x.uid===who).depts[d]==="admin")?"editor":"admin";
+        /* 改成管理員先確認（寫出信箱：名稱是本人自己取的，信箱才是登入的帳號）；降成編輯者不用 */
+        if(to==="admin"){const v=await ask(`把 ${nm} 改成${deptNameOf(d)}管理員`,[],{danger:"改成管理員",note:`帳號：${mail(who)||"（沒有信箱紀錄）"}`});if(v!=="delete")return}
         await write(who,r=>({...r,depts:{...r.depts,[d]:to}}),"manual",`已改成${ROLE_T[to]}`);return}
       if(b.dataset.rm){const d=b.dataset.rm;
         const v=await ask(`撤銷 ${nm} 的${deptNameOf(d)}編輯權限`,[],{danger:"撤銷",note:"撤銷後仍可閱讀看板"});if(v!=="delete")return;
@@ -429,15 +431,20 @@ function requestsPanel(){
     const legName=async()=>{try{const l=await A.legacyList();return Object.fromEntries(l.map(x=>[x.id,x.name]))}catch(_){return {}}};
     let leg={};
     const draw=()=>{if(!p.alive)return;
-      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(nameOf(q.uid))}・${esc(deptNameOf(q.deptId))}${ROLE_T[q.role]}</b>
-        <small>${esc(mail(q.uid))} · ${hm(q.createdAt)}${q.legacyRef?` · 舊身分 ${esc(leg[q.legacyRef]||q.legacyRef)}`:""}</small>${q.note?`<small>${esc(q.note)}</small>`:""}</span>
+      /* 信箱（登入的帳號）放在粗體那一行最前面；名稱是申請人自己取的，放在後面的小字 */
+      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${ROLE_T[q.role]}</b>
+        <small>名稱 ${esc(nameOf(q.uid))} · ${hm(q.createdAt)}${q.legacyRef?` · 自稱舊身分 ${esc(leg[q.legacyRef]||q.legacyRef)}`:""}</small>${q.note?`<small>${esc(q.note)}</small>`:""}</span>
         <button type="button" class="icon" data-ok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-no="${esc(q.id)}">拒絕</button></div>`).join("")||`<p class="set-p acct-empty">沒有待審的申請</p>`}</div>`};
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b)return;
       /* 04：核准、拒絕的是畫面上那一版（rev；同一份申請可以撤回後再申請）。不論成功或失敗都重讀清單（失敗多半是申請剛被撤回或改過）；已經離開面板就不重讀 */
       const q=list.find(x=>x.id===(b.dataset.ok||b.dataset.no));if(!q)return;
-      if(b.dataset.ok){if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
+      if(b.dataset.ok){
+        /* 核准先確認：帳號（信箱）、部門與角色、名稱、舊身分各一行 */
+        const v=await ask(`核准 ${mail(q.uid)||nameOf(q.uid)} 的申請`,[],{danger:"核准",note:`帳號：${mail(q.uid)||"（沒有信箱紀錄）"}\n角色：${deptNameOf(q.deptId)}・${ROLE_T[q.role]}\n名稱：${nameOf(q.uid)}${q.legacyRef?`\n自稱舊身分：${leg[q.legacyRef]||q.legacyRef}`:""}`});
+        if(v!=="delete")return;
+        if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.requestDecide(q.id,"rejected",q.rev),"已拒絕")}
       else return;
       if(p.alive){await load();draw()}
