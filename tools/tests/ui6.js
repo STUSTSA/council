@@ -2,14 +2,14 @@
    github 模式（data_test.json），固定 8300 埠（run-tests.sh 換埠時會一起換）。
    1. 通知鈕進到部門內的一頁：標題列同一個節點、鏡片不動、沒有搜尋列與新增圓鈕；返回四種：再按通知鈕、Esc、系統返回鍵、工具列分頁（到那個分頁）
    2. 今日／明日卡片：今日＝--pri 底；今日層開關（Esc）、只有「本來就要做」；點明日＝行事曆選到那一天
-   3. 逾期卡片堆只列逾期（勾了的、還沒到的不列）；左滑延後（明天同一時刻、存檔）；右滑（改時間鈕）打開那張卡片的時間頁
+   3. 清點區：已過期／本週到期／之後三段；已過期每項只有完成、改期；完成與復原（含沒有核取行的舊時間標記）；改期打開那張卡片的時間頁
    4. 海報月曆：週一開頭、選到的日期 40px --acc 圓、今天 --acc2 粗體、跨天細線與分層 9px；點日期清單換內容（舊的分身淡出）；月份選單 Esc 關、選月份
    5. 五類模式：會長室、「其他」勾了才讀那個部門（攔截請求計數，讀過不重讀）；活動、會議在 github 部門是空的、不讀；只有測試部門是 firestore 也不讀；有 firestore 部門時讀 scope（用替身模組）
    6. 跳脫：事件名稱含 <img onerror>；公共版參數（calMount）；唯讀時沒有通知鈕、開著時變唯讀就回原分頁
-   7. 關掉動態（reduced-motion）：進出、今日層、換日期、卡片堆都沒有程式動畫
+   7. 關掉動態（reduced-motion）：進出、今日層、換日期都沒有程式動畫
    8. 412 寬：沒有橫捲、鏡片留在原分頁
-   9. 審查修正：沒登入／沒選身分時逾期卡片堆唯讀（沒有延後／改時間鈕、拖不動、notiPostpone 回 false 且沒有寫入）；
-      30px 快甩不觸發延後；延後後出現「復原」、按了寫回原值；固定 11/30 點明日會讀新月份；11/27–12/08 在 11/30 那格畫成半條線；
+   9. 審查修正：沒登入／沒選身分時清點區唯讀（沒有完成／改期鈕、notiDone 回 false 且沒有寫入）；
+      固定 11/30 點明日會讀新月份；11/27–12/08 在 11/30 那格畫成半條線；
       時刻欄位含 <!--x 版面不壞；calMount→calUnmount 五次 resize 監聽不累積、拆掉的不吃 Esc；未登入的公共版查詢帶 visibility（替身 Firebase 模組）；
       通知頁開著按設定鍵：瀏覽紀錄不為 null、系統返回關設定
    失敗會印 FAIL 並以非 0 結束 */
@@ -51,7 +51,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     ok(r.tab==='progress'&&JSON.stringify(r.lens)===JSON.stringify(lens0),`鏡片留在原分頁、不動（${JSON.stringify(lens0)} → ${JSON.stringify(r.lens)}）`);
     ok(r.search&&r.fab,'這一頁沒有搜尋列、沒有新增圓鈕');
     ok(r.hist==='noti'&&r.pressed==='true','推一筆瀏覽紀錄、通知鈕 aria-pressed');
-    ok(r.order==='noti-days,nt-late,cal',`由上到下：今日／明日 → 逾期 → 行事曆（${r.order}）`);
+    ok(r.order==='noti-days,nt-tally,cal',`由上到下：今日／明日 → 清點區 → 行事曆（${r.order}）`);
     await p.click('#notiBtn');await p.waitForTimeout(800);
     ok(await p.evaluate(()=>!notiOpen&&curSec==='progress'&&$('.sgroup[data-sec=progress]').classList.contains('cur')&&!history.state),'再按通知鈕：回到原分頁（進度）');
     await p.click('#notiBtn');await p.waitForTimeout(700);await p.keyboard.press('Escape');await p.waitForTimeout(700);
@@ -84,25 +84,36 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
   {const r=await p.evaluate(()=>({img:document.querySelectorAll('#notiPage img:not(.dh-logo),#todayOv img').length,x:window.__xss,txt:$('#notiPage .nd-card.today').textContent.includes('<img')}));
     ok(r.img===0&&!r.x&&r.txt,`事件名稱含 <img onerror>：照字面顯示、沒有產生元素（${JSON.stringify(r)}）`);}
 
-  /* 3. 逾期卡片堆 */
-  {const r=await p.evaluate(()=>({late:notiLate(),ids:[...document.querySelectorAll('#notiDeck .dk-card')].map(c=>c.dataset.dk),top:$('#notiDeck .dk-card[data-i="0"]').dataset.dk,n:$('.dk-n').textContent,badge:$('#notiBtn .noti-n').textContent}));
-    ok(r.late===3&&r.ids.sort().join()==='tL1,tL2,tL3'&&r.n==='3'&&r.badge==='3',`只列逾期的三筆（勾了的、還沒到的不列）：${r.ids}，件數 ${r.n}、通知鈕 ${r.badge}`);
-    ok(r.top==='tL3',`最早的在最上面（${r.top}）`);
-    await p.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await p.waitForTimeout(300);
-    const bb=await (await p.$('#notiDeck .dk-card[data-i="0"]')).boundingBox();const n0=st.commits.length;
-    await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.mouse.down();for(let i=1;i<=12;i++){await p.mouse.move(bb.x+bb.width/2-i*24,bb.y+bb.height/2+i);await p.waitForTimeout(16)}
-    const stamp=await p.evaluate(()=>[getComputedStyle($('#notiDeck .dk-card[data-i="0"] .dk-stp.l')).opacity,getComputedStyle($('#notiDeck .dk-card[data-i="0"] .dk-stp.r')).opacity]);
-    ok(+stamp[0]>.5&&+stamp[1]===0,`往左拖浮出「延後」（${stamp}）`);
-    await p.mouse.up();await p.waitForTimeout(1600);
-    const a=await p.evaluate(()=>{const t=state.events.flatMap(e=>e.times||[]).find(x=>x.id==='tL3');return {end:t.end,start:t.start,late:notiLate(),ids:[...document.querySelectorAll('#notiDeck .dk-card')].map(c=>c.dataset.dk).join()}});
-    ok(a.end===await p.evaluate(()=>addDays(today(),1))&&a.late===2&&!/tL3/.test(a.ids),`左滑＝延後：跨天的結束日改成明天（${a.start}～${a.end}），從卡片堆拿掉`);
-    ok(st.commits.length>n0,'延後有存檔');
-    await p.click('[data-dkgo="l"]');await p.waitForTimeout(1600);
-    const a2=await p.evaluate(()=>state.events.flatMap(e=>e.times||[]).find(x=>x.id==='tL1').start);
-    ok(a2===await p.evaluate(()=>addDays(today(),1)+'T09:30'),`延後鈕：單天的整個搬到明天同一時刻（${a2}）`);
-    await p.click('[data-dkgo="r"]');await p.waitForTimeout(1600);
+  /* 3. 清點區：三段、已過期只有完成與改期、完成與復原（含舊時間標記）、改期 */
+  {const r=await p.evaluate(()=>{const g=k=>[...document.querySelectorAll(`#notiTally .tl-g[data-g="${k}"] .tl-row`)].map(x=>x.dataset.tl);
+      return {late:notiLate(),gl:g('late'),gw:g('week'),gx:g('later'),badge:$('#notiBtn .noti-n').textContent,hs:[...document.querySelectorAll('#notiTally .tl-gh')].map(h=>h.firstChild.textContent).join(),
+        actLate:[...document.querySelectorAll('#notiTally .tl-g[data-g="late"] .tl-row')].map(x=>[...x.querySelectorAll('.tl-btn')].map(b=>b.textContent).join('|')).join(),
+        actOther:document.querySelectorAll('#notiTally .tl-g:not([data-g="late"]) .tl-btn').length,all:[...document.querySelectorAll('#notiTally .tl-row')].map(x=>x.dataset.tl)}});
+    ok(r.gl.join()==='tL3,tL1,tL2'&&r.late===3&&r.badge==='3',`已過期三筆、最早的在最上面（勾了的不列）：${r.gl}，通知鈕 ${r.badge}`);
+    ok(r.hs.startsWith('已過期')&&r.gw.includes('tT')&&!r.all.includes('tD')&&r.gw.length+r.gx.length>=4,`本週到期、之後也列出（本週 ${r.gw}、之後 ${r.gx}），勾了的不列`);
+    ok(r.actLate==='完成|改期,完成|改期,完成|改期'&&r.actOther===0,`已過期每項只有「完成」「改期」兩個動作、其他段沒有動作鈕（${r.actLate}）`);
+    await p.evaluate(()=>$('#notiTally').scrollIntoView({block:'center'}));await p.waitForTimeout(300);
+    const n0=st.commits.length;
+    await p.click('[data-tldone="tL1"]');await p.waitForTimeout(1400);
+    const a=await p.evaluate(()=>{const ev=state.events.find(e=>e.times&&e.times.some(t=>t.id==='tL1'));return {chk:ev.blocks.find(b=>b.timeId==='tL1').check,late:notiLate(),row:!!$('[data-tl="tL1"]'),u:$('.tl-undo .kp-st')?.textContent}});
+    ok(a.chk===true&&a.late===2&&!a.row&&a.u==='已完成'&&st.commits.length>n0,`完成：勾起那一行、離開已過期（剩 ${a.late}）、有存檔、出現「已完成＋復原」`);
+    const n1=st.commits.length;await p.click('[data-tlundo]');await p.waitForTimeout(1400);
+    const b2=await p.evaluate(()=>{const ev=state.events.find(e=>e.times&&e.times.some(t=>t.id==='tL1'));return {chk:ev.blocks.find(b=>b.timeId==='tL1').check,late:notiLate(),u:!!$('[data-tlundo]')}});
+    ok(b2.chk===false&&b2.late===3&&!b2.u&&st.commits.length>n1,'復原：改回沒勾、回到已過期、有存檔');
+    /* 舊時間標記（沒有連到任何一行）：也列在已過期；完成當下才補一行核取行，只動這一張卡片；復原拿掉補的那一行 */
+    const L0=await p.evaluate(()=>{const ev=state.events.find(e=>e.times&&e.times.some(t=>t.id==='tL1'));ev.times.push({id:'tLg',label:'舊的時間標記',start:addDays(today(),-9),end:'',place:''});render();renderNoti();return {n:ev.blocks.length,o:state.events.filter(e=>e!==ev).map(e=>JSON.stringify(e.blocks)).join()}});
+    await p.waitForTimeout(500);
+    ok(await p.evaluate(()=>document.querySelector('#notiTally [data-tl="tLg"] [data-tldone]')!==null&&notiLate()===4&&$('#notiBtn .noti-n').textContent==='4'),'舊時間標記也在已過期、有完成與改期（通知鈕 4）');
+    await p.click('[data-tldone="tLg"]');await p.waitForTimeout(1400);
+    const g1=await p.evaluate(()=>{const ev=state.events.find(e=>e.times.some(t=>t.id==='tLg')),b=ev.blocks.find(x=>x.timeId==='tLg');return {b:b&&{chk:b.check,tx:b.text},n:ev.blocks.length,late:notiLate()}});
+    ok(g1.b&&g1.b.chk===true&&g1.b.tx==='舊的時間標記'&&g1.n===L0.n+1&&g1.late===3,`舊時間標記按完成：補一行核取行（${JSON.stringify(g1.b)}），只多這一行，已過期剩 ${g1.late}`);
+    await p.click('[data-tlundo]');await p.waitForTimeout(1400);
+    const g2=await p.evaluate(()=>{const ev=state.events.find(e=>e.times.some(t=>t.id==='tLg'));return {n:ev.blocks.length,b:!!ev.blocks.find(x=>x.timeId==='tLg'),o:state.events.filter(e=>!e.times.some(t=>t.id==='tLg')).map(e=>JSON.stringify(e.blocks)).join(),late:notiLate()}});
+    ok(g2.n===L0.n&&!g2.b&&g2.o===L0.o&&g2.late===4,'復原：補的那一行拿掉，其他卡片沒動');
+    await p.evaluate(()=>{const ev=state.events.find(e=>e.times.some(t=>t.id==='tLg'));ev.times=ev.times.filter(t=>t.id!=='tLg');render();renderNoti()});await p.waitForTimeout(300);
+    await p.click('[data-tlre="tL2"]');await p.waitForTimeout(1600);
     const rr=await p.evaluate(()=>({open:notiOpen,sec:curSec,lv:lvOpen,ed:editing,pane:lvPane,tid:lvSeg&&lvSeg.tid,foc:document.activeElement&&document.activeElement.matches('.lc-ed .sg.on')}));
-    ok(!rr.open&&rr.sec==='live'&&rr.lv===evId&&rr.ed&&rr.pane==='time'&&rr.tid==='tL2'&&rr.foc,`右滑＝改時間：回到即時回報、打開那張卡片、進入時間頁選到那個時間（${JSON.stringify(rr)}）`);
+    ok(!rr.open&&rr.sec==='live'&&rr.lv===evId&&rr.ed&&rr.pane==='time'&&rr.tid==='tL2'&&rr.foc,`改期：回到即時回報、打開那張卡片、進入時間頁選到那個時間（${JSON.stringify(rr)}）`);
     await p.keyboard.press('Escape');await p.waitForTimeout(900);await p.keyboard.press('Escape');await p.waitForTimeout(900);}
 
   /* 4. 海報月曆 */
@@ -183,7 +194,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
   /* 6b. 公共版參數 */
   {await p.evaluate(()=>{document.body.insertAdjacentHTML('beforeend','<div id="pubT"></div>');window.__pc=calMount($('#pubT'))});await p.waitForTimeout(400);
     const r=await p.evaluate(()=>({pub:__pc.pub,modes:[...document.querySelectorAll('#pubT .cal-seg [data-k]')].map(x=>x.textContent).join(),h:$('#pubT .sec-h').textContent,foot:$('#pubT .pc-foot').textContent,
-      extra:!!$('#pubT .nd-card,#pubT .dk-card,#pubT .cal-oth')}));
+      extra:!!$('#pubT .nd-card,#pubT .nt-tally,#pubT .cal-oth')}));
     ok(r.pub&&r.modes==='全部,活動,會議'&&/全會行事曆/.test(r.h)&&r.foot==='全會・學生會'&&!r.extra,`公共版：全部／活動／會議、沒有今日／明日與逾期（${r.modes}，${r.foot}）`);
     await p.click('#pubT .cal-seg [data-k="meet"]');await p.waitForTimeout(400);
     ok(await p.evaluate(()=>__pc.mode==='meet'&&NOTI.mode==='mine'),'公共版自己一份狀態（換模式不影響通知頁）');
@@ -213,7 +224,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     const l0=await q.evaluate(()=>$('#tabbar .tab.on').dataset.tab);
     await q.click('#notiBtn');await q.waitForTimeout(1000);
     const r=await q.evaluate(()=>({open:notiOpen,tab:$('#tabbar .tab.on').dataset.tab,sw:document.documentElement.scrollWidth,pw:$('#pageMain').scrollWidth,cw:$('#pageMain').clientWidth,w:innerWidth,
-      cards:[...document.querySelectorAll('.nd-card')].map(c=>Math.round(c.getBoundingClientRect().width)),dk:Math.round($('#notiDeck').getBoundingClientRect().width)}));
+      cards:[...document.querySelectorAll('.nd-card')].map(c=>Math.round(c.getBoundingClientRect().width)),tl:Math.round($('#notiTally').getBoundingClientRect().width)}));
     ok(r.open&&r.tab===l0&&r.sw<=r.w&&r.pw<=r.cw+1,`412：鏡片留在原分頁（${r.tab}）、沒有橫捲（${r.sw}/${r.pw}/${r.cw}）`);
     ok(r.cards.length===2&&Math.abs(r.cards[0]-r.cards[1])<=1,`412：今日／明日兩張並排（${r.cards}）`);
     await q.screenshot({path:'ui6_412.png'});
@@ -221,40 +232,20 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await q.close();}
 
   /* 9. 審查修正 */
-  const flick=async(pg,dx,steps,wait)=>{const bb=await (await pg.$('#notiDeck .dk-card[data-i="0"]')).boundingBox();const x0=bb.x+bb.width/2,y0=bb.y+bb.height/2;
-    await pg.mouse.move(x0,y0);await pg.mouse.down();for(let i=1;i<=steps;i++){await pg.mouse.move(x0+dx*i/steps,y0);if(wait)await pg.waitForTimeout(wait)}await pg.mouse.up()};
-  const tOf=(pg,id)=>pg.evaluate(id=>{const t=state.events.flatMap(e=>e.times||[]).find(x=>x.id===id);return t&&{start:t.start,end:t.end||''}},id);
-  /* 9a. P1-1：沒選身分（GitHub 模式沒登入）＝唯讀 */
+  const blk=(pg,id)=>pg.evaluate(id=>{const b=state.events.flatMap(e=>e.blocks||[]).find(x=>x.timeId===id);return b&&b.check},id);
+  /* 9a. 沒選身分（GitHub 模式沒登入）＝唯讀：清點區看得到，沒有完成／改期鈕，notiDone、notiRetime 回 false 且沒有寫入 */
   {const q=await mk(1300,900,'light',false);const evId=await seed(q);await q.click('#notiBtn');await q.waitForTimeout(900);
-    await q.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await q.waitForTimeout(300);
-    const ls0=await q.evaluate(()=>JSON.stringify(Object.entries(localStorage).sort()));const n0=st.commits.length,t0=await tOf(q,'tL3');
-    const r=await q.evaluate(()=>({btn:document.querySelectorAll('[data-dkgo]').length,cards:document.querySelectorAll('#notiDeck .dk-card').length,n:$('.dk-n')?.textContent}));
-    ok(r.btn===0&&r.cards===3&&r.n==='3',`沒選身分：逾期卡片堆還看得到（${r.cards} 張、${r.n} 件），沒有延後／改時間鈕（${r.btn}）`);
-    await flick(q,-320,10,16);await q.waitForTimeout(1200);
-    const t1=await tOf(q,'tL3'),d1=await q.evaluate(()=>({late:notiLate(),dlg:$('#dlg').open,go:!!$('#notiDeck .dk-card.go-l,#notiDeck .dk-card.go-r')}));
-    ok(JSON.stringify(t1)===JSON.stringify(t0)&&d1.late===3&&!d1.dlg&&!d1.go,`沒選身分：卡片拖不動、沒有延後（${JSON.stringify(t1)}，${JSON.stringify(d1)}）`);
-    const v=await q.evaluate(id=>Promise.race([Promise.resolve(notiPostpone(id,'tL3')),new Promise(r=>setTimeout(()=>r('還在等'),1500))]),evId);
+    await q.evaluate(()=>$('#notiTally').scrollIntoView({block:'center'}));await q.waitForTimeout(300);
+    const ls0=await q.evaluate(()=>JSON.stringify(Object.entries(localStorage).sort()));const n0=st.commits.length,t0=await blk(q,'tL3');
+    const r=await q.evaluate(()=>({btn:document.querySelectorAll('#notiTally .tl-btn').length,late:document.querySelectorAll('#notiTally .tl-g[data-g="late"] .tl-row').length}));
+    ok(r.btn===0&&r.late===3,`沒選身分：清點區還看得到（已過期 ${r.late} 項），沒有完成／改期鈕（${r.btn}）`);
+    const v=await q.evaluate(id=>Promise.race([Promise.resolve(notiDone(id,'tL3')),new Promise(r=>setTimeout(()=>r('還在等'),1500))]),evId);
     const v2=await q.evaluate(id=>Promise.race([Promise.resolve(notiRetime(id,'tL3')),new Promise(r=>setTimeout(()=>r('還在等'),1500))]),evId);
     await q.evaluate(()=>{if($('#dlg').open)$('#dlg').close()});
     const ls1=await q.evaluate(()=>JSON.stringify(Object.entries(localStorage).sort()));
-    ok(v===false&&v2===false&&st.commits.length===n0&&ls1===ls0&&JSON.stringify(await tOf(q,'tL3'))===JSON.stringify(t0)&&await q.evaluate(()=>notiOpen),
-      `沒選身分：notiPostpone、notiRetime 回 false（${v}、${v2}），沒有寫進 GitHub（${st.commits.length-n0}）或這台裝置（${ls1===ls0?'沒變':'變了'}）`);
+    ok(v===false&&v2===false&&st.commits.length===n0&&ls1===ls0&&await blk(q,'tL3')===t0&&await q.evaluate(()=>notiOpen),
+      `沒選身分：notiDone、notiRetime 回 false（${v}、${v2}），沒有寫進 GitHub（${st.commits.length-n0}）或這台裝置（${ls1===ls0?'沒變':'變了'}）`);
     await q.close();}
-  /* 9b. P1-2：30px 快甩不觸發；延後後「復原」 */
-  {const S2=await c.setup(),st=S2.st;   /* 新的一份模擬 GitHub（上面已經建立過身分「王」，再登入一次要個人密碼） */
-    const q=await S2.mk(1300,900,'light',false);await S2.login(q);await seed(q);await q.click('#notiBtn');await q.waitForTimeout(900);
-    await q.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await q.waitForTimeout(300);
-    const t0=await tOf(q,'tL3'),n0=st.commits.length;
-    await flick(q,-30,2,0);   /* 兩步、每步約 16ms：速度約 0.9px/ms（超過速度門檻），位移 30px */await q.waitForTimeout(1200);
-    ok(JSON.stringify(await tOf(q,'tL3'))===JSON.stringify(t0)&&st.commits.length===n0&&await q.evaluate(()=>notiLate()===3),'30px 快甩：不延後（卡片彈回）');
-    await q.click('[data-dkgo="l"]');await q.waitForTimeout(1600);
-    const a=await q.evaluate(()=>({late:notiLate(),u:!!$('[data-dkundo]'),st:$('.dk-undo .kp-st')?.textContent}));const t1=await tOf(q,'tL3');
-    ok(a.late===2&&t1.end!==t0.end&&a.u&&/延後/.test(a.st||''),`延後後出現「復原」（${a.st}；${JSON.stringify(t0)} → ${JSON.stringify(t1)}）`);
-    const n1=st.commits.length;await q.click('[data-dkundo]',{timeout:3000}).catch(()=>{});await q.waitForTimeout(1600);
-    const t2=await tOf(q,'tL3');
-    ok(JSON.stringify(t2)===JSON.stringify(t0)&&st.commits.length>n1&&await q.evaluate(()=>notiLate()===3&&!$('[data-dkundo]')),`按復原：寫回原值（${JSON.stringify(t2)}）、有存檔、卡片回到卡片堆`);
-    ok(q.errs.length===0,`9b 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
-    await S2.b.close();}
   /* 9c. 固定在 2026-11-30：P2-1 點明日讀新月份、P2-2 跨週只佔一格畫半條線、P2-4 時刻跳脫、P2-5 拆除 */
   {const q=await mk(1300,900,'light',false);await q.context().clock.setFixedTime(new Date(2026,10,30,10,0,0));await q.reload();await q.waitForTimeout(1800);
     await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=[{id:'tW',label:'跨月',start:'2026-11-27',end:'2026-12-08',place:''},{id:'tH',label:'跨週',start:'2026-11-29',end:'2026-12-02',place:''},
@@ -262,9 +253,9 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
       e.blocks=[{id:'bW',text:'跨月',check:false,timeId:'tW'},{id:'bH',text:'跨週',check:false,timeId:'tH'},{id:'bX',text:'註解今天',check:false,timeId:'tX'},{id:'bY',text:'註解過期',check:false,timeId:'tY'}];render()});
     await q.click('#notiBtn');await q.waitForTimeout(900);
     const h=await q.evaluate(()=>{const d=today(),n=notiMine().filter(x=>covers(x,d)).length;return {today:d,rows:document.querySelectorAll('#notiPage .nd-card.today .nd-row').length,er:Math.min(4,n),
-      dk:document.querySelectorAll('#notiDeck .dk-card').length,ed:Math.min(3,notiLateItems().length),ev:document.querySelectorAll('#notiPage .cal-list .cal-ev').length,en:n,
+      dk:document.querySelectorAll('#notiTally .tl-g[data-g="late"] .tl-row').length,ed:notiLateItems().length,ev:document.querySelectorAll('#notiPage .cal-list .cal-ev').length,en:n,
       cal:!!$('#notiPage .pc-foot'),txt:$('#notiPage').textContent.split('<!--x').length-1}});
-    ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日 ${h.rows}/${h.er} 列、逾期 ${h.dk}/${h.ed} 張、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
+    ok(h.today==='2026-11-30'&&h.er>=2&&h.rows===h.er&&h.ed>=1&&h.dk===h.ed&&h.ev===h.en&&h.cal&&h.txt>=3,`時刻含 <!--x 版面不壞：今日 ${h.rows}/${h.er} 列、已過期 ${h.dk}/${h.ed} 項、清單 ${h.ev}/${h.en} 件、月曆還在（${h.cal}），照字面顯示 ${h.txt} 次`);
     await q.evaluate(()=>{const e=state.events.find(x=>!x.doneAt);e.times=e.times.filter(t=>/^t[WH]$/.test(t.id));e.blocks=e.blocks.filter(b=>/^b[WH]$/.test(b.id));render()});await q.waitForTimeout(400);   /* 下面各項跟跳脫分開測 */
     const w=await q.evaluate(()=>{const wk=$('.pc-d[data-calday="2026-11-30"]').parentElement,e=[...wk.querySelectorAll('.pc-e')].find(x=>x.style.getPropertyValue('--i0')==='0'&&x.style.getPropertyValue('--i1')==='0'&&/cont-r/.test(x.className));
       const cell=$('.pc-d[data-calday="2026-11-30"]').getBoundingClientRect(),b=e&&getComputedStyle(e,'::before'),a=e&&getComputedStyle(e,'::after');
