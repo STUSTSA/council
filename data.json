@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-20 17:07",
+ "savedAt": "2026-11-20 17:12",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -1118,37 +1118,6 @@
     }
    ],
    "doneAt": "2026-11-20"
-  },
-  {
-   "id": "emwj2z9n02k6g",
-   "name": "婉如日聲明",
-   "desc": "討論聲明內容與校內環境檢視",
-   "createdAt": "2026-11-16",
-   "staff": [],
-   "links": [
-    {
-     "id": "lmwj33pk67jjt",
-     "name": "婉如日聲明",
-     "url": "https://drive.google.com/file/d/1syFs51V7FCsfoZocGqtD8x62GDdo1Vau/view",
-     "color": "#6a4fd8"
-    }
-   ],
-   "times": [],
-   "round": 1,
-   "touched": [
-    "2026-11-16"
-   ],
-   "touchedAt": "2026-11-16T17:52",
-   "report": true,
-   "labels": [],
-   "blocks": [
-    {
-     "id": "L0",
-     "text": "討論聲明內容與校內環境檢視",
-     "check": null,
-     "timeId": null
-    }
-   ]
   },
   {
    "id": "emvz5bo0gi726",
