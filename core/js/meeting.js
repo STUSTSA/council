@@ -272,7 +272,15 @@ function agItems(){
     return {dept:d.id,name:d.name,w,fresh,on:!!w&&(AG.pick.has(d.id)?AG.pick.get(d.id):fresh)};
   }).filter(Boolean);
 }
-function agText(date,items){return [`行政會議議程　${fmt(date)}`,...items.map(x=>String(x.text).trim())].join("\n\n")}
+/* 上次決議追蹤（2026-11-21）：議程最前面列「上一次定版、而且有寫決議的議程」的各部門決議（沒有決議的部門不列）。定版時把那份存成 a.prev 快照，之後文字不會跟著變 */
+function agPrev(date){
+  const a=[...(state.agendas||[])].filter(x=>x.date<date&&x.items.some(i=>String(i.decision||"").trim())).sort((x,y)=>y.date.localeCompare(x.date))[0];
+  return a?{date:a.date,items:a.items.filter(i=>String(i.decision||"").trim()).map(i=>({deptName:i.deptName,decision:String(i.decision).trim()}))}:null;
+}
+function agText(date,items,prev){
+  const trk=prev&&prev.items&&prev.items.length?[`上次決議追蹤（${fmt(prev.date)}）\n`+prev.items.map(i=>`    ${i.deptName}：${i.decision}`).join("\n")]:[];
+  return [`行政會議議程　${fmt(date)}`,...trk,...items.map(x=>String(x.text).trim())].join("\n\n");
+}
 const agPicked=()=>agItems().filter(x=>x.on).map(x=>({dept:x.dept,deptName:x.name,weekDate:x.w.date,text:String(x.w.text)}));
 function renderAgenda(){
   const p=$("#agPanel");if(!p)return;p.hidden=!CFG.meeting;if(!CFG.meeting)return;
@@ -280,12 +288,13 @@ function renderAgenda(){
   const its=agItems(),on=its.filter(x=>x.on),today0=today(),done=[...(state.agendas||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))),had=done.find(a=>a.date===today0);
   $("#agSt").textContent=on.length?`併入 ${on.length} 個部門的週報；點部門可以加入或拿掉。`:"還沒有可以併入的週報（各部門在設定的「每週概述」按「生成週報」後會出現在這裡）。";
   $("#agDepts").innerHTML=its.map(x=>`<button type="button" role="checkbox" class="wk-d${x.w?"":" none"}" data-agd="${esc(x.dept)}" aria-checked="${x.on}"${x.w?"":" disabled"}>${x.fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(x.name)}<span class="num">${x.w?(x.fresh?"本週":esc(fmt(x.w.date).slice(5))):"無"}</span></button>`).join("");
-  $("#agBody").innerHTML=on.length?`<pre class="wk-text ag-text">${esc(agText(today0,on.map(x=>x.w)))}</pre>`:"";
+  $("#agBody").innerHTML=on.length?`<pre class="wk-text ag-text">${esc(agText(today0,on.map(x=>x.w),agPrev(today0)))}</pre>`:"";
   $("#agCopy").disabled=!on.length;$("#agFinal").disabled=!on.length||AG.busy;
   $("#agFinal").textContent=had?"重新定版":"定版";
   $("#agInfo").textContent=had?`今天 ${(had.at||"").slice(11,16)} 已定版（${had.items.length} 個部門）`:"定版後會存成今天的議程";
   $("#agDone").innerHTML=done.length?`<h3 class="ag-h">已定版的議程</h3><div class="events wk-caps">${done.map(a=>`<details class="ev wk-cap" data-agdoc data-agcap="${esc(a.id||a.date)}"${AG.open.has(a.id||a.date)?" open":""}><summary><b>${esc(fmt(a.date))}</b><span class="num wk-date">${a.items.length} 個部門${a.by?"・"+esc(a.by):""}</span><span class="ev-chev" aria-hidden="true">▾</span></summary>
-      <div class="ev-body"><div class="wk-top"><button type="button" class="icon" data-agcopyone>複製文字</button></div><pre class="wk-text">${esc(agText(a.date,a.items))}</pre></div></details>`).join("")}</div>`:"";
+      <div class="ev-body"><div class="wk-top"><button type="button" class="icon" data-agcopyone>複製文字</button></div><pre class="wk-text">${esc(agText(a.date,a.items,a.prev))}</pre>
+      <div class="ag-dec" data-agdec="${esc(a.id||a.date)}"><h4 class="ag-h">會議決議（下次議程最前面會列出）</h4>${a.items.map((i,k)=>`<label class="ag-dec-row"><span>${esc(i.deptName)}</span><input type="text" maxlength="300" data-agdi="${k}" value="${esc(i.decision||"")}" placeholder="沒有決議就留白"></label>`).join("")}<div class="ag-dec-act"><button type="button" class="icon" data-agdsave>存決議</button></div></div></div></details>`).join("")}</div>`:"";
 }
 async function agFinalize(){
   if(AG.busy)return;const items=agPicked();if(!items.length)return;
@@ -293,13 +302,26 @@ async function agFinalize(){
   const had=(state.agendas||[]).find(a=>a.date===today());
   const v=await ask(had?"重新定版今天的議程":"定版行政會議議程",[],{note:(had?"今天已經定版過，會用現在的內容取代。\n":"")+`會把這 ${items.length} 個部門的週報存成 ${fmt(today())} 的議程：${items.map(x=>x.deptName).join("、")}。\n不會改動各部門的資料。`});
   if(!v||v==="alt")return;
-  const a={id:had?had.id:uid("ag"),date:today(),by:mtWho()||"",at:nowStr(),items};
+  items.forEach(x=>{const o=had&&had.items.find(i=>i.dept===x.dept);if(o&&o.decision)x.decision=o.decision});   /* 重新定版：同部門已寫的決議保留 */
+  const a={id:had?had.id:uid("ag"),date:today(),by:mtWho()||"",at:nowStr(),items},pv=agPrev(a.date);if(pv)a.prev=pv;
+  await agSave(a,"已定版","定版失敗，請稍後再試","沒有權限，沒有定版");
+}
+/* 存一份議程（定版、補決議共用）：GitHub 模式進秘書處資料檔，firestore 模式進 meetingMinutes/{日期} 的 agenda 欄位 */
+async function agSave(a,okMsg,failMsg,denyMsg){
   AG.busy=true;renderAgenda();
+  const put=()=>{state.agendas=(state.agendas||[]).filter(x=>x.date!==a.date).concat(a)};
   try{
-    if(fsMode()){const W=await storeWriteGet();await W.saveAgenda(CFG.firebase,a.date,a);state.agendas=(state.agendas||[]).filter(x=>x.date!==a.date).concat(a);render();toast("已定版")}
-    else await settingSave(()=>{state.agendas=(state.agendas||[]).filter(x=>x.date!==a.date).concat(a)},"已定版")
-  }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?"沒有權限，沒有定版":"定版失敗，請稍後再試")}
+    if(fsMode()){const W=await storeWriteGet();await W.saveAgenda(CFG.firebase,a.date,a);put();render();toast(okMsg)}
+    else await settingSave(put,okMsg)
+  }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?denyMsg:failMsg)}
   AG.busy=false;renderAgenda();
+}
+/* 補決議：秘書處（與總管理員）在定版的議程上逐部門寫一行；各部門自己不寫 */
+async function agDecide(box){
+  if(AG.busy)return;const a=(state.agendas||[]).find(x=>(x.id||x.date)===box.dataset.agdec);if(!a)return;
+  if(!(await ensureLogin())){if(fsMode())toast("需要秘書處的編輯權限才能寫決議");return}
+  const n={...a,items:a.items.map((i,k)=>({...i,decision:String(box.querySelector(`[data-agdi="${k}"]`).value||"").trim().slice(0,300)}))};
+  await agSave(n,"已存決議","決議沒有存進去，請稍後再試","沒有權限，沒有存決議");
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#agDone .wk-cap"))return;if(d.open)AG.open.add(d.dataset.agcap);else AG.open.delete(d.dataset.agcap)},true);
 document.addEventListener("click",e=>{
@@ -307,5 +329,6 @@ document.addEventListener("click",e=>{
   const d=t.closest("[data-agd]");if(d){AG.pick.set(d.dataset.agd,d.getAttribute("aria-checked")!=="true");renderAgenda();return}
   if(t.closest("#agCopy")){navigator.clipboard.writeText($("#agBody .ag-text").textContent).then(()=>toast("已複製議程"),()=>toast("複製失敗"));return}
   const c=t.closest("[data-agcopyone]");if(c){navigator.clipboard.writeText(c.closest("[data-agdoc]").querySelector(".wk-text").textContent).then(()=>toast("已複製"),()=>toast("複製失敗"));return}
+  const ds=t.closest("[data-agdsave]");if(ds){agDecide(ds.closest("[data-agdec]"));return}
   if(t.closest("#agFinal"))agFinalize();
 });
