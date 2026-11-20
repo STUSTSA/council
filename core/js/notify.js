@@ -2,7 +2,7 @@
    - 標題列的通知鈕進到這一頁（shell.js 的 .layout 裡的 .sg-noti；換的動畫跟換分頁同一套，render.js 的 secSwap）。
      標題列、工具列留在原地，工具列的鏡片留在原本的分頁（這一頁不是工具列的分頁）；沒有搜尋列、沒有新增圓鈕。
      返回原分頁：再按通知鈕、Esc、系統返回鍵（打開時推一筆瀏覽紀錄）；按工具列任一分頁＝到那個分頁。
-   - 由上到下：今日／明日 → 清點區（已過期、本週到期、之後）→ 行事曆。
+   - 由上到下：今日／明日 → 清點區（已過期、本週到期）→ 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
 /* 部門色：會長室「各部門編輯量」的折線與圖例在用（activity.js） */
@@ -303,10 +303,10 @@ function notiInner(){
     ${tallyHTML()}
     ${calHTML(NOTI)}`;
 }
-/* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分三段：已過期、本週到期、之後 ----------
+/* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分兩段：已過期、本週到期 ----------
    收的是還沒結案的即時回報上、有開始時間而且核取框還沒勾的時間行；03 以前沒有連到任何一行的舊時間標記（沒有核取框）也收，當作還沒勾。
    已過期的用卡片堆處理（下面的 tlFly／tlBind），沒有移除：右滑或按鈕＝完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
-   左滑或按鈕＝改期（打開那張卡片的時間頁，notiRetime）。本週到期、之後只列出來，不放動作。負責人＝整張卡的專員。
+   左滑或按鈕＝改期（打開那張卡片的時間頁，notiRetime）。本週到期只列出來，不放動作；期限在下週以後的不收。負責人＝整張卡的專員。
    不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有按鈕、卡片拖不動。完成後卡片堆下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
 function notiTodoItems(s=state){
   const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
@@ -316,10 +316,11 @@ function notiTodoItems(s=state){
     (e.times||[]).forEach(x=>{if(!x.start)return;const b=bt.get(x.id)||null;if(b&&b.check)return;
       const ed=(x.end||"").slice(0,10),due=ed&&ed>=x.start.slice(0,10)?ed:x.start.slice(0,10);
       const late=ed?past(ed,x.end.slice(11,16)):past(x.start.slice(0,10),x.start.slice(11,16));
-      out.push({ev:e,t:x,b,due,g:late?"late":due<=wkEnd?"week":"later"})})});
+      if(!late&&due>wkEnd)return;   /* 期限在本週以後的不收 */
+      out.push({ev:e,t:x,b,due,g:late?"late":"week"})})});
   return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
 }
-const TL_GROUPS=[["late","已過期"],["week","本週到期"],["later","之後"]],TL_LATER_MAX=5;
+const TL_GROUPS=[["late","已過期"],["week","本週到期"]];
 /* 已過期的卡片堆：一次一張、後面露出兩張；最上面那張跟手指走並傾斜：往右滑＝完成（notiDone）、往左滑＝改期（打開那張卡片的時間頁，notiRetime）。
    拖過卡片寬的 30%（或快甩）才算；沒拖夠就彈回。下面一排小按鈕（改期、剩幾張、完成）給滑鼠與鍵盤；卡片本身（Tab 到它）也能用左右方向鍵。
    不能編輯（canEdit 為假）時卡片照樣看得到，沒有按鈕、拖不動。動畫只動 transform／opacity。 */
@@ -343,8 +344,8 @@ function tlRowHTML(x){
 }
 function tallyHTML(){
   const xs=notiTodoItems(),ed=canEdit(),u=tlUndoHTML();if(!xs.length&&!u)return "";
-  const gs=TL_GROUPS.map(([g,nm])=>{const L=xs.filter(x=>x.g===g);if(!L.length)return "";const cap=g==="later"?L.slice(0,TL_LATER_MAX):L;
-    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4>${g==="late"?tlDeckHTML(L,ed):`<ul class="tl-list">${cap.map(x=>tlRowHTML(x)).join("")}</ul>`}${L.length>cap.length?`<p class="tl-more">還有 ${L.length-cap.length} 項</p>`:""}</div>`}).join("");
+  const gs=TL_GROUPS.map(([g,nm])=>{const L=xs.filter(x=>x.g===g);if(!L.length)return "";
+    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4>${g==="late"?tlDeckHTML(L,ed):`<ul class="tl-list">${L.map(x=>tlRowHTML(x)).join("")}</ul>`}</div>`}).join("");
   return `<section class="nt-tally" id="notiTally" aria-labelledby="ntTallyH"><h3 class="sec-h" id="ntTallyH" data-en="CHECKLIST">清點</h3>${gs}${u}</section>`;
 }
 function tlFly(card,dir,from={x:0,y:0}){
