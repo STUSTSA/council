@@ -242,7 +242,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
-    ok(sw.CACHE==='board-cache-v31'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v31（逾期清點區要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
+    ok(sw.CACHE==='board-cache-v32'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v32（逾期清點區要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
     const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
     ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
     const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];

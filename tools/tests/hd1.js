@@ -32,7 +32,7 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){c.q='
  await p.click('#setOv [data-set=week]');await p.waitForTimeout(1200);
  const ow=await p.evaluate(()=>[!!weekPaneEnd,setOpen,$('#setOv').hidden,!$('#weekSecLink').hidden,!$('#weekWrap').hidden&&!!$('#weekWrap').closest('#setOv,#setSub')]);console.log(w,'on week',ow);   /* 2026-11-06 每週概述改成設定裡的面板（weekly.js 的 weekPane；weekPaneEnd 有值＝開著），onWeek 已拿掉 */
  A(ow[0]&&ow[1]&&ow[4],'week pane open in settings');
- await p.click(w<900?'#subBack':'#backMain');await p.waitForTimeout(900);const bk=await p.evaluate(()=>[!!weekPaneEnd,setOpen,$('#weekWrap').hidden]);console.log(w,'back',bk);A(!bk[0]&&bk[1]&&bk[2],'back to settings list');   /* 手機在子頁，用子頁上方的「返回」 */
+ await p.click(w<900?'.dh-home':'#backMain');await p.waitForTimeout(900);const bk=await p.evaluate(()=>[!!weekPaneEnd,setOpen,$('#weekWrap').hidden]);console.log(w,'back',bk);A(!bk[0]&&bk[1]&&bk[2],'back to settings list');   /* 手機在子頁，用子頁上方的「返回」 */
  const er=p.errs.filter(x=>!x.includes('404'));console.log(w,'errs',er);A(!er.length,'errors');await p.context().close()}
 /* 秘書處 */
 c.q='?d=secretariat';const p=await mk(1300,900,'dark',false);
