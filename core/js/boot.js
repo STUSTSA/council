@@ -1,5 +1,15 @@
 /* 核心｜啟動：擷取匯出範本、讀資料、開始同步 */
 
+/* 權益部的網址跟其他部門一樣是 ?d=rights（ui-13）。舊網址（index.html、資料夾網址、舊書籤，沒有 d）照舊開權益部，打開時把網址列換成帶 ?d=rights 的（replaceState：不重新載入、不多一筆歷史；其他參數與 # 後面照留）。
+   只在看板頁做（總覽 home.html 沒載入這個檔）；網址帶了別的 ?d=（包括不存在的代號）不動 */
+(function rightsUrl(){
+  try{
+    if(CFG.deptId!=="rights"||new URLSearchParams(location.search).get("d"))return;
+    const rest=location.search.replace(/^\?/,"").split("&").filter(x=>x&&!/^d(=|$)/.test(x)).join("&");
+    history.replaceState(history.state,"",location.pathname+"?d=rights"+(rest?"&"+rest:"")+location.hash);
+  }catch(_){}   /* file:// 等不允許 replaceState 的環境：維持原網址 */
+})();
+
 /* 擷取匯出用的乾淨範本：扣掉執行期由 shell.js / 設定檔加上的東西 */
 (function captureTemplate(){
   const root=document.documentElement.cloneNode(true);
