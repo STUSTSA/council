@@ -256,6 +256,76 @@ async function saveDept(cfg, dept, base, next, opt = {}) {
   return done;
 }
 
+/* ---------- 秘書處會議編輯（2026-11-20；規則 cards 的 meetingEdit、events 的 meetingEditOfReportedCard，permissions.md 第 5.1i 節） ----------
+   會長室開放（grants/meetingEdit 到期時間還沒到）時，秘書處在自己的看板改各部門標了報告的卡片。只寫規則允許秘書處改的：
+   報告卡片的名稱、逐行內容（version +1＋同一批新建那一版）；它已有的時間標記的名稱、時間、地點、寫進母議題（rev +1）。
+   畫面也只給改這些（views.js 的 evFieldsHTML 第二個參數）；其他差異：更新紀錄（touched、touchedAt）不寫（秘書處改的不算部門的更新）、
+   母議題的處理紀錄（syncLink 改的）不寫（部門下次編輯那張卡片時會同步），其餘任何差異（專員、標籤、超連結、母議題、新增或刪掉卡片與時間標記、
+   週報、標籤、部門設定）整次不寫、丟出 meeting-field。base＝{src, orig, state}（讀那個部門時留下的）；next＝改過的畫面資料。 */
+const MEET_CARD = ["title", "blocks"], MEET_SKIP = ["touched", "touchedAt"],
+  MEET_EV = ["label", "start", "end", "startRaw", "endRaw", "allDay", "place", "toIssue"];
+async function saveMeeting(cfg, dept, base, next) {
+  await authReady(cfg);
+  const f = fb(cfg);
+  db = f.db; me = f.auth.currentUser && f.auth.currentUser.uid;
+  if (!me) throw fail("permission-denied");
+  const src = base.src, orig = base.orig;
+  const B = M().desired(dept, base.state, src, me), N = M().desired(dept, JSON.parse(JSON.stringify(next)), src, me);
+  const diff = (a, b) => [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])].filter(k => stable(a && a[k]) !== stable(b && b[k]));
+  const sameKeys = (a, b) => stable(Object.keys(a).sort()) === stable(Object.keys(b).sort());
+  if (stable(B.labels) !== stable(N.labels) || stable(B.weeks) !== stable(N.weeks) || stable(B.settings) !== stable(N.settings)
+    || !sameKeys(B.cards, N.cards) || !sameKeys(B.events, N.events)) throw fail("meeting-field");
+  const RC = new Map((src.cards || []).map(d => [d.id, d])), RE = new Map((src.events || []).map(d => [d.id, d]));
+  const units = [];
+  for (const [id, d] of Object.entries(N.cards)) {
+    const ks = diff(B.cards[id], d).filter(k => !MEET_SKIP.includes(k));
+    if (!ks.length) continue;
+    const r = RC.get(id), o = orig.cards[id];
+    if (!r || !o || r.report !== true || ks.some(k => !MEET_CARD.includes(k))) throw fail("meeting-field");
+    const patch = finalize(Object.fromEntries(ks.map(k => [k, d[k]])), o), v = r.version + 1;
+    const title = "title" in patch ? patch.title : o.title, blocks = "blocks" in patch ? patch.blocks : o.blocks;
+    const times = (r.timeIds || []).filter(e => N.events[e]).map(e => ({ id: e, label: N.events[e].label, startRaw: N.events[e].startRaw, endRaw: N.events[e].endRaw }));
+    units.push(unit(7, [
+      { path: `cards/${id}`, op: "update", data: { ...patch, version: v, ...stamp() } },
+      { path: `cards/${id}/versions/${v}`, op: "set", data: { cardId: id, deptId: r.deptId, version: v, title, blocks, times, state: r.state, by: me, at: serverTimestamp(), imported: false } }],
+      [{ path: `cards/${id}`, ok: s => s && s.version === r.version && s.report === true && (s.state === "open" || s.state === "done") }]));
+  }
+  for (const [eid, e] of Object.entries(N.events)) {
+    const ks = diff(B.events[eid], e);
+    if (!ks.length) continue;
+    const r = RE.get(eid), c = r && RC.get(r.cardId);
+    if (!r || !c || c.report !== true || ks.some(k => !MEET_EV.includes(k))) throw fail("meeting-field");
+    if (!e.start || !e.end) throw fail("badtime");
+    units.push(unit(6, [{ path: `events/${eid}`, op: "update", data: { ...finalize(Object.fromEntries(ks.map(k => [k, e[k]])), orig.events[eid]), rev: r.rev + 1, ...stamp() } }],
+      [{ path: `events/${eid}`, ok: s => s && s.rev === r.rev }]));
+  }
+  return run(units);
+}
+/* 會長室開放秘書處今天的會議編輯（只有總管理員，規則 grants）：until＝到期的毫秒（今天結束）；null＝關閉（到期＝寫入的那一刻）。rev +1＋同一批稽核紀錄 */
+async function setMeetGrant(cfg, until, by) {
+  await authReady(cfg);
+  const f = fb(cfg);
+  db = f.db; me = f.auth.currentUser && f.auth.currentUser.uid;
+  if (!me) throw fail("permission-denied");
+  try {
+    await runTransaction(db, async tx => {
+      const ref = doc(db, "grants", "meetingEdit"), s = await tx.get(ref), rev = s.exists() ? (s.data().rev || 0) + 1 : 1;
+      tx.set(ref, { until: until == null ? serverTimestamp() : Timestamp.fromMillis(until), by: String(by || "").slice(0, 40), at: serverTimestamp(), rev, ...stamp() });
+      tx.set(doc(db, "auditLogs", `grants_meetingEdit_${rev}`), { col: "grants", docId: "meetingEdit", rev, action: until == null ? "close" : "open", actor: me,
+        at: serverTimestamp(), before: {}, after: {}, ref: "" });
+    }, { maxAttempts: 3 });
+  } catch (e) { throw e && e.code ? e : fail("error"); }
+}
+/* 會議紀錄（規則 meetingMinutes：秘書處與總管理員）：一天一份 meetingMinutes/{日期}，items＝那一天的會議（state.minutes 裡日期相同的，跟遷移的寫法一樣） */
+async function saveMinutes(cfg, date, items) {
+  await authReady(cfg);
+  const f = fb(cfg);
+  db = f.db;
+  try {
+    await runTransaction(db, async tx => { tx.set(doc(db, "meetingMinutes", date), { date, items: JSON.parse(JSON.stringify(items)), deptId: "secretariat" }); });
+  } catch (e) { throw e && e.code ? e : fail("error"); }
+}
+
 /* 依序裝進每一批（規則讀取 ≤ 20、同一份文件一批只寫一次），每一批一個交易 */
 async function run(units) {
   const batches = [];
@@ -287,5 +357,5 @@ async function run(units) {
   return { batches: committed };
 }
 
-window.BoardStoreWrite = { saveDept };
+window.BoardStoreWrite = { saveDept, saveMeeting, setMeetGrant, saveMinutes };
 dispatchEvent(new Event("board-store-write-ready"));

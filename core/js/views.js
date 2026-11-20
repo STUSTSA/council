@@ -296,7 +296,7 @@ function fldRowHTML(o){
         <div class="evf-btns">${o.del?`<button type="button" class="icon danger" data-${o.fx}="del">刪除</button><span class="evd-gap"></span>`:""}<button type="button" class="ghost" data-${o.fx}="cancel">取消</button><button type="button" class="primary" data-${o.fx}="ok">完成</button></div></div>`;
   return `<div class="evf" data-${o.key}="${esc(o.k)}"${at}>${lb}<button type="button" class="evf-v" data-${o.pen}="${esc(o.k)}">${o.view}</button></div>`;
 }
-function evFieldHTML(ev,k,label,view,editor){return fldRowHTML({open:evFldOpen(ev,k),k,label,view,editor,del:/^[tl]:(?!\+)/.test(k),key:"evfk",pen:"evpen",fx:"evfx"})}
+function evFieldHTML(ev,k,label,view,editor,noDel){return fldRowHTML({open:evFldOpen(ev,k),k,label,view,editor,del:!noDel&&/^[tl]:(?!\+)/.test(k),key:"evfk",pen:"evpen",fx:"evfx"})}
 /* 時間的文字：「日期 時刻 名稱 期間 · 地點」（顯示與編輯中共用） */
 function evTimeView(t,par){const x=evTimeText(t);
   return `<span class="num ev-t-when">${esc(x.when)}</span><span class="ev-t-label">${esc(t.label)}</span>${x.span?`<span class="sub num">${esc(x.span)}</span>`:""}${t.place?`<span class="ev-t-place">· ${esc(t.place)}</span>`:""}${t.toIssue&&par?`<span class="sub">（母議題）</span>`:""}`}
@@ -316,8 +316,16 @@ function linkEditorHTML(l,n,fx){
   return `<span class="evf-row"><button type="button" class="evf-sw" style="background:${c}" data-${fx}="color" data-c="${c}" aria-label="換顏色"></button><input data-e="name" value="${esc(l?l.name:"")}" placeholder="按鈕名稱"><input data-e="url" value="${esc(l?l.url:"")}" placeholder="https://" inputmode="url"></span>`;
 }
 /* 秘書處會議卡（編輯中）的欄位：名稱、說明、母議題、專員、標籤、時間標記、超連結，每一欄各自可以點 */
-function evFieldsHTML(ev){
-  const par=parentOf(ev),ts=evTimesSorted(ev),so=staffOptsFor(ev);
+/* lim（2026-11-20，秘書處在 firestore 模式的會議編輯）：只能改名稱、說明、已有時間標記的內容（不能新增、刪掉時間標記）；
+   母議題、專員、標籤、超連結照原樣顯示、不能改（規則 cards 的 meetingEdit、events 的 meetingEditOfReportedCard 只開放這些） */
+function evFieldsHTML(ev,lim){
+  const par=parentOf(ev),ts=evTimesSorted(ev);
+  if(lim)return `<div class="evfs">
+      ${evFieldHTML(ev,"name","名稱",`<b>${esc(ev.name)}</b>`,()=>`<input data-e="name" value="${esc(ev.name)}">`)}
+      ${evFieldHTML(ev,"desc","說明",ev.desc?`<span class="evf-desc">${esc(ev.desc)}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="desc" rows="4">${esc(ev.desc||"")}</textarea>`)}
+      ${ts.length?`<div class="evf-group"><span class="evf-l">時間標記</span>${ts.map(t=>evFieldHTML(ev,"t:"+t.id,"",evTimeView(t,par),()=>evTimeEditor(ev,t),true)).join("")}</div>`:""}
+    </div>${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${staffHTML(ev.staff)}${labelChipsHTML(ev.labels)}${evLinksHTML(ev)}`;
+  const so=staffOptsFor(ev);
   const opts=[["","（不連結）"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   const staffChips=staffNames(ev.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("");
   const lblChips=labelChipsHTML(ev.labels);

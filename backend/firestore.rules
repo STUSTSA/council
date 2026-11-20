@@ -2,7 +2,7 @@ rules_version = '2';
 // 南臺科大學生會工作看板：Cloud Firestore Security Rules（階段 01B，02A、02B、02D、03、04 修正）
 // 設計依據：docs/architecture/permissions.md、invitations-roles-audit.md、booking.md、migration.md。
 // 原則：預設拒絕；授權一律在這裡判斷（前端只負責顯示）；角色每次請求都從 roles/{uid} 讀（撤權立刻生效）。
-// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、L-01～L-11、X-01～X-10、M-01～M-07、遷移）。
+// 測試：backend/tests/（權限矩陣、C-01～C-20、I-01～I-49、B-01～B-40、N-01～N-17、D-01～D-07、R-01～R-03、S-01～S-04、P-01～P-02、L-01～L-11、X-01～X-10、M-01～M-07、MT-01～MT-12（秘書處會議編輯）、遷移）。
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -466,11 +466,12 @@ service cloud.firestore {
 
       function editorEdit()  { return live() && deptWriter(resource.data.deptId) && stamped() && unchanged(['purgeLog'])
                                  && d().version == resource.data.version + 1 && verAfter() && stateMove() && droppedGone(); }
-      // 秘書處會議編輯：報告事項、授權未到期、只改內容
+      // 秘書處會議編輯：報告事項、授權未到期、只改名稱與內容。timeIds 不能改（2026-11-20）：秘書處不能新建、刪除時間事件，
+      // 能改 timeIds 只會讓人把別的部門、別張卡片的事件 ID 塞進來（這張卡片之後就刪不掉）；時間本身在 events 的 meetingEditOfReportedCard 改
       function meetingEdit() { return live() && isEditor('secretariat') && resource.data.report == true
                                  && get(doc('grants', 'meetingEdit')).data.until > request.time
-                                 && onlyChanged(['title', 'blocks', 'timeIds', 'version', 'updatedAt', 'updatedBy'])
-                                 && stamped() && d().version == resource.data.version + 1 && verAfter() && droppedGone(); }
+                                 && onlyChanged(['title', 'blocks', 'version', 'updatedAt', 'updatedBy'])
+                                 && stamped() && d().version == resource.data.version + 1 && verAfter(); }
       function reorder()     { return live() && deptWriter(resource.data.deptId)
                                  && onlyChanged(['order', 'updatedAt', 'updatedBy']) && stamped(); }
       // 永久刪除 ①：開始。刪除權限＝該部門編輯者以上、總管理員。
