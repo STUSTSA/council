@@ -109,7 +109,7 @@ const ESC=async(p,ms=360)=>{await p.keyboard.press('Escape');return take(p,ms)};
   ok(await made(p)===0,'看板開頁：沒有建立 AudioContext');
   await p.click('#tabbar .tab[data-tab="progress"]');is(await take(p,500),['tab'],'工具列換分頁＝換頁');
   await p.click('[data-jump]');is(await take(p,500),['enter'],'點甘特圖的議題＝進入（詳情）');
-  await p.click('#pvBack');is(await take(p,500),['back'],'返回甘特圖＝返回');
+  await p.click('.dh-home');is(await take(p,500),['back'],'返回甘特圖＝返回');
   await p.click('#tabbar .tab[data-tab="live"]');is(await take(p,600),['tab'],'回即時回報＝換頁');
   await p.click('#notiBtn');is(await take(p,700),['tab'],'通知與行事曆＝換頁');
   await p.click('#notiPage .nd-card.today');is(await take(p,700),['open'],'今日卡片＝展開（今日層）');
