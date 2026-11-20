@@ -1787,6 +1787,10 @@ body.set-open #pageMain{overflow:hidden}
 .ce-t b{font-size:17px;font-weight:500}
 .ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
 .ce-n{font-size:15.5px;font-weight:500;line-height:1.45}
+.ce-n.ck{display:flex;align-items:flex-start;gap:12px}
+.ce-n.ck .fld-check{margin-top:2px}
+.ce-n span,.ce-n.done{transition:color var(--mo-base) var(--mo-out)}
+.ce-n.done,.ce-n.done span{color:var(--muted);text-decoration:line-through}
 .ce-b{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--muted)}
 .ce-pl{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-pl .ico{flex:none;width:15px;height:15px}
