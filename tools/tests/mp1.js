@@ -156,7 +156,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await dlgSet(P.boss,{dept:'fruit',role:'editor'});await dlgAct(P.boss,'ok');
   ok(await until(async()=>{const r=await read(`roles/${U.x1}`);return r&&(r.depts||{}).fruit==='editor'}),'總管理員：從「尚無權限的帳號」指派部門與角色');
   ok(await until(async()=>!!(await read(`deptMembers/fruit__${U.x1}`))),'指派後名單也補上');
-  await P.boss.click('[data-back]');await P.boss.waitForTimeout(600);
+  await P.boss.click('.dh-home');await P.boss.waitForTimeout(600);
   ok(!(await paneText(P.boss)).includes('尚無權限的帳號')||!(await paneText(P.boss)).split('尚無權限的帳號')[1].includes('x1@example.test'),'指派後：x1 不再在「尚無權限的帳號」');
   /* 舊身分 */
   P.boss=await open(`${BASE}/index.html?d=fruit`);await signIn(P.boss,'boss');await P.boss.waitForTimeout(1500);await openSet(P.boss);await P.boss.click('#setOv [data-set="council"]');await P.boss.waitForTimeout(800);
