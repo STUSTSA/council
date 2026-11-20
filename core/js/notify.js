@@ -305,9 +305,9 @@ function notiInner(){
 }
 /* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分三段：已過期、本週到期、之後 ----------
    收的是還沒結案的即時回報上、有開始時間而且核取框還沒勾的時間行；03 以前沒有連到任何一行的舊時間標記（沒有核取框）也收，當作還沒勾。
-   已過期的每一項只有兩個動作，沒有移除：完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
-   改期（打開那張卡片的時間頁，notiRetime）。本週到期、之後只列出來，不放動作。負責人＝整張卡的專員。
-   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有動作鈕。完成後那一列下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
+   已過期的用卡片堆處理（下面的 tlFly／tlBind），沒有移除：右滑或按鈕＝完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
+   左滑或按鈕＝改期（打開那張卡片的時間頁，notiRetime）。本週到期、之後只列出來，不放動作。負責人＝整張卡的專員。
+   不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有按鈕、卡片拖不動。完成後卡片堆下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
 function notiTodoItems(s=state){
   const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
   const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
@@ -320,18 +320,74 @@ function notiTodoItems(s=state){
   return out.sort((a,b)=>a.t.start.localeCompare(b.t.start));   /* 最早的在最上面 */
 }
 const TL_GROUPS=[["late","已過期"],["week","本週到期"],["later","之後"]],TL_LATER_MAX=5;
-function tlRowHTML(x,ed){
-  const d=x.t.start.slice(0,10),tm=x.t.start.slice(11,16),en=(x.t.end||"").slice(0,10),who=staffNames(x.ev.staff).join("、"),late=x.g==="late";
+/* 已過期的卡片堆：一次一張、後面露出兩張；最上面那張跟手指走並傾斜：往右滑＝完成（notiDone）、往左滑＝改期（打開那張卡片的時間頁，notiRetime）。
+   拖過卡片寬的 30%（或快甩）才算；沒拖夠就彈回。下面一排小按鈕（改期、剩幾張、完成）給滑鼠與鍵盤；卡片本身（Tab 到它）也能用左右方向鍵。
+   不能編輯（canEdit 為假）時卡片照樣看得到，沒有按鈕、拖不動。動畫只動 transform／opacity。 */
+function tlCardHTML(x,i){
+  const d=x.t.start.slice(0,10),en=(x.t.end||"").slice(0,10),tm=x.t.start.slice(11,16),sub=[x.ev.name||"",tm,x.t.place||"",staffNames(x.ev.staff).join("、")].filter(Boolean).map(esc).join("・");
+  return `<div class="tl-card" data-tlcard="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}" data-i="${i}" style="--i:${i}"${i?' aria-hidden="true"':' tabindex="0"'}>
+    <span class="tl-stp r" aria-hidden="true">完成</span><span class="tl-stp l" aria-hidden="true">改期</span>
+    <span class="tl-d"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
+    <span class="tl-x"><b>${esc(x.t.label||(x.b&&x.b.text)||x.ev.name||"（未命名）")}</b><small>${sub}</small></span>
+  </div>`;
+}
+function tlDeckHTML(L,ed){
+  return `<div class="tl-stack${ed?"":" ro"}" id="notiDeck" role="group" aria-label="已過期 ${L.length} 項${ed?"：右滑或按完成、左滑或按改期":""}">${L.slice(0,3).map((x,i)=>tlCardHTML(x,i)).reverse().join("")}</div>
+    ${ed?`<div class="tl-ctl"><button type="button" class="tl-btn" data-tlgo="l">改期</button><span class="tl-n num" aria-hidden="true">${L.length}</span><button type="button" class="tl-btn pri" data-tlgo="r">完成</button></div>`:""}`;
+}
+function tlRowHTML(x){
+  const d=x.t.start.slice(0,10),tm=x.t.start.slice(11,16),en=(x.t.end||"").slice(0,10),who=staffNames(x.ev.staff).join("、");
   const sub=[x.ev.name||"",tm,x.t.place||"",who].filter(Boolean).map(esc).join("・");
   return `<li class="tl-row" data-tl="${esc(x.t.id)}"><span class="tl-d"><b class="num">${nmd(d)}</b><small>週${WD[pd(d).getDay()]}${en&&en>d?`<br>到 ${nmd(en)}`:""}</small></span>
-    <span class="tl-x"><b>${esc(x.t.label||(x.b&&x.b.text)||x.ev.name||"（未命名）")}</b><small>${sub}</small></span>
-    ${late&&ed?`<span class="tl-act"><button type="button" class="tl-btn pri" data-tldone="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">完成</button><button type="button" class="tl-btn" data-tlre="${esc(x.t.id)}" data-tlev="${esc(x.ev.id)}">改期</button></span>`:""}</li>`;
+    <span class="tl-x"><b>${esc(x.t.label||(x.b&&x.b.text)||x.ev.name||"（未命名）")}</b><small>${sub}</small></span></li>`;
 }
 function tallyHTML(){
   const xs=notiTodoItems(),ed=canEdit(),u=tlUndoHTML();if(!xs.length&&!u)return "";
   const gs=TL_GROUPS.map(([g,nm])=>{const L=xs.filter(x=>x.g===g);if(!L.length)return "";const cap=g==="later"?L.slice(0,TL_LATER_MAX):L;
-    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4><ul class="tl-list">${cap.map(x=>tlRowHTML(x,ed)).join("")}</ul>${L.length>cap.length?`<p class="tl-more">還有 ${L.length-cap.length} 項</p>`:""}</div>`}).join("");
+    return `<div class="tl-g" data-g="${g}"><h4 class="tl-gh">${nm}<span class="num">${L.length}</span></h4>${g==="late"?tlDeckHTML(L,ed):`<ul class="tl-list">${cap.map(x=>tlRowHTML(x)).join("")}</ul>`}${L.length>cap.length?`<p class="tl-more">還有 ${L.length-cap.length} 項</p>`:""}</div>`}).join("");
   return `<section class="nt-tally" id="notiTally" aria-labelledby="ntTallyH"><h3 class="sec-h" id="ntTallyH" data-en="CHECKLIST">清點</h3>${gs}${u}</section>`;
+}
+function tlFly(card,dir,from={x:0,y:0}){
+  if(!card||card._gone||!canEdit())return;card._gone=true;
+  const W=card.offsetWidth||320,sx=dir==="r"?1:-1,tid=card.dataset.tlcard,evId=card.dataset.tlev,x=notiLateItems().find(y=>y.t.id===tid&&y.ev.id===evId);
+  const reset=()=>{if(!card.isConnected)return;card._gone=false;card.getAnimations().forEach(a=>a.cancel());card.classList.remove("go-l","go-r");card.style.transform="";card.style.transition="";card.style.setProperty("--l",0);card.style.setProperty("--r",0)};
+  const act=()=>{if(!x){reset();return}if(dir==="r")Promise.resolve(notiDone(x.ev.id,tid)).finally(reset);else{reset();notiRetime(x.ev.id,tid)}};
+  card.classList.add(dir==="r"?"go-r":"go-l");
+  if(reduceMotion()){act();return}
+  const next=card.parentElement.querySelector(`.tl-card[data-i="1"]`);
+  if(next)next.animate([{transform:getComputedStyle(next).transform},{transform:"none"}],{duration:MO.base,easing:MO.out,fill:"forwards"});
+  card.animate([{transform:`translate(${from.x}px,${from.y}px) rotate(${from.x/18}deg)`,opacity:1},{transform:`translate(${sx*W*1.3}px,${from.y+40}px) rotate(${sx*26}deg)`,opacity:0}],{duration:340,easing:MO.in,fill:"forwards"})
+    .finished.then(()=>{if(next)next.getAnimations().forEach(a=>a.cancel());act()}).catch(()=>{});
+}
+function tlBind(){
+  const st=$("#notiDeck");if(!st||st._tl||!canEdit())return;st._tl=true;   /* 不能編輯＝不綁（之後登入、重畫時才綁） */
+  ["touchstart","touchmove"].forEach(t=>st.addEventListener(t,e=>{if(e.target.closest(".tl-card"))e.stopPropagation()},{passive:true}));
+  let d=null;
+  st.addEventListener("pointerdown",e=>{
+    const c=e.target.closest(".tl-card");if(!c||e.button>0||c.dataset.i!=="0"||c._gone||!canEdit())return;   /* 綁過之後才變成不能編輯（登出、唯讀） */
+    d={c,id:e.pointerId,x0:e.clientX,y0:e.clientY,x:0,y:0,axis:"",vx:0,lx:e.clientX,lt:performance.now()};
+    c.getAnimations().forEach(a=>a.cancel());try{st.setPointerCapture(e.pointerId)}catch(_){}
+  });
+  st.addEventListener("pointermove",e=>{
+    if(!d||e.pointerId!==d.id)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
+    if(!d.axis){if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;d.axis=Math.abs(dx)>=Math.abs(dy)?"x":"y";if(d.axis==="y"){d=null;return}d.c.style.transition="none"}
+    const now=performance.now();d.vx=(e.clientX-d.lx)/Math.max(8,now-d.lt);d.lx=e.clientX;d.lt=now;d.x=dx;d.y=dy*.35;
+    const W=d.c.offsetWidth||320,k=Math.min(1,Math.abs(dx)/(W*.3));
+    d.c.style.transform=`translate(${dx}px,${d.y}px) rotate(${dx/18}deg)`;d.c.style.setProperty("--r",dx>0?k:0);d.c.style.setProperty("--l",dx<0?k:0);
+    const nx=st.querySelector('.tl-card[data-i="1"]');if(nx){nx.style.transition="none";nx.style.transform=`translateY(${(1-k)*12}px) scale(${.95+.05*k})`}
+  });
+  const end=e=>{
+    if(!d||(e&&e.pointerId!==d.id))return;const c=d.c,W=c.offsetWidth||320,x=d.x,y=d.y,v=d.vx;d=null;
+    const nx=st.querySelector('.tl-card[data-i="1"]');
+    /* 甩出去：拖過卡片寬的 30%，或快甩（速度超過 0.6px/ms）而且至少拖了卡片寬的 15%（ui-06 審查 P1-2：原本 24px 就算，太容易誤觸） */
+    if(Math.abs(x)>W*.3||Math.abs(v)>.6&&Math.abs(x)>W*.15){if(nx){nx.style.transform="";nx.style.transition=""}tlFly(c,(x||v)>0?"r":"l",{x,y});return}
+    const from=c.style.transform;c.style.transform="";c.style.transition="";c.style.setProperty("--r",0);c.style.setProperty("--l",0);
+    if(nx){nx.style.transform="";nx.style.transition=""}
+    if(from&&!reduceMotion())c.animate([{transform:from},{transform:"none"}],{duration:MO.slow,easing:MO.spring});
+  };
+  st.addEventListener("keydown",e=>{const c=e.target.closest&&e.target.closest('.tl-card[data-i="0"]');if(!c||c!==e.target||!canEdit()||e.altKey||e.ctrlKey||e.metaKey)return;
+    if(e.key==='ArrowRight'){e.preventDefault();tlFly(c,'r')}else if(e.key==='ArrowLeft'){e.preventDefault();tlFly(c,'l')}});
+  st.addEventListener("pointerup",end);st.addEventListener("pointercancel",end);
 }
 /* 完成：勾起那一行的核取框（舊時間標記補一行）。存好後「已完成＋復原」（經 settingSave）。
    復原＝把剛勾的那一行改回沒勾（舊時間標記補的那一行拿掉）；那一行在這之後被改過就不復原。關掉這一頁、再完成別項時「復原」消失 */
@@ -347,7 +403,7 @@ async function notiDone(evId,tid){
     if(b){if(b.check)return false;b.check=true}
     else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
       b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
-    u={evId,tid,bid:b.id,made};evTouch(ev);syncLink(ev)},"已完成");
+    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},"已完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
   tlUndo=ok&&u?u:null;renderNoti();return ok;
 }
 async function notiUndo(){
@@ -355,7 +411,7 @@ async function notiUndo(){
   const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
   if(!b||!b.check){toast("這一項已有新的修改，無法復原");renderNoti();return false}
   const ok=await settingSave(()=>{const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);if(!b||!b.check)return false;
-    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);syncLink(ev)},"已復原");
+    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);kpSync(ev)},"已復原");
   renderNoti();return ok;
 }
 /* 改期：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
@@ -439,6 +495,7 @@ function closeToday(instant){
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
+  tlBind();
 }
 
 /* ---------- 進出這一頁 ----------
@@ -482,8 +539,7 @@ document.addEventListener("click",e=>{
   if(t.closest("#notiBtn")){notiOpen?closeNoti():openNoti();return}
   if(!notiOpen||!t.closest("#notiPage"))return;
   const card=t.closest(".nd-card");if(card){const d=card.dataset.nopen;if(card.classList.contains("today")){setTimeout(()=>{if(notiOpen)openToday(card)},reduceMotion()?0:140);return}setTimeout(()=>{if(notiOpen)notiOpenDay(d)},reduceMotion()?0:200);return}   /* 等回彈跑一段再換內容，按壓動畫不會被重畫打斷 */
-  const dn=t.closest("[data-tldone]");if(dn){if(dn.disabled)return;dn.disabled=true;dn.closest(".tl-row")?.classList.add("gone");notiDone(dn.dataset.tlev,dn.dataset.tldone);return}   /* 先把那一列淡出，存好重畫；失敗時重畫會把它放回來 */
-  const re=t.closest("[data-tlre]");if(re){notiRetime(re.dataset.tlev,re.dataset.tlre);return}
+  const g=t.closest("[data-tlgo]");if(g){const c=$('#notiDeck .tl-card[data-i="0"]');if(c)tlFly(c,g.dataset.tlgo);return}
   if(t.closest("[data-tlundo]")){notiUndo();return}
 });
 /* Esc＝回到原分頁（今日層、月份選單開著時先關那一層，在它們自己的監聽） */
