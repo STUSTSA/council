@@ -93,6 +93,28 @@ function renderSecEdit(){
 const activeIssues=()=>state.issues.filter(i=>!i.doneAt||(editing&&keepIds.has(i.id)));
 const doneIssues=()=>state.issues.filter(i=>i.doneAt&&!(editing&&keepIds.has(i.id))).sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
 
+/* ---------- 沒登入的登入提示（firestore 模式）----------
+   新資料庫的部門沒登入讀不到內容（規則的既定設計）：這時各分頁本體不畫「目前沒有…」，整塊換成「請先登入才能查看」＋登入鈕；
+   登入後 acctReload 重讀、render 再呼叫這裡，提示自動消失。已登入但讀取失敗、github／frozen 來源都不算（維持原本畫面）。
+   App 內建瀏覽器擋 Google 登入：改請對方用 Chrome 或 Safari 開啟（inAppBrowser／acctCopyUrl，account.js） */
+const needLogin=()=>fsMode()&&!(typeof acct!=="undefined"&&acct.user)&&!!storeFsErr&&storeFsErr.code==="permission-denied";
+function renderGate(){
+  const g=$("#loginGate"),on=needLogin();
+  document.body.classList.toggle("gated",on);
+  if(!g)return;
+  g.hidden=!on;
+  if(!on){g.innerHTML="";return}
+  const ib=inAppBrowser();
+  g.innerHTML=`<b>請先登入才能查看</b><p class="sub">${ib?"這個瀏覽器不能用 Google 登入，請用 Chrome 或 Safari 開啟":"這個部門的看板內容要登入後才看得到"}</p>`
+    +(ib?`<button type="button" class="primary" data-gate-copy>複製網址</button>`:`<button type="button" class="primary" data-gate-login>用 Google 登入</button>`)
+    +(typeof acct!=="undefined"&&acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:"");
+}
+document.addEventListener("click",e=>{
+  if(!e.target.closest)return;
+  if(e.target.closest("#loginGate [data-gate-login]")){acctSignIn();return}
+  if(e.target.closest("#loginGate [data-gate-copy]"))acctCopyUrl();
+});
+
 /* ---------- render ---------- */
 let rendering=false;
 function render(){
@@ -101,6 +123,7 @@ function render(){
   try{
     document.body.classList.toggle("edit",editing);
     document.body.classList.toggle("locked",boardLocked());
+    renderGate();
     renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();layoutAll();flowWatch();
   }finally{rendering=false}
   kpFitAll();kpFocusSet(kf);

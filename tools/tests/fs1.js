@@ -76,6 +76,10 @@ let fails=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fails+
   /* 未登入：讀不到、提示要登入（上面的 firestore 模式都是用沒有任何角色的一般登入帳號 vw 讀的） */
   const n=await open('events','firestore',null);
   ok(n.snap.data.includes('"ev":[]')&&n.toasts.some(x=>x.includes('要登入才能看')),'未登入：讀不到內容、提示要登入');
+  /* 沒登入：分頁本體換成「請先登入才能查看」＋登入鈕，不畫「目前沒有…」的空狀態（render.js 的 renderGate） */
+  const gt=await n.evaluate(()=>{const g=document.getElementById('loginGate');return {on:!!g&&!g.hidden&&!!g.offsetParent,txt:g?g.textContent:'',btn:!!document.querySelector('#loginGate [data-gate-login]'),secs:[...document.querySelectorAll('.layout>.sgroup')].filter(x=>x.offsetParent).length,empty:[...document.querySelectorAll('.empty')].some(x=>x.offsetParent)}});
+  ok(gt.on&&gt.txt.includes('請先登入才能查看')&&gt.btn&&gt.secs===0&&!gt.empty,'未登入：顯示請先登入與登入鈕，分頁本體與「目前沒有…」都不出現');
+  if(process.env.SHOT_DIR){await n.setViewportSize({width:390,height:844});await n.waitForTimeout(400);await n.screenshot({path:path.join(process.env.SHOT_DIR,process.env.SHOT_NAME||'after.png')})}
   await n.ctx.close();
   await b.close();await t.cleanup();srv.close();
   console.log(fails?`失敗 ${fails} 項`:'全部通過');process.exit(fails?1:0);

@@ -38,6 +38,7 @@ const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
 let acctCanW="";
 function acctChanged(){
+  if(typeof renderGate==="function")renderGate();   /* 沒登入的登入提示（render.js）：登入失敗訊息跟著變 */
   if(typeof renderSettings==="function")renderSettings();
   if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
   const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();

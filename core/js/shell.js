@@ -58,6 +58,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="mt-foot"><button type="button" class="icon" id="minutesBtn">匯出會議紀錄</button><span class="sub" id="minutesInfo"></span></div>
       </section>
       <div class="layout">
+        <div class="login-gate" id="loginGate" role="region" aria-label="請先登入" hidden></div>
         <div class="sgroup" data-sec="live">
           <section class="panel" id="livePanel" aria-labelledby="evH">
             <div class="panel-head"><h2 class="sec-h" id="evH" data-en="LIVE">即時回報</h2></div>
