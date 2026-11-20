@@ -5,7 +5,7 @@
    - Sfx.result(成功?)：儲存的結果（save.js 的 persist、live.js 的 kpSave）：成功＝ok（這次操作已經響過就不再響，例如對話框按確定、完成的慶祝）；失敗＝no。
    一次操作只響一種：同一個工作（task）裡的呼叫先收著，工作結束才挑一個播（功能呼叫優先於點擊預設音，先到先播；慶祝最優先）；
    按下（pointerdown／keydown）之後已經響過，接著來的點擊預設音就不響（例如主頁卡片堆放開就換焦點，後面跟來的 click）；按下後移動超過 8px 才放開（拖曳）也不響。
-   節流：同一種 40ms 內只響一次。音量照模擬頁（總音量 .5，各音 .03–.15）。
+   節流：同一種 40ms 內只響一次。音量：各音 .03–.22 照模擬頁，總音量 1（模擬頁 .5，2026-11-20 使用者反映太小而加倍）、後面接 DynamicsCompressor 防止疊音削波。
    開關是設定 → 外觀的「音效」（theme.js 的 UI.get().sound，存在這台裝置，預設開）；關閉時不建立 AudioContext、不出聲。
    AudioContext 只在使用者操作（按下、放開、點擊、按鍵）時建立或 resume，或在操作後 1 秒內要出聲時建立；不用 <audio> 播靜音檔之類的方式解除系統靜音。
    不出聲的情況：音效關閉；第一次按下或按鍵之前；分頁在背景（document.hidden）；瀏覽器沒有 Web Audio；iPhone 靜音開關開著（Web Audio 跟著系統靜音）。
@@ -16,7 +16,8 @@ const Sfx=(()=>{
   const on=()=>{try{return UI.get().sound!==false}catch(_){return true}};
   function init(){
     if(ctx)return true;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
-    ctx=new AC();out=ctx.createGain();out.gain.value=.5;out.connect(ctx.destination);
+    ctx=new AC();out=ctx.createGain();out.gain.value=1;   /* 總音量（原 .5，2026-11-20 加倍）；後面接壓縮器，疊音（慶祝）不會削波破音 */
+    const cp=ctx.createDynamicsCompressor();cp.threshold.value=-14;cp.knee.value=12;cp.ratio.value=6;cp.attack.value=.003;cp.release.value=.15;out.connect(cp);cp.connect(ctx.destination);
     const b=ctx.createBuffer(1,Math.round(ctx.sampleRate*.05),ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);nz=b;return true;
   }
   /* 一個音：f0→f1（Hz）、長度、音量、波形、延遲（秒） */
@@ -40,7 +41,7 @@ const Sfx=(()=>{
       [0,.04,.3,.42,.66,.8,1.02,1.2,1.45].forEach((t,i)=>tick(.1,3000+i*260,.55+t));[1047,1319,1568].forEach(f=>tone(f,f,.9,.07,"sine",.62));tone(2093,2093,.5,.04,"sine",1.1)},
   };
   /* 使用者操作的當下：建立或喚醒 AudioContext（音效關閉時不建立） */
-  function wake(){if(!on())return;try{if(init()&&ctx.state==="suspended")ctx.resume().catch(()=>{})}catch(_){}}
+  function wake(){if(!on())return;try{if(init()&&ctx.state!=="running")ctx.resume().catch(()=>{})}catch(_){}}   /* 不只 suspended：iOS 來電、鎖屏後是 interrupted，原本不喚醒就一直沒聲音 */
   function fire(k){
     if(!on()||document.hidden||!K[k])return;
     const t=now(),fresh=t-gestAt<1000;
@@ -69,6 +70,8 @@ const Sfx=(()=>{
   ];
   const clickKind=t=>{if(!t||!t.closest)return "";for(const [s,k] of CLICK)if(t.closest(s))return k;return ""};
   const begin=()=>{gestAt=now();wake()};
+  /* 切回前景、從返回／快取還原頁面：瀏覽器可能已把 AudioContext 暫停；能喚醒就先喚醒（沒有操作時瀏覽器會拒絕，下一次按下再喚醒） */
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ctx)wake()});addEventListener("pageshow",()=>{if(ctx)wake()});
   addEventListener("pointerdown",e=>{fired=false;down={x:e.clientX,y:e.clientY};begin()},true);
   addEventListener("keydown",e=>{if(!e.repeat)fired=false;down=null;begin()},true);
   addEventListener("pointerup",begin,true);addEventListener("touchend",begin,true);   /* 觸控：瀏覽器把放開當成「使用者操作」，在這裡才能喚醒 */
