@@ -1673,15 +1673,13 @@ body.set-open #pageMain{overflow:hidden}
 .nd-num{font-family:"Jost",sans-serif;font-weight:300;font-size:52px;line-height:.8;letter-spacing:-.02em}
 .nd-lab{display:grid;justify-items:end;gap:3px;text-align:right}
 .nd-lab b{font-size:14px;font-weight:700;letter-spacing:.12em;white-space:nowrap}
-.nd-lab b i{font-style:normal;font-weight:400;color:var(--nd-mut)}
 .nd-lab small{font-size:12px;color:var(--nd-mut);letter-spacing:.06em}
-.nd-list{display:grid;gap:11px}
-.nd-row{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:8px;align-items:baseline}
-.nd-t{font-size:12.5px;color:var(--nd-mut);font-variant-numeric:tabular-nums;white-space:nowrap}
-.nd-x{display:grid;gap:1px;min-width:0}
-.nd-x b{font-size:14px;font-weight:500;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.nd-x small{font-size:11.5px;line-height:1.4;color:var(--nd-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nd-more{font-size:12px;color:var(--nd-mut);padding-left:calc(3.4em + 8px)}
+.nd-list{display:grid;gap:12px}
+/* 一列＝標題（最多兩行，text-wrap:balance 讓兩行長度接近、不留孤字）＋一行小字（時刻、到 M/D） */
+.nd-row{display:grid;gap:3px;min-width:0}
+.nd-row b{font-size:14px;font-weight:500;line-height:1.45;text-wrap:balance;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.nd-row small{font-size:12px;line-height:1.4;color:var(--nd-mut);white-space:nowrap}
+.nd-more{font-size:12px;color:var(--nd-mut)}
 /* 沒有事件：卡片下方一條短細線 */
 .nd-empty{margin-top:auto}
 .nd-empty i{display:block;width:28px;height:1px;background:var(--nd-mut)}
@@ -1690,7 +1688,7 @@ body.set-open #pageMain{overflow:hidden}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
   .nd-num{font-size:44px}
   .nd-lab b{font-size:13px;letter-spacing:.06em}
-  .nd-x b{font-size:13.5px}
+  .nd-row b{font-size:13.5px}
 }
 
 /* ===== 今日層（notify.js 的 openToday；DESIGN-next 第五節「彈簧與回彈」、第九節） =====
