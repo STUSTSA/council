@@ -757,7 +757,7 @@ a.doc-pill:active{scale:.96}
 /* 今天：每一列一條細綠線（平面，沒有漸層） */
 .g-track .today{position:absolute;top:2px;bottom:2px;width:1px;background:var(--ok);pointer-events:none}
 .g-bar{position:absolute;left:0;right:0;top:27px;height:22px}   /* 整條時間軸的刻度；上下位置由 views.js 的 layoutTrack 依註記標籤的層數決定 */
-.g-mk{position:absolute;top:0;bottom:0;width:0;--mc:var(--tone)!important;transition:opacity .2s}
+.g-mk{position:absolute;top:0;bottom:0;width:0;transition:opacity .2s}
 .g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
 .g-mk .dot{position:absolute;border-radius:50%;background:var(--muted);z-index:2;width:6px;height:6px;left:-3px}   /* 註記：刻度上方的小點（最新一筆是文字色） */
 .g-mk:not(.quiet) .dot{background:var(--ink)}
@@ -765,6 +765,13 @@ a.doc-pill:active{scale:.96}
 .g-mk .stem{position:absolute;left:-.5px;width:1px;background:var(--ink);z-index:1;opacity:.5}
 .g-mk.edgeL .lbl{transform:translateX(-8px)}
 .g-mk.edgeR .lbl{transform:translateX(calc(-100% + 8px))}
+.g-mk.quiet .lbl,.g-mk.quiet .stem{opacity:0;pointer-events:none;transition:opacity .18s}
+.g-mk.quiet:hover .lbl{opacity:1;z-index:9}
+.g-mk.quiet:hover .stem{opacity:1}
+.g-mk.quiet:hover{z-index:9}
+.g-mk.quiet .dot{opacity:.7}
+.g-track.peeking .g-mk:not(.quiet) .lbl{opacity:0}
+.g-mk:not(.quiet) .lbl{transition:opacity .18s}
 .legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:12px;color:var(--muted);margin:-2px 0 10px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;flex:none}
@@ -773,22 +780,14 @@ a.doc-pill:active{scale:.96}
 .lg-tk.now{--c:var(--ok);--h:100%;width:3px;border-radius:1px}
 .lg-tk.on{--c:var(--ink);--h:72%}
 .lg-tk.in{--c:var(--muted);--h:45%;opacity:.7}
-/* 今天標籤：白色實心黑字（淺色模式加細框才看得出邊界），左上角一顆會閃的紅點（共用 .live-dot） */
+/* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
 .g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
-.g-mk.quiet .lbl,.g-mk.quiet .stem{opacity:0;pointer-events:none;transition:opacity .18s}
-.g-mk.quiet:hover .lbl{opacity:1;z-index:9}
-.g-mk.quiet:hover .stem{opacity:1}
-.g-mk.quiet:hover{z-index:9}
-.g-mk.quiet .dot{opacity:.7}
-.g-track.peeking .g-mk:not(.quiet) .lbl{opacity:0}
-.g-mk:not(.quiet) .lbl{transition:opacity .18s}
 @media (hover:hover){
   .g-row:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}
   .g-mk:hover .dot{transform:scale(1.35);box-shadow:0 0 0 2px var(--surface)}
-  .g-mk:hover .lbl{border-color:var(--mc)}
 }
 @media (max-width:640px){
   .g-row{grid-template-columns:104px 1fr}
