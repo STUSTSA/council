@@ -60,7 +60,7 @@ function lnHTML(b,t,ed,ro){
 /* 編輯中連續的純文字行合成一個大輸入框（像備忘錄）：每個換行＝一筆，存檔格式不變。
    data-kpids＝這個框裡每一行的行 ID（用空白隔開、跟框裡的換行一一對應），data-kpgrp＝第一行的 ID（重畫後游標放回用）。
    框的內容前面多放一個換行：HTML 會吞掉 textarea 開頭的一個換行，第一行是空行時才不會少一行 */
-const kpGrpHTML=g=>`<div class="ln txg" data-blk="${esc(g[0].id)}" data-k="text"><textarea class="tx" rows="1" data-kpgrp="${esc(g[0].id)}" data-kpids="${g.map(b=>esc(b.id)).join(" ")}" aria-label="內容">\n${esc(g.map(b=>b.text).join("\n"))}</textarea></div>`;
+const kpGrpHTML=g=>`<div class="ln" data-blk="${esc(g[0].id)}" data-k="text"><textarea class="tx" rows="1" data-kpgrp="${esc(g[0].id)}" data-kpids="${g.map(b=>esc(b.id)).join(" ")}" aria-label="內容">\n${esc(g.map(b=>b.text).join("\n"))}</textarea></div>`;
 /* 沒有連到行的舊時間標記：時間線的樣子，圓點不能按（沒有勾選狀態）；編輯中名稱可以改、可以刪 */
 function freeHTML(t,ed){const when=evTimeText(t).when;
   return `<div class="ln tm free" data-tfree="${esc(t.id)}" data-k="time"><span class="ln-dot" aria-hidden="true"></span>${ed?`<button type="button" class="tmc num" data-kptm="${esc(t.id)}">${esc(when)}</button><textarea class="tx" rows="1" data-kplb="${esc(t.id)}" maxlength="${StoreMap.TXT_MAX}" aria-label="時間標記名稱">${esc(t.label)}</textarea><button type="button" class="ln-x" data-kptdel="${esc(t.id)}" aria-label="刪除這個時間標記">${ico("close","solo")}</button>`:`<span class="tmc num">${esc(when)}</span><span class="tx">${esc(t.label)}</span>`}${t.place?`<span class="pl">${esc(t.place)}</span>`:""}</div>`}
