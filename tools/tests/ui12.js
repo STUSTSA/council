@@ -66,9 +66,9 @@ const hit=(a,b)=>!!a&&!!b&&a.vis&&b.vis&&a.l<b.r&&b.l<a.r&&a.t<b.b&&b.t<a.b;
     /* 3. 選中的議題：從詳情返回 */
     await p.evaluate(id=>progShow(id),ISS);await p.waitForTimeout(800);await p.evaluate(()=>progShow(null));await p.waitForTimeout(800);
     rs=await rows(p);
-    {const acc=await cv(p,'--acc'),ink=await cv(p,'--ink'),blk2=await cv(p,'--blk2'),s=rs.find(r=>r.id===ISS),o=rs.filter(r=>r.id!==ISS&&r.a&&r.a.vis);
+    {const acc=await cv(p,'--acc'),ink=await cv(p,'--ink'),s=rs.find(r=>r.id===ISS),o=rs.filter(r=>r.id!==ISS&&r.a&&r.a.vis);
       ok(!!s&&s.sel&&s.a&&s.a.bg===acc&&s.h.bg===ink,tag+`選中的議題條用選中色（${s&&s.a&&s.a.bg}）、把手用深色（${s&&s.h&&s.h.bg}）`);
-      ok(o.length>=2&&o.every(r=>!r.sel&&r.a.bg!==acc&&r.a.bg===blk2&&r.h.bg===ink),tag+`其他列不用選中色（${o.map(r=>r.a.bg).filter((v,i,a)=>a.indexOf(v)===i).join('、')}）`);}
+      ok(o.length>=2&&o.every(r=>!r.sel&&r.a.bg!==acc&&r.a.bg===o[0].a.bg&&r.h.bg===ink),tag+`其他列不用選中色、彼此同色（顏色規則在 ui13.js）（${o.map(r=>r.a.bg).filter((v,i,a)=>a.indexOf(v)===i).join('、')}）`);}
     /* 4. 註記 */
     const mk4=()=>p.evaluate(iss=>{const row=document.querySelector(`#gantt .g-issue[data-jump="${iss}"]`),tr=row&&row.querySelector('.g-track'),bar=tr&&tr.querySelector('.sl');
       const v=e=>{if(!e)return null;const r=e.getBoundingClientRect(),cs=getComputedStyle(e);return {l:r.left,r:r.right,t:r.top,b:r.bottom,w:r.width,h:r.height,op:+cs.opacity,vis:cs.display!=='none'&&cs.visibility!=='hidden'&&r.width>0&&r.height>0,bg:cs.backgroundColor}};
