@@ -75,7 +75,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
               <button type="button" class="pg-add auth-only" id="addIssue"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>議題</button>
               <button type="button" class="icon card-edit-btn" id="ganttEdBtn" data-edit="s:gantt" aria-label="編輯甘特圖時間軸">編輯</button></div>
             <div class="pv-page" id="pvGantt" data-edbox="s:gantt">
-            <div class="legend" aria-label="圖例"><span><i class="lg-tk now" aria-hidden="true"></i>今天</span><span><i class="lg-tk on" aria-hidden="true"></i>已過時程</span><span><i class="lg-tk in" aria-hidden="true"></i>剩餘時程</span></div>
+            <div class="legend" aria-label="圖例"><span><i class="lg-now" aria-hidden="true"></i>今天</span><span><i class="lg-sl lg-a" aria-hidden="true"></i>已過時程</span><span><i class="lg-sl lg-b" aria-hidden="true"></i>剩餘時程</span></div>
             <div class="range">時間軸 <input type="month" id="rStart" aria-label="起始月份"> 到 <input type="month" id="rEnd" aria-label="結束月份"> <button class="icon" id="autoRange">依議題自動調整</button></div>
             <div class="gantt" id="gantt" data-flip></div>
             </div>

@@ -237,7 +237,7 @@
      圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕；中文網域改用名稱第一個字，見 lkFirst）。不帶 referrer。
      內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
-     寬度改變（加、刪、進出編輯）：底板左右兩半各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
+     寬度改變（加、刪、進出編輯）：底板左右兩半（手機才畫；桌面是分開的圓鈕，ui-12）各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
   const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
   const lkCut=s=>[...String(s==null?"":s).trim()].slice(0,LK_NAME).join("");
