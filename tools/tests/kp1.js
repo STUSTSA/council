@@ -132,7 +132,8 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   await expand(ed,k2);
   await ed.click(`${box(k2)} [data-kpgo="${r2.blocks[0].id}"]`);await ed.waitForTimeout(400);
   await ed.keyboard.press('End');await ed.keyboard.press('Enter');await ed.keyboard.type('插入的一行');
-  await ed.click(`${lineSel(k2,1)} [data-kpdel]`);await ed.waitForTimeout(300);
+  /* 大輸入框：文字行沒有 ×，刪第一行＝選取第一行的字、刪掉、再刪掉換行（像備忘錄） */
+  await ed.keyboard.press('Control+Home');await ed.keyboard.press('Shift+End');await ed.keyboard.press('Delete');await ed.keyboard.press('Delete');await ed.waitForTimeout(300);
   await outside(ed);
   await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.length>0,null,{timeout:15000});await ed.waitForTimeout(800);
   const r3=await evOf(ed,k2);c=await read(C(k2));const ev3=await read(`events/${DEPT}__${tid2}`);
@@ -178,7 +179,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   await setRole(edUid,{});await until(()=>ed.evaluate(()=>boardLocked()));
   await ed.click('#evH');await settled(ed);
   const f6=await ed.evaluate(id=>({editing,card:cardEdit,kp:!!document.querySelector('.lc-ed'),st:(document.querySelector('.lc-ed .lc-save .kp-st')||{}).dataset,txt:(document.querySelector('.lc-ed .lc-save .kp-st')||{}).textContent,
-    draft:(document.querySelector(`[data-kptx]`)||{}).value,dlg:!!document.querySelector('#dlg[open]')}),k2);
+    draft:((document.querySelector(`[data-kptx],[data-kpgrp]`)||{value:''}).value).split('\n')[0],dlg:!!document.querySelector('#dlg[open]')}),k2);
   ok(f6.editing&&f6.card==='e:'+k2&&f6.kp&&f6.st&&f6.st.st==='fail'&&/儲存失敗/.test(f6.txt)&&f6.draft==='插入的一行（草稿）'&&!f6.dlg,`儲存失敗：不收合、保留草稿、顯示「${f6.txt}」、不跳對話框`);
   ok((await read(C(k2))).version===v6,'儲存失敗：規則擋下、沒有寫入');
   await setRole(edUid,{[DEPT]:'editor'});await until(()=>ed.evaluate(()=>!boardLocked()));
@@ -244,7 +245,7 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
     await expand(ed,k2);
     await ed.click(`${box(k2)} [data-kpgo="${ids[1]}"]`);await ed.waitForTimeout(400);
     await ed.keyboard.press('Home');await ed.keyboard.type('  ');await ed.keyboard.press('End');await ed.keyboard.type('  ');
-    await ed.click(`${box(k2)} [data-kptx="${ids[2]}"]`);await ed.keyboard.press('End');await ed.keyboard.type(' ');
+    await ed.evaluate(i=>kpFocus(i),ids[2]);await ed.keyboard.type(' ');   /* 大輸入框：用 kpFocus 把游標放到那一行最後 */
     await outside(ed);
     await check([null,false,false],'P0-1 行首行尾加空白後點外面');
     /* c. 時間行切換勾選，點外面 */
