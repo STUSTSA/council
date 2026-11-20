@@ -430,3 +430,13 @@ match /events/{id} {
 - 一律不公開：users（信箱）、roles、invitations、roleRequests、deptMembers、legacyIdentities、profiles（顯示名稱）、auditLogs、卡片版本歷史（編輯紀錄）、meetingMinutes 與秘書處其他資料、grants、預約相關（calendars、openWindows、slots、busyBlocks、bookings）。拿不準的不公開。
 - 寫入不變：未登入、沒有角色的登入者都不能寫。internal 的時間事件不能帶 title、summary（整個 events 集合公開，不能夾帶文字）。
 - 畫面：沒登入時看板照常顯示，負責人（舊身分、帳號名稱）不顯示（名字在 profiles、舊身分，要登入）。
+
+### 5.1k 06 申請與審核流程（`backend/tests/rules-07-requests.test.js` R-01～R-11、`tools/tests/rq1.js`）
+
+DievE 決定：看板內容一律公開（第 5.1j 節之二）；登入的人選部門與位階（部長／次長／部員）送申請，等部長審核。
+
+- **申請文件**：多一個可有可無的 `rank`（`minister`／`deputy`／`member`）。`rank` 與 `role` 要一致：`minister` ↔ `admin`，其餘 ↔ `editor`；沒有 `rank` 的舊申請照舊能送。次長只是申請上的頭銜，核准後權限＝編輯者（roles 沒有位階欄位，頭銜不會留在帳號上）。
+- **誰能審**（`canDecide()`）：總管理員，或「該部門的部長、對象不是自己、申請的是 editor、沒有帶舊身分（`legacyRef`）」。**部長申請（admin）與帶舊身分的申請只有總管理員能核准或拒絕**；部長不能把人升成部長。部長讀得到、列得出自己部門的申請（`allow list` 要求查詢帶 `deptId`＝自己是部長的部門）。
+- **核准寫 roles**（`viaDeptRequest()`）：同一批把申請 `pending → approved`、`decidedBy＝自己`，並新增（或新建 roles 文件）那個部門的 `editor`；不能動 `super`、不能改別的部門、不能動已有該部門角色的人；`lastVia＝request`、`lastRef＝申請 ID`。
+- **部長讀申請人的 roles**（`adminSeesRequest()`，為了帶 `rev` 寫入）：申請 ID 固定是 `{uid}_{部門}`，只有「我是該部門部長、而且那一份申請還在待審」才讀得到；先用我自己的部門角色擋掉（便宜），才去查申請，因為規則每次評估最多 1000 個運算式（排在最後的部門試過會超過，R-04c 專門測）。
+- **攻擊測試**：沒登入不能送、不能替別人送、rank 與 role 不一致、別部門的部長審、部長核准部長申請、自己核准自己、一般編輯者審、核准夾帶 `super`／別的部門／沒同批寫 roles／只改 roles 不改申請、部長讀沒有待審申請的人的 roles、部長列出別部門或全部申請。
