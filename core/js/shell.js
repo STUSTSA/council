@@ -41,6 +41,15 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="follows" id="follows" data-flip></div>
         <button class="ghost edit-only add-row" id="addFollow">+ 追蹤項目</button>
       </section>
+      <!-- 秘書處：行政會議議程（2026-11-21，meeting.js 的 renderAgenda）：把各部門最新一份週報併成一份議程（可以勾掉不併入的部門），按「定版」存成該次會議的議程；下面列出定版過的 -->
+      <section class="panel follow-panel meet-panel ag-panel" id="agPanel" aria-labelledby="agH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議議程</h2><button type="button" class="icon" data-mtrefresh>擷取最新</button></div>
+        <p class="sub ag-st" id="agSt"></p>
+        <div class="wk-depts" id="agDepts" role="group" aria-label="併入的部門"></div>
+        <div class="ag-body" id="agBody" data-flow></div>
+        <div class="mt-foot"><button type="button" class="icon" id="agCopy">複製議程</button><button type="button" class="primary" id="agFinal">定版</button><span class="sub" id="agInfo"></span></div>
+        <div class="ag-done" id="agDone" data-flow></div>
+      </section>
       <section class="panel follow-panel meet-panel wk-panel" id="wkPanel" aria-labelledby="wkH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="wkH" data-en="WEEKLY">各部門週報</h2><button type="button" class="icon" data-mtrefresh>擷取最新</button></div>
         <div class="wk-depts" id="wkDepts" role="tablist" aria-label="部門"></div>
@@ -144,7 +153,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#docsPanel","#grantPanel","#followPanel","#actPanel","#meetEdPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
+    ["#docsPanel","#grantPanel","#followPanel","#actPanel","#meetEdPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();
