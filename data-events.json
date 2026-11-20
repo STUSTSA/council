@@ -23,9 +23,21 @@
     "i": "EDUs+mB/BLGjZfia",
     "c": "3WwQMqJXYtzRNXHAj9Jl0TqWLOSBFzpRuxd88P2WxQ6W6Q3ixY1bmtRg7EHxOMG6AzKm+lYWYcMb4uLf/Us6A+XUomye9gp7sXJ07lRa1CBDC0093YdKvIySrPuxTWbTZmLfKoud0YwAb+D+og=="
    }
+  },
+  {
+   "id": "mmwon8gzyt8tt",
+   "name": "蔡建霆",
+   "role": "member",
+   "kdf": "ztMqxkL59RTVZ91BlGFo+Q==:Ywp0vl0Dbwtfhq7BRoiZptOCAyrQvMSGWY7j3vyhuxA=",
+   "createdAt": "2026-11-20 15:14",
+   "tok": {
+    "s": "Q2ifMANhiJw/bx4p6kLoaQ==",
+    "i": "lJEASSfQBner1EQm",
+    "c": "5a3DiHCH5ZPKxBOjNhYvH9hSKSsETgrlSFqucpuRuTzFPMiSAxiYVI9Wpb1BasQEfAIUmvRtatUbuHmq+kRxD75mPdk9OKe0GWT9Pbz3Pgxjl5pd7kFsBEZFfqVbh+tGAS0+8l4+jJ1jylFvLQ=="
+   }
   }
  ],
- "schemaVersion": 13,
+ "schemaVersion": 14,
  "id": "board-events",
  "follows": [],
  "weeks": [
@@ -52,7 +64,8 @@
    ],
    "touchedAt": "2026-11-10T20:15",
    "labels": [],
-   "report": false
+   "report": false,
+   "blocks": []
   },
   {
    "id": "emwanlphb17pu",
@@ -68,7 +81,8 @@
    ],
    "touchedAt": "2026-11-10T20:16",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": []
   },
   {
    "id": "emwanm4a88y46",
@@ -84,7 +98,8 @@
    ],
    "touchedAt": "2026-11-10T20:16",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": []
   },
   {
    "id": "emwanmvi8btmy",
@@ -100,7 +115,8 @@
    ],
    "touchedAt": "2026-11-10T20:16",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": []
   },
   {
    "id": "emwanqad907f9",
@@ -116,7 +132,8 @@
    ],
    "touchedAt": "2026-11-10T20:19",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": []
   },
   {
    "id": "emwanr5lyeshx",
@@ -132,7 +149,8 @@
    ],
    "touchedAt": "2026-11-10T20:20",
    "report": false,
-   "labels": []
+   "labels": [],
+   "blocks": []
   },
   {
    "id": "emwantm0hywbq",
@@ -148,7 +166,8 @@
    ],
    "touchedAt": "2026-11-10T20:22",
    "labels": [],
-   "report": false
+   "report": false,
+   "blocks": []
   }
  ],
  "reportBase": {
