@@ -8,7 +8,7 @@
      會長室的開放存在 grants/meetingEdit（總管理員才能開關，有稽核紀錄；到期時間＝當天結束）；寫回用 store-write.js 的 saveMeeting，
      只能改報告卡片的名稱、說明（逐行內容）、已有時間標記的內容（規則 cards 的 meetingEdit、events 的 meetingEditOfReportedCard）；
      會議紀錄寫進 meetingMinutes/{日期}（秘書處與總管理員讀得到）。
-   - 「會議要報告」標記仍由各部門生成週報時自動清掉；這裡不改標記本身。 */
+   - 「會議要報告」標記由各部門手動取消（生成週報不會清；週三自動清待規則更新）；這裡不改標記本身。 */
 const MT={depts:new Map(),loading:false,at:0};   /* dept id → {data,base,sha,err,dirty,fs}；fs＝{src,orig}（firestore 的部門，寫回用） */
 function withState(s,fn){const keep=state;state=s;try{return fn()}finally{state=keep}}
 const mtOf=el=>{const b=el&&el.closest&&el.closest("[data-mtdept]");return b?MT.depts.get(b.dataset.mtdept):null};

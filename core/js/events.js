@@ -18,7 +18,7 @@ document.addEventListener("click",async e=>{
   if(t.closest("#genWeek")&&!readOnly()){
     const r=buildWeekly();
     const v=await ask("生成週報",[{name:"date",label:"日期",type:"date",value:r.end},{name:"text",label:`內容（${fmt(r.start)} 之後 – ${fmt(r.end)}）`,type:"textarea",value:r.text}],{wide:true});
-    if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);state.events.forEach(e=>{e.report=false});newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
+    if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
   /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
   if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
   if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
