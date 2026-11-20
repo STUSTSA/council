@@ -297,10 +297,10 @@ function membersPanel(){
       if(!p.alive)return;
       const stat=cur?(cur.status==="used"?"已使用":cur.status==="revoked"?"已撤銷":left()>0?mmss(left()):"已過期"):"";
       p.html=p.head()+(manage?(cur?`<div class="acct-qr${live()?"":" off"}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
-          <b>${esc(deptNameOf(cur.deptId))}・${ROLE_T.editor}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${stat}</span>
+          <b>${esc(deptNameOf(cur.deptId))}・${roleT("editor")}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${stat}</span>
           <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke>撤銷</button>`:""}</div></div>`
-        :`<button type="button" class="primary acct-new" data-new>新增${ROLE_T.editor}</button>`):"")
-        +`<div class="set-list">${list.map(x=>`<div class="acct-line"><span><b>${esc(nameOf(x.uid))}</b><small>${esc(ROLE_T[x.role]||"成員")}${x.uid===me?"・自己":""}</small></span>${manage&&x.role==="editor"&&x.uid!==me?`<button type="button" class="icon danger" data-rm="${esc(x.uid)}">撤銷</button>`:""}</div>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>`;
+        :`<button type="button" class="primary acct-new" data-new>新增${roleT("editor")}</button>`):"")
+        +`<div class="set-list">${list.map(x=>`<div class="acct-line"><span><b>${esc(nameOf(x.uid))}</b><small>${esc(x.role?roleT(x.role,dept):"成員")}${x.uid===me?"・自己":""}</small></span>${manage&&x.role==="editor"&&x.uid!==me?`<button type="button" class="icon danger" data-rm="${esc(x.uid)}">撤銷</button>`:""}</div>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>`;
     };
     p.every(()=>{
       const t=p.box.querySelector(".acct-qr-t");

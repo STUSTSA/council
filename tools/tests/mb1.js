@@ -102,7 +102,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* ---------- 1. 部門成員名單 ---------- */
   ok(await members(P.edA),'編輯者：設定有「部門成員」');
   let txt=await paneText(P.edA);
-  ok(txt.includes('adm 同學')&&txt.includes('管理員')&&txt.includes('edA 同學')&&txt.includes('編輯者')&&txt.includes('edB 同學'),`編輯者：看得到本部門的成員與角色（${txt.replace(/\n/g,' / ')}）`);
+  ok(txt.includes('adm 同學')&&txt.includes('部長')&&txt.includes('edA 同學')&&txt.includes('編輯者')&&txt.includes('edB 同學'),`編輯者：看得到本部門的成員與角色（${txt.replace(/\n/g,' / ')}）`);
   ok(!txt.includes('example.test'),'編輯者：名單沒有信箱');
   ok(txt.includes('成員')&&await P.edA.evaluate(()=>!document.querySelector('#setOv .acct-panel [data-rm],#setOv .acct-panel [data-new]')),'編輯者：沒有「新增編輯者」與「撤銷」；沒有 role 的舊文件顯示「成員」');
   await openSet(P.nb);ok(!(await setHas(P.nb,'members')),'沒有角色的登入者：沒有「部門成員」');
