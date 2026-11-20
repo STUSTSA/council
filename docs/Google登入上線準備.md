@@ -1,4 +1,6 @@
-# Google 登入上線準備（開發專案 `stustsa-council-dev`＋水果部實測）
+# Google 登入上線準備（開發專案 `stustsa-council-dev`＋水果部實測；正式專案 `stustsa-council`）
+
+> **2026-11-20 起網站設定是正式專案 `stustsa-council`**（換設定的 PR，第 4.8 節）。第 1～3 節是開發專案的部署與實測紀錄（步驟仍可照做，網址與 `--project` 換成要部署的專案）；第 4 節是正式專案，`<正式 ID>` 就是 `stustsa-council`。
 
 - 寫於 2026-11-19，依據 `main` 的 `66a71ee`（規則與索引最後一次修改是 `e49bd5f`，2026-11-17）。
 - 這份只是準備：**沒有部署、沒有登入任何主控台、沒有建專案、沒有改 `data*.json`**。下面每一步都由 DievE 用學生會公用帳號自己操作。
@@ -333,7 +335,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 ### 4.1 建專案
 
 1. 打開 https://console.firebase.google.com/ （學生會公用帳號）→「建立專案」（或「新增專案」）。
-2. 專案名稱填 `南臺科大學生會看板`。下面的專案 ID 改成 `stustsa-council`（被用過時主控台會自動加尾碼，例如 `stustsa-council-1a2b3`；**以畫面上最後顯示的為準**，抄下來，下面的 `<正式 ID>` 都是它）。專案 ID 建好就不能改。
+2. 專案名稱填 `南臺科大學生會看板`。下面的專案 ID 改成 `stustsa-council`（被用過時主控台會自動加尾碼，例如 `stustsa-council-1a2b3`；**以畫面上最後顯示的為準**，抄下來，下面的 `stustsa-council` 都是它）。專案 ID 建好就不能改。
 3. 「為這個專案啟用 Google Analytics」→ 關掉 → 建立專案。
 4. 算成功：進到專案總覽，左上角是「南臺科大學生會看板」。方案是 **Spark**（左下角寫「Spark 免付費」）；**不要按「升級」、不要連結帳單帳戶**（不連帳單就不可能被收費；Cloud Functions、Blaze 都不用）。
 
@@ -342,7 +344,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 1. 左側「建構」→「Firestore Database」→「建立資料庫」。
 2. 資料庫 ID 保留 `(default)`；位置選 **`asia-east1`（台灣）**（建好就不能改）。
 3. 安全性規則選「**以正式版模式啟動**」（全部拒絕；正式規則在 4.7 部署）→ 建立。
-4. 算成功：https://console.firebase.google.com/project/<正式 ID>/firestore/databases/-default-/data 是空的資料庫，上方寫 `(default)`、位置 `asia-east1`。
+4. 算成功：https://console.firebase.google.com/project/stustsa-council/firestore/databases/-default-/data 是空的資料庫，上方寫 `(default)`、位置 `asia-east1`。
 
 ### 4.3 登入方式與授權網域
 
@@ -350,13 +352,13 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 2. 「設定」分頁 →「授權網域」：
    - 加入 `stustsa.github.io`。
    - **刪掉 `localhost`**（正式專案不留本機入口）。
-   - 保留預設的 `<正式 ID>.firebaseapp.com`（登入視窗用的就是它，刪了會不能登入）與 `<正式 ID>.web.app`。
+   - 保留預設的 `stustsa-council.firebaseapp.com`（登入視窗用的就是它，刪了會不能登入）與 `stustsa-council.web.app`。
    - **不要加**舊網域 `linkmasterking.github.io`。
-3. 算成功：授權網域清單只有 `<正式 ID>.firebaseapp.com`、`<正式 ID>.web.app`、`stustsa.github.io` 三個。
+3. 算成功：授權網域清單只有 `stustsa-council.firebaseapp.com`、`stustsa-council.web.app`、`stustsa.github.io` 三個。
 
 ### 4.4 Google 登入畫面（Google Auth Platform）
 
-1. 打開 https://console.cloud.google.com/auth/overview?project=<正式 ID> （同一個公用帳號；第一次會要你「開始使用」）。
+1. 打開 https://console.cloud.google.com/auth/overview?project=stustsa-council （同一個公用帳號；第一次會要你「開始使用」）。
 2. 「品牌宣傳」（Branding）：**應用程式名稱填 `南臺科大學生會`**；使用者支援電子郵件、開發人員聯絡資訊都選公用帳號。**不要上傳標誌**（上傳標誌就要送 Google 審核品牌）；應用程式首頁、隱私權政策連結可以先空著。
 3. 「目標對象」（Audience）：使用者類型「**外部**」；發布狀態按「**發布應用程式**」改成「**實際運作中（正式版）**」。只用預設的範圍（email、profile、openid），不需要 Google 審核。
    - 如果這裡只能選「內部」或出現學校組織的限制：不要改組織設定，截圖給決策端（`docs/architecture/verification.md` 第 9.2 節）。
@@ -366,7 +368,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 
 1. 專案總覽 → 畫面中間的「</>」（網頁）→ 應用程式暱稱填 `看板網站` → **不要勾**「同時為這個應用程式設定 Firebase 代管」→ 註冊應用程式。
 2. 畫面上的 `firebaseConfig` 裡抄 `apiKey`、`authDomain`、`projectId`、`appId` 四個值（之後在 ⚙ 專案設定 →「一般」最下面也看得到）。這四個不是機密，會放進 repo；`storageBucket`、`messagingSenderId`、`measurementId` 不用。
-3. 算成功：`authDomain` 是 `<正式 ID>.firebaseapp.com`、`projectId` 是 `<正式 ID>`。
+3. 算成功：`authDomain` 是 `stustsa-council.firebaseapp.com`、`projectId` 是 `stustsa-council`。
 
 ### 4.6 擁有者（IAM）
 
@@ -375,7 +377,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 
 ### 4.7 部署規則與索引到正式專案
 
-- 照第 1.3（規則，主控台貼上）＋1.4（索引，Cloud Shell）做，把網址裡的 `stustsa-council-dev` 換成 `<正式 ID>`，Cloud Shell 的 `--project` 也換成 `<正式 ID>`。
+- 照第 1.3（規則，主控台貼上）＋1.4（索引，Cloud Shell）做，把網址裡的 `stustsa-council-dev` 換成 `stustsa-council`，Cloud Shell 的 `--project` 也換成 `stustsa-council`。
 - 用部署當天 `main` 的版本：Cloud Shell 第 2 步的 `C=` 換成 `main` 最新的 commit（GitHub 網頁 repo 首頁「commits」最上面那一筆的完整 SHA），印出的兩個 SHA-256 要跟最後一個合併的 PR 說明寫的一樣（2026-11-20 時：規則 `32208b52…`；秘書處會議編輯的 PR 合併後是 `76e470cb…`；索引 `dbe4e2c3…`）。
 - 正式專案是空的，部署索引不會問要不要刪掉舊索引。
 - 算成功：規則頁最上面一行是 `rules_version = '2';`、左側歷史有剛剛那一筆；索引頁「複合」22 列全部「已啟用」、「單一欄位」的「豁免項目」14 列。
@@ -384,22 +386,22 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 
 **要換的欄位**：只換 `BOARD_BASE.firebase` 那一行的四個值，其他欄位不要加（不要 `emulator`）：
 
-| 欄位 | 現在（開發專案） | 換成 |
+| 欄位 | 11/20 之前（開發專案） | 換成（正式專案，2026-11-20 的 PR） |
 |---|---|---|
-| `apiKey` | 開發專案的 | 4.5 抄的 `apiKey` |
-| `authDomain` | `stustsa-council-dev.firebaseapp.com` | `<正式 ID>.firebaseapp.com` |
-| `projectId` | `stustsa-council-dev` | `<正式 ID>` |
-| `appId` | 開發專案的 | 4.5 抄的 `appId` |
+| `apiKey` | 開發專案的 | `AIzaSyB9z0EsAT4uVUgfOcqEkibRf4wlDisN6uU` |
+| `authDomain` | `stustsa-council-dev.firebaseapp.com` | `stustsa-council.firebaseapp.com` |
+| `projectId` | `stustsa-council-dev` | `stustsa-council` |
+| `appId` | 開發專案的 | `1:541648735824:web:0c0295c2004d1e478c4b55` |
 
-那一行上面的註解改成「正式專案 <正式 ID>」。這個 PR 只改這一行（跟任何部門的切換分開合併）；把四個值給我就可以開，或決策端自己在 GitHub 網頁改。
+那一行上面的註解改成「正式專案 stustsa-council」。這個 PR 只改這一行（跟任何部門的切換分開合併）；把四個值給我就可以開，或決策端自己在 GitHub 網頁改。
 
 **合併後會發生什麼**：九個部門還是 `github`，畫面與存檔都不變（行事曆的「活動」「會議」不受測試部門影響，#81）。水果部（`source: "firestore"`、測試部門）改讀**正式專案**，正式專案一開始是空的。開發專案裡的資料不會搬過去，也不會再被網站用到。
 
 **水果部的演練（使用者決定：在正式專案再匯入一次）**，合併後依序：
 
-1. 第一位總管理員：要當總管理員的人打開 `https://stustsa.github.io/council/index.html?d=fruit` → 設定 → 用 Google 登入 → 決策端照第 2.1 節在**正式專案**的主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1`（網址裡的專案換成 `<正式 ID>`）。重新整理後看到「總管理員」膠囊與「會長室管理」。
+1. 第一位總管理員：要當總管理員的人打開 `https://stustsa.github.io/council/index.html?d=fruit` → 設定 → 用 Google 登入 → 決策端照第 2.1 節在**正式專案**的主控台建 `roles/{UID}` 與 `auditLogs/roles_{UID}_1`（網址裡的專案換成 `stustsa-council`）。重新整理後看到「總管理員」膠囊與「會長室管理」。
 2. 網站上的備援總管理員（第 2.3 節最後一段）也在這時候授予。
-3. 匯入水果部：照 `docs/遷移步驟.md` 第 3.4 節的匯入步驟做一次（記 commit 與 `data-fruit.json` 的 SHA-256 → 會長室管理 → 匯入 → 水果部（標「新資料庫」）→ 填兩格 → 確認畫面 → 確認匯入）。算成功：報告最上面是 `<正式 ID>`、每一列「相同」、「結果：通過」、衝突 0。
+3. 匯入水果部：照 `docs/遷移步驟.md` 第 3.4 節的匯入步驟做一次（記 commit 與 `data-fruit.json` 的 SHA-256 → 會長室管理 → 匯入 → 水果部（標「新資料庫」）→ 填兩格 → 確認畫面 → 確認匯入）。算成功：報告最上面是 `stustsa-council`、每一列「相同」、「結果：通過」、衝突 0。
 4. 快速實測（第 3 節挑這幾項，在正式專案上）：L-1 電腦 Chrome 登入、W-1 50 行＋10 個超連結、W-2 改一行、Q-1 QR 邀請、R-1 撤權、D-1 刪除卡片、E-1／E-2 匯出、設定 → 編輯紀錄讀得到。
 5. 演練用的卡片、角色留在正式專案沒關係（水果部是測試部門，不在總覽）；要清的話照 `docs/遷移步驟.md` 附錄 A.4.1 第 2 步在主控台刪 `deptId == fruit` 的文件。
 
@@ -409,7 +411,7 @@ S-1 要排在任何看板寫入之前：水果部的資料檔是空的，先寫�
 
 | 項目 | 怎麼做 | 注意 |
 |---|---|---|
-| API 金鑰限制網站來源 | Google Cloud 主控台 → API 和服務 → 憑證 → 自動建立的 Browser key → 應用程式限制「網站」：`https://stustsa.github.io/*`、`https://<正式 ID>.firebaseapp.com/*` | 設錯會讓登入壞掉；要做的話先在開發專案試（待決定 7） |
+| API 金鑰限制網站來源 | Google Cloud 主控台 → API 和服務 → 憑證 → 自動建立的 Browser key → 應用程式限制「網站」：`https://stustsa.github.io/*`、`https://stustsa-council.firebaseapp.com/*` | 設錯會讓登入壞掉；要做的話先在開發專案試（待決定 7） |
 | 備份 | D11：每週一次＋切換前後，會長室管理 →「匯出全部資料」存到公用帳號雲端硬碟的幹部資料夾 | Spark 沒有排程備份 |
 | 用量 | Firestore →「用量」：Spark 每天 5 萬次讀、2 萬次寫、儲存 1 GiB | 超過當天讀寫不了（不會收費） |
 

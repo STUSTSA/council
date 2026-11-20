@@ -27,9 +27,9 @@ const BOARD_BASE = {
   // 預留：之後的通知功能（目前沒有作用）
   notify: { url: "" },
 
-  // Firebase 網頁設定（不是機密）。02B：開發專案 stustsa-council-dev；正式專案建立後換成正式專案的設定。
+  // Firebase 網頁設定（不是機密）。2026-11-20 起是正式專案 stustsa-council（02B～11/20 是開發專案 stustsa-council-dev）。
   // 部門的 source 是 "firestore"／"frozen"、網址帶 QR 邀請（#join=）、或要讀某個已切到 firestore 的部門（會長室追蹤、秘書處會議、學年設定、通知「全會」）時才會載入 Firebase
-  firebase: { apiKey: "AIzaSyBCgnzKIUjC_hHkLwCyiSI0KUMPQif24rA", authDomain: "stustsa-council-dev.firebaseapp.com", projectId: "stustsa-council-dev", appId: "1:252023581385:web:e248b3b1968c5796bc7b18" }
+  firebase: { apiKey: "AIzaSyB9z0EsAT4uVUgfOcqEkibRf4wlDisN6uU", authDomain: "stustsa-council.firebaseapp.com", projectId: "stustsa-council", appId: "1:541648735824:web:0c0295c2004d1e478c4b55" }
 };
 
 /* ---------------------------------------------------------
