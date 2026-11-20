@@ -347,21 +347,24 @@ body.lc-lock #pageMain{overflow:hidden}
 /* --- 逐行內容（live.js 的 lnHTML）：文字、核取（方形 .fld-check，勾了變淡加刪除線）、時間（時間線）；超連結膠囊 ---
    有權限的人點一行＝原位編輯（滑過去淡底）；唯讀不能點、不能勾、不放大。編輯中文字變成底線輸入框、右邊刪除（指到或聚焦才出現） */
 .lns{display:grid;gap:2px}
-.ln{position:relative;display:flex;align-items:center;gap:10px;min-height:38px;padding:0 8px;margin:0 -8px;border-radius:var(--r-sm);font-size:14.5px;transition:background-color var(--mo-fast) var(--mo-out)}
+.ln{position:relative;display:flex;align-items:center;gap:10px;padding:0 8px;margin:0 -8px;border-radius:var(--r-sm);font-size:14.5px;transition:background-color var(--mo-fast) var(--mo-out)}
 .lc:not(.ro):not(.lc-ed) .ln{cursor:text}
 @media (hover:hover){.lc:not(.ro):not(.lc-ed) .ln:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}}
 .ln .tx{flex:1;min-width:0;overflow-wrap:anywhere;transition:color var(--mo-base) var(--mo-out)}
 .ln span.tx{padding:7px 0;line-height:1.6}
 .ln span.tx:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
-.ln textarea.tx{display:block;width:auto;min-height:0;padding:6px 0;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font:inherit;font-size:14.5px;line-height:1.6;resize:none;overflow:hidden;overflow-wrap:anywhere;transition:border-color var(--mo-fast) var(--mo-out)}   /* 編輯中的一行：自動折行，高度由 live.js kpFit 跟著內容；一行還是一筆 */
-.ln textarea.tx:focus{outline:none;border-bottom-color:var(--ink)}
+.ln textarea.tx{display:block;width:auto;min-height:0;padding:0;border:0;border-radius:0;background:transparent;font:inherit;font-size:14.5px;line-height:1.6;resize:none;overflow:hidden;overflow-wrap:anywhere}   /* 編輯中的文字、核取行：沒有底線、行距跟折行一樣，相鄰幾行看起來是一段連續的文字（折行只是視覺，一行還是一筆）；高度由 live.js kpFit 跟著內容 */
+.ln textarea.tx:focus{outline:none}
+.ln.tm textarea.tx{padding:6px 0;border-bottom:1px solid var(--hair);transition:border-color var(--mo-fast) var(--mo-out)}   /* 時間行的名稱維持有底線的輸入欄 */
+.ln.tm textarea.tx:focus{border-bottom-color:var(--ink)}
 .ln.done span.tx{color:var(--muted);text-decoration:line-through}
 .ln .pl{flex:none;margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
 .ln-ck{flex:none}
 .ln-ck input:disabled{cursor:default;opacity:.75;pointer-events:none}
 .ln-x{flex:none;display:grid;place-items:center;width:28px;height:28px;min-height:28px;padding:0;border:0;border-radius:50%;color:var(--muted);opacity:0;transition:opacity var(--mo-fast) var(--mo-out),transform .24s var(--mo-spring)}
 .ln:hover .ln-x,.ln:focus-within .ln-x,.lk:focus-within .ln-x,.lk:hover .ln-x{opacity:1}
-@media (pointer:coarse){.ln-x{opacity:1}}
+@media (pointer:coarse){.ln.tm .ln-x,.lk .ln-x{opacity:1}}   /* 觸控：時間行、超連結的刪除一直看得到；文字、核取行只有游標所在那一行才出現，不然一排 × 會把一段文字切開 */
+.ln:not(.tm) .ln-x{margin:-3px 0}
 .ln-empty{display:block;width:100%;min-height:0;margin:0;padding:8px 0;border:0;border-radius:0;background:transparent;color:var(--muted);text-align:left;font-size:14px}
 button.ln-empty{cursor:text}
 @media (hover:hover){button.ln-empty:hover{transform:none}}
@@ -414,8 +417,10 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
 .pg-ppl h4{margin:0;font-size:14px;font-weight:700;letter-spacing:.1em}
 .lc .chips{display:flex;flex-wrap:wrap;gap:8px}
 .te{display:grid;justify-items:start;gap:10px;padding:6px 0 16px;border-bottom:1px solid var(--hair)}
-.te-nm{width:min(20em,100%);padding:2px 0;border:0;border-radius:0;background:transparent;font-size:15.5px}   /* 時間頁、地點頁的名稱：平面字，點了就改（模擬頁 .te input.nm；ui-09 拿掉聚焦時的底線） */
-.te-nm:focus{outline:none}
+.te-nm{width:min(20em,100%);padding:2px 0 4px;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font-size:15.5px;transition:border-color var(--mo-fast) var(--mo-out)}   /* 時間頁、地點頁的標題欄：有底線的輸入欄；空的時候底線改成虛線強調色、提示字「標題（例如：協商會議）」，提醒要先打標題（只提醒、不擋存檔；沒標題的時間標記會沒有自己的名稱） */
+.te-nm::placeholder{color:color-mix(in srgb,var(--acc2) 75%,var(--muted));opacity:1}
+.te-nm:placeholder-shown{border-bottom:1.5px dashed var(--acc2)}
+.te-nm:focus{outline:none;border-bottom-color:var(--ink)}
 .te-rw{display:flex;flex-wrap:wrap;gap:8px}
 .te-pl{position:relative;display:inline-flex;align-items:center;height:36px;min-height:36px;padding:0 14px;border:0;border-radius:999px;background:color-mix(in srgb,var(--acc2) 15%,var(--blk));color:var(--acc2);font-size:14px;line-height:1}
 button.te-pl.dsh{background:transparent;border:1.5px dashed var(--acc2);color:color-mix(in srgb,var(--acc2) 60%,transparent)}
@@ -684,8 +689,8 @@ a.doc-pill:active{scale:.96}
 .wk-d{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:3px 12px;font-size:13px;border-color:var(--hair)}
 .wk-d .num{font-size:12px;color:var(--muted)}
 .wk-d.none{color:var(--muted)}
-.wk-d[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.wk-d[aria-selected="true"] .num{color:inherit;opacity:.7}
+.wk-d[aria-selected="true"],.wk-d[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.wk-d[aria-selected="true"] .num,.wk-d[aria-checked="true"] .num{color:inherit;opacity:.7}
 .wk-new{width:7px;height:7px;border-radius:50%;background:var(--ok)}
 .wk-weeks{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
 .wk-w{flex:none;min-height:28px;padding:2px 11px;font-size:12.5px;border-color:var(--hair)}
@@ -2161,3 +2166,20 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 @keyframes pop{0%{transform:scale(.9)}100%{transform:none}}
 @keyframes dotIn{from{transform:scale(0);opacity:0}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
+
+
+/* ===== 行政會議議程（meeting.js 的 renderAgenda） =====
+   上面一排部門膠囊（沿用 .wk-d，選取＝實心；後面寫本週或週報日期），中間是併好的議程全文，下面「複製議程」「定版」，最下面是定版過的議程（跟週報同一種收合膠囊） */
+.ag-st{margin:0 0 12px;font-size:12.5px}
+.ag-text{margin:0 0 4px;padding:12px 14px;border:1px solid var(--hair);border-radius:12px}
+.ag-body:empty{display:none}
+.ag-h{margin:18px 0 8px;font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:.06em}
+.ag-done:empty{display:none}
+.mt-foot .primary{min-height:32px;padding:3px 16px;font-size:13px}
+/* 會議決議（定版議程裡逐部門一行，秘書處填；下次議程最前面列「上次決議追蹤」） */
+.ag-dec{margin-top:12px;padding-top:4px;border-top:1px solid var(--hair)}
+.ag-dec .ag-h{margin:10px 0 8px}
+.ag-dec-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px}
+.ag-dec-row span{flex:none;min-width:4.5em;color:var(--muted)}
+.ag-dec-row input{flex:1;min-width:0}
+.ag-dec-act{display:flex;justify-content:flex-end;margin-top:8px}
