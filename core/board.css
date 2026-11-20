@@ -36,10 +36,10 @@ html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
 h1{margin:0;font-size:clamp(26px,3.2vw,38px);font-weight:400;letter-spacing:.08em;line-height:1.2}
-button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:6px 16px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
+button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:7px 16px 5px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
 button.primary{background:var(--teal);border-color:var(--teal);color:var(--onteal)}   /* 按鈕：一般＝外框（次要動作，--hair）；primary＝主要動作的實心（--pri）；被指到放大、按下縮回，沒有光暈 */
 button.ghost{border-style:dashed;color:var(--muted)}
-button.icon{min-height:30px;font-size:13px;padding:3px 12px}
+button.icon{min-height:30px;font-size:13px;padding:4px 12px 2px}
 button.danger{color:var(--warn)}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 input{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;border-radius:var(--r-sm);-webkit-user-select:text;user-select:text}
@@ -92,7 +92,6 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .card-edbar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);width:100%;animation:fadeSlide .4s var(--ease) both}
 
 /* ===== 共用：多個元件一起設定的效果 ===== */
-.add-row,.dlg-actions button,.week-tools button{padding-top:5.5px;padding-bottom:6.5px}
 /* 進度色調（議題卡片、甘特圖）：--tone 給線條與色塊，--tone-ink 給文字（不叫 --acc：--acc 是主題的「選中」色） */
 [data-tone="hi"]{--tone:var(--prog-hi);--tone-ink:var(--prog-hi-ink)}
 [data-tone="lo"]{--tone:var(--prog-lo);--tone-ink:var(--prog-lo-ink)}
@@ -226,7 +225,7 @@ body.searching .layout{display:none}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .panel-head>.sec-h{flex:1}   /* 標題佔掉剩下的寬，右邊的按鈕靠右（以前是全站 h2 的 flex:1；ui-09 審查） */
-.count{font-size:12px;border-radius:999px;padding:1px 8px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.count{font-size:12px;border-radius:999px;padding:2px 8px 0;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 新增鈕（+ 新增議題、+ 新增文件、+ 追蹤項目；即時回報 2026-11-17 起是右下角的浮動圓鈕）：2026-11-06 使用者：平常檢視太明顯，不常用。
    低調的小字：沒有框、灰字 13px、靠左，滑過／按下才變文字色 */
 button.add-row{justify-self:start;align-self:start;justify-content:flex-start;align-items:center;gap:4px;width:auto;min-height:32px;margin-top:10px;padding:0 10px 0 4px!important;border-color:transparent;border-radius:999px;background:none;color:var(--muted);font-size:13px;letter-spacing:.04em;box-shadow:none}
@@ -315,7 +314,7 @@ input.lc-title:focus{outline:none}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
-.lc-meta .ev-st,.lc-tag{height:26px;padding:0 12px;border-radius:999px;line-height:1}
+.lc-meta .ev-st,.lc-tag{height:26px;padding:2px 12px 0;border-radius:999px;line-height:1}
 .lc-tag{display:inline-flex;align-items:center;background:var(--blk2);color:var(--ink)}
 .lc-meta .lbl-row{margin:0}
 .lc-body{flex:1;min-height:0;display:grid;align-content:start;gap:4px;padding:0 8px 10px;margin:0 -8px}
@@ -398,7 +397,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
    人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
 .lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
 .lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:0 17px 0 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
+.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:3px 17px 0 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
 .lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
 .lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
@@ -519,7 +518,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
 .kid-list{display:flex;flex-wrap:wrap;gap:6px}
-.kid-ev{display:inline-flex;align-items:center;gap:7px;background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 12px 3px 10px;font-size:13px}
+.kid-ev{display:inline-flex;align-items:center;gap:7px;background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px 2px 10px;font-size:13px}
 .kid-ev .live-dot{width:7px;height:7px}
 
 /* ===== 逐欄編輯（進度、完成紀錄、秘書處會議卡；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML；即時回報卡是原位編輯，在「即時回報」段） =====
@@ -580,7 +579,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
    編輯中：一個文件一列（膠囊＋小字網址＋修改／上下移／刪除），列與列之間細線 */
 .docs{display:flex;flex-wrap:wrap;gap:10px}
 .docs .empty{margin:0}
-.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
+.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:3.5px 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
 .doc-pill .ico{font-size:16px;flex:none}
 .doc-pill b{font-weight:500;overflow-wrap:anywhere}
 .doc-go{font-size:13px;color:var(--muted);transition:transform .35s var(--mo-spring),color .2s}
@@ -777,7 +776,7 @@ a.doc-pill:active{scale:.96}
    實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
 .pg-head{flex-wrap:wrap;gap:12px 16px;margin-bottom:16px}
 .g-term{flex:none}
-.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 22px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
+.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:2px 22px 0;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
 .pg-add .ico{width:18px;height:18px;margin:0;stroke-width:2}
 #progPanel.pv-on :is(.g-term,.pg-add){display:none}
 @media (max-width:640px){.pg-head .sec-h{flex-basis:100%}}
@@ -805,7 +804,7 @@ a.doc-pill:active{scale:.96}
 /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝實心小膠囊（文字色底）＋細線連到條；其他＝條上方的短線（位置照日期），滑過才顯示標籤 */
 .g-mk{position:absolute;top:0;bottom:0;width:0;transition:opacity .2s}
 .g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（標籤與短線都是；跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
-.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:4px 9px 5px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
+.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:6.5px 9px 2.5px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
 .g-mk .stem{position:absolute;left:-.5px;width:1px;background:var(--ink);z-index:1;opacity:.5}
 .g-mk.edgeL .lbl{transform:translateX(-8px)}
 .g-mk.edgeR .lbl{transform:translateX(calc(-100% + 8px))}
@@ -825,7 +824,7 @@ a.doc-pill:active{scale:.96}
 .lg-a{border-radius:6px 3px 3px 6px;background:var(--sl-fc)}
 .lg-b{border-radius:3px 6px 6px 3px;background:var(--sl-rest)}
 /* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
-.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -868,7 +867,7 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
 .hpct small{font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;margin-right:6px;color:var(--muted);vertical-align:.45em}
 .hpct.none{font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:400;color:var(--muted)}
 .closed-tag{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.tag.sm{font-size:11px;min-height:20px;padding:0 7px 2px!important;line-height:17px}
+.tag.sm{font-size:11px;min-height:20px;padding:3px 7px 0!important;line-height:17px}
 .card{padding:16px var(--cpx,18px);display:flex;flex-direction:column;gap:8px;scroll-margin-top:60px;border-radius:0;transition:background-color .25s,opacity .2s;background:transparent;border:0;border-top:1px solid var(--line)}
 .card.open{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .card-title{font-weight:700;font-size:16px;line-height:1.4}
@@ -876,8 +875,8 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
 .sec-edit .card-tools{display:flex}
 .meta{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .tags{display:flex;flex-wrap:wrap;gap:5px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.tag{font-size:12px;border-radius:999px;border:1px solid transparent;background:var(--blk2);min-height:24px;color:var(--ink);transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding:0 9px 2px!important;line-height:20px}
-.tag.cur{background:var(--acc);color:var(--acc-ink);font-weight:500;padding-top:.5px!important;padding-bottom:1.5px!important}   /* 目前的階段＝選中色（DESIGN-next 第二節 --acc） */
+.tag{font-size:12px;border-radius:999px;border:1px solid transparent;background:var(--blk2);min-height:24px;color:var(--ink);transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding:1.4px 9px 0!important;line-height:20px}
+.tag.cur{background:var(--acc);color:var(--acc-ink);font-weight:500}   /* 目前的階段＝選中色（DESIGN-next 第二節 --acc） */
 .c-track{position:relative;height:84px;margin:0 8px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* ---- 滑桿式時程條（DESIGN.md／DESIGN-next 第八節：比照 Android Material 的音量滑桿；views.js 的 sliderHTML／slFit／slAnim）----
    議題詳情（.c-bar）與甘特圖每一列（.g-bar.g，緊湊尺寸）共用同一套結構與樣式，兩者只差下面的變數。
@@ -1055,7 +1054,7 @@ a.link:active{transform:scale(.96)}
 .week summary::before{color:var(--muted);transition:transform .15s;content:"";display:inline-block;flex:none;width:7px;height:9px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);margin:0 2px 0 1px}
 .week[open] summary::before{transform:rotate(90deg)}
 .week summary .num{font-size:18px;transition:letter-spacing .25s var(--ease)}
-.badge{font-size:11.5px;border-radius:999px;padding:0 8px;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
+.badge{font-size:11.5px;border-radius:999px;padding:3px 8px 0;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
 .week-tools{display:flex;gap:6px;justify-content:flex-end;padding:0 12px;flex-wrap:wrap;animation:none}
 .week-text{white-space:pre-wrap;line-height:1.85;padding:6px 14px 14px;font-size:14.5px;word-break:break-word;animation:none;-webkit-user-select:text;user-select:text}
 .gen-btn{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);display:inline-flex;align-items:center;gap:6px}
@@ -1583,7 +1582,7 @@ body.set-open #pageMain{overflow:hidden}
 .acct-err{margin:4px 0 0;color:var(--red);font-size:13.5px}
 .acct-empty{padding:16px 20px}
 .acct-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.acct-chip{font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
+.acct-chip{font-size:12px;line-height:1;padding:6px 10px 4px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
 .acct-chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .acct-person{display:grid;gap:2px}
 /* 帳號頁最上面：名稱、信箱、角色膠囊（一塊平面色塊；設定清單的「帳號」列只寫「帳號」） */
@@ -1750,7 +1749,7 @@ body.set-open #pageMain{overflow:hidden}
 .tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
 .tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
 .tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.tl-btn{height:40px;min-height:0;padding:0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-btn{height:40px;min-height:0;padding:3.5px 22px 0;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
 .tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
@@ -1809,7 +1808,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal-modes{margin:0 -6px;padding:0 6px;overflow-x:auto;scrollbar-width:none}
 .cal-modes::-webkit-scrollbar{display:none}
 .cal-oth{display:flex;flex-wrap:wrap;gap:8px;margin-top:-6px}
-.cal-chip{height:36px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
+.cal-chip{height:36px;min-height:0;padding:4px 16px 0;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
 .cal-chip[aria-checked="true"]{background:var(--ink);color:var(--blk)}
 .cal-chip:active{transform:scale(.94)}
 .cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
@@ -1872,7 +1871,7 @@ body.set-open #pageMain{overflow:hidden}
 .pc-d:active{transform:scale(.9)}
 @media (hover:hover){.pc-d:not(.sel):hover::before{opacity:.28;transform:none}}
 .pc-pad{visibility:hidden}
-.pc-n{font-size:19px;line-height:1}
+.pc-n{font-size:19px;line-height:1;padding-top:2px}
 .pc-d.has .pc-n{font-weight:500}
 .pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
@@ -1898,7 +1897,7 @@ body.set-open #pageMain{overflow:hidden}
 .lseg{display:inline-flex;padding:4px;border-radius:999px;background:var(--blk2);box-shadow:none;transform-origin:0 50%;   /* 按下時往右放大，貼著內容左邊也不會被切到 */
   touch-action:none;-webkit-user-select:none;user-select:none}
 .lseg-lens{position:absolute;left:0;top:4px;bottom:4px;z-index:0;border-radius:999px;background:var(--pri);pointer-events:none;will-change:transform}
-.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:4px 18px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
+.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:6px 18px 2px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
 .lseg>[data-k][aria-selected="true"]{font-weight:500}
 .lseg>[data-k].lit{color:var(--pri-ink)}
 .lseg>[data-k]:hover,.lseg>[data-k]:active{transform:none;box-shadow:none}
@@ -1936,7 +1935,7 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .tm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .tm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 14px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .tm-name{font-weight:500}
-.tm-pill{display:inline-flex;align-items:center;height:22px;padding:0 10px 1px;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
+.tm-pill{display:inline-flex;align-items:center;height:22px;padding:4px 10px 0;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
 .tm-pill.on{background:var(--acc2);color:var(--acc2-ink)}   /* 管理員：焦點色（紅色只給逾期、刪除、報告） */
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
