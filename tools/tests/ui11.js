@@ -81,6 +81,15 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
     ok(!r.err&&r.a===false&&r.b.length===1&&r.b[0]===false&&r.ck===false,`找不到來源（evId 指到不存在的卡片、卡片刪掉拿掉連結）：不透明（${JSON.stringify(r)}）`);}
   await p.evaluate(()=>{if(editing&&typeof kpCommit==='function')kpCommit()});await p.waitForTimeout(600);await p.reload();await p.waitForTimeout(1800);
 
+  /* C. 50 行時按「時間」「地點」 */
+  {const r=await p.evaluate(async evId=>{const ev=state.events.find(e=>e.id===evId);ev.times=[];ev.blocks=Array.from({length:StoreMap.BLK_MAX},(_,i)=>({id:'b'+i,text:'第 '+i+' 行',check:null,timeId:null}));ev.desc=StoreMap.descOf(ev.blocks);render();
+      lcShow('live',evId);await new Promise(r=>setTimeout(r,700));const ok1=await kpStart(evId,{focus:null});await new Promise(r=>setTimeout(r,300));
+      const out={ok1};for(const k of ['time','place']){document.querySelector(`.lc-ed [data-lctool="${k}"]`).click();await new Promise(r=>setTimeout(r,400));
+        out[k]={pane:lvPane,te:document.querySelectorAll('.lc-ed .lc-body .te').length,lns:document.querySelectorAll('.lc-ed .ln').length,st:(document.querySelector('.lc-ed .kp-st')||{}).textContent,n:ev.blocks.length,tm:ev.times.length}}
+      return out},EV).catch(e=>({err:e.message}));
+    ok(!r.err&&r.ok1&&r.time.pane===null&&r.time.te===0&&r.time.lns===50&&r.time.st==='最多 50 行'&&r.time.n===50&&r.time.tm===0,`50 行按「時間」：不換到空白的時間頁、提示「最多 50 行」（${JSON.stringify(r.time||r)}）`);
+    ok(!r.err&&r.place&&r.place.pane===null&&r.place.lns===50&&r.place.st==='最多 50 行',`50 行按「地點」：同上（${JSON.stringify(r.place||r)}）`);
+    await p.keyboard.press('Escape');await p.waitForTimeout(600);}
 
 
   /* A. 儲存空間用量 */
