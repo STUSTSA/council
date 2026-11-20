@@ -5,6 +5,7 @@
    4. 點名：點一下依序 出席→請假→缺席→出席；寫入 attendanceRecords/{場次}_{成員}（決定性 ID、狀態、sessionAt、updatedBy）；快速連點只有一份文件、最後狀態正確
    5. 切換場次：每場各自的結果；重新整理後還在；四個數字對得上
    6. 寫入失敗（沒有權限）：畫面換回原狀並提示
+   7. 整理名冊：取消勾選＝停用（不刪、紀錄還在、不再出現在點名）、勾回來＝恢復；複製結果文字；別部門被規則拒絕
    執行（會自己開模擬器與網站）：cd backend && npm run test:web */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
 const {createRequire}=require('module');
@@ -139,6 +140,25 @@ const XSS='<img src=x onerror="window.__xss=1">';
   await pe.evaluate(()=>{window.__orig=BoardAttendance.mark;BoardAttendance.mark=async()=>{throw Object.assign(new Error('x'),{code:'permission-denied'})}});
   pe.toasts.length=0;await tap(pe,lin);await pe.waitForTimeout(600);
   ok(await pe.evaluate(g=>!AT.recs[g]&&!$(`#attPanel [data-id="${g}"]`).classList.contains('on'),lin)&&pe.toasts.some(m=>/沒有權限/.test(m)),'寫入失敗：畫面換回原狀、提示沒有權限');
+
+  /* ---------- 7. 整理名冊與複製結果 ---------- */
+  await pe.evaluate(()=>{BoardAttendance.mark=window.__orig});
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#dlgForm input[type=checkbox]');
+  ok(await pe.evaluate(()=>document.querySelectorAll('#dlgForm input[type=checkbox]').length===4),'名冊對話框列出全部 4 人');
+  await pe.evaluate(g=>{document.querySelector(`#dlgForm input[value="${g}"]`).click()},gao);await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.filter(m=>m.active).length===3));
+  const gm=(await list('attendanceMembers')).find(m=>m.id===gao);
+  ok(gm&&gm.active===false&&gm.updatedBy===eUid&&(await list('attendanceMembers')).length===4,'取消勾選＝停用（文件還在、active false）');
+  ok(await pe.evaluate(g=>!document.querySelector(`#attPanel [data-id="${g}"]`),gao),'停用的人不再出現在點名');
+  ok(!!(await list('attendanceRecords')).find(x=>x.memberId===gao),'過去的點名紀錄不動');
+  const txt=await pe.evaluate(()=>atText());
+  ok(/第十一次行政會議|臨時會議/.test(txt)&&/還沒點：/.test(txt)&&!/高苡安/.test(txt),'複製結果文字：含場次與名單，不含停用的人');
+  const dn=await po.evaluate(async()=>{try{const B=await atMod();await B.setActive(CFG.firebase,[{id:'x',active:false}]);return 'ok'}catch(e){return e.code||e.message}});
+  ok(dn==='permission-denied','別部門編輯者直接改名冊：被規則拒絕');
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#dlgForm input[type=checkbox]');
+  await pe.evaluate(g=>{document.querySelector(`#dlgForm input[value="${g}"]`).click()},gao);await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.filter(m=>m.active).length===4));
+  ok(await pe.evaluate(()=>AT.members.filter(m=>m.active).length===4),'勾回來＝恢復');
 
   ok(![ps,pe,po,pv].some(p=>p.errs.length),'沒有頁面錯誤：'+[ps,pe,po,pv].flatMap(p=>p.errs).join('|'));
   if(process.env.SHOTS){

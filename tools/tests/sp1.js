@@ -68,6 +68,6 @@ remote=JSON.parse(fs.readFileSync('data_test.json','utf8'));   /* 手機重新�
  await p.click('.dh-home');await p.waitForTimeout(900);log('m back -> list:',await sub());
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);
  await p.click('#setSub [data-hub=week]');await p.waitForTimeout(1300);log('m week from hub:',await sub(),await p.evaluate(()=>onWeek));
- await p.click('#backMain');await p.waitForTimeout(1300);log('m week back -> settings:',await sub(),await p.evaluate(()=>onWeek));
+ await p.click('.dh-home');await p.waitForTimeout(1300);log('m week back -> settings:',await sub(),await p.evaluate(()=>onWeek));
  log('m errs',p.errs)}
 await b.close()})();
