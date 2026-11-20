@@ -35,15 +35,15 @@ for(const [w,h,sc,tag] of [[1300,860,'dark','d'],[412,915,'light','m']]){
   const dl=await p.evaluate(()=>[$('#dlgForm b').textContent,...[...document.querySelectorAll('#dlgForm input')].map(i=>i.name+'='+i.value)]);console.log(tag,'dialog:',dl);A(/工作報告/.test(dl[0]),tag+' report dialog');
   await ok();await p.waitForTimeout(900);
   const rp=await p.evaluate(()=>({open:rptOpen,secs:[...document.querySelectorAll('.rpt-ch')].map(c=>c.querySelector('.rpt-ch-n').textContent+c.querySelector('h2').textContent),pages:[...document.querySelectorAll('.rpt-page')].map(x=>x.classList[1]).join(','),toc:[...document.querySelectorAll('.toc-list b')].map(x=>x.textContent).join('/'),issues:document.querySelectorAll('.rpt-issue').length,gantt:!!document.querySelector('.rpt-gantt svg'),stats:[...document.querySelectorAll('.rpt-stats b')].map(b=>b.textContent)}));console.log(tag,'report:',rp);
-  A(rp.open&&rp.secs.length===4&&/^rpt-cover,rpt-toc(,rpt-sec){4}$/.test(rp.pages)&&rp.toc.length>0,tag+' report pages: cover, toc, four chapters');
+  A(rp.open&&rp.secs.length===3&&/^rpt-cover,rpt-toc(,rpt-sec){3}$/.test(rp.pages)&&rp.toc.length>0,tag+' report pages: cover, toc, three chapters');
   await p.screenshot({path:`rp_${tag}_1.png`});
   // 改字、新增章節、移除章節（2026-11-06 改版：封面、目錄、各章）
   await p.click('.rpt-ch[data-k=free] .rpt-text');await p.keyboard.type('本期完成六宿停車場公告清理，與總務處建立固定回報窗口。');
   await p.click('#rptAdd');await p.waitForTimeout(500);await p.keyboard.type('附件與感謝');await p.keyboard.press('Tab');
   await p.evaluate(()=>{const t=[...document.querySelectorAll('.rpt-sec')].pop().querySelector('.rpt-text');t.focus()});await p.keyboard.type('感謝各位專員的協助。');
-  await p.evaluate(()=>[...document.querySelectorAll('.rpt-sec')].find(s=>s.querySelector('h2').textContent==='下期規劃').querySelector('[data-chx]').click());await p.waitForTimeout(400);
+  await p.evaluate(()=>document.querySelector('.rpt-ch[data-k=app] [data-chx]').click());await p.waitForTimeout(400);
   const ae=await p.evaluate(()=>[...document.querySelectorAll('.rpt-ch')].map(c=>c.querySelector('.rpt-ch-n').textContent+c.querySelector('h2').textContent));console.log(tag,'after edit:',ae);
-  A(ae.length===rp.secs.length&&ae.some(x=>/附件與感謝$/.test(x))&&!ae.some(x=>/下期規劃$/.test(x))&&ae.every((x,i)=>x.startsWith(String(i+1).padStart(2,'0'))),tag+' add/remove chapter');
+  A(ae.length===rp.secs.length&&ae.some(x=>/附件與感謝$/.test(x))&&!ae.some(x=>/附錄/.test(x))&&ae.every((x,i)=>x.startsWith(String(i+1).padStart(2,'0'))),tag+' add/remove chapter');
   await p.screenshot({path:`rp_${tag}_2.png`,fullPage:false});
   if(tag==='d'){
     await p.evaluate(()=>document.activeElement&&document.activeElement.blur());await p.emulateMedia({media:'print'});

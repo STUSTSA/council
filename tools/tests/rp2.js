@@ -21,7 +21,7 @@ for(const [tag,w,h,touch] of [['desktop',1300,900,false],['mobile',412,915,true]
   console.log('open',JSON.stringify(await st()));
   const fit=await p.evaluate(()=>{const f=$('.rpt-fit'),pp=$('.rpt-paper'),sc=$('#rptOv .rpt-scroll');return {fit:f.classList.contains('is-fit'),k:+(pp.getBoundingClientRect().width/pp.offsetWidth).toFixed(3),paperW:pp.offsetWidth,hscroll:sc.scrollWidth>sc.clientWidth+1}});
   console.log('fit',JSON.stringify(fit));ok(fit.paperW>=793&&!fit.hscroll&&(tag==='mobile'?fit.fit&&fit.k<.6:!fit.fit),'紙張是 A4 寬'+(tag==='mobile'?'、整張縮小、不能左右捲':'、沒有縮小'));
-  await p.evaluate(()=>{const t=[...document.querySelectorAll('.rpt-ch')].find(c=>c.querySelector('h2').textContent==='工作檢討').querySelector('.rpt-text');
+  await p.evaluate(()=>{const t=document.querySelector('.rpt-ch[data-k=free] .rpt-text');
     t.innerHTML=Array.from({length:70},(_,i)=>`<p>第 ${i+1} 段：這是一段很長的工作檢討文字，用來測試報告換頁的位置是不是跟實際存成 PDF 的時候一樣，換行也要一樣。</p>`).join('');t.dispatchEvent(new Event('input',{bubbles:true}))});
   await p.waitForTimeout(900);const s2=await st();console.log('long text',JSON.stringify(s2));ok(s2.pb===0&&s2.foot===0&&!s2.measure,'沒有分頁線、預覽裡沒有列印用的頁碼與強制換頁');
   const top=await p.evaluate(()=>[...document.querySelectorAll('.rpt-sp')].map(sp=>{const sec=sp.closest('.rpt-page'),el=sp.nextElementSibling,k=sec.getBoundingClientRect().height/sec.offsetHeight,y=(el.getBoundingClientRect().top-sec.getBoundingClientRect().top)/k,A4=rptPageH.A4+28;return +((y%A4)/rptPageH.top*14).toFixed(1)}));
