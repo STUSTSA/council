@@ -29,7 +29,7 @@ function renderWeeks(){
   if(!openWeeks&&ws.length)openWeeks=new Set([ws[0].id]);
   const lines=t=>String(t||"").split("\n").map(l=>`<span class="wl">${l.trim()?esc(l):"&nbsp;"}</span>`).join("");
   $("#weekList").innerHTML=ws.map((w,k)=>`<details class="week ${w.id===newWeekId?"new":""}" data-week="${esc(w.id)}" ${openWeeks&&openWeeks.has(w.id)?"open":""}>
-      <summary><span class="num">${fmt(w.date)}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${esc(fmt(w.date))} 的週報">刪除</button>`:""}</summary>
+      <summary><span class="num">${esc(fmt(w.date))}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${esc(fmt(w.date))} 的週報">刪除</button>`:""}</summary>
       <div class="week-tools"><button type="button" class="icon" data-copyweek>複製文字</button><button type="button" class="icon auth-only" data-editweek>${ico("edit")}編輯</button></div>
       <div class="week-text">${lines(w.text)}</div></details>`).join("")
     ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
@@ -65,7 +65,7 @@ function renderGantt(){
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     const l=pos(s),w=Math.max(.8,pos(e)-l);
     const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}${mkPending(m)?" pend":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
-    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
+    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${esc(fmt(s).slice(5))} – ${esc(fmt(e).slice(5))}</span></div>
       <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
   }).join("");
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
@@ -87,13 +87,13 @@ function latestMarkerId(list){
 }
 function markerHTML(m,latest,it){
   const at=cssNum(mkAt(it,m),50),edge=at<18?"edgeL":at>82?"edgeR":"";
-  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" data-marker="${esc(m.id)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${fmt(m.date).slice(5)}</span> `:""}${esc(m.text)}</span></div>`;
+  return `<div class="marker ${m.pos==="down"?"down":"up"} ${edge} ${latest&&m.id!==latest?"quiet":""}" style="left:${at}%;--mc:${cssColor(m.color,MARK_COLORS[0])}" data-marker="${esc(m.id)}"><span class="stem"></span><span class="dot"></span><span class="lbl">${m.date?`<span class="num">${esc(fmt(m.date).slice(5))}</span> `:""}${esc(m.text)}</span></div>`;
 }
 
 const sortedMarkers=it=>[...it.markers].sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||a.at-b.at);
 function logHTML(it){
   const ms=sortedMarkers(it);if(!ms.length)return "";
-  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li${mkPending(m)?' class="pend"':""}><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
+  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li${mkPending(m)?' class="pend"':""}><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?esc(fmt(m.date)):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
 /* ---------- 議題詳情的時程條（DESIGN-next 第八節：比照 Android Material 的音量滑桿） ----------
@@ -184,13 +184,13 @@ function cardHTML(it){
       <div class="card-head">${nm?`<input class="card-title" data-iname value="${esc(it.title)}" maxlength="500" aria-label="議題名稱" autocomplete="off" enterkeyhint="done">`:`<b class="card-title"${canEdit()&&!editing?` data-iname-go tabindex="0" role="button"`:""}>${esc(it.title)}</b>`}${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></div>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
-    ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${fmt(it.start)} – ${fmt(it.end)}`:"未排入甘特圖"}</span></div>
+    ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${esc(fmt(it.start))} – ${esc(fmt(it.end))}`:"未排入甘特圖"}</span></div>
     <div class="tags">${tagsHTML(it)}</div>
     ${staffHTML(it.staff)}${labelChipsHTML(it.labels)}
     ${it.note?`<p class="note"><span class="note-h">目前進度</span>${esc(it.note)}</p>`:""}`}
     <div class="c-track" data-track>
       ${sliderHTML(it)}
-      ${hasDates(it)?issueSpan(it).map((d,k)=>`<span class="tick ${k?"tick-e":"tick-s"}" style="left:${k*100}%">${fmt(d).slice(5)}</span>`).join(""):""}
+      ${hasDates(it)?issueSpan(it).map((d,k)=>`<span class="tick ${k?"tick-e":"tick-s"}" style="left:${k*100}%">${esc(fmt(d).slice(5))}</span>`).join(""):""}
       ${(()=>{const L=latestMarkerId(it.markers);return it.markers.map(m=>markerHTML(m,L,it)).join("")})()}
     </div>
     ${(()=>{const kids=state.events.filter(e=>!e.doneAt&&e.issueId===it.id);return kids.length?`<div class="kid-evs"><div class="att-h">進行中的即時回報</div><div class="kid-list">${kids.map(e=>`<span class="kid-ev" data-st="${evStatus(e)}"><span class="live-dot" aria-hidden="true"></span>${esc(e.name)}</span>`).join("")}</div></div>`:""})()}
@@ -235,7 +235,7 @@ function doneFieldsHTML(o,isEv){
   const opts=[["","（不連結）"],...state.issues.map(i=>[i.id,i.title+(i.doneAt?"（已結案）":"")])];
   return `<div class="evfs">
       ${F(nk,"名稱",`<b>${esc(o[nk])}</b>`,()=>`<input data-e="${nk}" value="${esc(o[nk])}">`)}
-      ${isEv&&fsMode()?"":F("done","完成日期",`<span class="num">${fmt(o.doneAt)||"—"}</span>`,()=>`<input type="date" data-e="done" value="${esc(o.doneAt)}">`)}
+      ${isEv&&fsMode()?"":F("done","完成日期",`<span class="num">${esc(fmt(o.doneAt))||"—"}</span>`,()=>`<input type="date" data-e="done" value="${esc(o.doneAt)}">`)}
       ${F(dk,"說明",o[dk]?`<span class="evf-desc">${esc(o[dk])}</span>`:noneTxt("沒有說明，點一下填寫"),()=>`<textarea data-e="${dk}" rows="3">${esc(o[dk]||"")}</textarea>`)}
       ${isEv?F("issue","母議題",par?esc(par.title):noneTxt("不連結"),()=>fieldHTML({name:"evIssue",label:"完成紀錄會寫進這個議題的處理紀錄",type:"select",value:o.issueId||"",options:opts})):""}
     </div>`;
@@ -351,9 +351,9 @@ function doneCardHTML(id,full){
       :`${fsDelOk()?`<button type="button" class="icon danger" data-deldone>刪除</button>`:""}<button type="button" class="icon" data-restore>取消結案</button>`}</div>${editBarHTML()}`
     :`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
   if(x.k==="e")return lcLiveHTML(o,{k:"done",ids,full,edit:ed,tail,body:ed?doneFieldsHTML(o,true)+evTimesHTML(o):null});
-  const body=ed?doneFieldsHTML(o,false):`${hasDates(o)?`<p class="sub">期間 <span class="num">${fmt(o.start)} – ${fmt(o.end)}</span></p>`:""}${o.note?`<p class="dn-note">${esc(o.note)}</p>`:""}
+  const body=ed?doneFieldsHTML(o,false):`${hasDates(o)?`<p class="sub">期間 <span class="num">${esc(fmt(o.start))} – ${esc(fmt(o.end))}</span></p>`:""}${o.note?`<p class="dn-note">${esc(o.note)}</p>`:""}
       ${o.tags.length?`<div class="tags">${o.tags.map((g,k)=>`<span class="tag ${k===o.cur?"cur":k<o.cur?"past":""}">${esc(g)}</span>`).join("")}</div>`:""}
-      ${o.markers.length?`<ul class="dn-mk">${sortedMarkers(o).map(m=>`<li>${m.date?`<span class="num">${fmt(m.date)}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
+      ${o.markers.length?`<ul class="dn-mk">${sortedMarkers(o).map(m=>`<li>${m.date?`<span class="num">${esc(fmt(m.date))}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
       ${o.links.length?`<div class="lnks">${o.links.map(doneLink).join("")}</div>`:""}`;
   return lcFrame({k:"done",id:o.id,key,st:"done",ids,full,ro:true,sec:ed,attr:`data-issue="${esc(o.id)}"`,title:`<b class="lc-title">${esc(o.title)}</b>`,
     meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>議題</span>`,body,tail,save:""});

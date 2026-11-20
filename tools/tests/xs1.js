@@ -30,15 +30,20 @@ let fail=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fail++}
     d.issues=[iss,done];
     d.events=[{id:'eL',name:'回報L',desc:'內容',round:1,touchedAt:'00000<img ',times:[],links:[],staff:[],labels:[]},
               {id:'eD',name:'回報D',desc:'',round:1,doneAt:'<img src',touchedAt:'',times:[],links:[],staff:[],labels:[]}];
-    fwCache.set(dept.id,{at:Date.now(),data:normalize(d),err:''});
+    /* 04：讀進來（normalize）時不合格式的日期會被整理掉；這裡要測的是輸出那一層，所以整理完再把同樣的值放回去 */
+    const nd=normalize(JSON.parse(JSON.stringify(d)));
+    const tidied=nd.issues[0].markers[0].date===''&&nd.issues[1].doneAt===null&&nd.events[0].touchedAt===''&&nd.events[1].doneAt===null;
+    nd.issues[0].markers[0].date=d.issues[0].markers[0].date;nd.issues[1].doneAt=d.issues[1].doneAt;nd.events[0].touchedAt=d.events[0].touchedAt;nd.events[1].doneAt=d.events[1].doneAt;
+    fwCache.set(dept.id,{at:Date.now(),data:nd,err:''});
     state.follows=[{id:'f1',dept:dept.id,kind:'issue',ref:'iX'},{id:'f2',dept:dept.id,kind:'done',ref:'iD'},
                    {id:'f3',dept:dept.id,kind:'live',ref:'eL'},{id:'f4"><img src=x onerror=window.__x=2>',dept:dept.id,kind:'done',ref:'eD'}];
     renderFollows();
     await new Promise(r=>setTimeout(r,1200));
     const box=document.querySelector('#follows');
-    return {x:window.__x,imgs:box.querySelectorAll('img,svg:not(.ico):not([class])').length,raw:box.querySelectorAll('img').length,
+    return {tidied,x:window.__x,imgs:box.querySelectorAll('img,svg:not(.ico):not([class])').length,raw:box.querySelectorAll('img').length,
       n:box.querySelectorAll('article.fw').length,txt:box.textContent,ids:[...box.querySelectorAll('article.fw')].map(a=>a.dataset.fw)};
   });
+  ok(A.tidied,'A 讀進來時（normalize）不合格式的日期已經整理掉（04）');
   ok(A.x===undefined,`A 追蹤面板沒有執行注入的程式（window.__x=${A.x}）`);
   ok(A.raw===0,`A 追蹤面板沒有多出 img（${A.raw}）`);
   ok(A.n===4,`A 四筆追蹤都畫出來（${A.n}）`);

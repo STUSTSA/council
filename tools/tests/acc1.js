@@ -235,6 +235,31 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(pt2.includes('刪除卡片')&&pt2.includes('測試卡片甲')&&pt2.includes('u2 同學'),'紀錄：看得到卡片刪除（誰、標題）');
   ok(pt2.includes('核准申請')&&pt2.includes('撤權')&&pt2.includes('重新產生 QR')&&pt2.includes('撤銷 QR'),'紀錄：核准、撤權、重新產生、撤銷都有');
   ok(!boss.errs.length&&!gen.errs.length&&!u2.errs.length,`沒有頁面錯誤 ${[...boss.errs,...gen.errs,...u2.errs].join(' | ')}`);
+  /* ---------- 5b. 04：權限申請每人每個部門一份；核准的是畫面上那一版 ---------- */
+  {const sent=()=>u2.toasts.filter(x=>x.includes('已送出申請')).length,n0=sent();
+    await meText(u2);await u2.click('[data-hub="req"]');await dlg(u2);
+    await dlgSet(u2,{dept:'works',role:'editor',note:'第二個部門'});await dlgAct(u2,'ok');
+    ok(await until(()=>sent()>n0),'04 申請：送出另一個部門');
+    ok(await until(async()=>{const r=await read(`roleRequests/${u2Uid}_works`);return r&&r.status==='pending'&&r.rev===1}),'04 申請：文件 ID 是「UID＋底線＋部門」');
+    await u2.click('[data-hub="req"]');await dlg(u2);
+    await dlgSet(u2,{dept:'works',role:'admin',note:''});await dlgAct(u2,'ok');
+    ok(await until(()=>u2.evaluate(()=>{const e=document.querySelector('#dlgForm .dlg-err');return !!e&&!e.hidden&&e.textContent.includes('這個部門已經有一筆待審的申請')})),'04 申請：同一個部門待審中再送，視窗裡提示、不送出');
+    await dlgAct(u2,'cancel');
+    {let docs=[];await admin(async d=>{docs=(await d.collection('roleRequests').where('uid','==',u2Uid).get()).docs.map(x=>x.id+':'+x.data().rev)});
+      ok(docs.length===2&&docs.includes(`${u2Uid}_works:1`),`04 申請：沒有多送一筆（${docs.length} 份）`)}
+    /* 總管理員的清單讀出來之後，申請被改過（等同撤回後換一個角色再申請）：核准不生效、清單更新成新的內容 */
+    await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);
+    await hub(boss,'requests');
+    ok(await until(async()=>(await paneText(boss)).includes('工務部編輯者')),'04 核准：待審清單顯示工務部編輯者');
+    await admin(d=>d.doc(`roleRequests/${u2Uid}_works`).update({role:'admin',rev:3}));
+    await boss.click('[data-ok]');
+    ok(await toastHas(boss,'這筆申請剛被改過'),'04 核准：清單讀出來之後被改過的申請，提示再看一次');
+    const r2=await read(`roles/${u2Uid}`),q2=await read(`roleRequests/${u2Uid}_works`);
+    ok(!((r2&&r2.depts)||{}).works&&q2.status==='pending','04 核准：沒有寫入角色、申請仍是待審');
+    ok(await until(async()=>(await paneText(boss)).includes('工務部管理員')),'04 核准：清單更新成現在的內容');
+    await boss.click('[data-no]');await dlg(boss);await dlgAct(boss,'delete');
+    ok(await until(async()=>(await read(`roleRequests/${u2Uid}_works`)).status==='rejected'),'04 拒絕：照畫面上那一版拒絕');
+  }
   /* 登出 */
   await meText(gen);await gen.click('[data-hub="out"]');   /* 帳號頁在第 2 段已經打開（meText），再點那一列會收起 */
   ok(await until(async()=>(await setText(gen)).includes('用 Google 登入')),'登出：設定頁回到「用 Google 登入」');
