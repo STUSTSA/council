@@ -1139,7 +1139,7 @@
     "2026-11-12"
    ],
    "touchedAt": "2026-11-12T03:01",
-   "report": false,
+   "report": true,
    "roundAt": "2026-11-05T17:37",
    "labels": [],
    "blocks": [
