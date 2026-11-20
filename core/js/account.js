@@ -223,7 +223,7 @@ function peoplePanel(){
       if(!p.alive)return;
       if(who){const r=roles.find(x=>x.uid===who)||{uid:who,super:false,depts:{}},self=who===acct.user.uid;
         p.html=p.head()+`<div class="acct-person"><b>${esc(nameOf(who))}</b><small>${esc(mail(who))}</small></div>
-          <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${roleT(v,d)}</span>
+          <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${esc(roleT(v,d))}</span>
             <button type="button" class="icon" data-swap="${esc(d)}">改成${v==="admin"?"編輯者":roleT("admin",d)}</button><button type="button" class="icon danger" data-rm="${esc(d)}">撤銷</button></div>`).join("")}
             <div class="acct-line"><span>總管理員</span>${self?`<small>自己</small>`:`<button type="button" class="icon${r.super?" danger":""}" data-super>${r.super?"取消":"授予"}</button>`}</div></div>
           <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button><button type="button" class="add-row" data-back>返回</button></div>`;
@@ -392,7 +392,7 @@ function invitePanel(){
       if(!p.alive)return;
       const qr=cur?await qrSvg(joinUrl(cur.token,cur.deptId)):"";
       p.html=p.head()+(cur?`<div class="acct-qr${live()?"":" off"}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
-          <b>${esc(deptNameOf(cur.deptId))}・${roleT(cur.role,cur.deptId)}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
+          <b>${esc(deptNameOf(cur.deptId))}・${esc(roleT(cur.role,cur.deptId))}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
           <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke="${esc(cur.h)}">撤銷</button>`:""}</div></div>`
         :`<button type="button" class="primary acct-new" data-new>產生 QR</button>`)
         +`<div class="set-list acct-invites">${list.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${esc(roleT(i.role,i.deptId))}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&i.expiresAt>A.serverNow()&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>`;
@@ -439,7 +439,7 @@ function requestsPanel(){
     let leg={};
     const draw=()=>{if(!p.alive)return;
       /* 信箱（登入的帳號）放在粗體那一行最前面；名稱是申請人自己取的，放在後面的小字 */
-      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${roleT(q.role,q.deptId)}</b>
+      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${esc(roleT(q.role,q.deptId))}</b>
         <small>名稱 ${esc(nameOf(q.uid))} · ${hm(q.createdAt)}${q.legacyRef?` · 自稱舊身分 ${esc(leg[q.legacyRef]||q.legacyRef)}`:""}</small>${q.note?`<small>${esc(q.note)}</small>`:""}</span>
         <button type="button" class="icon" data-ok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-no="${esc(q.id)}">拒絕</button></div>`).join("")||`<p class="set-p acct-empty">沒有待審的申請</p>`}</div>`};
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
