@@ -132,7 +132,8 @@ const XSS='<img src=x onerror="window.__xss=1">\'"';
   await expand(ed,k2);
   await ed.click(`${box(k2)} [data-kpgo="${r2.blocks[0].id}"]`);await ed.waitForTimeout(400);
   await ed.keyboard.press('End');await ed.keyboard.press('Enter');await ed.keyboard.type('插入的一行');
-  await ed.click(`${lineSel(k2,1)} [data-kpdel]`);await ed.waitForTimeout(300);
+  /* 大輸入框：文字行沒有 ×，刪第一行＝選取第一行的字、刪掉、再刪掉換行（像備忘錄） */
+  await ed.keyboard.press('Control+Home');await ed.keyboard.press('Shift+End');await ed.keyboard.press('Delete');await ed.keyboard.press('Delete');await ed.waitForTimeout(300);
   await outside(ed);
   await ed.reload();await ed.waitForFunction(()=>typeof storeFsBase!=='undefined'&&storeFsBase&&state.events.length>0,null,{timeout:15000});await ed.waitForTimeout(800);
   const r3=await evOf(ed,k2);c=await read(C(k2));const ev3=await read(`events/${DEPT}__${tid2}`);

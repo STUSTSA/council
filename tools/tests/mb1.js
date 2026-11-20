@@ -8,9 +8,10 @@
 const c=require('./common');
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 (async()=>{
-  const {b,mk,login}=await c.setup();
+  let b;
   for(const [w,h,touch] of [[390,844,true],[1300,900,false]].filter(x=>!process.argv[2]||+process.argv[2]===x[0])){
     const tag=w+'：';
+    const S0=await c.setup();b=S0.b;const {mk,login}=S0;   /* 每個寬度各開一個瀏覽器與一份新的假遠端（共用同一份時，第二次登入會遇到已建立身分的對話框） */
     const p=await mk(w,h,'light',touch);await login(p);
     await p.evaluate(()=>{setSection('live',{instant:true});render()});await p.waitForTimeout(600);
     const id=await p.evaluate(()=>{const e=state.events.find(e=>!e.doneAt);
@@ -46,7 +47,7 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     const saved=await p.evaluate(i=>{const ev=state.events.find(e=>e.id===i);return {t:ev.blocks.map(b=>b.text),d:ev.desc}},id);
     ok(saved.t.length===s.t.length&&saved.d===saved.t.map((t,i)=>i===saved.t.indexOf('核取項目')?'☐ '+t:t).join('\n').replace(/^(.*)$/s,x=>x),tag+'存檔後 blocks、desc 一致（'+saved.t.length+' 行）');
     ok(p.errs.length===0,tag+'沒有錯誤 '+p.errs.join(';'));
-    await p.context().close();
+    await p.context().close();await b.close();
   }
-  console.log(fails?`FAIL ${fails}`:`全部通過（${passes} 項）`);await b.close();process.exit(fails?1:0);
+  console.log(fails?`FAIL ${fails}`:`全部通過（${passes} 項）`);process.exit(fails?1:0);
 })();
