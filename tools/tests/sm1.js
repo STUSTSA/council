@@ -29,7 +29,7 @@ ok(await p.evaluate(()=>$('#setSub').hidden&&setOpen),'系統返回鍵回到設�
 await p.goBack();await p.waitForTimeout(1200);
 ok(await p.evaluate(()=>!setOpen),'再按一次返回關掉設定');
 /* 長標題不撐出畫面 */
-await p.evaluate(()=>{const e=state.events.find(x=>x.doneAt);e.name='上傳NAS與常會資料以及提案單追蹤以及其他非常長的名稱';render();setSection('done',{instant:true})});await p.waitForTimeout(700);
+await p.evaluate(()=>{const e=state.events.find(x=>x.doneAt);e.name='上傳NAS與常會資料以及提案單追蹤以及其他非常長的名稱';render();setSection('done',{instant:true});doneWeekShow(wkStart(doneItems()[0].d),{instant:true})});await p.waitForTimeout(700);
 const r=await p.evaluate(()=>({panel:$('#donePanel').getBoundingClientRect().right,cap:Math.max(...[...document.querySelectorAll('#doneList .cp')].map(e=>e.getBoundingClientRect().right))}));
 ok(r.cap>0&&r.cap<=r.panel,'完成紀錄膠囊不超出區塊 '+JSON.stringify(r));
 ok(!p.errs.length,'手機（權益部）沒有錯誤 '+p.errs.join('|'));

@@ -1012,6 +1012,22 @@ a.link:active{transform:scale(.96)}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
+/* 週資料夾（views.js 的 renderDone）：完成紀錄先列「一週一張」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；卡片底色、圓角、陰影跟即時回報一樣，左上角多一個資料夾的耳朵 */
+.wkfs{display:grid;gap:26px 14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));padding-top:12px}
+.wkf{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;min-width:0;padding:22px 22px 18px;border:0;border-radius:0 var(--r-lg) var(--r-lg) var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
+.wkf::before{content:"";position:absolute;left:0;top:-10px;width:68px;height:11px;border-radius:10px 10px 0 0;background:var(--blk)}
+.wkf-d{font-size:19px;font-weight:700;letter-spacing:.04em}
+.wkf-n{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.wkf-n::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--done)}
+.wkf-pv{display:grid;width:100%;gap:3px;margin:6px 0 0;padding:0;list-style:none;font-size:14px;opacity:.7}
+.wkf-pv li{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wkf-more{font-size:12.5px;color:var(--muted)}
+.wk-head{display:flex;align-items:baseline;gap:12px;margin:0 2px 14px}
+.wk-head h3{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
+.wk-head span{font-size:13px;color:var(--muted)}
+@media (hover:hover){.wkf:hover{transform:translateY(-3px)}}
+.wkf:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){.wkf:hover,.wkf:active{transform:none}}
 @media (prefers-reduced-motion:reduce){
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}

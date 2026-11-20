@@ -11,6 +11,7 @@ const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.messag
 await p.goto('http://127.0.0.1:8300/index.html');await p.waitForFunction(()=>!document.body.classList.contains('intro'));await p.waitForTimeout(600);
 for(const sec of ['live','done']){
  await p.click(`#tabbar [data-tab=${sec}]`);await p.waitForTimeout(900);
+ if(sec==='done')await p.evaluate(()=>doneWeekShow(wkStart(doneItems()[0].d),{instant:true}));   /* 完成紀錄先列週資料夾：進到最新的一週 */
  const list=sec==='live'?'#events':'#doneList',ids=await p.evaluate(l=>[...document.querySelectorAll(l+' .cp')].map(x=>x.dataset.cp),list);
  if(!ids.length){console.log(w,sec,'no items');A(false,`${w} ${sec} 沒有膠囊`);continue}
  await p.click(`${list} .cp[data-cp="${ids[0]}"]`);await p.waitForTimeout(900);

@@ -16,6 +16,7 @@ let r=await p.evaluate(id=>{const i=state.issues.find(x=>x.id===id);return [i.ti
 console.log('after close btn',JSON.stringify(r));
 ok(r[1]===await p.evaluate(()=>today())&&r[2]==='已結案'&&r[3]==='取消結案','結案鈕：標記結案日、顯示「已結案」、鈕變「取消結案」');
 await save();
+await p.evaluate(id=>doneWeekFor(id),cid);
 ok(await p.evaluate(id=>!!document.querySelector(`#doneList [data-done="${id}"]`)&&!activeIssues().some(i=>i.id===id),cid),'儲存後移到完成紀錄');
 /* 時程條上按住拖曳新增註記 */
 const mid=ids[0];await show(mid);await p.click('#cardDetail .card-edit-btn');await p.waitForTimeout(700);

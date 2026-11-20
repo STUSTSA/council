@@ -69,7 +69,7 @@ ok(await p.evaluate(()=>state.issues.some(i=>i.title==='全新議題')&&!editing
 await p.evaluate(()=>setSection('done',{instant:true}));await R();
 const did=await p.evaluate(()=>state.issues.find(i=>i.doneAt)?.id||null),eid=await p.evaluate(()=>state.events.find(e=>e.doneAt&&!e.fromEv).id);
 /* ui-05：完成紀錄點膠囊打開卡片（寬螢幕在右邊、手機全螢幕，都是 .lc）；換一張前先按 Esc 收回 */
-const openDone=async id=>{if(await p.evaluate(()=>!!dnOpen)){await p.keyboard.press('Escape');await p.waitForTimeout(700)}await p.click(`#doneList .cp[data-cp="${id}"]`);await p.waitForTimeout(700)};
+const openDone=async id=>{if(await p.evaluate(()=>!!dnOpen)){await p.keyboard.press('Escape');await p.waitForTimeout(700)}await p.evaluate(i=>doneWeekFor(i),id);await p.click(`#doneList .cp[data-cp="${id}"]`);await p.waitForTimeout(700)};
 const scope=async id=>'.lc:not(.lc-ghost)';
 const edit=async id=>{const sc=await scope(id);await p.click(`${sc} .card-edit-btn`);await p.waitForTimeout(700);return scope(id)};
 await openDone(eid);let S=await edit(eid);

@@ -1,5 +1,5 @@
 /* 核心｜整體重繪＋區塊切換 */
-let openWeeks=null,newWeekId=null,prevDone=null,editing=false,dirty=false,snapshot="",keepIds=new Set();
+let openWeeks=null,newWeekId=null,prevDone=null,doneWeek=null,editing=false,dirty=false,snapshot="",keepIds=new Set();
 
 /* ---------- timeline math ---------- */
 /* 甘特圖看的範圍（2026-11-05）：「全部」＝設定的時間軸（state.range）；「上學期」＝8 月～隔年 1 月；「下學期」＝2 月～7 月。
@@ -126,7 +126,7 @@ function secFxStop(groups){groups.forEach(g=>{g.getAnimations().forEach(a=>a.can
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
   const prev=curSec,ord=TABS().map(t=>t[0]),dir=ord.indexOf(k)>=ord.indexOf(prev)?1:-1;
-  curSec=k;homeSync();if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
+  curSec=k;if(doneWeek&&k!==secOf("done"))doneWeekShow(null,{instant:true});homeSync();if(HS.q)hsClear();hsBar();renderTabbar();   /* 換分頁：搜尋清掉；會長室、秘書處自己的分頁沒有搜尋列（search.js） */
   secSwap(prev,k,dir,instant);
 }
 /* 從 prev 那一區換到 k 那一區（dir：1＝往工具列後面、-1＝往前；通知與行事曆 noti 也用這一套，notify.js 的 openNoti／closeNoti） */
