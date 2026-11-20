@@ -225,39 +225,65 @@ async function inviteRedeem(token) {
   return result;
 }
 
-/* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}，只有部門與 uid；名字從 profiles） ---------- */
+/* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}：部門、uid、角色 role（05）；名字從 profiles） ---------- */
 const rosterId = (d, u) => `${d}__${u}`;
 const ROLE_OK = ["admin", "editor"];
-/* 同部門的名單（編輯者、管理員、總管理員讀得到；別人 permission-denied） */
-async function roster(dept) { return (await getDocs(query(collection(db, "deptMembers"), where("deptId", "==", dept)))).docs.map(s => s.data().uid); }
-/* 本人：自己有角色的部門補上名單（第一次登入、QR 加入、核准之後都會補）。讀不到或沒寫成不影響其他功能 */
+/* 同部門的名單（編輯者、管理員、總管理員讀得到；別人 permission-denied）。role 是 05 才有的欄位（舊文件沒有，回傳空字串＝還沒對齊） */
+async function roster(dept) { return (await rosterFull(dept)).map(x => x.uid); }
+async function rosterFull(dept) { return (await getDocs(query(collection(db, "deptMembers"), where("deptId", "==", dept)))).docs.map(s => ({ uid: s.data().uid, role: ROLE_OK.includes(s.data().role) ? s.data().role : "" })); }
+/* 本人：自己有角色的部門補上名單、並讓名單上的 role 跟角色一致（第一次登入、QR 加入、核准、角色被改之後都會補）。讀不到或沒寫成不影響其他功能 */
 async function rosterSelf(roles) {
   const me = uid(); if (!me || !roles) return;
   for (const [d, r] of Object.entries(roles.depts || {})) {
     if (!ROLE_OK.includes(r)) continue;
-    try { if (!(await getDoc(ref("deptMembers", rosterId(d, me)))).exists()) await setDoc(ref("deptMembers", rosterId(d, me)), { deptId: d, uid: me, at: NOW() }); } catch (_) { /* 下次登入再試 */ }
+    try { const s = await getDoc(ref("deptMembers", rosterId(d, me))); if (!s.exists() || s.data().role !== r) await setDoc(ref("deptMembers", rosterId(d, me)), { deptId: d, uid: me, role: r, at: NOW() }); } catch (_) { /* 下次登入再試 */ }
   }
 }
-/* 總管理員：讓名單跟角色一致（改角色、核准、撤權之後，與打開「人員」時）。only＝只看這個 uid */
+/* 總管理員：讓名單跟角色一致（改角色、核准、撤權之後，與打開「人員」時）：補上缺的、角色不一致的改正（含補上 role）、清掉多的。only＝只看這個 uid */
 async function rosterSync(only) {
   const rs = only ? [await getDoc(ref("roles", only))].filter(s => s.exists()).map(s => ({ uid: s.id, depts: s.data().depts || {} }))
     : (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, depts: s.data().depts || {} }));
   const have = (await getDocs(only ? query(collection(db, "deptMembers"), where("uid", "==", only)) : collection(db, "deptMembers"))).docs.map(s => s.data());
-  const want = new Set(rs.flatMap(r => Object.entries(r.depts).filter(([, v]) => ROLE_OK.includes(v)).map(([d]) => rosterId(d, r.uid))));
-  const got = new Set(have.map(x => rosterId(x.deptId, x.uid)));
+  const want = new Map(rs.flatMap(r => Object.entries(r.depts).filter(([, v]) => ROLE_OK.includes(v)).map(([d, v]) => [rosterId(d, r.uid), v])));
+  const got = new Map(have.map(x => [rosterId(x.deptId, x.uid), x.role || ""]));
   if (only && !rs.length) want.clear();
-  const add = [...want].filter(k => !got.has(k)), del = [...got].filter(k => !want.has(k));
+  const add = [...want].filter(([k, v]) => got.get(k) !== v).map(([k]) => k), del = [...got.keys()].filter(k => !want.has(k));
   let failed = 0;
   for (let i = 0; i < add.length + del.length; i += 5) {   /* 每份寫入的規則讀取約 3～4 次，整批上限 20（不依賴快取）：一批 5 份 */
     const b = writeBatch(db);
     [...add.map(k => ["add", k]), ...del.map(k => ["del", k])].slice(i, i + 5).forEach(([op, k]) => {
       const [d, u] = k.split("__");
-      if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, at: NOW() }); else b.delete(ref("deptMembers", k));
+      if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, role: want.get(k), at: NOW() }); else b.delete(ref("deptMembers", k));
     });
     try { await b.commit(); } catch (e) { failed++; }   /* 一批失敗（例如本人剛好同時補上）不擋後面的批，下次打開人員再對齊（03 審查） */
   }
   if (failed) throw Object.assign(new Error("roster"), { code: "partial", failed });
   return { add: add.length, del: del.length };
+}
+/* 05 部長（部門管理員）撤掉本部門的編輯者：roles（lastVia dept、lastRef 部門）＋稽核＋刪名單同一批。
+   規則只准撤編輯者、不能動自己與管理員、不能動別的部門；總管理員不走這條（人員頁的 roleWrite） */
+async function deptRemove(target, dept) {
+  await runTransaction(db, async tx => {
+    const s = await tx.get(ref("roles", target));
+    if (!s.exists()) throw fail("inactive");
+    const cur = s.data(), before = plainRole(cur);
+    if (before.depts[dept] !== "editor") throw fail("inactive");
+    const depts = { ...before.depts }; delete depts[dept];
+    const after = { super: before.super, depts }, rev = cur.rev + 1, m = await tx.get(ref("deptMembers", rosterId(dept, target)));
+    tx.set(ref("roles", target), { ...after, rev, lastVia: "dept", lastRef: dept, updatedAt: NOW(), updatedBy: uid() });
+    tx.set(auditRef("roles", target, rev), audit("roles", target, rev, "dept", before, after, dept));
+    if (m.exists()) tx.delete(ref("deptMembers", rosterId(dept, target)));
+  });
+}
+/* 05 總管理員刪除舊身分（legacyIdentities 只有總管理員能刪，規則沿用 04）：一批 10 份，回傳實際刪掉幾份 */
+async function legacyDelete(ids) {
+  let n = 0;
+  for (let i = 0; i < ids.length; i += 10) {
+    const b = writeBatch(db);
+    ids.slice(i, i + 10).forEach(id => b.delete(ref("legacyIdentities", id)));
+    await b.commit(); n += Math.min(10, ids.length - i);
+  }
+  return n;
 }
 /* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
    mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
@@ -353,7 +379,7 @@ async function auditChain(col, id) {
   return { rev, missing };
 }
 
-const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterSelf, rosterSync,
+const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, legacyDelete, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
   rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };

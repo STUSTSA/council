@@ -101,6 +101,7 @@
 | `labels` | 標籤 ID（`labels[]`，改新 ID） |
 | `links` | 連結（`links[]`）＝`[{id, name, url, color}]`。03 審查：最多 10 個、`color` 只能是 `#rrggbb`（規則 `linksOk`，改了超連結才檢查；[permissions.md](permissions.md) 第 5.1f 節） |
 | `report` | 會議要報告（`report`） |
+| `reportAt` | 標記報告當下的台灣時間 `YYYY-MM-DD HH:mm`（05）；只有 `report` 為 true 才有；每週三 00:00（台灣）前的標記失效 |
 | `state` | `open` \| `done` \| `purging`（02A：永久刪除進行中，不可逆；拿掉 `deleted`） |
 | `doneAt`、`deletedAt`、`deletedBy` | （`doneAt`）；`deletedAt`、`deletedBy`＝開始永久刪除的時間與人 |
 | `purgeLog` | 02B：開始永久刪除時寫入的亂數，指向刪除紀錄 `auditLogs/cards_{id}_purge_{purgeLog}`；新建、一般編輯都不能帶（[permissions.md](permissions.md) 第 5.1c 節） |
