@@ -24,7 +24,7 @@ function hsIndex(ql){
     if(hsHit(i.title,ql)||hsHit(i.note,ql)||m)issue.push({k:"issue",id:i.id,title:i.title,sub:hsHit(i.title,ql)?"":hsHit(i.note,ql)?i.note:m});
   });
   done.sort((a,b)=>b.d.localeCompare(a.d));
-  return [["live","LIVE","即時回報",live],["done","ARCHIVE","完成紀錄",done],["issue","ISSUES","議題",issue]].filter(([k])=>secTab(secOf(k==="issue"?"progress":k)));
+  return [["live","LIVE","即時回報",live],["done","ARCHIVE","完成紀錄",done],["issue",ISS==="專案"?"PROJECTS":"ISSUES",ISS,issue]].filter(([k])=>secTab(secOf(k==="issue"?"progress":k)));
 }
 const hsHL=(s,q)=>{const t=String(s||"");const i=t.toLowerCase().indexOf(q.toLowerCase());return i<0||!q?esc(t):esc(t.slice(0,i))+`<mark>${esc(t.slice(i,i+q.length))}</mark>`+esc(t.slice(i+q.length))};
 /* 搜尋列只在三頁出現（會長室、秘書處自己的分頁沒有）；不在那三頁時順便清掉 */
