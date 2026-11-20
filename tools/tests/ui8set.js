@@ -105,14 +105,14 @@ const gearSt=p=>p.evaluate(()=>{const g=$('#setBtn');return {open:setOpen,on:g.c
     await p.click('#setBtn');await W(900);
     let rc=await rowCheck(p);ok(rc.n>=7&&!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'412 列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
     const sub=()=>p.evaluate(()=>{const s=$('#setSub'),r=s&&s.getBoundingClientRect();return {sub:subOpen,shown:!!s&&!s.hidden,full:!!r&&r.left===0&&Math.abs(r.top-document.querySelector('.dhead').getBoundingClientRect().bottom)<1.5&&r.top>20&&r.width===innerWidth&&r.bottom===innerHeight,listHidden:$('#setOv').hidden,
-      top:s?[...s.querySelector('.set-sub-top').children].map(x=>x.id):[],logo:!!s&&!!s.querySelector('.logo,.set-logo'),hub:s?[...s.querySelectorAll('.set-hub:not([hidden]) [data-hub]')].map(x=>x.dataset.hub):[],
+      logo:!!s&&!!s.querySelector('.logo,.set-logo'),hub:s?[...s.querySelectorAll('.set-hub:not([hidden]) [data-hub]')].map(x=>x.dataset.hub):[],
       dlg:$('#dlg').open&&!!s&&s.contains($('#dlg'))?$('#dlgForm>b')?.textContent:'',log:!!s&&!!s.querySelector('#logOv:not([hidden])'),week:!!s&&!!s.querySelector('#weekWrap:not([hidden])'),look:!!s&&!!s.querySelector('.look')}});
     const seen={};
     const go=async k=>{await p.click(`#setOv [data-set="${k}"]`);await W(1100);return sub()};
-    const leave=async()=>{for(let i=0;i<3&&await p.evaluate(()=>subOpen);i++){await p.click('#subBack');await W(1000)}};
-    let s=await go('report');ok(s.sub&&s.shown&&s.full&&s.top.join()==='subBack'&&!s.logo&&s.hub.join()==='week,report','412 進子頁（ui-09 起從部門標題列下緣蓋到底，標題列留著）、上方只有返回 '+JSON.stringify(s));
+    const leave=async()=>{for(let i=0;i<3&&await p.evaluate(()=>subOpen);i++){await p.click('.dh-home');await W(1000)}};
+    let s=await go('report');ok(s.sub&&s.shown&&s.full&&!s.logo&&s.hub.join()==='week,report','412 進子頁（ui-09 起從部門標題列下緣蓋到底，標題列留著）、沒有自己的返回鈕（左上圓鈕是上一頁） '+JSON.stringify(s));
     rc=await rowCheck(p);ok(!rc.bad.length&&!rc.gap.length&&!rc.rad.length,'412 子頁的列：沒有小字、留縫、圓角 14 '+JSON.stringify(rc));
-    await p.click('#setSub [data-hub="week"]');await W(1000);seen['每週概述']=(await sub()).week;await p.click('#subBack');await W(1000);
+    await p.click('#setSub [data-hub="week"]');await W(1000);seen['每週概述']=(await sub()).week;await p.click('.dh-home');await W(1000);
     await p.click('#setSub [data-hub="report"]');await W(1000);seen['工作報告']=(await sub()).dlg==='匯出工作報告';await leave();
     s=await sub();ok(!s.sub&&!s.listHidden,'412 返回回到設定清單');
     s=await go('log');seen['編輯紀錄']=s.log;c=await noChrome(p);ok(!c.close,'412 編輯紀錄子頁沒有「關閉」');await leave();

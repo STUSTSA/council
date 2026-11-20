@@ -7,7 +7,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <!-- 部門標題列（DESIGN-next 第六節「部門內」）：首頁鍵、部門標誌、英文小標與部門名、（沒有權限）唯讀標籤、（可編輯的單位）唯讀檢視的眼睛鈕、通知鈕。
            換分頁、進出設定與通知都是同一個節點（data-fx-keep，不參加進場動畫）；顯示哪些鈕由 views.js 的 renderHero 決定 -->
       <header class="dhead" data-fx-keep>
-        <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>
+        <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>   <!-- 在部門主頁是首頁鍵；進到更深的頁面（設定、通知、卡片詳情…）自動變成上一頁（views.js 的 homeSync） -->
         <span class="dh-logo" aria-hidden="true"></span>
         <div class="dh-name"><span class="dh-en" id="dhEn"></span><b id="dhName"></b></div>
         <span class="dh-ro" id="dhRo" hidden>唯讀</span>

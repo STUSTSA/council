@@ -1492,10 +1492,8 @@ body.set-open #pageMain{overflow:hidden}
 .set-pane{flex:1 1 0;min-width:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:14px calc(4px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
 .set-pane[hidden]{display:none}
 /* 手機版的下一層（nav.js 的 subRun）：設定清單點了有下一層的項目，進到這個全畫面子頁，表單畫在 .set-sub-body 裡（樣式跟桌面右側面板同一套）；
-   左上「返回」回到設定清單。進出用換頁動畫（pagefx.js） */
+   標題列左上的圓鈕在這時是「上一頁」（views.js 的 homeSync）、回到設定清單。進出用換頁動畫（pagefx.js） */
 .set-sub{z-index:39}
-.set-sub-top{display:flex;align-items:center;min-height:44px}   /* 手機子頁上方只有「返回」 */
-#subBack{gap:6px;padding-left:12px;padding-right:16px}   /* 左邊的箭頭自己帶留白，左內距少 4px，箭頭＋「返回」整組才視覺置中 */
 .set-sub-body{flex:1;min-height:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;padding:10px calc(2px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
 /* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
