@@ -62,6 +62,7 @@ function hsClear(){const q=$("#boardQ");if(!q)return;q.value=HS.q="";HS.on=-1;hs
 function hsGo(x){
   if(!x)return;$("#boardQ").blur();hsClear();
   if(notiOpen)closeNoti(true);if(setOpen)closeSettings(true);
+  if(x.k==="done")doneWeekFor(x.id);   /* 完成紀錄先進到那一週（views.js） */
   const sec=secOf(x.k==="issue"?"progress":x.k);if(typeof setSection==="function"&&secTab(sec))setSection(sec);
   setTimeout(()=>{
     const el=x.k==="issue"?document.querySelector(`#gantt [data-jump="${CSS.escape(x.id)}"]`):document.querySelector(x.k==="live"?`#events [data-cp="${CSS.escape(x.id)}"]`:`#donePanel [data-cp="${CSS.escape(x.id)}"]`);

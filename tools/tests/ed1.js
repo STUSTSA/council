@@ -60,6 +60,7 @@ for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login,st}=await c.
   await p.click('#cardDetail [data-edcancel]');await p.waitForTimeout(700);
   /* 完成紀錄：展開才有「編輯」 */
   await p.evaluate(()=>setSection('done',{instant:true}));await p.waitForTimeout(600);
+  await p.evaluate(()=>doneWeekShow(wkStart(doneItems()[0].d),{instant:true}));await p.waitForTimeout(300);   /* 完成紀錄先列週資料夾：進到最新的一週 */
   const did=await p.evaluate(()=>document.querySelector('#doneList .cp').dataset.done);
   await p.click(`#doneList .cp[data-cp="${did}"]`);await p.waitForTimeout(900);
   const dbtn='.lc:not(.lc-ghost) .card-edit-btn';

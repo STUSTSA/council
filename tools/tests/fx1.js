@@ -25,6 +25,7 @@ ok(await p.evaluate(()=>!lvOpen&&!$('#liveMD').classList.contains('split')),'點
 /* 完成紀錄 */
 await p.click('#tabbar [data-tab=done]');await p.waitForTimeout(1200);
 ok(await p.evaluate(()=>!$('#doneMD').classList.contains('split')),'完成紀錄：還沒點之前不分欄');
+await p.click('#doneList .wkf');await p.waitForTimeout(500);   /* 完成紀錄先列週資料夾：點進最新的一週 */
 await p.click('#doneList .cp:nth-child(3)');await p.waitForTimeout(800);
 ok(await p.evaluate(()=>!!dnOpen&&$('#doneMD').classList.contains('split')),'完成紀錄：點一筆後分欄');
 await p.keyboard.press('Escape');await p.waitForTimeout(700);

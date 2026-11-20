@@ -187,9 +187,9 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     await s.evaluate(()=>{localStorage.clear();localStorage.setItem('workboard:ghtoken','T')});await s.reload();await s.waitForTimeout(2000);await D.login(s);await s.waitForTimeout(600);
     const fab=()=>s.evaluate(()=>!$('#addEvent').hidden&&$('#addEvent')._tgl===true);
     const f0=await fab();
-    await s.click('#doneList .cp[data-cp="D1"]');await s.waitForTimeout(700);const f1=await fab();
+    await s.evaluate(()=>doneWeekFor('D1'));await s.click('#doneList .cp[data-cp="D1"]');await s.waitForTimeout(700);const f1=await fab();
     await s.evaluate(()=>{state.events.find(e=>e.id==='D1').doneAt=null;render()});await s.waitForTimeout(600);const f2=await fab();
-    await s.click('#doneList .cp[data-cp="D2"]');await s.waitForTimeout(700);const f3=await fab();
+    await s.evaluate(()=>doneWeekFor('D2'));await s.click('#doneList .cp[data-cp="D2"]');await s.waitForTimeout(700);const f3=await fab();
     await s.evaluate(()=>{state.events=state.events.filter(e=>e.id!=='D2');render()});await s.waitForTimeout(600);const f4=await fab();
     ok(f0&&!f1&&f2&&!f3&&f4,`P1-1 秘書處：完成卡打開時圓鈕不出現（${f1}），移回即時回報（${f2}）、刪除之後（${f4}）圓鈕回來`);
     ok(!s.errs.length,'秘書處沒有錯誤'+(s.errs.length?'：'+s.errs.slice(0,3).join(' | '):''));

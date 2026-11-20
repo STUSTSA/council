@@ -384,10 +384,10 @@ function doneItems(){
   return doneIssues().map(i=>({id:i.id,k:"i",o:i,d:i.doneAt||"",title:i.title})).concat(ev).sort((a,b)=>b.d.localeCompare(a.d));
 }
 const doneLink=l=>`<a class="lnk" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;
-/* 一筆完成紀錄的卡片（full＝全螢幕） */
+/* 一筆完成紀錄的卡片（full＝全螢幕）；上一張／下一張只在同一週裡走 */
 function doneCardHTML(id,full){
   const items=doneItems(),x=items.find(y=>y.id===id);if(!x)return "";
-  const ids=items.map(y=>y.id),key=x.k+":"+x.id,ed=cardEd(x.k,x.id),o=x.o;
+  const ids=items.filter(y=>wkStart(y.d)===wkStart(x.d)).map(y=>y.id),key=x.k+":"+x.id,ed=cardEd(x.k,x.id),o=x.o;
   const tail=ed?`<div class="lc-ops">${x.k==="e"?`<button type="button" class="icon danger" data-evdel>刪除</button>${o.fromEv?"":`<button type="button" class="icon" data-evundo>移回即時回報</button>`}`
       :`${fsDelOk()?`<button type="button" class="icon danger" data-deldone>刪除</button>`:""}<button type="button" class="icon" data-restore>取消結案</button>`}</div>${editBarHTML()}`
     :`<div class="ev-edrow">${editBtnHTML(key)}</div>`;
@@ -399,15 +399,43 @@ function doneCardHTML(id,full){
   return lcFrame({k:"done",id:o.id,key,st:"done",ids,full,ro:true,sec:ed,attr:`data-issue="${esc(o.id)}"`,title:`<b class="lc-title">${esc(o.title)}</b>`,
     meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>議題</span>`,body,tail,save:""});
 }
+/* ---------- 完成紀錄：一週一張資料夾 ----------
+   完成紀錄先列「一週一張」的資料夾（週一到週日，最新的在最上面；沒有完成紀錄的週不出現），點一張進去是那一週的膠囊清單，卡片的開法沿用即時回報（live.js）。
+   分週只看完成日（doneAt，日期字串）：同一張卡分段完成、結案在不同週，各自出現在完成那一週。資料不變，只在前端分組。
+   doneWeek＝進去的那一週（週一的日期）；null＝資料夾總覽。進去的那一頁比部門主頁更深：登記在 Back（左上角鍵變「上一頁」、系統返回鍵關掉這一頁），頁面裡不另放返回鈕。 */
+const wkStart=d=>addDays(d,-((pd(d).getDay()+6)%7));
+const wkLabel=s=>`${fmt(s).slice(5)} – ${fmt(addDays(s,6)).slice(5)}`;
+function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
+/* 進去／離開那一週（只改狀態與 Back 登記，不畫） */
+function wkSet(w){
+  if(w===doneWeek)return;const was=doneWeek;doneWeek=w;
+  if(w&&!was)Back.opened("doneweek",()=>doneWeekShow(null));else if(!w&&was)Back.closed("doneweek");
+}
+function doneWeekShow(w,{instant}={}){
+  if(w===doneWeek)return;
+  if(!w&&dnOpen){if(!lvWide())Back.closed("card");lcSet("done",null)}   /* 離開這一週時卡片一起收起來 */
+  wkSet(w);renderDone();
+  if(!instant&&!reduceMotion())pvIn($("#doneList"));
+}
+/* 要開某一筆（搜尋、其他地方跳過來）：先進到它那一週 */
+function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkStart(x.d));renderDone()}}
 function renderDone(){
   const items=doneItems(),ids=new Set(items.map(x=>x.id));
   const dnew=id=>prevDone&&!prevDone.has(id)?" new":"";
   if(dnOpen&&!ids.has(dnOpen))dnOpen=null;
+  const open=dnOpen&&items.find(x=>x.id===dnOpen);
+  if(open)wkSet(wkStart(open.d));   /* 卡片開著＝一定在它那一週 */
+  else if(doneWeek&&!items.some(x=>wkStart(x.d)===doneWeek))wkSet(null);   /* 那一週的紀錄都不見了（移回、刪除） */
   const wide=lvWide(),split=wide&&!!dnOpen,pane=$("#doneDetail");
   $("#doneMD").classList.toggle("split",split);
   $("#doneCount").textContent=items.length;
   const cp=x=>`<button type="button" class="cp done${dnew(x.id)}${split&&x.id===dnOpen?" sel":""}${!wide&&x.id===dnOpen?" away":""}" data-cp="${esc(x.id)}" data-done="${esc(x.id)}" ${x.k==="e"?`data-ev="${esc(x.id)}"`:`data-issue="${esc(x.id)}"`} data-st="done"${split&&x.id===dnOpen?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(x.title)}</b><span class="cp-d num">${esc(fmt(x.d).slice(5))}</span></button>`;
-  morphTo($("#doneList"),items.length?`<div class="cps">${items.map(cp).join("")}</div>`:`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`);   /* 原位更新（morph.js） */
+  const thisWk=wkStart(today());
+  const folder=([w,a])=>`<button type="button" class="wkf" data-wk="${esc(w)}" aria-label="${esc(wkLabel(w))}，完成 ${a.length} 張"><b class="wkf-d num">${esc(wkLabel(w))}</b><span class="wkf-n"><span><span class="num">${a.length}</span> 張完成${w===thisWk?" · 本週":w===addDays(thisWk,-7)?" · 上週":w.slice(0,4)!==thisWk.slice(0,4)?" · "+esc(w.slice(0,4)):""}</span></span><ul class="wkf-pv">${a.slice(0,3).map(x=>`<li>${esc(x.title)}</li>`).join("")}</ul>${a.length>3?`<span class="wkf-more">另 ${a.length-3} 張</span>`:""}</button>`;
+  const inWk=doneWeek?items.filter(x=>wkStart(x.d)===doneWeek):[];
+  morphTo($("#doneList"),!items.length?`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`
+    :doneWeek?`<div class="wk-head"><h3 class="num">${esc(wkLabel(doneWeek))}</h3><span>${inWk.length} 張完成</span></div><div class="cps">${inWk.map(cp).join("")}</div>`
+    :`<div class="wkfs">${doneWeeks(items).map(folder).join("")}</div>`);   /* 原位更新（morph.js） */
   if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   prevDone=ids;lcFullSync();Anim.syncPings();fabSync();   /* 打開的那一筆不見了（移回、刪除）時圓鈕要回來：renderEvents 先跑，這裡再對一次 */
 }
