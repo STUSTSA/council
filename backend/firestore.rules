@@ -272,30 +272,64 @@ service cloud.firestore {
       // 部長讀對方的角色（為了帶 rev 寫入）：只有對方在「我是管理員的部門」有角色時。逐一列出部門（沒有迴圈）；其他人仍只有本人與總管理員
       function adminSees() {
         return signedIn() && resource != null && !resource.data.get('super', false)
-          && ((isAdmin('rights') && 'rights' in resource.data.depts)
-            || (isAdmin('president') && 'president' in resource.data.depts)
-            || (isAdmin('secretariat') && 'secretariat' in resource.data.depts)
-            || (isAdmin('marketing') && 'marketing' in resource.data.depts)
-            || (isAdmin('finance') && 'finance' in resource.data.depts)
-            || (isAdmin('events') && 'events' in resource.data.depts)
-            || (isAdmin('affairs') && 'affairs' in resource.data.depts)
-            || (isAdmin('pr') && 'pr' in resource.data.depts)
-            || (isAdmin('works') && 'works' in resource.data.depts)
-            || (isAdmin('fruit') && 'fruit' in resource.data.depts));
+          && (('rights' in resource.data.depts && isAdmin('rights'))
+            || ('president' in resource.data.depts && isAdmin('president'))
+            || ('secretariat' in resource.data.depts && isAdmin('secretariat'))
+            || ('marketing' in resource.data.depts && isAdmin('marketing'))
+            || ('finance' in resource.data.depts && isAdmin('finance'))
+            || ('events' in resource.data.depts && isAdmin('events'))
+            || ('affairs' in resource.data.depts && isAdmin('affairs'))
+            || ('pr' in resource.data.depts && isAdmin('pr'))
+            || ('works' in resource.data.depts && isAdmin('works'))
+            || ('fruit' in resource.data.depts && isAdmin('fruit')));
       }
-      allow get:  if signedIn() && (uid == me() || isSuper() || adminSees());
+      // 06 部長核准本部門的部員（編輯者）申請：同一批把申請從 pending 改成 approved、只新增那個部門的 editor（不改既有角色、不動 super）
+      function viaDeptRequest() {
+        let rb = get(doc('roleRequests', d().lastRef)).data;
+        let ra = getAfter(doc('roleRequests', d().lastRef)).data;
+        return stamped() && d().lastVia == 'request' && uid != me() && !oldSuper() && d().get('super', false) == false
+          && isAdmin(rb.deptId) && rb.status == 'pending' && ra.status == 'approved' && ra.decidedBy == me()
+          && rb.uid == uid && rb.role == 'editor' && !rb.keys().hasAny(['legacyRef'])
+          && onlyDeptSet(rb.deptId, 'editor') && oldDepts().get(rb.deptId, null) == null;
+      }
+      // 部長讀申請人的 roles（為了帶 rev 寫入）：該部門有這個人的待審申請（ID＝{uid}_{部門}）。逐一列出部門（沒有迴圈）
+      function adminSeesRequest() {
+        let md = hasRole() ? role().get('depts', {}) : {};   // 我是管理員的部門先擋掉（便宜），只有命中才去查申請（規則有運算次數上限）
+        return signedIn() && (
+              (md.get('rights', null) == 'admin' && exists(doc('roleRequests', uid + '_rights')) && get(doc('roleRequests', uid + '_rights')).data.status == 'pending')
+            || (md.get('president', null) == 'admin' && exists(doc('roleRequests', uid + '_president')) && get(doc('roleRequests', uid + '_president')).data.status == 'pending')
+            || (md.get('secretariat', null) == 'admin' && exists(doc('roleRequests', uid + '_secretariat')) && get(doc('roleRequests', uid + '_secretariat')).data.status == 'pending')
+            || (md.get('marketing', null) == 'admin' && exists(doc('roleRequests', uid + '_marketing')) && get(doc('roleRequests', uid + '_marketing')).data.status == 'pending')
+            || (md.get('finance', null) == 'admin' && exists(doc('roleRequests', uid + '_finance')) && get(doc('roleRequests', uid + '_finance')).data.status == 'pending')
+            || (md.get('events', null) == 'admin' && exists(doc('roleRequests', uid + '_events')) && get(doc('roleRequests', uid + '_events')).data.status == 'pending')
+            || (md.get('affairs', null) == 'admin' && exists(doc('roleRequests', uid + '_affairs')) && get(doc('roleRequests', uid + '_affairs')).data.status == 'pending')
+            || (md.get('pr', null) == 'admin' && exists(doc('roleRequests', uid + '_pr')) && get(doc('roleRequests', uid + '_pr')).data.status == 'pending')
+            || (md.get('works', null) == 'admin' && exists(doc('roleRequests', uid + '_works')) && get(doc('roleRequests', uid + '_works')).data.status == 'pending')
+            || (md.get('fruit', null) == 'admin' && exists(doc('roleRequests', uid + '_fruit')) && get(doc('roleRequests', uid + '_fruit')).data.status == 'pending'));
+      }
+      allow get:  if signedIn() && (uid == me() || isSuper() || adminSees() || adminSeesRequest());
       allow list: if isSuper();
       allow delete: if false;
       allow create: if d().rev == 1 && baseShape() && auditAfter('roles', uid, 1)
-        && ((viaInvite() && inviteGrant()) || superWrite());
+        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptRequest());
       allow update: if revNext() && baseShape() && auditAfter('roles', uid, d().rev)
-        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptAdmin());
+        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptAdmin() || viaDeptRequest());
     }
 
     // ===================== 權限申請 =====================
     match /roleRequests/{id} {
-      allow get:  if signedIn() && (resource.data.uid == me() || isSuper());
-      allow list: if isSuper() || (signedIn() && resource.data.uid == me());
+      // 06：部長（部門管理員）看得到、也能審自己部門的「部員（編輯者）」申請；申請部長一律只有總管理員能核准（部長不能把人升成部長）
+      allow get:  if signedIn() && (resource.data.uid == me() || isSuper() || isAdmin(resource.data.deptId));
+      allow list: if isSuper() || (signedIn() && resource.data.uid == me()) || isAdmin(resource.data.deptId);
+      function canDecide() {
+        return isSuper() || (isAdmin(resource.data.deptId) && resource.data.uid != me() && resource.data.role == 'editor'
+                             && !resource.data.keys().hasAny(['legacyRef']));
+      }
+      // 位階 rank（06）：minister（部長＝管理員）、deputy（次長）、member（部員）；次長只是頭銜，權限同部員（editor）；沒有 rank＝舊申請
+      function rankOk() {
+        return !d().keys().hasAny(['rank'])
+          || (d().rank in ['minister', 'deputy', 'member'] && ((d().rank == 'minister') == (d().role == 'admin')));
+      }
       // 04：每人每個部門一份申請，ID＝{自己的 UID}_{部門}（取代 02B 的 SDK 亂數 ID；ID 的兩段都由規則決定，不接受自訂）。
       // 待審中不能再送一份；撤回、被拒絕、已核准之後要再申請＝把同一份改回 pending（reopen，rev +1＋稽核）。
       // 04 之前的申請（20 碼亂數 ID）照舊能撤回、拒絕、核准，但不能改回 pending。
@@ -307,7 +341,7 @@ service cloud.firestore {
       }
       function askOk() {                                                          // 新建與改回 pending 共用
         return d().uid == me() && d().status == 'pending'
-          && d().keys().hasOnly(['uid', 'deptId', 'role', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy'])
+          && d().keys().hasOnly(['uid', 'deptId', 'role', 'rank', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy']) && rankOk()
           && d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()   // 02A：不再申請檢視資格
           && id == me() + '_' + d().deptId
           && exists(doc('departments', d().deptId)) && legacyOk()
@@ -320,11 +354,11 @@ service cloud.firestore {
              && onlyChanged(['status', 'rev', 'updatedAt', 'updatedBy']))
        || (signedIn() && resource.data.uid == me() && resource.data.status in ['cancelled', 'rejected', 'approved']
              && unchanged(['uid', 'deptId']) && askOk())                          // reopen：上一輪的 decidedBy／decidedAt 不留（askOk 的 hasOnly）
-       || (isSuper() && resource.data.status == 'pending' && d().status == 'rejected'
+       || (canDecide() && resource.data.status == 'pending' && d().status == 'rejected'
              && d().decidedBy == me() && d().decidedAt == request.time
              && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy']))
        // 核准一定要同一批把角色寫進 roles，而且 roles 的來源指向這筆申請（防「已核准但沒角色」與重放）
-       || (isSuper() && resource.data.status == 'pending' && d().status == 'approved'
+       || (canDecide() && resource.data.status == 'pending' && d().status == 'approved'
              && d().decidedBy == me() && d().decidedAt == request.time
              && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy'])
              && getAfter(doc('roles', resource.data.uid)).data.lastVia == 'request'

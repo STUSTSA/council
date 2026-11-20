@@ -307,15 +307,18 @@ async function requestCreate(o) {
   const mine = (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", me)))).docs;
   if (mine.some(s => s.data().deptId === o.deptId && s.data().status === "pending")) throw fail("pending");
   const cur = mine.find(s => s.id === id), rev = cur ? cur.data().rev + 1 : 1, b = writeBatch(db);
-  b.set(r, { uid: me, deptId: o.deptId, role: o.role, note: String(o.note || "").slice(0, 200), ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}),
+  const rank = ["minister", "deputy", "member"].includes(o.rank) ? o.rank : null, role = rank ? (rank === "minister" ? "admin" : "editor") : o.role;
+  b.set(r, { uid: me, deptId: o.deptId, role, ...(rank ? { rank } : {}), note: String(o.note || "").slice(0, 200), ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}),
     status: "pending", rev, createdAt: NOW(), updatedAt: NOW(), updatedBy: me });
   b.set(auditRef("roleRequests", id, rev), audit("roleRequests", id, rev, "request", cur ? { status: cur.data().status } : {}, { status: "pending" }));
   await b.commit();
   return id;
 }
-const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
+const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, rank: d.rank || "", note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
 async function requestsMine() { return (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", uid())))).docs.map(plainReq).sort((a, b) => b.createdAt - a.createdAt); }
 async function requestsPending() { return (await getDocs(query(collection(db, "roleRequests"), where("status", "==", "pending"), orderBy("createdAt")))).docs.map(plainReq); }
+/* 06 部長看本部門的待審申請（規則：部長只能查自己部門；兩個相等條件不需要複合索引，時間在這裡排） */
+async function requestsDept(dept) { return (await getDocs(query(collection(db, "roleRequests"), where("deptId", "==", dept), where("status", "==", "pending")))).docs.map(plainReq).sort((a, b) => a.createdAt - b.createdAt); }
 /* seen＝畫面上那一筆的 rev。04 起同一份申請可以撤回後再申請（內容可能不一樣）：決定的一定是畫面上看到的那一版，
    交易裡讀到的 rev 不同＝清單讀出來之後被改過，不寫入、回 changed，畫面重讀清單 */
 async function requestDecide(id, to, seen) {   /* to＝cancelled（本人撤回）｜rejected（總管理員） */
@@ -381,7 +384,7 @@ async function auditChain(col, id) {
 
 const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, legacyDelete, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
-  rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestDecide, requestApprove,
+  rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };
 window.BoardAccount = api;
 dispatchEvent(new Event("board-account-ready"));

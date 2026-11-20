@@ -19,6 +19,9 @@ const acctOn=()=>FB_ON&&(storeSource()==="firestore"||storeSource()==="frozen");
    表單的下拉選單還沒選部門，用 ROLE_OPT 的合併稱呼 */
 const roleT=(r,d)=>r==="admin"?((BOARD_DEPTS.find(x=>x.id===d)||{}).adminTitle||"部長"):r==="editor"?"編輯者":r;
 const ROLE_OPT=[["editor","編輯者"],["admin","部長／處長／會長"]];
+/* 06 申請的位階：部員、次長（兩者權限都是編輯者，次長只是申請上的頭銜）、部長（管理員，只有總管理員能核准） */
+const RANK_OPT=[["member","部員"],["deputy","次長"],["minister","部長／處長／會長"]];
+const rankT=q=>q.rank==="deputy"?"次長":q.rank==="member"?"部員":roleT(q.role,q.deptId);
 const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
 const hm=ms=>{if(!ms)return "";const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`};
@@ -159,13 +162,16 @@ async function acctHub(){
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
   const head=()=>{const u=acct.user;if(!u)return "";
-    return `<div class="acct-me"><div class="acct-person"><b>${esc(acct.names[u.uid]||u.name||u.email||"")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>`};
+    return `<div class="acct-me"><div class="acct-person"><b>${esc(acct.names[u.uid]||u.name||u.email||"")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>${waitNote()}`};
+  /* 06 等待頁：還沒有任何編輯權限的人，帳號頁最上面說明目前的狀態（有待審的申請＝等部長或總管理員審核；沒有＝請申請） */
+  const waitNote=()=>{if(acctSuper()||Object.keys(acctDepts()).length)return "";const q=pend()[0];
+    return `<p class="set-p acct-empty">${q?`申請已送出，等待${esc(deptNameOf(q.deptId))}${q.role==="admin"?"總管理員":"部長"}審核。審核完成後重新整理就能編輯。`:"還沒有編輯權限。選擇部門與位階送出申請，部長審核後就能編輯。"}</p>`};
   return hubRun("帳號",()=>[
     {k:"name",ic:"edit",t:"名稱",flow:acctRename},
-    {k:"req",ic:"doc",t:"申請編輯權限",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
+    {k:"req",ic:"doc",t:"申請加入部門",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
-    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)}（待審）`,
-      act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${rankT(q)}（等待審核）`,
+      act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${rankT(q)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
 }
@@ -184,12 +190,12 @@ async function acctRequest(pending=[]){
   const A=await acctLoad(),legacy=await acctLegacyOpts(A);
   const v=await ask("申請編輯權限",[
     {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
-    {name:"role",label:"角色",type:"select",value:"editor",options:ROLE_OPT},
+    {name:"rank",label:"位階",type:"select",value:"member",options:RANK_OPT},
     ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[]),
     {name:"note",label:"備註",ph:""}],
-    {validate:o=>acctDepts()[o.dept]===o.role?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
+    {validate:o=>acctDepts()[o.dept]===(o.rank==="minister"?"admin":"editor")?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
   if(!v)return false;
-  return acctTry(()=>A.requestCreate({deptId:v.dept,role:v.role,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
+  return acctTry(()=>A.requestCreate({deptId:v.dept,rank:v.rank,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
 }
 
 /* ---------- 系統管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
@@ -279,11 +285,13 @@ function membersPanel(){
   const dept=CFG.deptId;
   return acctPanel(`部門成員・${deptNameOf(dept)}`,async p=>{
     const A=await acctLoad(),me=acct.user.uid,manage=acctSuper()||acctDepts()[dept]==="admin";
-    let list=[],cur=null,busy=false,curOff=null;
+    let list=[],reqs=[],cur=null,busy=false,curOff=null;
     const left=()=>cur?cur.expiresAt-A.serverNow():0;
     const live=()=>!!cur&&cur.status==="active"&&left()>0;
+    /* 部長只能審「部員、次長」（編輯者）申請；部長申請與帶舊身分的申請只有總管理員能核准（規則 canDecide） */
+    const canJudge=q=>q.uid!==me&&(acctSuper()||(q.role==="editor"&&!q.legacyRef));
     const rank=r=>r==="admin"?0:r==="editor"?1:2;
-    const load=async()=>{list=await A.rosterFull(dept);acct.names=await A.profiles().catch(()=>acct.names);
+    const load=async()=>{list=await A.rosterFull(dept);if(manage)reqs=await A.requestsDept(dept).catch(()=>[]);acct.names=await A.profiles().catch(()=>acct.names);
       list.sort((a,b)=>rank(a.role)-rank(b.role)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"))};
     /* 這張 QR 被用掉或撤銷：跟著變；用掉之後過一下再重讀名單（對方登入後才會補上名單那一份） */
     const watch=()=>{if(curOff){curOff();curOff=null}if(!cur||!p.alive)return;const h=cur.h;
@@ -299,6 +307,7 @@ function membersPanel(){
           <b>${esc(deptNameOf(cur.deptId))}・${roleT("editor")}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${stat}</span>
           <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke>撤銷</button>`:""}</div></div>`
         :`<button type="button" class="primary acct-new" data-new>新增${roleT("editor")}</button>`):"")
+        +(reqs.length?`<b class="acct-sub">待審的申請（${reqs.length}）</b><div class="set-list">${reqs.map(q=>`<div class="acct-line acct-req"><span><b>${esc(nameOf(q.uid))}・${esc(rankT(q))}</b><small>${hm(q.createdAt)}${q.note?` · ${esc(q.note)}`:""}${canJudge(q)?"":" · 要由總管理員核准"}</small></span>${canJudge(q)?`<button type="button" class="icon" data-rok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-rno="${esc(q.id)}">拒絕</button>`:""}</div>`).join("")}</div><b class="acct-sub">成員</b>`:"")
         +`<div class="set-list">${list.map(x=>`<div class="acct-line"><span><b>${esc(nameOf(x.uid))}</b><small>${esc(x.role?roleT(x.role,dept):"成員")}${x.uid===me?"・自己":""}</small></span>${manage&&x.role==="editor"&&x.uid!==me?`<button type="button" class="icon danger" data-rm="${esc(x.uid)}">撤銷</button>`:""}</div>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>`;
     };
     p.every(()=>{
@@ -312,6 +321,12 @@ function membersPanel(){
         else if(b.hasAttribute("data-regen")&&cur){try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}}
         else if(b.hasAttribute("data-revoke")&&cur){const v=await ask("撤銷這張 QR",[],{danger:"撤銷"});if(v!=="delete")return;
           const h=cur.h;if(await acctTry(()=>A.inviteRevoke(h),"已撤銷")){cur=null;watch()}}
+        else if(b.dataset.rok||b.dataset.rno){
+          const q=reqs.find(x=>x.id===(b.dataset.rok||b.dataset.rno));if(!q)return;
+          if(b.dataset.rok){const v=await ask(`核准 ${nameOf(q.uid)} 加入${deptNameOf(dept)}`,[],{danger:"核准",note:`位階：${rankT(q)}\n權限：編輯者`});if(v!=="delete")return;
+            if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
+          else{const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.requestDecide(q.id,"rejected",q.rev),"已拒絕")}
+        }
         else if(b.dataset.rm){const u=b.dataset.rm,v=await ask(`撤銷 ${nameOf(u)} 的${deptNameOf(dept)}編輯權限`,[],{danger:"撤銷",note:"撤銷後仍可閱讀看板"});if(v!=="delete")return;
           const ok=await acctTry(async()=>{
             if(acctSuper()){await A.roleWrite(u,r=>{const x={...r.depts};delete x[dept];return {...r,depts:x}},"revoke");await A.rosterSync(u).catch(()=>{})}
@@ -535,7 +550,7 @@ function requestsPanel(){
     let leg={};
     const draw=()=>{if(!p.alive)return;
       /* 信箱（登入的帳號）放在粗體那一行最前面；名稱是申請人自己取的，放在後面的小字 */
-      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${esc(roleT(q.role,q.deptId))}</b>
+      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${esc(rankT(q))}</b>
         <small>名稱 ${esc(nameOf(q.uid))} · ${hm(q.createdAt)}${q.legacyRef?` · 自稱舊身分 ${esc(leg[q.legacyRef]||q.legacyRef)}`:""}</small>${q.note?`<small>${esc(q.note)}</small>`:""}</span>
         <button type="button" class="icon" data-ok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-no="${esc(q.id)}">拒絕</button></div>`).join("")||`<p class="set-p acct-empty">沒有待審的申請</p>`}</div>`};
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
@@ -545,7 +560,7 @@ function requestsPanel(){
       const q=list.find(x=>x.id===(b.dataset.ok||b.dataset.no));if(!q)return;
       if(b.dataset.ok){
         /* 核准先確認：帳號（信箱）、部門與角色、名稱、舊身分各一行 */
-        const v=await ask(`核准 ${mail(q.uid)||nameOf(q.uid)} 的申請`,[],{danger:"核准",note:`帳號：${mail(q.uid)||"（沒有信箱紀錄）"}\n角色：${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)}\n名稱：${nameOf(q.uid)}${q.legacyRef?`\n自稱舊身分：${leg[q.legacyRef]||q.legacyRef}`:""}`});
+        const v=await ask(`核准 ${mail(q.uid)||nameOf(q.uid)} 的申請`,[],{danger:"核准",note:`帳號：${mail(q.uid)||"（沒有信箱紀錄）"}\n角色：${deptNameOf(q.deptId)}・${rankT(q)}\n名稱：${nameOf(q.uid)}${q.legacyRef?`\n自稱舊身分：${leg[q.legacyRef]||q.legacyRef}`:""}`});
         if(v!=="delete")return;
         if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.requestDecide(q.id,"rejected",q.rev),"已拒絕")}
