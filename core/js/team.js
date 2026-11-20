@@ -196,7 +196,7 @@ async function teamSettings(){
 const staffOpts=()=>state.members.map(m=>[m.id,m.name]);
 /* 03 負責人（暫定，不改權限）：firestore 模式的帳號（UID）用 profiles 的名稱，總管理員另外看得到信箱；舊身分照舊用 members 的名字 */
 const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name;if(!fsMode())return "";
-  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?STAFF_GONE:String(id).slice(0,8))};
+  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(typeof acct!=="undefined"&&acct.user?(String(id).startsWith("legacy:")?STAFF_GONE:String(id).slice(0,8)):"")};   /* 06：沒登入看不到名字（profiles、舊身分要登入）：不顯示代號 */
 /* 05：舊身分被總管理員刪掉後，卡片上指定給它的負責人顯示「（已移除）」（幾個都只顯示一次）；名字不會變成代號 */
 const STAFF_GONE="（已移除）";
 const staffNames=ids=>(ids||[]).map(staffName).filter((n,i,a)=>n&&(n!==STAFF_GONE||a.indexOf(n)===i));

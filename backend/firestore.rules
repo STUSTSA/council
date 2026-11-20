@@ -441,7 +441,7 @@ service cloud.firestore {
           && (kept('follows') || (d().get('follows', []) is list && d().get('follows', []).size() <= 100))
           && (kept('docs') || (d().get('docs', []) is list && d().get('docs', []).size() <= 50));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開（看板內容，切換前本來就是公開的資料檔）
       allow create: if isSuper() && deptId in deptIds() && shape() && d().rev == 1 && stamped()
         && auditAfter('deptSettings', deptId, 1);
       allow update: if (isAdmin(deptId) || isSuper()) && shape() && revNext() && stamped()
@@ -542,8 +542,9 @@ service cloud.firestore {
           && stamped();
       }
 
-      allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
-      allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
+      // 06 對外公開：不用登入也讀得到（永久刪除中的卡片仍只有該部門編輯者以上）；版本歷史（編輯紀錄）仍要登入
+      allow get:  if resource.data.state != 'purging' || deptWriter(resource.data.deptId);
+      allow list: if resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId);
       // 03：blocks 每一行的形狀（blocksOk）。修改時 blocks、timeIds 都沒變（只換順序）不再檢查；永久刪除中（purging）也不檢查
       // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）。超連結（linksOk）：新建一定檢查；修改時 links 有變才檢查（舊卡片沒改超連結照常能存）
       allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', [])) && linksOk(d().get('links', []))
@@ -644,7 +645,7 @@ service cloud.firestore {
           && (kept('links')   || (d().get('links', []) is list && d().get('links', []).size() <= 50))
           && (kept('markers') || (d().get('markers', []) is list && d().get('markers', []).size() <= 300));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
       allow delete: if delLogged('issues', id) || importRollback('issues');
@@ -658,7 +659,7 @@ service cloud.firestore {
           && (kept('text') || d().text.size() <= 50000)
           && (kept('auto') || d().get('auto', false) is bool);
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'createdAt', 'importBatch']) && stamped();
       allow delete: if delLogged('weeks', id) || importRollback('weeks');
@@ -670,7 +671,7 @@ service cloud.firestore {
           && (kept('name') || d().name.size() <= 200)                             // 04
           && (kept('kind') || short(d().get('kind', ''), 20));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && stamped();
       allow delete: if delLogged('labels', id) || importRollback('labels');
@@ -709,7 +710,7 @@ service cloud.firestore {
                                || (d().scope == 'all-activity' && isEditor('events'))
                                || (d().scope == 'all-meeting'  && isEditor('secretariat'))
                                || isSuper(); }
-      function visOk()   { return d().visibility == 'internal'
+      function visOk()   { return (d().visibility == 'internal' && !d().keys().hasAny(['title', 'summary']))
                                || ((isEditor('events') || isSuper()) && publicShape()); }   // D4
       // 02A：屬於卡片的時間事件一定要列在批次後母卡片的 timeIds（永久刪除時靠它確認全部刪光）、
       // 跟卡片同部門、卡片不在刪除中
@@ -735,7 +736,8 @@ service cloud.firestore {
                 : exists(evCard()));
       }
 
-      allow get, list: if resource.data.visibility == 'public' || internalReader();
+      // 06 對外公開：卡片的時間、地點是看板內容；internal 事件不能帶 title／summary（visOk），所以整個集合公開不會多洩露文字
+      allow get, list: if true;
       allow create: if safeId(id) && deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
         && d().rev == 1 && stamped();
       allow update: if eventShape() && unchanged(['deptId', 'cardId', 'importBatch']) && stamped() && revNext() && (
