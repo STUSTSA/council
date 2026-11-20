@@ -15,7 +15,10 @@ const joinToken=()=>{try{return sessionStorage.getItem(JOIN_KEY)||""}catch(_){re
 const joinClear=()=>{try{sessionStorage.removeItem(JOIN_KEY)}catch(_){}};
 /* 02D D-a：凍結中的部門也用 Google 登入（總管理員在這裡進系統管理 → 匯入；看板本身照舊唯讀、不讀 Firestore） */
 const acctOn=()=>FB_ON&&(storeSource()==="firestore"||storeSource()==="frozen");
-const ROLE_T={admin:"管理員",editor:"編輯者"};
+/* 角色的畫面稱呼（資料裡的角色值仍是 admin／editor）：部門管理員依部門稱呼——預設「部長」，設定 adminTitle 的部門照設定（秘書處「處長」、會長室「會長／副會長」，dept/config.js）；
+   表單的下拉選單還沒選部門，用 ROLE_OPT 的合併稱呼 */
+const roleT=(r,d)=>r==="admin"?((BOARD_DEPTS.find(x=>x.id===d)||{}).adminTitle||"部長"):r==="editor"?"編輯者":r;
+const ROLE_OPT=[["editor","編輯者"],["admin","部長／處長／會長"]];
 const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
 const hm=ms=>{if(!ms)return "";const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`};
@@ -161,8 +164,8 @@ async function acctHub(){
     {k:"name",ic:"edit",t:"名稱",flow:acctRename},
     {k:"req",ic:"doc",t:"申請編輯權限",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
-    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${ROLE_T[q.role]}（待審）`,
-      act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${ROLE_T[q.role]} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
+    ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)}（待審）`,
+      act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
 }
@@ -181,7 +184,7 @@ async function acctRequest(pending=[]){
   const A=await acctLoad(),legacy=await acctLegacyOpts(A);
   const v=await ask("申請編輯權限",[
     {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
-    {name:"role",label:"角色",type:"select",value:"editor",options:[["editor","編輯者"],["admin","管理員"]]},
+    {name:"role",label:"角色",type:"select",value:"editor",options:ROLE_OPT},
     ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[]),
     {name:"note",label:"備註",ph:""}],
     {validate:o=>acctDepts()[o.dept]===o.role?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
@@ -206,7 +209,7 @@ async function councilHub(){
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
-const roleChips=r=>[...(r.super?[`<span class="acct-chip on">總管理員</span>`]:[]),...Object.entries(r.depts||{}).map(([d,v])=>`<span class="acct-chip">${esc(deptNameOf(d))}・${ROLE_T[v]||esc(v)}</span>`)].join("")||`<span class="acct-chip">唯讀</span>`;   /* 被撤光的人也列出來（roles 文件還在） */
+const roleChips=r=>[...(r.super?[`<span class="acct-chip on">總管理員</span>`]:[]),...Object.entries(r.depts||{}).map(([d,v])=>`<span class="acct-chip">${esc(deptNameOf(d))}・${esc(roleT(v,d))}</span>`)].join("")||`<span class="acct-chip">唯讀</span>`;   /* 被撤光的人也列出來（roles 文件還在） */
 
 /* 人員：列出有角色的人；點一個人：改角色、撤銷部門、授予／取消總管理員（不能取消自己）、看他的權限歷史 */
 function peoplePanel(){
@@ -220,8 +223,8 @@ function peoplePanel(){
       if(!p.alive)return;
       if(who){const r=roles.find(x=>x.uid===who)||{uid:who,super:false,depts:{}},self=who===acct.user.uid;
         p.html=p.head()+`<div class="acct-person"><b>${esc(nameOf(who))}</b><small>${esc(mail(who))}</small></div>
-          <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${ROLE_T[v]}</span>
-            <button type="button" class="icon" data-swap="${esc(d)}">改成${v==="admin"?"編輯者":"管理員"}</button><button type="button" class="icon danger" data-rm="${esc(d)}">撤銷</button></div>`).join("")}
+          <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${roleT(v,d)}</span>
+            <button type="button" class="icon" data-swap="${esc(d)}">改成${v==="admin"?"編輯者":roleT("admin",d)}</button><button type="button" class="icon danger" data-rm="${esc(d)}">撤銷</button></div>`).join("")}
             <div class="acct-line"><span>總管理員</span>${self?`<small>自己</small>`:`<button type="button" class="icon${r.super?" danger":""}" data-super>${r.super?"取消":"授予"}</button>`}</div></div>
           <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button><button type="button" class="add-row" data-back>返回</button></div>`;
         return}
@@ -237,9 +240,9 @@ function peoplePanel(){
       if(b.hasAttribute("data-hist")){await auditPanel({roles:who});return}
       const nm=who&&nameOf(who);
       if(b.dataset.swap){const d=b.dataset.swap,to=(roles.find(x=>x.uid===who).depts[d]==="admin")?"editor":"admin";
-        /* 改成管理員先確認（寫出信箱：名稱是本人自己取的，信箱才是登入的帳號）；降成編輯者不用 */
-        if(to==="admin"){const v=await ask(`把 ${nm} 改成${deptNameOf(d)}管理員`,[],{danger:"改成管理員",note:`帳號：${mail(who)||"（沒有信箱紀錄）"}`});if(v!=="delete")return}
-        await write(who,r=>({...r,depts:{...r.depts,[d]:to}}),"manual",`已改成${ROLE_T[to]}`);return}
+        /* 改成部長（管理員）先確認（寫出信箱：名稱是本人自己取的，信箱才是登入的帳號）；降成編輯者不用 */
+        if(to==="admin"){const v=await ask(`把 ${nm} 改成${deptNameOf(d)}${roleT("admin",d)}`,[],{danger:`改成${roleT("admin",d)}`,note:`帳號：${mail(who)||"（沒有信箱紀錄）"}`});if(v!=="delete")return}
+        await write(who,r=>({...r,depts:{...r.depts,[d]:to}}),"manual",`已改成${roleT(to,d)}`);return}
       if(b.dataset.rm){const d=b.dataset.rm;
         const v=await ask(`撤銷 ${nm} 的${deptNameOf(d)}編輯權限`,[],{danger:"撤銷",note:"撤銷後仍可閱讀看板"});if(v!=="delete")return;
         await write(who,r=>{const x={...r.depts};delete x[d];return {...r,depts:x}},"revoke","已撤銷");return}
@@ -253,7 +256,7 @@ function peoplePanel(){
         const v=await ask(pick?"授予權限":`${nm}：新增部門`,[
           ...(pick?[{name:"uid",label:"帳號",type:"select",value:opts[0][0],options:opts}]:[]),
           {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
-          {name:"role",label:"角色",type:"select",value:"editor",options:[["editor","編輯者"],["admin","管理員"]]}],
+          {name:"role",label:"角色",type:"select",value:"editor",options:ROLE_OPT}],
           {validate:o=>{const r=roles.find(x=>x.uid===(pick?o.uid:who));return r&&r.depts[o.dept]===o.role?"已經是這個角色":""}});
         if(!v)return;
         const target=pick?v.uid:who;
@@ -389,10 +392,10 @@ function invitePanel(){
       if(!p.alive)return;
       const qr=cur?await qrSvg(joinUrl(cur.token,cur.deptId)):"";
       p.html=p.head()+(cur?`<div class="acct-qr${live()?"":" off"}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
-          <b>${esc(deptNameOf(cur.deptId))}・${ROLE_T[cur.role]}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
+          <b>${esc(deptNameOf(cur.deptId))}・${roleT(cur.role,cur.deptId)}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
           <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke="${esc(cur.h)}">撤銷</button>`:""}</div></div>`
         :`<button type="button" class="primary acct-new" data-new>產生 QR</button>`)
-        +`<div class="set-list acct-invites">${list.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${ROLE_T[i.role]||esc(i.role)}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&i.expiresAt>A.serverNow()&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>`;
+        +`<div class="set-list acct-invites">${list.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${esc(roleT(i.role,i.deptId))}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&i.expiresAt>A.serverNow()&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>`;
     };
     p.every(()=>{
       const t=p.box.querySelector(".acct-qr-t");
@@ -406,7 +409,7 @@ function invitePanel(){
           const legacy=await acctLegacyOpts(A);
           const v=await ask("產生 QR",[
             {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
-            {name:"role",label:"角色",type:"select",value:"editor",options:[["editor","編輯者"],["admin","管理員"]]},
+            {name:"role",label:"角色",type:"select",value:"editor",options:ROLE_OPT},
             {name:"email",label:"綁定信箱（選填）",type:"email",value:""},
             ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[])],
             {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
@@ -436,7 +439,7 @@ function requestsPanel(){
     let leg={};
     const draw=()=>{if(!p.alive)return;
       /* 信箱（登入的帳號）放在粗體那一行最前面；名稱是申請人自己取的，放在後面的小字 */
-      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${ROLE_T[q.role]}</b>
+      p.html=p.head()+`<div class="set-list">${list.map(q=>`<div class="acct-line acct-req"><span><b>${esc(mail(q.uid)||"（沒有信箱紀錄）")}・${esc(deptNameOf(q.deptId))}${roleT(q.role,q.deptId)}</b>
         <small>名稱 ${esc(nameOf(q.uid))} · ${hm(q.createdAt)}${q.legacyRef?` · 自稱舊身分 ${esc(leg[q.legacyRef]||q.legacyRef)}`:""}</small>${q.note?`<small>${esc(q.note)}</small>`:""}</span>
         <button type="button" class="icon" data-ok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-no="${esc(q.id)}">拒絕</button></div>`).join("")||`<p class="set-p acct-empty">沒有待審的申請</p>`}</div>`};
     const load=async()=>{[list,users,leg]=await Promise.all([A.requestsPending(),A.usersList(),legName()]);acct.names=await A.profiles().catch(()=>acct.names)};
@@ -446,7 +449,7 @@ function requestsPanel(){
       const q=list.find(x=>x.id===(b.dataset.ok||b.dataset.no));if(!q)return;
       if(b.dataset.ok){
         /* 核准先確認：帳號（信箱）、部門與角色、名稱、舊身分各一行 */
-        const v=await ask(`核准 ${mail(q.uid)||nameOf(q.uid)} 的申請`,[],{danger:"核准",note:`帳號：${mail(q.uid)||"（沒有信箱紀錄）"}\n角色：${deptNameOf(q.deptId)}・${ROLE_T[q.role]}\n名稱：${nameOf(q.uid)}${q.legacyRef?`\n自稱舊身分：${leg[q.legacyRef]||q.legacyRef}`:""}`});
+        const v=await ask(`核准 ${mail(q.uid)||nameOf(q.uid)} 的申請`,[],{danger:"核准",note:`帳號：${mail(q.uid)||"（沒有信箱紀錄）"}\n角色：${deptNameOf(q.deptId)}・${roleT(q.role,q.deptId)}\n名稱：${nameOf(q.uid)}${q.legacyRef?`\n自稱舊身分：${leg[q.legacyRef]||q.legacyRef}`:""}`});
         if(v!=="delete")return;
         if(await acctTry(()=>A.requestApprove(q.id,q.rev),"已核准"))A.rosterSync(q.uid).catch(()=>{})}
       else if(b.dataset.no){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.requestDecide(q.id,"rejected",q.rev),"已拒絕")}
@@ -465,7 +468,7 @@ function auditWhat(l){
   if(l.col==="roles"){
     const b=l.before||{},a=l.after||{},bd=b.depts||{},ad=a.depts||{},ch=[];
     if(!!b.super!==!!a.super)ch.push(a.super?"+總管理員":"−總管理員");
-    new Set([...Object.keys(bd),...Object.keys(ad)]).forEach(d=>{if(bd[d]===ad[d])return;ch.push(!bd[d]?`+${deptNameOf(d)}${ROLE_T[ad[d]]}`:!ad[d]?`−${deptNameOf(d)}`:`${deptNameOf(d)} ${ROLE_T[bd[d]]}→${ROLE_T[ad[d]]}`)});
+    new Set([...Object.keys(bd),...Object.keys(ad)]).forEach(d=>{if(bd[d]===ad[d])return;ch.push(!bd[d]?`+${deptNameOf(d)}${roleT(ad[d],d)}`:!ad[d]?`−${deptNameOf(d)}`:`${deptNameOf(d)} ${roleT(bd[d],d)}→${roleT(ad[d],d)}`)});
     return {act:{invite:"QR 加入",request:"核准申請",manual:"手動調整",revoke:"撤權",bootstrap:"建立總管理員"}[l.action]||l.action,obj:nameOf(l.docId),diff:ch.join("、")};
   }
   if(l.col==="cards"&&l.action==="purge")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
@@ -522,19 +525,19 @@ async function joinFlow(){
     if(!inv){joinClear();await ask("這張邀請已失效",[],{});return}
     if(inv.legacyTaken){joinClear();await ask("這張邀請綁定的舊身分已經被認領",[],{});return}
     const has=acctDepts()[inv.deptId];
-    if(has){joinClear();await ask(`你已經是${deptNameOf(inv.deptId)}的${ROLE_T[has]}`,[],{});return}
+    if(has){joinClear();await ask(`你已經是${deptNameOf(inv.deptId)}的${roleT(has,inv.deptId)}`,[],{});return}
     if(inv.boundEmail&&inv.boundEmail!==String(acct.user.email||"").toLowerCase()){joinClear();await ask("這張邀請只限指定的帳號使用",[],{});return}
     const tick=setInterval(()=>{const n=$("#dlgForm .dlg-note");if(n)n.textContent=`剩 ${mmss(inv.expiresAt-A.serverNow())}`},1000);
-    const v=await ask(`加入${deptNameOf(inv.deptId)}・${ROLE_T[inv.role]}`,[],{note:`剩 ${mmss(inv.expiresAt-A.serverNow())}`});
+    const v=await ask(`加入${deptNameOf(inv.deptId)}・${roleT(inv.role,inv.deptId)}`,[],{note:`剩 ${mmss(inv.expiresAt-A.serverNow())}`});
     clearInterval(tick);
     if(!v){joinClear();return}
     try{
       const r=await A.inviteRedeem(token);joinClear();
-      toast(`已加入${deptNameOf(r.deptId)}（${ROLE_T[r.role]}）`);
+      toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
       if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
     }catch(e){
       joinClear();
-      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${ROLE_T[e.role]}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
+      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${roleT(e.role,e.deptId)}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
     }
   }finally{joinBusy=false}
 }
