@@ -35,7 +35,7 @@ function renderWeeks(){
     ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
 }
 
-/* 細刻度（甘特圖每一列；會長室追蹤、報告的甘特圖也用）：n 根細直線排滿整條；s～e＝議題期間（%），t＝今天（%；在範圍外就給 -1 或 101）。
+/* 細刻度（會長室追蹤、工作報告的期間甘特圖用；看板的甘特圖從 ui-12 起改用滑桿式時程條 sliderHTML）：n 根細直線排滿整條；s～e＝議題期間（%），t＝今天（%；在範圍外就給 -1 或 101）。
    期間外＝淡色短刻度、期間內已過＝深色長刻度、期間內還沒到＝灰色中刻度、今天那一根＝綠色最高 */
 function ticksHTML(n,s,e,t){
   const half=50/n;let h="";
@@ -43,6 +43,7 @@ function ticksHTML(n,s,e,t){
   return `<div class="tk" aria-hidden="true">${h}</div>`;
 }
 let ganttSeg=null;
+let ganttSel=null;   /* 甘特圖上「選中的議題」＝最後打開過詳情的那一個（progShow 記下；只在這次開頁有效、不存）：時程條的已過段用選中色 */
 function renderGantt(){
   $("#rStart").value=state.range.start;$("#rEnd").value=state.range.end;
   /* 全部／上學期／下學期：液態分段切換（anim.js 的 LiquidSeg）；在骨架裡、不跟著重畫，換的時候舊圖淡出、新圖淡入 */
@@ -56,17 +57,19 @@ function renderGantt(){
   /* 手機看單一學期（6 個月）時，時間軸剛好塞進畫面寬，不用左右滑（2026-11-06）；看「全部」照舊依月份數加寬、可以左右滑 */
   const fit=narrow&&gTermNow()!=="all",avail=Math.max(220,($("#gantt").clientWidth||360)-nameW-14);   /* 14：列的左右內距，不然會多出一點點要滑 */
   const width=fit?avail:Math.max(narrow?360:640,ms.length*(narrow?84:130));
-  /* 細刻度（2026-11-05 使用者選的 A 方案）：每一列整條時間軸是一排細直線（約每 6px 一根），格子與「已經過去」的打亮都拿掉；
-     今天＝每列一條往下淡掉的細綠線，時間軸上方綠色小膠囊寫日期。tN＝今天在時間軸上的位置（範圍之前 -1、之後 101） */
-  const tN=inRange?tp:Date.now()>=e0?101:-1,nT=Math.max(40,Math.round(width/6));
+  /* 每一列＝滑桿式時程條（ui-12，DESIGN.md 第八節；跟議題詳情同一個元件 sliderHTML）：條只畫在議題期間，把手＝今天在期間的位置。
+     今天＝每列一條細綠線（在條的後面，從把手上下露出來），時間軸上方綠色小膠囊寫日期 */
   const grid=inRange?`<span class="today" style="left:${tp}%"></span>`:"";
   let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name sub" style="font-weight:400">議題</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
-    const l=pos(s),w=Math.max(.8,pos(e)-l);
-    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}${mkPending(m)?" pend":""}" style="left:${p}%"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
+    /* p：把手的位置（%）＝今天在條上的位置，不四捨五入（才跟今天線對齊）；還沒開始＝0（把手在最左）、已經結束＝100（最右）。
+       期間超出時間軸範圍時條被切在範圍邊緣，把手照樣對齊今天線 */
+    const l=pos(s),r=pos(e),w=Math.max(.8,r-l),p=r>l?clamp((tp-l)/(r-l)*100):tp>=l?100:0;
+    /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝深色膠囊標籤＋細線連到條；其他＝條上方的短線（位置照日期，滑過才顯示標籤）；還沒勾的處理紀錄 .pend 半透明 */
+    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const x=pos(m.date);return `<span class="g-mk ${x<6?"edgeL":x>94?"edgeR":""} ${m.id!==gL?"quiet":""}${mkPending(m)?" pend":""}" style="left:${x}%"><span class="stem"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
     return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${esc(fmt(s).slice(5))} – ${esc(fmt(e).slice(5))}</span></div>
-      <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
+      <div class="g-track">${grid}${sliderHTML(it,{l,w,p,sel:it.id===ganttSel})}${mk}</div></div>`;
   }).join("");
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
@@ -74,7 +77,7 @@ function renderGantt(){
   /* 空狀態：唯讀＝「目前沒有進行中的議題」；已登入＝只寫狀態（DESIGN.md「介面不放教學說明文字」；ui-11）；github 模式還沒登入的照舊 */
   if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":loggedIn()?"還沒有議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
   else if(!all.length)h+=`<p class="empty">這段期間沒有議題。</p>`;
-  morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、刻度、註記都是同一個節點 */
+  morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、時程條、註記都是同一個節點 */
 }
 
 /* 階段標籤與連結按鈕（只顯示；編輯中改用逐欄編輯的「階段」「超連結」欄） */
@@ -96,16 +99,19 @@ function logHTML(it){
   return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li${mkPending(m)?' class="pend"':""}><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?esc(fmt(m.date)):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
-/* ---------- 議題詳情的時程條（DESIGN-next 第八節：比照 Android Material 的音量滑桿） ----------
-   已過的一段、直立把手、還沒到的一段，三者之間留縫（外觀在 board.css「議題詳情的時程條」）。把手中心＝時程百分比（schedPct，跟「時程 N%」同一個數），
-   期間＝開始日到結束日（整條）；未排程沒有把手、整條是還沒到的那段。
-   條上放名稱與百分比、負責人（每人一格，名字第一個字）；位置由 slFit 依實際寬度決定，動畫在 slAnim */
-const SL_HW=5,SL_GAP=5,SL_OV=7,SL_PAD=14,SL_END=22,SL_CW=24,SL_CG=4;   /* 跟 board.css 同一組：把手寬、縫、把手高出條、文字內距、右端小點、負責人一格的寬與間距（「+N」的寬照實際量，slFit） */
-function sliderHTML(it){
-  const p=schedPct(it),names=staffNames(it.staff);
-  return `<div class="c-bar sl${p==null?" none":""}" style="--p:${cssNum(p,0)}%" data-p="${p==null?"":cssNum(p,0)}" aria-hidden="true">
+/* ---------- 滑桿式時程條（DESIGN.md／DESIGN-next 第八節：比照 Android Material 的音量滑桿；議題詳情與甘特圖每一列共用） ----------
+   已過的一段、直立把手、還沒到的一段，三者之間留縫（外觀在 board.css「滑桿式時程條」）。
+   議題詳情：整條＝開始日到結束日，把手中心＝時程百分比（schedPct，跟「時程 N%」同一個數）；未排程沒有把手、整條是還沒到的那段。
+   條上放名稱與百分比、負責人（每人一格，名字第一個字）；位置由 slFit 依實際寬度決定，動畫在 slAnim。
+   g（甘特圖的一列，renderGantt）＝{l,w,p,sel}：條只畫在議題期間（left l%、寬 w%）、把手在 p%、sel＝選中的議題（已過段用選中色）；緊湊尺寸（.g），不放名稱、百分比、負責人（名稱在左邊那欄）。
+   把手在 0（還沒開始）／100（已經結束）時加 at0／at100：沒有長度的那一段不畫 */
+const SL_HW=5,SL_GAP=5,SL_PAD=14,SL_END=22,SL_CW=24,SL_CG=4;   /* 跟 board.css 同一組（議題詳情的尺寸）：把手寬、縫、文字內距、右端小點、負責人一格的寬與間距（「+N」的寬照實際量，slFit）；把手高出條多少照 CSS 的 --sl-ov 讀（layoutTrack） */
+function sliderHTML(it,g){
+  const p=g?Math.round(g.p*1000)/1000:schedPct(it),names=g?[]:staffNames(it.staff);
+  const cls=(g?"g-bar g":"c-bar")+" sl"+(p==null?" none":p<=0?" at0":p>=100?" at100":"")+(g&&g.sel?" sel":"");
+  return `<div class="${cls}" style="${g?`left:${cssNum(g.l)}%;width:${cssNum(g.w)}%;`:""}--p:${cssNum(p,0)}%" data-p="${p==null?"":cssNum(p,0)}" aria-hidden="true">
         <span class="sl-a"></span><span class="sl-h"></span><span class="sl-b"></span>
-        <span class="sl-lb"><b>${esc(it.title)}</b><i class="num">${p==null?"未排程":cssNum(p,0)+"%"}</i></span>
+        ${g?"":`<span class="sl-lb"><b>${esc(it.title)}</b><i class="num">${p==null?"未排程":cssNum(p,0)+"%"}</i></span>`}
         ${names.length?`<span class="sl-avs">${names.map(n=>`<span class="sl-av">${esc(Array.from(n)[0]||"")}</span>`).join("")}<span class="sl-av sl-more num" hidden></span></span>`:""}
       </div>`;
 }
@@ -147,9 +153,9 @@ function slAnim(bar,from){
 const LH=22;
 function layoutTrack(tr){
   const isG=tr.classList.contains("g-track"),W=tr.clientWidth;if(!W||!tr.querySelector(".g-bar,.c-bar"))return;   /* 未排程的甘特列沒有條 */
-  /* 議題詳情的時程條（滑桿）：把手比條上下各高出 SL_OV；名稱與百分比移到條上方時再多 lift，註記都往上讓 */
-  const sl=!isG&&tr.querySelector(".sl"),lift=sl?slFit(sl):0,ov=sl?SL_OV:0;
-  const barH=isG?22:sl?sl.offsetHeight:16,dotH=isG?6:16,gap=isG?3:4;   /* 註記都放在條的「上方」、不疊在條上：甘特圖是 6px 小點；議題詳情是 16px 細長條（2026-11-06 使用者：長條疊在刻度上又半透明很粗糙） */
+  /* 滑桿式時程條：把手比條上下各高出 ov（CSS 的 --sl-ov，議題詳情與甘特圖的緊湊尺寸不同）；議題詳情的名稱與百分比移到條上方時再多 lift，註記都往上讓 */
+  const sl=tr.querySelector(".sl"),lift=sl&&!isG?slFit(sl):0,ov=sl?cssNum(parseFloat(getComputedStyle(sl).getPropertyValue("--sl-ov")),0):0;
+  const barH=sl?sl.offsetHeight:16,dotH=isG?0:16,gap=isG?3:4;   /* 註記都放在條的「上方」、不疊在條上：甘特圖沒有小點（標籤或短線）；議題詳情是 16px 細長條（2026-11-06 使用者：長條疊在刻度上又半透明很粗糙） */
   const lanes={up:[],down:[]},info=[];
   [...tr.querySelectorAll(isG?".g-mk":".marker")].sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)).forEach(m=>{
     const side=!isG&&m.classList.contains("down")?"down":"up";
@@ -160,15 +166,16 @@ function layoutTrack(tr){
     info.push({m,lbl,side,k});
   });
   const nUp=lanes.up.length,nDown=lanes.down.length;
-  const barTop=(isG?6:8)+nUp*LH+(nUp?6:(isG?14:18))+(isG?0:dotH+gap-10)+ov+lift;   /* 議題詳情多留長條的高度 */
+  const barTop=(isG?6:8)+nUp*LH+(nUp?6:(isG?2:18))+(isG?0:dotH+gap-10)+ov+lift;   /* 議題詳情多留長條的高度；甘特圖沒有註記的列只留把手高出的部分 */
   const below=barTop+barH+ov+(isG?6:20),top0=barTop-ov-lift;   /* top0：條（含把手、上方的名稱）的頂端 */
   tr.querySelector(isG?".g-bar":".c-bar").style.top=barTop+"px";
   tr.querySelectorAll(".tick").forEach(t=>t.style.top=(barTop+barH+ov+3)+"px");
-  info.forEach(({m,lbl,side,k})=>{
+  info.forEach(({m,lbl,side,k,quiet})=>{
     const dot=m.querySelector(".dot"),stem=m.querySelector(".stem");
-    dot.style.top=(top0-dotH-gap)+"px";
-    if(side==="up"){const base=isG?barTop:top0-dotH-gap,top=base-6-(k+1)*LH+2;lbl.style.top=top+"px";stem.style.top=(top+18)+"px";stem.style.height=Math.max(0,base-top-18)+"px"}
+    if(dot)dot.style.top=(top0-dotH-gap)+"px";   /* 甘特圖的註記沒有小點 */
+    if(side==="up"){const base=isG?barTop-ov:top0-dotH-gap,top=base-6-(k+1)*LH+2;lbl.style.top=top+"px";stem.style.top=(top+18)+"px";stem.style.height=Math.max(0,(isG?barTop:base)-top-18)+"px"}   /* 甘特圖：標籤讓開把手，細線一路連到條 */
     else{const top=below+k*LH;lbl.style.top=top+"px";stem.style.top=(barTop+barH)+"px";stem.style.height=Math.max(0,top-barTop-barH)+"px"}
+    if(isG&&quiet){stem.style.top=(barTop-9)+"px";stem.style.height="7px"}   /* 甘特圖不是最新一筆的註記：條上方 7px 的短線 */
   });
   tr.style.height=(nDown?below+nDown*LH+4:below+(isG?0:4))+"px";
 }
@@ -259,7 +266,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
   if(id===progOpen&&!then&&!$(id?"#pvDetail":"#pvGantt").hidden)return;   /* 已經在那一頁（例如新增的議題沒有命名、點返回時已經回到甘特圖） */
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
-  const swap=()=>{if(tok!==pvTok)return;progOpen=id;renderCards();layoutAll();
+  const swap=()=>{if(tok!==pvTok)return;progOpen=id;if(id)ganttSel=id;renderCards();if(!id)renderGantt();layoutAll();   /* 回到甘特圖：剛看過的議題是選中的那一列 */
     const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
     pvIn($(id?"#pvDetail":"#pvGantt"));
     if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */

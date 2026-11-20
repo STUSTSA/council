@@ -1,6 +1,6 @@
 /* ui8prog：ui-08 進度頁（docs/DESIGN-next.md 第八節、第十三、十四節；前後端交接-next 第七節「時程條細刻度 → 滑桿式」）。
    github 模式（data_test.json 加上專員與兩個只在某一學期的議題），固定 8300 埠（run-tests.sh 換埠時會一起換）。412 與 1300 各跑一次：
-   1. 議題詳情的時程條：已過、把手、還沒到三段之間有縫；把手中心＝時程百分比（誤差 1px）；甘特圖照舊是細刻度
+   1. 議題詳情的時程條：已過、把手、還沒到三段之間有縫；把手中心＝時程百分比（誤差 1px）；甘特圖每一列也是滑桿（ui-12 起，原本「照舊是細刻度」）
    2. 名稱與百分比的邊界框不跟把手重疊：時程小（3%）放把手右側、時程大（97%）放左側、名稱太長放條的上方（在把手上緣之上）
    3. 負責人：1300 放條的右端、放不下收成「+N」（數字＝沒放的人數，不跟名稱重疊、不超出那一段）；412 不放在條上，看下面議題區塊的專員列
    4. 「+ 議題」：不開對話框、焦點直接在名稱上（整段選取）；打字＋Enter 存檔，攔截 PUT 驗證寫入的名稱（含 HTML 字元，畫面上經過 esc、沒有變成元素）
@@ -33,7 +33,7 @@ const ymdOff=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.getFullYea
     const iid=await p.evaluate(()=>activeIssues()[0].id);
     const open=async id=>{await p.evaluate(id=>{setSection('progress',{instant:true});progShow(id)},id);await p.waitForTimeout(900)};
     await open(null);
-    ok(await p.evaluate(()=>document.querySelectorAll('#gantt .g-issue .tk i').length>40&&!document.querySelector('#gantt .sl')),tag+'甘特圖照舊是細刻度（沒有滑桿）');
+    ok(await p.evaluate(()=>document.querySelectorAll('#gantt .g-issue .sl.g').length>0&&!document.querySelector('#gantt .tk')),tag+'甘特圖每一列也是滑桿式時程條（ui-12；細刻度拿掉，細節在 ui12.js）');
     await open(iid);
     await p.evaluate(()=>{window.__keep=JSON.stringify(state)});   /* 第 1～3 段只改畫面上的資料、不存：做完還原 */
 
