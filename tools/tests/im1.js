@@ -120,19 +120,19 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
     await fillExpect(su,'fruit',{sha:'0'.repeat(64)});let s=await checked(su);
     ok(/SHA-256 跟輸入的不同/.test(s)&&/沒有寫入/.test(s)&&!(await su.$('.acct-panel [data-go]')),'04 來源版本：SHA-256 不同，停下、沒有確認匯入的按鈕');
     ok(!s.includes(fileSha('data-fruit.json')),'04 來源版本：畫面不印出讀到的完整雜湊');
-    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('.dh-home');await su.waitForSelector('[data-imp="fruit"]');
     await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit',{commit:OLD,sha:oldSha('data-fruit.json')});s=await checked(su);
     ok(/這個 commit 之後資料檔又被改過/.test(s)&&/沒有寫入/.test(s)&&!(await su.$('.acct-panel [data-go]')),'04 來源版本：那個 commit 之後資料檔又改過，停下');
-    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('.dh-home');await su.waitForSelector('[data-imp="fruit"]');
     await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit',{commit:'c'.repeat(40)});s=await checked(su);
     ok(/這個 commit 沒有這個資料檔/.test(s)&&/沒有寫入/.test(s),'04 來源版本：沒有這個 commit，停下');
     ok((await nMig())===0&&(await deptDocs('fruit')).n===0,'04 來源版本：三種不符都沒有建立批次、沒有寫入任何文件');
-    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('.dh-home');await su.waitForSelector('[data-imp="fruit"]');
     /* 核對通過：停在確認畫面，還沒寫入 */
     await su.click('[data-imp="fruit"]');await dlg(su);await fillExpect(su,'fruit');s=await checked(su);
     ok(!!(await su.$('.acct-panel [data-go]'))&&s.includes(fileSha('data-fruit.json'))&&/舊身分 \d+ 筆/.test(s)&&s.includes('會寫入'),'04 確認畫面：列出來源、會寫入的筆數、舊身分');
     ok((await nMig())===0&&(await deptDocs('fruit')).n===0,'04 確認畫面：按「確認匯入」之前沒有寫入');
-    await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="fruit"]');
+    await su.click('.dh-home');await su.waitForSelector('[data-imp="fruit"]');
     await su.evaluate(()=>closeSettings(true));await su.waitForTimeout(300);}
   const t1=await importVia(su,'fruit');
   ok(t1.includes('結果：通過'),'水果部：結果通過');
@@ -155,7 +155,7 @@ const stable=v=>JSON.stringify(v,(k,x)=>x&&typeof x==='object'&&!Array.isArray(x
   ok((await q(async d=>(await d.collection('migrations').get()).docs.map(x=>x.data().status))).every(s=>s==='done'),'兩個批次都是 done');
 
   /* ---------- 4. 權益部（資料最多）：從頁面匯入、命令列的報告也通過 ---------- */
-  await su.click('.acct-panel [data-back]');await su.waitForSelector('[data-imp="rights"]');
+  await su.click('.dh-home');await su.waitForSelector('[data-imp="rights"]');
   await su.click('[data-imp="rights"]');ok((await dlg(su))==='匯入 權益部（還沒凍結）','權益部：確認的標題標出還沒凍結');await fillExpect(su,'rights');
   {const s=await checked(su),mem=JSON.parse(fs.readFileSync(path.join(ROOT,'data.json'),'utf8')).members||[];
     ok(s.includes(`舊身分 ${mem.length} 筆`)&&mem.every(m=>s.includes(m.name)),`04 確認畫面（權益部）：舊身分 ${mem.length} 筆的名字都列出來`);}

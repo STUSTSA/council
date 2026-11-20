@@ -829,7 +829,6 @@ a.doc-pill:active{scale:.96}
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
 #progPanel{--cpx:18px;overflow:hidden}
 .pv-page[hidden]{display:none}
-.pv-back{gap:4px;padding-left:8px;margin-bottom:20px}   /* 下面是議題詳情的分隔線：至少留 18px */
 #cardDetail{margin:0 calc(-1*var(--cpx)) -16px}
 #cardDetail .card{background:transparent}
 .card-top{display:flex;align-items:center;gap:6px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -1044,10 +1043,6 @@ a.link:active{transform:scale(.96)}
 [data-copyweek].copied{background:var(--ok);border-color:var(--ok);color:var(--ok-ink);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
 .week:hover summary .num{letter-spacing:.04em}
 .week .badge{animation:none}
-#backMain span{transition:transform .2s var(--ease)}
-#backMain{transition:transform .2s var(--ease);gap:6px;padding:5px 14px 5px 13px}
-#backMain:hover{transform:translateX(-2px)}
-@media (max-width:899px){#backMain{display:none}}
 #genWeek{padding-left:12px;padding-right:20px}
 @media (prefers-reduced-motion:reduce){
   .week:hover{transform:none!important}
