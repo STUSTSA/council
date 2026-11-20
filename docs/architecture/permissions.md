@@ -127,7 +127,7 @@ match /cards/{id} {
   allow update: if cardShape() && unchanged([...])
     && (editorEdit() || meetingEdit() || reorder() || purgeStart() || purgeSweep());
   allow delete: if purgeFinish() || rollbackDelete();
-  // editorEdit／meetingEdit：卡片是 open／done、version +1、同批新建版本；從 timeIds 拿掉的時間事件要同批刪掉（droppedGone）
+  // editorEdit／meetingEdit：卡片是 open／done、version +1、同批新建版本；editorEdit 從 timeIds 拿掉的時間事件要同批刪掉（droppedGone）；meetingEdit 不能改 timeIds（2026-11-20，第 5.1j 節）
   // purgeStart：open／done → purging，deletedAt＝現在、deletedBy＝自己；同一批新建刪除紀錄（02B，第 5.1c 節）；timeIds 不能動
   // purgeSweep：purging → purging，只改 timeIds（只能減少，拿掉的事件要同批刪）
   // purgeFinish：purging、timeIds 是空的、第 1 版在批次後不存在
@@ -246,7 +246,7 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 - **併發**：每一批是一個交易，先讀要改的文件，`version`（卡片）、`rev`（議題、時間事件、部門設定）、`updatedAt`（週報、標籤）跟上次讀到的不同就整批不寫（`conflict`），不會蓋掉別人剛存的內容（C-15 前端部分）。
 - **失敗**：衝突、沒有權限、斷線都不清掉畫面上的修改，提示原因並可以重新載入（DESIGN「資料來源與暫停編輯」）。一次儲存分成多批、前面的批已寫入而後面失敗時（02D 審查修正）：提示「部分修改已寫入，正在補寫其餘的修改…」，重新讀一次當比對基準，只補寫這次要寫、還沒寫進去的文件（`store.js` 的 `fsFinish`，最多 3 輪；「完成這一段」換過 ID 的時間標記沿用同一個新 ID，不會重建第二份）。上次讀到之後被別人改過或刪掉的文件不補寫，比對基準對那幾份留在舊的（下次儲存照樣被版本檢查擋下，不會蓋掉別人剛存的）；補寫不完時提示「部分修改已寫入；…（還在畫面上）」並保留畫面上的修改。測試：`fw1.js` 第 10 段（擋下第二個 commit → 收斂、時間標記沒有重複）。
 - **只在 GitHub 模式有的欄位不寫**：`members`、`sync`、密碼、權杖、`minutes`、`meetGrant`、`yearLabel`／`termStart`／`semester`。
-- **不開放（規則沒有對應或要另外設計）**：秘書處跨部門會議編輯（寫的是別的部門）、會長室的會議編輯開關（`grants/meetingEdit` 只有總管理員＋稽核鏈，還沒接畫面）、學年與開學日（`org/config` 只有總管理員）、匯入備份（整份取代；回復路徑是 firestore 模式「匯出備份」→ 改回 github →「匯入備份」，見 [migration.md](migration.md) 第 7 節）、改已完成卡片的完成日期（規則要求 `doneAt`＝伺服器時間或不變）。
+- **不開放（規則沒有對應或要另外設計）**：~~秘書處跨部門會議編輯、會長室的會議編輯開關~~（2026-11-20 開放，第 5.1j 節）、學年與開學日（`org/config` 只有總管理員）、匯入備份（整份取代；回復路徑是 firestore 模式「匯出備份」→ 改回 github →「匯入備份」，見 [migration.md](migration.md) 第 7 節）、改已完成卡片的完成日期（規則要求 `doneAt`＝伺服器時間或不變）。
 
 - **編輯紀錄與會長室編輯量（02D D3）**：讀版本歷史（collection group `versions` where `deptId` order by `at`，Q9；規則只給總管理員與該部門編輯者，其他人 `permission-denied`）；總管理員另外讀 `auditLogs`（order by `at`），只取部門設定的修改（`deptSettings`、`update`）與卡片刪除（`cards`、`purge`）。遷移產生的第 1 版在編輯紀錄顯示成「遷移｜匯入」，不算進編輯量。議題、週報、標籤沒有歷史（只有最後一次的 `updatedAt`），不在這兩個畫面裡。測試：`fw1.js` 第 7 段。
 
@@ -344,9 +344,25 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 
 **卡片的檢查放在版本的規則**（`versions` 的 `cardFieldsOk(cardAfter())`）：卡片自己的規則（`cardShape`＋`blocksOk`＋`linksOk`）已經接近每份文件 1000 個運算式的上限——模擬器實測，滿載的卡片（50 行、10 個超連結）遷移匯入時只剩大約 8 個簡單條件的餘裕，直接加在卡片上會讓匯入失敗。新建卡片、改內容（`editorEdit`、`meetingEdit`）、遷移匯入都一定同批新建一個版本（`verAfter`），所以這些欄位每次變動都會經過版本的規則；只換順序、永久刪除不建版本，那幾步也改不到這些欄位（`onlyChanged`）。版本的規則加完之後的餘裕（同一種量法）：一般新建約 30、遷移匯入約 12。正式環境的上限是否跟模擬器一樣仍是〔待驗證〕（[verification.md](verification.md)）。
 
-已知限制（04 之前就有，沒有在這次處理）：滿載的卡片在秘書處會議編輯裡同時拿掉時間標記，卡片的規則會超過運算式上限（只改內容可以；部門編輯者、總管理員拿掉 3 個時間都可以）。記在 [README.md](README.md) 的待辦。
+~~已知限制：滿載的卡片在秘書處會議編輯裡同時拿掉時間標記，卡片的規則會超過運算式上限~~：2026-11-20 起秘書處的會議編輯不能改 timeIds（第 5.1j 節），這個情況不會再發生。
 
 測試（`rules-04.test.js`，18 項）：F-01～F-04 議題、週報、標籤；F-05 時間標記；F-06～F-08 卡片與版本（含滿載卡片的新建、匯入、修改不超過上限）；F-09 部門設定；A-01～A-03 稽核紀錄；G-01 舊身分；U-01 個人資料；Q-01～Q-04 權限申請。每一組都有「04 之前的文件照常能改其他欄位」。
+
+### 5.1j 秘書處會議編輯在 firestore 模式（2026-11-20，`backend/tests/rules-meeting.test.js`、`tools/tests/mtf1.js`）
+
+使用者決定：照現有做法（會長室開放 → 秘書處改各部門標了報告的卡片 → 寫回時記成會議紀錄），不採用新的「待併入」流程（DESIGN 的〔已定・未實作〕行政會議流程沒有做）。
+
+| 步驟 | 誰 | 寫什麼 | 規則 |
+|---|---|---|---|
+| 會長室開放／關閉 | 總管理員（會長室看板的開關；其他人開關停用） | `grants/meetingEdit`：開放＝`until` 今天結束（台灣時間隔天 0 點），關閉＝`until` 寫入的那一刻；`rev` +1＋同批 `auditLogs/grants_meetingEdit_{rev}`（action `open`／`close`） | `grants`：只有 `isSuper()`、`until` 不超過現在＋7 天、稽核鏈（沒改） |
+| 改報告卡片 | 秘書處編輯者以上（總管理員走 `editorEdit`） | 卡片的 `title`、`blocks`、`version` +1＋同批新建那一版 | `meetingEdit()`：`report == true`、`until` 未到、卡片 open／done、只改 `title`／`blocks`（**這次拿掉 `timeIds`**） |
+| 改它的時間 | 同上 | 已有時間事件的 `label`、`start`、`end`、`startRaw`、`endRaw`、`allDay`、`place`、`toIssue`，`rev` +1 | `meetingEditOfReportedCard()`（沒改）；新建、刪除時間事件要 `deptWriter`，秘書處不行 |
+| 記會議紀錄 | 同上 | `meetingMinutes/{日期}`＝`{date, items, deptId: 'secretariat'}`（跟遷移的寫法一樣） | `meetingMinutes`：秘書處與總管理員讀寫、只有總管理員刪（沒改） |
+
+- **規則 diff**：只有 `meetingEdit()` 的可改欄位拿掉 `timeIds`（連帶拿掉 `droppedGone()`），加上檔頭的測試清單。原因：秘書處本來就不能新建、刪除時間事件，能改 `timeIds` 只會讓別的部門、別張卡片的事件 ID 被塞進報告卡片（MT-06，修改前會成功），那張卡片之後永久刪除時清不掉那個事件，就刪不掉。SHA-256：`32208b52…`（930 行）→ `76e470cb864729efecfd1976a67553da03a6382749029900da67c2e53b1af6ac`（931 行）。
+- **跟 GitHub 模式的差別**：GitHub 模式的會議編輯還能改母議題、專員、標籤、超連結、新增或刪掉時間標記（整份資料檔寫回，沒有欄位層級的權限）；firestore 模式照規則只開放名稱、說明、已有時間的內容。母議題的處理紀錄（`syncLink` 依時間標記更新的）秘書處寫不了議題，firestore 模式不寫，部門下次編輯那張卡片時同步。秘書處改的不算部門的「更新」（`touched`／`touchedAt` 不寫，燈號不因為會議上的修改變綠）。
+- **攻擊測試 MT-01～MT-12**：開關關著、授權過期、不是秘書處（活動部編輯者、會長室管理員、一般登入者、未登入、撤權後）、改 `deptId`／`staff`／`state`／`report`／`labels`／`links`／`issueId`／`order`／`touched`／`createdBy`、非報告卡片（含把它改成報告）、`timeIds`（加別部門或別張卡片的事件、加不存在的 ID、拿掉）、時間事件（新建、刪除、改 `deptId`／`cardId`／`visibility`／`blockId`）、版本（不建、內容不同、作者是別人、沿用舊號）、授權本身（秘書處、會長室管理員、一般登入者不能開；超過 7 天、沒稽核拒絕；總管理員開到今天結束、關閉可以）、會議紀錄、刪除中的卡片、部門編輯者照常編輯。
+- **網頁**（`store-write.js` 的 `saveMeeting`／`setMeetGrant`／`saveMinutes`）：`saveMeeting` 比對讀到時與現在的畫面資料，只寫上表的欄位，其他差異整次不寫（`meeting-field`）；每張卡片一個交易（先確認 `version`、`report` 沒變），時間事件確認 `rev`。寫回前再讀一次會長室的授權（跟 GitHub 模式一樣）。秘書處看板讀 `meetingMinutes`（只有秘書處與總管理員讀得到，其他人當成沒有）。
 
 ### 5.2 時間事件
 
