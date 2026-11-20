@@ -73,7 +73,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     /* ui-05：沒有種類選單，核取行用工具列的「核取」加；游標放回第一行再按核取框 */
     await p.click(`${L} [data-lctool="check"]`);await p.waitForTimeout(300);await p.keyboard.type('要勾的');
     const ck=await p.evaluate(i=>{const ev=state.events.find(e=>e.id===i);return ev.blocks[ev.blocks.length-1].id},id);
-    await p.click(`${L} .ln[data-blk="${bid}"] input.tx`);await p.waitForTimeout(150);
+    await p.click(`${L} .ln[data-blk="${bid}"] textarea.tx`);await p.waitForTimeout(150);
     const ckb=await (await p.$(`${L} .ln[data-blk="${ck}"] [data-kpck]`)).boundingBox();
     await p.mouse.move(ckb.x+ckb.width/2,ckb.y+ckb.height/2);await p.mouse.down();
     const mid2=await p.evaluate(b=>{const a=document.activeElement;return a.dataset.kptx===b},bid);
@@ -206,7 +206,7 @@ const HOOK=()=>{window.__an=[];const o=Element.prototype.animate;Element.prototy
     const bid=await q.evaluate(e=>state.events.find(x=>x.id===e).blocks[0].id,eid),ck=await q.evaluate(e=>{const b=state.events.find(x=>x.id===e).blocks;return b[b.length-1].id},eid);
     await q.click(`${L} [data-kptx="${bid}"]`);await q.waitForTimeout(200);
     {const sel=`${L} .ln[data-blk="${ck}"] label.ln-ck`;
-      const pre=await q.evaluate(()=>{const a=document.activeElement;a.__k=1;return a.matches('input.tx')});
+      const pre=await q.evaluate(()=>{const a=document.activeElement;a.__k=1;return a.matches('textarea.tx')});
       if(touch)await q.tap(sel);else await q.click(sel);await q.waitForTimeout(350);
       const r=await q.evaluate(([e,ck])=>{const a=document.activeElement;return {to:a.dataset.kptx===ck,on:state.events.find(x=>x.id===e).blocks.find(b=>b.id===ck).check,act:a.tagName+'.'+a.className}},[eid,ck]);
       ok(pre&&r.to&&r.on===true,`${tag}：游標在一行時點核取框（label 包著）：勾起來、游標到那一行、沒有掉到 body（${r.act}）`);}

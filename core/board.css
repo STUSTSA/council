@@ -350,11 +350,11 @@ body.lc-lock #pageMain{overflow:hidden}
 .ln{position:relative;display:flex;align-items:center;gap:10px;min-height:38px;padding:0 8px;margin:0 -8px;border-radius:var(--r-sm);font-size:14.5px;transition:background-color var(--mo-fast) var(--mo-out)}
 .lc:not(.ro):not(.lc-ed) .ln{cursor:text}
 @media (hover:hover){.lc:not(.ro):not(.lc-ed) .ln:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}}
-.ln .tx{flex:1;min-width:0;word-break:break-word;transition:color var(--mo-base) var(--mo-out)}
+.ln .tx{flex:1;min-width:0;overflow-wrap:anywhere;transition:color var(--mo-base) var(--mo-out)}
 .ln span.tx{padding:7px 0;line-height:1.6}
 .ln span.tx:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:6px}
-.ln input.tx{width:auto;padding:6px 0;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font-size:14.5px;transition:border-color var(--mo-fast) var(--mo-out)}
-.ln input.tx:focus{outline:none;border-bottom-color:var(--ink)}
+.ln textarea.tx{display:block;width:auto;min-height:0;padding:6px 0;border:0;border-bottom:1px solid var(--hair);border-radius:0;background:transparent;font:inherit;font-size:14.5px;line-height:1.6;resize:none;overflow:hidden;overflow-wrap:anywhere;transition:border-color var(--mo-fast) var(--mo-out)}   /* 編輯中的一行：自動折行，高度由 live.js kpFit 跟著內容；一行還是一筆 */
+.ln textarea.tx:focus{outline:none;border-bottom-color:var(--ink)}
 .ln.done span.tx{color:var(--muted);text-decoration:line-through}
 .ln .pl{flex:none;margin-left:auto;font-size:12.5px;color:var(--muted);white-space:nowrap}
 .ln-ck{flex:none}
