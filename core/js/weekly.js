@@ -31,6 +31,13 @@ function syncLink(ev){
 }
 /* 刪除即時回報時：母議題裡由它寫入的處理紀錄保留下來，只拿掉連結 */
 function unlinkEv(ev){state.issues.forEach(i=>i.markers.forEach(m=>{if(m.evId===ev.id){delete m.evId;delete m.tmId}}))}
+/* 母議題處理紀錄的「還沒完成」（ui-11）：由時間行寫進來的那一筆（m.evId＋m.tmId），在來源卡片裡那一行（blocks 裡 timeId＝m.tmId）還沒勾時半透明。
+   每次畫的時候從卡片即時算，不另存；找不到來源（卡片或那一行被刪、沒有核取框的舊時間標記、整張完成寫的那一筆）＝照舊不透明 */
+function mkPending(m){
+  if(!m.evId||!m.tmId)return false;
+  const ev=state.events.find(e=>e.id===m.evId),b=ev&&(ev.blocks||[]).find(x=>x.timeId===m.tmId);
+  return !!b&&b.check===false;
+}
 /* 記一次更新（狀態顏色用）：touched 只留最近幾天的日期，touchedAt 是最後更新的時刻 */
 function evTouch(ev){
   const t=nowStr().replace(" ","T"),d=t.slice(0,10);

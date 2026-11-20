@@ -189,7 +189,10 @@ async function acctRequest(pending=[]){
   return acctTry(()=>A.requestCreate({deptId:v.dept,role:v.role,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
 }
 
-/* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄 ---------- */
+/* ---------- 會長室管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
+/* 儲存空間用量（ui-11）：在新分頁開 Firebase 主控台的用量頁（要用自己的 Google 帳號登入主控台才看得到）；不估算、不讀資料。
+   只在這個部門已切到新資料庫（firestore；凍結中不算，同「匯入備份」的 fsMode 判斷）、而且有 projectId 時出現 */
+const usageUrl=()=>{const id=fsMode()&&CFG.firebase&&CFG.firebase.projectId;return id?`https://console.firebase.google.com/project/${encodeURIComponent(id)}/usage`:""};
 async function councilHub(){
   await acctLoad();
   return hubRun("會長室管理",()=>[
@@ -198,7 +201,8 @@ async function councilHub(){
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
     {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
     {k:"import",ic:"cloud",t:"匯入",flow:()=>importPanel()},
-    {k:"export",ic:"download",t:"匯出全部資料",act:exportAllData}]);
+    {k:"export",ic:"download",t:"匯出全部資料",act:exportAllData},
+    ...(usageUrl()?[{k:"usage",ic:"progress",t:"儲存空間用量",act:()=>{const u=usageUrl();if(u)window.open(u,"_blank","noopener,noreferrer")}}]:[])]);
 }
 const nameOf=uid=>acct.names[uid]||uid.slice(0,8);
 const mailOf=(users,uid)=>(users.find(x=>x.uid===uid)||{}).email||"";
@@ -454,7 +458,9 @@ function requestsPanel(){
 }
 
 /* 紀錄：最近 50 筆、翻頁；by.roles＝某人的權限歷史（附檢查連號）、by.actor＝某人做過什麼 */
-const ACT_T={update:"修改",create:"建立邀請",redeem:"QR 加入",revoke:"撤銷",request:"申請",approve:"核准",reject:"拒絕",cancel:"撤回",invite:"QR 加入",manual:"手動調整",claim:"認領舊身分",purge:"刪除卡片",bootstrap:"建立總管理員"};
+/* 動作的中文（寫入端：fb-account.js 的 audit()、store-write.js、migrate-core.js 的 runImport／setMigrationStatus；遷移批次的狀態轉換以狀態名當動作） */
+const ACT_T={update:"修改",create:"建立邀請",redeem:"QR 加入",revoke:"撤銷",request:"申請",approve:"核准",reject:"拒絕",cancel:"撤回",invite:"QR 加入",manual:"手動調整",claim:"認領舊身分",purge:"刪除卡片",bootstrap:"建立總管理員",
+  delete:"刪除",import:"匯入",start:"開始",done:"完成",failed:"失敗",rollingBack:"開始撤回",rolledBack:"撤回完成"};
 function auditWhat(l){
   if(l.col==="roles"){
     const b=l.before||{},a=l.after||{},bd=b.depts||{},ad=a.depts||{},ch=[];
@@ -462,7 +468,7 @@ function auditWhat(l){
     new Set([...Object.keys(bd),...Object.keys(ad)]).forEach(d=>{if(bd[d]===ad[d])return;ch.push(!bd[d]?`+${deptNameOf(d)}${ROLE_T[ad[d]]}`:!ad[d]?`−${deptNameOf(d)}`:`${deptNameOf(d)} ${ROLE_T[bd[d]]}→${ROLE_T[ad[d]]}`)});
     return {act:{invite:"QR 加入",request:"核准申請",manual:"手動調整",revoke:"撤權",bootstrap:"建立總管理員"}[l.action]||l.action,obj:nameOf(l.docId),diff:ch.join("、")};
   }
-  if(l.col==="cards")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
+  if(l.col==="cards"&&l.action==="purge")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
   if(l.action==="delete"&&{issues:1,weeks:1,labels:1}[l.col])return {act:{issues:"刪除議題",weeks:"刪除週報",labels:"刪除標籤"}[l.col],obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};   /* 02D D-d */
   if(l.col==="invitations")return {act:l.action==="create"&&l.ref?"重新產生 QR":l.action==="revoke"&&l.ref?"撤銷 QR（重新產生）":{create:"建立 QR",redeem:"QR 加入",revoke:"撤銷 QR"}[l.action]||l.action,obj:`QR #${l.docId.slice(0,6)}`,diff:""};
   if(l.col==="roleRequests")return {act:{request:"送出申請",approve:"核准申請",reject:"拒絕申請",cancel:"撤回申請"}[l.action]||l.action,obj:`申請 #${l.docId.slice(0,6)}`,diff:""};

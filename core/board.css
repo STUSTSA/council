@@ -757,7 +757,8 @@ a.doc-pill:active{scale:.96}
 /* 今天：每一列一條細綠線（平面，沒有漸層） */
 .g-track .today{position:absolute;top:2px;bottom:2px;width:1px;background:var(--ok);pointer-events:none}
 .g-bar{position:absolute;left:0;right:0;top:27px;height:22px}   /* 整條時間軸的刻度；上下位置由 views.js 的 layoutTrack 依註記標籤的層數決定 */
-.g-mk{position:absolute;top:0;bottom:0;width:0;--mc:var(--tone)!important}
+.g-mk{position:absolute;top:0;bottom:0;width:0;--mc:var(--tone)!important;transition:opacity .2s}
+.g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
 .g-mk .dot{position:absolute;border-radius:50%;background:var(--muted);z-index:2;width:6px;height:6px;left:-3px}   /* 註記：刻度上方的小點（最新一筆是文字色） */
 .g-mk:not(.quiet) .dot{background:var(--ink)}
 .g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:4px 9px 5px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
@@ -801,6 +802,7 @@ a.doc-pill:active{scale:.96}
 .log[open] summary::before{transform:rotate(90deg)}
 .log ol{list-style:none;margin:6px 0 0 6px;padding:0}
 .log li{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:3px 0 7px 16px;border-left:2px solid var(--hair);font-size:13.5px;line-height:1.45;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s}
+.log li.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾：半透明（同 .g-mk.pend；淡入淡出用上面 .log li 的 opacity 過渡） */
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
 .log-d{min-width:74px;font-size:14px}
 .log-p{margin-left:auto;font-size:12px}

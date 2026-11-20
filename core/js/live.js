@@ -286,6 +286,8 @@ function lvTool(ev,k){
     const l={id:uid("l"),name:"",url:"",color:COLORS[ev.links.length%COLORS.length]};ev.links.push(l);render();
     document.querySelector(`.lc-ed [data-lk="${CSS.escape(l.id)}"] [data-e="name"]`)?.focus({preventScroll:true});return}
   if(lvPane===k){lvPane=null;lvSeg=null;render();return}
+  /* 時間、地點頁沒有任何時間行時要先新增一行；已經 50 行加不了：不換頁（換過去會是空白），只提示（ui-11） */
+  if(k!=="staff"&&!lvTimes(ev).length&&ev.blocks.length>=StoreMap.BLK_MAX){kpSay("bad",`最多 ${StoreMap.BLK_MAX} 行`);return}
   lvPane=k;lvSeg=null;
   if(k!=="staff"&&!lvTimes(ev).length){const t=lvAddTime(ev);if(t&&k==="time")lvSeg={tid:t.id,k:"d",buf:""}}
   render();
