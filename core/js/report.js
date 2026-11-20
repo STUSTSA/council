@@ -52,7 +52,7 @@ const rptCh=(k,title,blocks)=>`<section class="rpt-page rpt-sec rpt-ch" data-k="
     <div class="rpt-blocks">${blocks}</div>
     <div class="rpt-ins" contenteditable="false"><span>在這章加入</span><button type="button" data-ins="text">＋ 文字</button><button type="button" data-ins="img">＋ 圖片</button><button type="button" data-ins="cards">＋ 卡片</button></div></section>`;
 function rptHTML(d){
-  const dept=CFG.dept.name||state.title;
+  const dept=CFG.dept.name;
   const staffJoin=ids=>staffNames(ids).join("、");
   const dot=s=>esc(fmt(s).replaceAll("/","."));
   const cover=`<section class="rpt-page rpt-cover">

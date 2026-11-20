@@ -106,7 +106,7 @@ function weekRange(){
 function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
   const inP=d=>!!d&&d>start&&d<=end;
-  const dept=CFG.dept.name||(state.title||"").replace(/(工作)?(看板|進度|進度看板)$/,"").trim()||state.title;
+  const dept=CFG.dept.name;
   const L=[`${dept} 本週例行回報`,`日期：【${end.replaceAll("-",".")}】`,""];
   /* 有人標「會議要報告」就只列那些；一筆都沒有標時，改列全部進行中的即時回報標題（區名也改成「即時回報」） */
   const live=liveOrder(),rep=live.filter(e=>e.report);
