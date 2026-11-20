@@ -347,7 +347,7 @@ async function notiDone(evId,tid){
     if(b){if(b.check)return false;b.check=true}
     else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
       b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
-    u={evId,tid,bid:b.id,made};evTouch(ev);syncLink(ev)},"已完成");
+    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},"已完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
   tlUndo=ok&&u?u:null;renderNoti();return ok;
 }
 async function notiUndo(){
@@ -355,7 +355,7 @@ async function notiUndo(){
   const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
   if(!b||!b.check){toast("這一項已有新的修改，無法復原");renderNoti();return false}
   const ok=await settingSave(()=>{const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);if(!b||!b.check)return false;
-    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);syncLink(ev)},"已復原");
+    if(u.made)ev.blocks=ev.blocks.filter(x=>x!==b);else b.check=false;evTouch(ev);kpSync(ev)},"已復原");
   renderNoti();return ok;
 }
 /* 改期：回到即時回報、打開那張卡片、進入編輯並換到時間頁，選到那一個時間的日期（live.js） */
