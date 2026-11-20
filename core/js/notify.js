@@ -46,16 +46,19 @@ function dayWhen(x,d){
   const k=Math.round((pd(d)-pd(x.date))/864e5)+1,n=Math.round((pd(x.end)-pd(x.date))/864e5)+1;
   return k===1&&x.time?x.time:`${k}／${n} 天`;
 }
-/* 一張卡片：大日期、今日／明日、星期；下面最多四列，每列＝標題（最多兩行、換行平均，不斷成孤字）＋一行小字（當天開始的時刻、多天的「到 M/D」，沒有就不寫），多的寫 +N；沒有事＝一條短細線。
-   不寫件數、地點、所屬即時回報、「第 k／N 天」（地點與所屬在今日層與行事曆看得到）。
+/* 一張卡片：大日期、今日／明日、星期；下面只放一項最該先看的事（標題最多兩行、換行平均；小字＝當天開始的時刻、多天的「到 M/D」，沒有就不寫），
+   右下角一個數字＝當天總件數；沒有事＝一條短細線（不寫數字）。挑的順序：當天開始、有時刻的最早一筆；沒有就挑最近到期（結束日或當天）的。
+   不寫地點、所屬即時回報、「第 k／N 天」（那些在今日層與行事曆看得到）。
    今日＝主要動作色（--pri）底；點今日＝放大成全螢幕的「今日」層（openToday），點明日＝行事曆選到那一天（notiOpenDay） */
 const daySub=x=>[x.place,x.ev].filter(Boolean).join("・");
 const dayNote=(x,d)=>[x.date===d&&x.time?x.time:"",x.end?`到 ${nmd(x.end)}`:""].filter(Boolean).join("・");
+const dayPick=(xs,d)=>{const tm=xs.filter(x=>x.date===d&&x.time).sort((a,b)=>a.time.localeCompare(b.time))[0];
+  return tm||xs.slice().sort((a,b)=>(a.end||a.date).localeCompare(b.end||b.date))[0]};
 function dayCardHTML(d,lab,cls,list){
-  const xs=list.filter(x=>covers(x,d)),MAX=4;
+  const xs=list.filter(x=>covers(x,d)),x=xs.length&&dayPick(xs,d),n=x&&dayNote(x,d);
   return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件">
     <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}</b><small>週${WD[pd(d).getDay()]}</small></span></span>
-    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>{const n=dayNote(x,d);return `<span class="nd-row"><b>${esc(x.title)}</b>${n?`<small class="num">${esc(n)}</small>`:""}</span>`}).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
+    ${x?`<span class="nd-row"><b>${esc(x.title)}</b>${n?`<small class="num">${esc(n)}</small>`:""}</span><span class="nd-count num" aria-hidden="true">${xs.length}</span>`
       :`<span class="nd-empty" aria-hidden="true"><i></i></span>`}
   </button>`;
 }
