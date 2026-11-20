@@ -5,7 +5,7 @@
    4. 點名：點一下依序 出席→請假→缺席→出席；寫入 attendanceRecords/{場次}_{成員}（決定性 ID、狀態、sessionAt、updatedBy）；快速連點只有一份文件、最後狀態正確
    5. 切換場次：每場各自的結果；重新整理後還在；四個數字對得上
    6. 寫入失敗（沒有權限）：畫面換回原狀並提示
-   7. 整理名冊：取消勾選＝停用（不刪、紀錄還在、不再出現在點名）、勾回來＝恢復；複製結果文字；別部門被規則拒絕
+   7. 整理名冊（名冊鈕進整理模式）：一筆一筆新增（驗證、同名擋下、職稱預設部員）、編輯職稱／姓名／部門、「在名冊中」取消＝停用（不刪、紀錄還在、不再出現在點名）、勾回來＝恢復；部門膠囊只看一個部門；複製結果文字；別部門被規則拒絕
    執行（會自己開模擬器與網站）：cd backend && npm run test:web */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
 const {createRequire}=require('module');
@@ -87,11 +87,13 @@ const XSS='<img src=x onerror="window.__xss=1">';
   let ms=await list('attendanceMembers');
   ok(ms.length===4&&ms.every(m=>m.active===true&&m.updatedBy===eUid),'名冊 4 人（認不出的部門略過、同部門同姓名只留一個）');
   ok(ms.some(m=>m.dept==='財務部'&&m.role==='部員'&&m.name.startsWith('沈小明'))&&ms.some(m=>m.name==='林昱辰'&&m.role==='部長'&&m.dept==='權益部'),'職稱沒寫＝部員；寫了的照寫');
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#attPanel [data-at=import]');
   await imp(pe,'權益部 部長 林昱辰');await pe.waitForTimeout(600);
   ok((await list('attendanceMembers')).length===4,'再匯入同一個人：不重複');
   ok(await pe.evaluate(()=>window.__xss!==1&&!document.querySelector('#attBody img')),'名字帶 HTML：不執行');
   await pe.click('#attPanel [data-at=import]');await pe.waitForSelector('#dlgForm [name=txt]');await pe.fill('#dlgForm [name=txt]','亂寫一通');await pe.click('#dlgForm [data-act=ok]');await pe.waitForTimeout(300);
   ok(await pe.evaluate(()=>/認不出/.test($('#dlgForm .dlg-err').textContent)),'全部認不出：對話框提示');await pe.click('#dlgForm [data-act=cancel]');await pe.waitForTimeout(300);
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForTimeout(200);
 
   /* ---------- 3. 場次 ---------- */
   await pe.click('#attPanel [data-at=addsess]');await pe.waitForSelector('#dlgForm [name=title]');await pe.fill('#dlgForm [name=title]','');await pe.click('#dlgForm [data-act=ok]');await pe.waitForTimeout(300);
@@ -143,22 +145,55 @@ const XSS='<img src=x onerror="window.__xss=1">';
 
   /* ---------- 7. 整理名冊與複製結果 ---------- */
   await pe.evaluate(()=>{BoardAttendance.mark=window.__orig});
-  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#dlgForm input[type=checkbox]');
-  ok(await pe.evaluate(()=>document.querySelectorAll('#dlgForm input[type=checkbox]').length===4),'名冊對話框列出全部 4 人');
-  await pe.evaluate(g=>{document.querySelector(`#dlgForm input[value="${g}"]`).click()},gao);await pe.click('#dlgForm [data-act=ok]');
-  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.filter(m=>m.active).length===3));
-  const gm=(await list('attendanceMembers')).find(m=>m.id===gao);
-  ok(gm&&gm.active===false&&gm.updatedBy===eUid&&(await list('attendanceMembers')).length===4,'取消勾選＝停用（文件還在、active false）');
-  ok(await pe.evaluate(g=>!document.querySelector(`#attPanel [data-id="${g}"]`),gao),'停用的人不再出現在點名');
+  const edit1=async id=>{await pe.click(`#attPanel [data-at=edit1][data-id="${id}"]`);await pe.waitForSelector('#dlgForm [name=name]')};
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#attPanel [data-at=edit1]');
+  ok(await pe.evaluate(()=>document.querySelectorAll('#attPanel [data-at=edit1]').length===4&&!document.querySelector('#attPanel [data-at=mark]')&&!!document.querySelector('#attPanel [data-at=add]')),'整理名冊：列出全部 4 人、點人是編輯（不是點名）、有「+ 成員」');
+  /* 一筆一筆新增 */
+  await pe.click('#attPanel [data-at=add]');await pe.waitForSelector('#dlgForm [name=name]');await pe.click('#dlgForm [data-act=ok]');await pe.waitForTimeout(300);
+  ok(await pe.evaluate(()=>/請填姓名/.test($('#dlgForm .dlg-err').textContent)),'新增成員：姓名空白＝提示');
+  await pe.fill('#dlgForm [name=name]','林昱辰');
+  await pe.click('#dlgForm [data-act=ok]');await pe.waitForTimeout(300);
+  ok(await pe.evaluate(()=>/已經有同名/.test($('#dlgForm .dlg-err').textContent))&&(await list('attendanceMembers')).length===4,'新增成員：同部門同姓名＝提示、沒有寫入');
+  await pe.fill('#dlgForm [name=name]','陳新人<u>X</u>');await pe.fill('#dlgForm [name=role]','');await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.length===5));
+  const nm=(await list('attendanceMembers')).find(m=>m.name.startsWith('陳新人'));
+  ok(nm&&nm.role==='部員'&&nm.active===true&&nm.updatedBy===eUid&&nm.dept===(await pe.evaluate(()=>AT.dept||BOARD_DEPTS[0].name)),'新增成員：職稱沒填＝部員、寫入名冊');
+  ok(await pe.evaluate(()=>!document.querySelector('#attPanel .at-m u')&&/陳新人<u>X<\/u>/.test(document.querySelector('#attPanel').textContent)),'新增的名字帶 HTML：照字面顯示、不當標籤');
+  /* 編輯：改職稱與姓名 */
+  await edit1(gao);await pe.fill('#dlgForm [name=role]','部長');await pe.fill('#dlgForm [name=name]','高苡安二');await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(g=>AT.members.find(m=>m.id===g).name==='高苡安二',gao));
+  let gm=(await list('attendanceMembers')).find(m=>m.id===gao);
+  ok(gm.role==='部長'&&gm.name==='高苡安二'&&gm.dept===ms.find(m=>m.id===gao).dept&&gm.active===true,'編輯：改職稱、姓名（部門不變）');
+  /* 編輯：換部門 */
+  const deptTo=await pe.evaluate(g=>BOARD_DEPTS.map(d=>d.name).find(n=>n!==AT.members.find(m=>m.id===g).dept),gao);
+  await edit1(gao);await pe.evaluate(n=>{const c=document.querySelector('#dlgForm .csel');c.querySelector('.csel-btn').click()},deptTo);
+  await pe.waitForSelector('#dlgForm .csel-list:not([hidden])');await pe.evaluate(n=>{[...document.querySelectorAll('#dlgForm .csel-list [role=option]')].find(o=>o.textContent.trim()===n).click()},deptTo);
+  await pe.click('#dlgForm [data-act=ok]');await until(()=>pe.evaluate(({g,n})=>AT.members.find(m=>m.id===g).dept===n,{g:gao,n:deptTo}));
+  ok((await list('attendanceMembers')).find(m=>m.id===gao).dept===deptTo,'編輯：換部門');
+  /* 停用／恢復（編輯視窗的「在名冊中」） */
+  await edit1(gao);await pe.evaluate(()=>document.querySelector('#dlgForm input[name=active]').click());await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(g=>AT.members.find(m=>m.id===g).active===false,gao));
+  gm=(await list('attendanceMembers')).find(m=>m.id===gao);
+  ok(gm.active===false&&gm.updatedBy===eUid&&(await list('attendanceMembers')).length===5,'取消「在名冊中」＝停用（文件還在）');
+  ok(await pe.evaluate(g=>document.querySelector(`#attPanel [data-id="${g}"]`).classList.contains('off'),gao),'整理模式：停用的人淡色、標「停用中」');
   ok(!!(await list('attendanceRecords')).find(x=>x.memberId===gao),'過去的點名紀錄不動');
+  /* 部門膠囊 */
+  const dcount=await pe.evaluate(()=>[...document.querySelectorAll('#attPanel .at-dept .wk-d')].length);
+  ok(dcount>=3,'部門膠囊：全部＋各部門（'+dcount+'）');
+  await pe.evaluate(()=>document.querySelectorAll('#attPanel .at-dept .wk-d')[1].click());await pe.waitForTimeout(200);
+  ok(await pe.evaluate(()=>{const d=AT.dept;return !!d&&[...document.querySelectorAll('#attPanel .at-h')].length===1&&document.querySelector('#attPanel .at-h').textContent.startsWith(d)}),'點部門膠囊：只列那個部門');
+  await pe.evaluate(()=>document.querySelectorAll('#attPanel .at-dept .wk-d')[0].click());
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForTimeout(200);
+  ok(await pe.evaluate(g=>!document.querySelector(`#attPanel [data-id="${g}"]`)&&!!document.querySelector('#attPanel [data-at=mark]'),gao),'離開整理模式：回到點名、停用的人不在');
   const txt=await pe.evaluate(()=>atText());
   ok(/第十一次行政會議|臨時會議/.test(txt)&&/還沒點：/.test(txt)&&!/高苡安/.test(txt),'複製結果文字：含場次與名單，不含停用的人');
-  const dn=await po.evaluate(async()=>{try{const B=await atMod();await B.setActive(CFG.firebase,[{id:'x',active:false}]);return 'ok'}catch(e){return e.code||e.message}});
+  const dn=await po.evaluate(async()=>{try{const B=await atMod();await B.updateMember(CFG.firebase,'x',{name:'a',dept:'b',role:'c',active:false});return 'ok'}catch(e){return e.code||e.message}});
   ok(dn==='permission-denied','別部門編輯者直接改名冊：被規則拒絕');
-  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#dlgForm input[type=checkbox]');
-  await pe.evaluate(g=>{document.querySelector(`#dlgForm input[value="${g}"]`).click()},gao);await pe.click('#dlgForm [data-act=ok]');
-  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.filter(m=>m.active).length===4));
-  ok(await pe.evaluate(()=>AT.members.filter(m=>m.active).length===4),'勾回來＝恢復');
+  await pe.click('#attPanel [data-at=roster]');await pe.waitForSelector('#attPanel [data-at=edit1]');await edit1(gao);
+  await pe.evaluate(()=>document.querySelector('#dlgForm input[name=active]').click());await pe.click('#dlgForm [data-act=ok]');
+  await until(()=>pe.evaluate(()=>!AT.busy&&AT.members.filter(m=>m.active).length===5));
+  ok(await pe.evaluate(()=>AT.members.filter(m=>m.active).length===5),'勾回來＝恢復');
+  await pe.click('#attPanel [data-at=roster]');
 
   ok(![ps,pe,po,pv].some(p=>p.errs.length),'沒有頁面錯誤：'+[ps,pe,po,pv].flatMap(p=>p.errs).join('|'));
   if(process.env.SHOTS){
@@ -166,7 +201,8 @@ const XSS='<img src=x onerror="window.__xss=1">';
     for(const [n,w,h,cs] of [['desk',1100,900,'light'],['mob',390,844,'light'],['dark',390,844,'dark']]){
       await pe.setViewportSize({width:w,height:h});await pe.emulateMedia({colorScheme:cs});await pe.waitForTimeout(500);
       await pe.evaluate(()=>document.getElementById('attPanel').scrollIntoView());await pe.waitForTimeout(300);
-      await pe.locator('#attPanel').screenshot({path:path.join(process.env.SHOTS,`att_${n}.png`)})}}
+      await pe.locator('#attPanel').screenshot({path:path.join(process.env.SHOTS,`att_${n}.png`)});
+      await pe.click('#attPanel [data-at=roster]');await pe.waitForTimeout(400);await pe.locator('#attPanel').screenshot({path:path.join(process.env.SHOTS,`att_${n}_edit.png`)});await pe.click('#attPanel [data-at=roster]');await pe.waitForTimeout(300)}}
   for(const p of pages)await p.context().close().catch(()=>{});
   await b.close();await t.cleanup();srv.close();
   console.log(fails?`失敗 ${fails} 項（通過 ${passes}）`:`全部通過（${passes} 項）`);process.exit(fails?1:0);
