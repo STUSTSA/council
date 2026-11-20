@@ -198,7 +198,7 @@ const seed=(p,id)=>p.evaluate(id=>{const ev=state.events.find(e=>e.id===id);
   /* 12. 完成紀錄 */
   {await p.click('#tabbar .tab[data-tab="done"]');await p.waitForTimeout(800);
     const did=await p.evaluate(()=>{const e=state.events.find(e=>e.doneAt&&e.blocks&&e.blocks.length);return e.id});
-    await p.click(`#doneList .cp[data-cp="${did}"]`);await p.waitForTimeout(900);
+    await p.evaluate(id=>doneWeekFor(id),did);await p.click(`#doneList .cp[data-cp="${did}"]`);await p.waitForTimeout(900);
     const r=await p.evaluate(()=>{const lc=$('#doneDetail .lc');return lc&&{ro:lc.classList.contains('ro'),k:lc.dataset.lc,st:lc.querySelector('.lc-meta .ev-st').textContent,date:/\d/.test(lc.querySelector('.lc-meta .num')?.textContent||''),
       lines:lc.querySelectorAll('.lc-body .ln').length,tools:!!lc.querySelector('.lc-tools'),go:!!lc.querySelector('[data-kpgo]'),nav:lc.querySelectorAll('.lc-tri').length,op:getComputedStyle(document.querySelector('#doneList .cp:not(.sel)')).opacity}});
     ok(r&&r.ro&&r.k==='done'&&r.st==='完成'&&r.date&&r.lines>0&&!r.tools&&!r.go&&r.nav===2,`完成紀錄：同一套卡片唯讀，狀態「完成」、完成日、逐行內容（${r&&r.lines} 行）、上一張／下一張、沒有工具列`);
@@ -312,7 +312,7 @@ const seed=(p,id)=>p.evaluate(id=>{const ev=state.events.find(e=>e.id===id);
     /* P2-6：完成紀錄卡片標題跟膠囊一樣帶段次 */
     const did=await q.evaluate(()=>{const e=state.events.find(e=>e.doneAt);e.round=3;render();return e.id});
     await q.click('#tabbar .tab[data-tab="done"]');await q.waitForTimeout(800);
-    await q.click(`#doneList .cp[data-cp="${did}"]`);await q.waitForTimeout(900);
+    await q.evaluate(id=>doneWeekFor(id),did);await q.click(`#doneList .cp[data-cp="${did}"]`);await q.waitForTimeout(900);
     const t=await q.evaluate(id=>({cp:document.querySelector(`#doneList .cp[data-cp="${id}"] b`).textContent,card:$('#doneDetail .lc-title')?.textContent}),did);
     ok(t.card===t.cp&&/第 3 段/.test(t.card||''),`P2-6 完成紀錄卡片標題＝膠囊名稱（${t.card}）`);
     await q.keyboard.press('Escape');await q.waitForTimeout(500);
