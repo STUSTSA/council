@@ -57,7 +57,7 @@ R＝讀、C＝新增、U＝修改、D＝硬刪；「部門」＝文件的 `deptI
 | `deptSettings` | | R | R | RU（部門） | RCUD | |
 | `users/{uid}` | | 本人 RCU | 本人 | 本人 | R | 信箱必須等於登入信箱 |
 | `profiles/{uid}` | | R；本人 CU | 同左 | 同左 | RU | |
-| `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 只有部門與 uid（專員名單），名字從 `profiles`；見第 5.1h 節 |
+| `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 部門、uid、role（05 起）（專員名單），名字從 `profiles`；見第 5.1h、5.1i 節 |
 | `roles/{uid}` | | 本人 R；核銷邀請時本人 CU | 同左 | 同左 | RCU（不能動自己的 `super`） | 見 [invitations-roles-audit.md](invitations-roles-audit.md) |
 | `roleRequests` | | 本人 RC、本人撤回、再申請（只能申請部門的 `admin`／`editor`；04：每人每個部門一份） | 同左 | 同左 | RU（核准要同批改 `roles`） | |
 | `invitations` | | 知道權杖者 get；核銷 U | 同左 | 同左（D3 開放則可對自己部門 C） | RCU | 不能 list |
@@ -319,6 +319,13 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 | M-07 | 撤權後讀原本部門的名單 | 拒絕 |
 
 網頁測試：`tools/tests/dv1.js`（登入補名單、編輯者的專員選項、別部門與沒有角色的人讀不到、撤權後對齊、打開人員清掉過期的）。
+
+### 5.1i 05 部門成員名單、部長管理、舊身分清除（`backend/tests/rules-05-members.test.js`，N5-01～N5-40）
+- `deptMembers` 多一個可有可無的 `role`（admin／editor，要等於 roles 裡該部門的角色）；本人、總管理員、該部門管理員可建立與更新（更新只換 role、at）。名單的讀取範圍不變（同部門編輯者以上、總管理員）。
+- 部長（部門管理員）：可發自己部門「編輯者」的 QR 邀請（不能發管理員、不能綁舊身分、不能發別的部門）；可撤銷自己發的邀請、看得到自己發的邀請後來的狀態；可把本部門的編輯者從 roles 拿掉（`lastVia: dept`、`lastRef`＝部門，同一批寫稽核與刪名單）。不能動自己、其他管理員、總管理員、別的部門，不能新增角色或升管理員（升管理員仍只有總管理員）。
+- 部長讀 `roles/{uid}`（為了帶 rev 寫入）：只限對方在「我是管理員的部門」有角色、且對方不是總管理員；列出全部、讀 users（信箱）、稽核紀錄照舊只有總管理員。
+- 舊身分（legacyIdentities）刪除沿用 04：只有總管理員。刪除後卡片上指定給它的負責人顯示「（已移除）」。
+- 「會長」目前不是獨立角色（roles 只有 super 與各部門 admin／editor）；看全部帳號、指派一律是總管理員。
 
 ### 5.1i 04 欄位的型別、格式與長度（`backend/tests/rules-04.test.js`）
 

@@ -105,13 +105,14 @@ function acctSettingsInner(){
       +setRow("backup","download","備份")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
   return setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
-    +setSec(setRow("acct","people","帳號"))+ed
+    +setSec(setRow("acct","people","帳號")+(fsWriter()?setRow("members","people","部門成員"):""))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
   acct:()=>acctHub(),
+  members:()=>membersPanel(),
   council:()=>councilHub(),
 };
 document.addEventListener("click",async e=>{
@@ -197,6 +198,7 @@ async function councilHub(){
   await acctLoad();
   return hubRun("系統管理",()=>[
     {k:"people",ic:"people",t:"人員",flow:()=>peoplePanel()},
+    {k:"legacy",ic:"history",t:"舊身分",flow:()=>legacyPanel()},
     {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
     {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
@@ -226,7 +228,10 @@ function peoplePanel(){
           <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button><button type="button" class="add-row" data-back>返回</button></div>`;
         return}
       const list=roles.slice().sort((a,b)=>(b.super-a.super)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
+      /* 05：登入過、還沒有任何角色文件的帳號也列出來（點進去就能指派部門與角色）；有 roles 文件的（含被撤光的）在上面那一區 */
+      const none=users.filter(x=>!roles.some(r=>r.uid===x.uid)).sort((a,b)=>nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
       p.html=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="acct-rt"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
+        ${none.length?`<p class="acct-sub">尚無權限的帳號（${none.length}）</p><div class="set-list">${none.map(x=>`<button type="button" class="set-row acct-row" data-who="${esc(x.uid)}"><span class="acct-rt"><b>${esc(nameOf(x.uid))}</b><small>${esc(x.email)}</small></span>${SR_CHEV}</button>`).join("")}</div>`:""}
         <button type="button" class="add-row" data-grant>+ 授予權限</button>`;
     };
     const write=async(uid,mut,via,ok)=>{if(await acctTry(()=>A.roleWrite(uid,mut,via),ok)){A.rosterSync(uid).catch(()=>{});if(p.alive){await load();draw()}}};   /* 03 F3：專員名單跟著角色（另一批，失敗下次打開人員再補）；按確定後才離開面板（寫入晚完成）就不重讀 */
@@ -260,6 +265,98 @@ function peoplePanel(){
         await write(target,r=>({...r,depts:{...r.depts,[v.dept]:v.role}}),"manual","已授予");
         if(pick){who=target;draw()}
       }
+    });
+    await load();draw();
+  });
+}
+
+/* ---------- 部門成員（05）：這個部門有編輯權限的人（名字、角色）----------
+   編輯者、管理員、總管理員都看得到（名單 deptMembers，只有 uid 與角色；名字從 profiles，不含信箱）。
+   管理員（部長）與總管理員多兩個動作：產生這個部門「編輯者」的 QR（對方掃了登入就加入）、撤銷編輯者（管理員不能動管理員與自己；升管理員由總管理員在系統管理的人員頁做） */
+function membersPanel(){
+  const dept=CFG.deptId;
+  return acctPanel(`部門成員・${deptNameOf(dept)}`,async p=>{
+    const A=await acctLoad(),me=acct.user.uid,manage=acctSuper()||acctDepts()[dept]==="admin";
+    let list=[],cur=null,busy=false,curOff=null;
+    const left=()=>cur?cur.expiresAt-A.serverNow():0;
+    const live=()=>!!cur&&cur.status==="active"&&left()>0;
+    const rank=r=>r==="admin"?0:r==="editor"?1:2;
+    const load=async()=>{list=await A.rosterFull(dept);acct.names=await A.profiles().catch(()=>acct.names);
+      list.sort((a,b)=>rank(a.role)-rank(b.role)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"))};
+    /* 這張 QR 被用掉或撤銷：跟著變；用掉之後過一下再重讀名單（對方登入後才會補上名單那一份） */
+    const watch=()=>{if(curOff){curOff();curOff=null}if(!cur||!p.alive)return;const h=cur.h;
+      curOff=A.inviteWatch(h,v=>{if(!cur||cur.h!==h||!v||v.status===cur.status)return;Object.assign(cur,{status:v.status,usedBy:v.usedBy});
+        draw();if(v.status==="used")setTimeout(()=>{if(p.alive)load().then(draw)},2500)})};
+    p.onEnd(()=>{if(curOff)curOff()});
+    const draw=async()=>{
+      if(!p.alive)return;
+      const qr=cur?await qrSvg(joinUrl(cur.token,cur.deptId)):"";
+      if(!p.alive)return;
+      const stat=cur?(cur.status==="used"?"已使用":cur.status==="revoked"?"已撤銷":left()>0?mmss(left()):"已過期"):"";
+      p.html=p.head()+(manage?(cur?`<div class="acct-qr${live()?"":" off"}" data-h="${esc(cur.h)}"><div class="acct-qr-img" role="img" aria-label="QR 邀請">${qr}</div>
+          <b>${esc(deptNameOf(cur.deptId))}・${ROLE_T.editor}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${stat}</span>
+          <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke>撤銷</button>`:""}</div></div>`
+        :`<button type="button" class="primary acct-new" data-new>新增${ROLE_T.editor}</button>`):"")
+        +`<div class="set-list">${list.map(x=>`<div class="acct-line"><span><b>${esc(nameOf(x.uid))}</b><small>${esc(ROLE_T[x.role]||"成員")}${x.uid===me?"・自己":""}</small></span>${manage&&x.role==="editor"&&x.uid!==me?`<button type="button" class="icon danger" data-rm="${esc(x.uid)}">撤銷</button>`:""}</div>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>`;
+    };
+    p.every(()=>{
+      const t=p.box.querySelector(".acct-qr-t");
+      if(t&&cur&&cur.status==="active"){if(left()>0)t.textContent=mmss(left());else if(!p.box.querySelector(".acct-qr.off"))draw()}
+    },1000);
+    p.box.addEventListener("click",async e=>{
+      const b=e.target.closest("button");if(!b||busy)return;busy=true;
+      try{
+        if(b.hasAttribute("data-new")){try{cur=await A.inviteCreate({deptId:dept,role:"editor"});watch()}catch(err){toast(acctErr(err))}}
+        else if(b.hasAttribute("data-regen")&&cur){try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}}
+        else if(b.hasAttribute("data-revoke")&&cur){const v=await ask("撤銷這張 QR",[],{danger:"撤銷"});if(v!=="delete")return;
+          const h=cur.h;if(await acctTry(()=>A.inviteRevoke(h),"已撤銷")){cur=null;watch()}}
+        else if(b.dataset.rm){const u=b.dataset.rm,v=await ask(`撤銷 ${nameOf(u)} 的${deptNameOf(dept)}編輯權限`,[],{danger:"撤銷",note:"撤銷後仍可閱讀看板"});if(v!=="delete")return;
+          const ok=await acctTry(async()=>{
+            if(acctSuper()){await A.roleWrite(u,r=>{const x={...r.depts};delete x[dept];return {...r,depts:x}},"revoke");await A.rosterSync(u).catch(()=>{})}
+            else await A.deptRemove(u,dept)},"已撤銷");
+          if(!ok&&!p.alive)return;
+        }else return;
+        if(!p.alive)return;
+        await load();await draw();
+      }finally{busy=false}
+    });
+    await load();await draw();
+  });
+}
+
+/* ---------- 舊身分（05，總管理員）：匯入帶過來的名字對照表（歷史卡片「負責人」顯示名字的來源，沒有任何權限）----------
+   逐筆或整個部門或全部刪除（規則：只有總管理員能刪）。刪掉的名字不能復原；卡片本身與其他內容不變，指定給舊身分的負責人改顯示「（已移除）」（team.js 的 staffName）。
+   舊身分已被人認領（claimedBy）也一樣能刪：認領只是記一個對照，那個人的帳號與權限在 roles，不受影響 */
+function legacyPanel(){
+  return acctPanel("舊身分",async p=>{
+    const A=await acctLoad();
+    let list=[],busy=false;
+    const load=async()=>{list=await A.legacyList();acct.names=await A.profiles().catch(()=>acct.names)};
+    const order=d=>{const i=BOARD_DEPTS.findIndex(x=>x.id===d);return i<0?99:i};
+    const draw=()=>{if(!p.alive)return;
+      const by={};list.forEach(x=>(by[x.deptId]=by[x.deptId]||[]).push(x));
+      const depts=Object.keys(by).sort((a,b)=>order(a)-order(b));
+      p.html=p.head()+(list.length?`<div class="acct-acts"><button type="button" class="add-row" data-delall>全部刪除（${list.length}）</button></div>`:"")
+        +(depts.map(d=>`<div class="acct-acts"><b class="acct-sub">${esc(deptNameOf(d))}（${by[d].length}）</b><button type="button" class="icon danger" data-deldept="${esc(d)}">刪除這個部門</button></div>
+          <div class="set-list">${by[d].sort((a,b)=>String(a.name).localeCompare(String(b.name),"zh-Hant")).map(x=>`<div class="acct-line"><span><b>${esc(x.name)}</b><small>${x.claimedBy?`已有人認領・${esc(nameOf(x.claimedBy))}`:"沒有人認領"}</small></span><button type="button" class="icon danger" data-del="${esc(x.id)}">刪除</button></div>`).join("")}</div>`).join("")
+        ||`<p class="set-p acct-empty">沒有舊身分</p>`);
+    };
+    const NOTE="刪除後無法復原。卡片上原本指定給這些人的負責人改顯示「（已移除）」，卡片的其他內容不變；有登入帳號的人不受影響。要留一份名單，先用「匯出全部資料」備份。";
+    const run=async(ids,title,danger)=>{
+      const taken=list.filter(x=>ids.includes(x.id)&&x.claimedBy).length;
+      const v=await ask(title,[],{danger,note:`${NOTE}${taken?`\n其中 ${taken} 位已有人認領（對方的帳號與權限不變）。`:""}`});if(v!=="delete")return;
+      await acctTry(()=>A.legacyDelete(ids),`已刪除 ${ids.length} 筆`);
+    };
+    p.box.addEventListener("click",async e=>{
+      const b=e.target.closest("button");if(!b||busy)return;busy=true;
+      try{
+        if(b.dataset.del){const x=list.find(y=>y.id===b.dataset.del);if(!x)return;await run([x.id],`刪除舊身分「${x.name}」`,"刪除")}
+        else if(b.dataset.deldept){const d=b.dataset.deldept,ids=list.filter(x=>x.deptId===d).map(x=>x.id);if(!ids.length)return;await run(ids,`刪除${deptNameOf(d)}的 ${ids.length} 個舊身分`,"全部刪除")}
+        else if(b.hasAttribute("data-delall")){if(!list.length)return;await run(list.map(x=>x.id),`刪除全部 ${list.length} 個舊身分`,"全部刪除")}
+        else return;
+        if(!p.alive)return;
+        await load();draw();
+      }finally{busy=false}
     });
     await load();draw();
   });
@@ -460,7 +557,7 @@ function requestsPanel(){
 /* 紀錄：最近 50 筆、翻頁；by.roles＝某人的權限歷史（附檢查連號）、by.actor＝某人做過什麼 */
 /* 動作的中文（寫入端：fb-account.js 的 audit()、store-write.js、migrate-core.js 的 runImport／setMigrationStatus；遷移批次的狀態轉換以狀態名當動作） */
 const ACT_T={update:"修改",create:"建立邀請",redeem:"QR 加入",revoke:"撤銷",request:"申請",approve:"核准",reject:"拒絕",cancel:"撤回",invite:"QR 加入",manual:"手動調整",claim:"認領舊身分",purge:"刪除卡片",bootstrap:"建立總管理員",
-  delete:"刪除",import:"匯入",start:"開始",done:"完成",failed:"失敗",rollingBack:"開始撤回",rolledBack:"撤回完成"};
+  delete:"刪除",dept:"部門調整",import:"匯入",start:"開始",done:"完成",failed:"失敗",rollingBack:"開始撤回",rolledBack:"撤回完成"};
 function auditWhat(l){
   if(l.col==="roles"){
     const b=l.before||{},a=l.after||{},bd=b.depts||{},ad=a.depts||{},ch=[];

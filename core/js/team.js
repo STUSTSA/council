@@ -196,8 +196,10 @@ async function teamSettings(){
 const staffOpts=()=>state.members.map(m=>[m.id,m.name]);
 /* 03 負責人（暫定，不改權限）：firestore 模式的帳號（UID）用 profiles 的名稱，總管理員另外看得到信箱；舊身分照舊用 members 的名字 */
 const staffName=id=>{const m=state.members.find(x=>x.id===id);if(m)return m.name;if(!fsMode())return "";
-  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?"":String(id).slice(0,8))};
-const staffNames=ids=>(ids||[]).map(staffName).filter(Boolean);
+  return (typeof acct!=="undefined"&&acct.names[id])||(staffPpl.key===staffKey()&&staffPpl.mail[id])||(String(id).startsWith("legacy:")?STAFF_GONE:String(id).slice(0,8))};
+/* 05：舊身分被總管理員刪掉後，卡片上指定給它的負責人顯示「（已移除）」（幾個都只顯示一次）；名字不會變成代號 */
+const STAFF_GONE="（已移除）";
+const staffNames=ids=>(ids||[]).map(staffName).filter((n,i,a)=>n&&(n!==STAFF_GONE||a.indexOf(n)===i));
 /* 即時回報「專員」欄的選項：github 模式＝本看板的身分；firestore 模式（staffPplLoad 讀）：
    總管理員＝這個部門有角色的帳號（roles）；部門的編輯者、管理員＝已標的＋自己＋這個部門的專員名單（03 F3，deptMembers：同部門有角色的人，只有 uid，名字從 profiles） */
 const staffPpl={key:"",roles:null,editors:null,mail:{}};

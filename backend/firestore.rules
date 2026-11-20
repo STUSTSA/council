@@ -129,19 +129,25 @@ service cloud.firestore {
       allow update: if signedIn() && uid == me() && onlyChanged(['lastLoginAt']) && d().lastLoginAt == request.time;
       allow delete: if false;
     }
-    // 03 F3 專員名單：同部門有角色的人（編輯者、管理員）互相看得到「誰在這個部門」。只有 deptId、uid 與時間，沒有信箱、角色等級、其他部門；
+    // 03 F3 專員名單：同部門有角色的人（編輯者、管理員）互相看得到「誰在這個部門」。只有 deptId、uid、時間與角色（admin／editor），沒有信箱、其他部門；
     // 名字照舊從 profiles 讀。ID＝{部門}__{uid}。別部門的成員、沒有角色的登入者、未登入都讀不到。
-    // 寫：本人（自己真的有這個部門的角色時）或總管理員建立；刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
+    // role（05）：可有可無（舊文件沒有）；有的話一定要等於 roles 文件（同一批或之前已寫入）裡這個部門的角色，所以名單上的角色不可能騙人。
+    // 寫（建立、更新）：本人（自己真的有這個部門的角色時）、總管理員、或這個部門的管理員（部長；只能登記有這個部門角色的人）；
+    // 刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
     match /deptMembers/{id} {
       function rosterRole(u, dept) { return getAfter(doc('roles', u)).data.get('depts', {}).get(dept, null); }
       function mine() { return signedIn() && id.split('__').size() == 2 && id.split('__')[1] == me(); }   // 自己那一份（不論存不存在：登入時先查有沒有再補）
+      function rosterShape() {
+        return d().keys().hasOnly(['deptId', 'uid', 'role', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
+          && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
+          && (d().uid == me() || isSuper() || isAdmin(d().deptId))
+          && rosterRole(d().uid, d().deptId) in ['admin', 'editor']
+          && d().get('role', rosterRole(d().uid, d().deptId)) == rosterRole(d().uid, d().deptId);
+      }
       allow get: if mine() || isSuper() || isEditor(resource.data.deptId);
       allow list: if isSuper() || isEditor(resource.data.deptId);
-      allow create: if signedIn() && d().keys().hasOnly(['deptId', 'uid', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
-        && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
-        && (d().uid == me() || isSuper())
-        && rosterRole(d().uid, d().deptId) in ['admin', 'editor'];
-      allow update: if false;
+      allow create: if signedIn() && rosterShape();
+      allow update: if signedIn() && rosterShape() && unchanged(['deptId', 'uid']);   // 只換 role、at（角色改變後補上或對齊）
       allow delete: if signedIn() && (isSuper() || resource.data.uid == me()
         || (isEditor(resource.data.deptId) && !(rosterRole(resource.data.uid, resource.data.deptId) in ['admin', 'editor'])));
     }
@@ -158,7 +164,7 @@ service cloud.firestore {
 
     // ===================== 邀請（invitations-roles-audit.md 第 2、4 節） =====================
     match /invitations/{h} {
-      allow get:  if isSuper() || (signedIn() && resource.data.status == 'active');
+      allow get:  if isSuper() || (signedIn() && (resource.data.status == 'active' || resource.data.createdBy == me()));   // 05：發的人看得到自己那張後來的狀態
       allow list: if isSuper();
       allow delete: if false;
 
@@ -166,7 +172,9 @@ service cloud.firestore {
         return d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()
             && exists(doc('departments', d().deptId));
       }
-      allow create: if isSuper()                                                  // D3：只有會長室發邀請
+      // 05：部長（部門管理員）只能發自己部門的「編輯者」邀請（不能發管理員、不綁舊身分）；其餘仍只有總管理員
+      function deptAdminInvite() { return isAdmin(d().deptId) && d().role == 'editor' && !d().keys().hasAny(['legacyRef']); }
+      allow create: if (isSuper() || deptAdminInvite())                           // D3：總管理員；05：加上部長發本部門編輯者邀請
         && h.matches('^[0-9a-f]{64}$')
         && d().keys().hasOnly(['deptId', 'role', 'legacyRef', 'boundEmail', 'note', 'status', 'rev',
                                'createdBy', 'createdAt', 'expiresAt', 'updatedAt', 'updatedBy'])
@@ -192,7 +200,7 @@ service cloud.firestore {
               || getAfter(doc('legacyIdentities', resource.data.legacyRef)).data.claimedBy == me());
       }
       function revoke() {
-        return isSuper() && resource.data.status == 'active'
+        return (isSuper() || (isAdmin(resource.data.deptId) && resource.data.createdBy == me())) && resource.data.status == 'active'
           && onlyChanged(['status', 'revokedBy', 'revokedAt', 'rev', 'updatedAt', 'updatedBy']) && stamped()
           && d().status == 'revoked' && d().revokedBy == me() && d().revokedAt == request.time;
       }
@@ -253,13 +261,35 @@ service cloud.firestore {
           && (d().get('super', false) == false || oldSuper() == true);
       }
 
-      allow get:  if signedIn() && (uid == me() || isSuper());
+      // ---- 05 部長（部門管理員）撤掉本部門的編輯者：lastVia＝dept、lastRef＝部門 ID；只動那個部門、只能是編輯者（拿掉）、不能動自己、
+      //      不能動管理員與總管理員、不能碰 super；加人走 QR 邀請（部長只能發本部門編輯者邀請），所以這裡不新增、不改成別的角色 ----
+      function viaDeptAdmin() {
+        return stamped() && d().lastVia == 'dept' && isAdmin(d().lastRef) && uid != me()
+          && !oldSuper() && d().get('super', false) == false
+          && deptsDelta().affectedKeys() == [d().lastRef].toSet() && deptsDelta().removedKeys() == [d().lastRef].toSet()
+          && oldDepts().get(d().lastRef, null) == 'editor';
+      }
+      // 部長讀對方的角色（為了帶 rev 寫入）：只有對方在「我是管理員的部門」有角色時。逐一列出部門（沒有迴圈）；其他人仍只有本人與總管理員
+      function adminSees() {
+        return signedIn() && resource != null && !resource.data.get('super', false)
+          && ((isAdmin('rights') && 'rights' in resource.data.depts)
+            || (isAdmin('president') && 'president' in resource.data.depts)
+            || (isAdmin('secretariat') && 'secretariat' in resource.data.depts)
+            || (isAdmin('marketing') && 'marketing' in resource.data.depts)
+            || (isAdmin('finance') && 'finance' in resource.data.depts)
+            || (isAdmin('events') && 'events' in resource.data.depts)
+            || (isAdmin('affairs') && 'affairs' in resource.data.depts)
+            || (isAdmin('pr') && 'pr' in resource.data.depts)
+            || (isAdmin('works') && 'works' in resource.data.depts)
+            || (isAdmin('fruit') && 'fruit' in resource.data.depts));
+      }
+      allow get:  if signedIn() && (uid == me() || isSuper() || adminSees());
       allow list: if isSuper();
       allow delete: if false;
       allow create: if d().rev == 1 && baseShape() && auditAfter('roles', uid, 1)
         && ((viaInvite() && inviteGrant()) || superWrite());
       allow update: if revNext() && baseShape() && auditAfter('roles', uid, d().rev)
-        && ((viaInvite() && inviteGrant()) || superWrite());
+        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptAdmin());
     }
 
     // ===================== 權限申請 =====================
