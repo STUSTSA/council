@@ -145,7 +145,7 @@ const CALC=async(calc,a,b,c3,cands,dpr)=>calc.evaluate(async([a,b,c3,cands,dpr])
         if(await tap(p,'#notiPage .nd-card.today')){await W(1500);await measure(p,'今日層',tag);await p.keyboard.press('Escape');await W(1100)}
         await p.keyboard.press('Escape');await W(1100)}
       if(await tap(p,'#setBtn')){await W(1300);await measure(p,'設定',tag);
-        if(w<700&&await tap(p,'#setOv [data-set="tags"],#setOv [data-set]')){await W(1200);await measure(p,'設定子頁',tag);await tap(p,'#subBack');await W(900)}
+        if(w<700&&await tap(p,'#setOv [data-set="tags"],#setOv [data-set]')){await W(1200);await measure(p,'設定子頁',tag);await tap(p,'.dh-home');await W(900)}
         await p.evaluate(()=>{if(setOpen)closeSettings(true)});await W(700)}
       await p.evaluate(()=>{editBoardInfo('year')});await W(1100);await measure(p,'對話框',tag);
       ok(!p.errs.length,`${tag} 部門沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}

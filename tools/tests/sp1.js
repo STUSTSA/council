@@ -65,7 +65,7 @@ remote=JSON.parse(fs.readFileSync('data_test.json','utf8'));   /* 手機重新�
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);log('m report hub:',await sub());await p.screenshot({path:'sp_m_hub.png'});
  await p.click('#setSub [data-hub=report]');await p.waitForTimeout(900);log('m work report:',await sub());
  await p.goBack();await p.waitForTimeout(900);log('m system back -> hub:',await sub());
- await p.click('#subBack');await p.waitForTimeout(900);log('m back -> list:',await sub());
+ await p.click('.dh-home');await p.waitForTimeout(900);log('m back -> list:',await sub());
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);
  await p.click('#setSub [data-hub=week]');await p.waitForTimeout(1300);log('m week from hub:',await sub(),await p.evaluate(()=>onWeek));
  await p.click('#backMain');await p.waitForTimeout(1300);log('m week back -> settings:',await sub(),await p.evaluate(()=>onWeek));
