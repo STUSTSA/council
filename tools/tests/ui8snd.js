@@ -22,6 +22,7 @@ const STUB=()=>{const L=window.__snd={made:0,groups:[],cur:null};
   const node=o=>Object.assign(o,{connect:x=>x,disconnect(){}});
   class AC{constructor(){L.made++;this.state='running';this.currentTime=0;this.sampleRate=44100;this.destination=node({})}
     createGain(){return node({gain:param()})}
+    createDynamicsCompressor(){return node({threshold:param(),knee:param(),ratio:param(),attack:param(),release:param()})}
     createBuffer(c,n){const d=new Float32Array(n);return {getChannelData:()=>d}}
     createBiquadFilter(){return node({type:'',frequency:param(),Q:param()})}
     createBufferSource(){return node({buffer:null,start(){}})}
