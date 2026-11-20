@@ -2,7 +2,7 @@
    github 模式（data_test.json），固定 8300 埠（run-tests.sh 換埠時會一起換）。
    1. 通知鈕進到部門內的一頁：標題列同一個節點、鏡片不動、沒有搜尋列與新增圓鈕；返回四種：再按通知鈕、Esc、系統返回鍵、工具列分頁（到那個分頁）
    2. 今日／明日卡片：今日＝--pri 底；今日層開關（Esc）、只有「本來就要做」；點明日＝行事曆選到那一天
-   3. 清點區：已過期／本週到期／之後三段；已過期是卡片堆（右滑完成、左滑改期、小按鈕、方向鍵）；完成與復原（含沒有核取行的舊時間標記）；改期打開那張卡片的時間頁
+   3. 清點區：已過期／本週到期兩段；已過期是卡片堆（右滑完成、左滑改期、小按鈕、方向鍵）；完成與復原（含沒有核取行的舊時間標記）；改期打開那張卡片的時間頁
    4. 海報月曆：週一開頭、選到的日期 40px --acc 圓、今天 --acc2 粗體、跨天細線與分層 9px；點日期清單換內容（舊的分身淡出）；月份選單 Esc 關、選月份
    5. 五類模式：會長室、「其他」勾了才讀那個部門（攔截請求計數，讀過不重讀）；活動、會議在 github 部門是空的、不讀；只有測試部門是 firestore 也不讀；有 firestore 部門時讀 scope（用替身模組）
    6. 跳脫：事件名稱含 <img onerror>；公共版參數（calMount）；唯讀時沒有通知鈕、開著時變唯讀就回原分頁
@@ -20,10 +20,10 @@ const XSS='<img src=x onerror="window.__xss=1">';
 const seed=p=>p.evaluate(X=>{const t=today(),e=state.events.find(x=>!x.doneAt);e.name='測試卡片';
   e.times=[{id:'tL1',label:'過期一',start:addDays(t,-3)+'T09:30',end:'',place:'會辦'},{id:'tL2',label:'過期二',start:addDays(t,-2),end:'',place:''},
     {id:'tL3',label:'跨天過期',start:addDays(t,-6),end:addDays(t,-1),place:''},{id:'tD',label:'勾了的',start:addDays(t,-4),end:'',place:''},
-    {id:'tT',label:X,start:t+'T23:58',end:'',place:X},{id:'tM',label:'明天的事',start:addDays(t,1)+'T08:00',end:'',place:''},
+    {id:'tT',label:X,start:t+'T23:58',end:'',place:X},{id:'tFar',label:'三週後',start:addDays(t,21)+'T10:00',end:'',place:''},{id:'tM',label:'明天的事',start:addDays(t,1)+'T08:00',end:'',place:''},
     {id:'tS1',label:'跨天一',start:addDays(t,1),end:addDays(t,2),place:''}];
   e.blocks=[{id:'bL1',text:'過期一',check:false,timeId:'tL1'},{id:'bL2',text:'過期二',check:false,timeId:'tL2'},{id:'bL3',text:'跨天過期',check:false,timeId:'tL3'},
-    {id:'bD',text:'勾了的',check:true,timeId:'tD'},{id:'bT',text:X,check:false,timeId:'tT'},{id:'bM',text:'明天的事',check:false,timeId:'tM'},{id:'bS1',text:'跨天一',check:false,timeId:'tS1'}];
+    {id:'bD',text:'勾了的',check:true,timeId:'tD'},{id:'bT',text:X,check:false,timeId:'tT'},{id:'bFar',text:'三週後',check:false,timeId:'tFar'},{id:'bM',text:'明天的事',check:false,timeId:'tM'},{id:'bS1',text:'跨天一',check:false,timeId:'tS1'}];
   const f=state.events.filter(x=>!x.doneAt)[1];f.times=[{id:'tS2',label:'跨天二',start:addDays(t,1),end:addDays(t,2),place:''}];f.blocks=[{id:'bS2',text:'跨天二',check:false,timeId:'tS2'}];
   render();return e.id},XSS);
 /* 別的部門的資料檔（會長室、行銷部）：今天各一件事 */
@@ -84,13 +84,13 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
   {const r=await p.evaluate(()=>({img:document.querySelectorAll('#notiPage img:not(.dh-logo),#todayOv img').length,x:window.__xss,txt:$('#notiPage .nd-card.today').textContent.includes('<img')}));
     ok(r.img===0&&!r.x&&r.txt,`事件名稱含 <img onerror>：照字面顯示、沒有產生元素（${JSON.stringify(r)}）`);}
 
-  /* 3. 清點區：三段、已過期是卡片堆（右滑完成、左滑改期，另有小按鈕與方向鍵）、完成與復原（含舊時間標記）、改期 */
+  /* 3. 清點區：兩段、已過期是卡片堆（右滑完成、左滑改期，另有小按鈕與方向鍵）、完成與復原（含舊時間標記）、改期 */
   {const r=await p.evaluate(()=>{const g=k=>[...document.querySelectorAll(`#notiTally .tl-g[data-g="${k}"] .tl-row`)].map(x=>x.dataset.tl);
       return {late:notiLate(),cards:[...document.querySelectorAll('#notiDeck .tl-card')].map(c=>c.dataset.tlcard),top:$('#notiDeck .tl-card[data-i="0"]').dataset.tlcard,gw:g('week'),gx:g('later'),badge:$('#notiBtn .noti-n').textContent,
         hs:[...document.querySelectorAll('#notiTally .tl-gh')].map(h=>h.firstChild.textContent).join(),btns:[...document.querySelectorAll('#notiTally .tl-btn')].map(b=>b.textContent).join('|'),
         inRows:document.querySelectorAll('#notiTally .tl-row .tl-btn').length,all:[...document.querySelectorAll('#notiTally .tl-row')].map(x=>x.dataset.tl)}});
     ok(r.cards.slice().sort().join()==='tL1,tL2,tL3'&&r.late===3&&r.badge==='3'&&r.top==='tL3',`已過期三筆是卡片堆、最早的在最上面（勾了的不列）：${r.cards}，上面那張 ${r.top}，通知鈕 ${r.badge}`);
-    ok(r.hs.startsWith('已過期')&&r.gw.includes('tT')&&!r.all.includes('tD')&&r.gw.length+r.gx.length>=4,`本週到期、之後也列出（本週 ${r.gw}、之後 ${r.gx}），勾了的不列`);
+    ok(r.hs.startsWith('已過期')&&r.gw.includes('tT')&&!r.all.includes('tD')&&r.gx.length===0&&!r.all.includes('tFar'),`本週到期列出（${r.gw}），勾了的不列、下週以後的不收（沒有「之後」段）`);
     ok(r.btns==='改期|完成'&&r.inRows===0,`只有卡片堆下面兩顆小按鈕「改期」「完成」，其他段沒有動作鈕（${r.btns}）`);
     await p.evaluate(()=>$('#notiDeck').scrollIntoView({block:'center'}));await p.waitForTimeout(300);
     const drag=async(dx)=>{const bb=await (await p.$('#notiDeck .tl-card[data-i="0"]')).boundingBox();await p.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await p.mouse.down();for(let i=1;i<=12;i++){await p.mouse.move(bb.x+bb.width/2+dx*i/12,bb.y+bb.height/2+i);await p.waitForTimeout(16)}};

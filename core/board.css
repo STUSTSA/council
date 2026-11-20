@@ -1706,7 +1706,7 @@ body.set-open #pageMain{overflow:hidden}
 @media (prefers-reduced-motion:reduce){.td-ov.on .td-row{transition:none}}
 
 /* ===== 清點區（notify.js 的 tallyHTML；通知頁今日／明日下面） =====
-   三段：已過期（段標題用 --late 紅字，紅色只給逾期）、本週到期、之後（最多列 5 項）。本週到期、之後：一項一塊平面色塊（--blk），左邊日期、中間名稱與小字（所屬卡片・時刻・地點・專員）。
+   三段：已過期（段標題用 --late 紅字，紅色只給逾期）、本週到期。本週到期：一項一塊平面色塊（--blk），左邊日期、中間名稱與小字（所屬卡片・時刻・地點・專員）。
    已過期：卡片堆（.tl-stack，tlFly／tlBind）。最多露出三張（後面的往下 12px、縮 5%、越後面越淡）；最上面那張跟手指走並傾斜：往右拖浮出「完成」（左上，焦點色）、往左拖浮出「改期」（右上，文字色）。
    下面一排小按鈕：改期（外框）、剩幾張、完成（主要動作色），給滑鼠與鍵盤。後面的卡片往前補位時滑過去（transform 過渡；拖曳中由程式關掉）。
    完成後的「已完成＋復原」沿用 .lc-save／.kp-st／.lc-undo */
@@ -1723,7 +1723,6 @@ body.set-open #pageMain{overflow:hidden}
 .tl-x{display:grid;gap:3px;min-width:0}
 .tl-x b{font-size:15.5px;font-weight:500;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .tl-x small{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-more{margin:0;padding-left:calc(5.6em + 18px);font-size:12.5px;color:var(--muted)}
 .tl-stack{position:relative;height:150px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
 .tl-card{position:absolute;inset:0 0 14px;display:grid;grid-template-columns:5.6em minmax(0,1fr);align-items:center;gap:18px;padding:0 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 10px 26px -8px var(--stack-sh);transform:translateY(calc(var(--i) * 12px)) scale(calc(1 - var(--i) * .05));transform-origin:50% 100%;cursor:grab;will-change:transform;transition:transform var(--mo-slow) var(--mo-spring),opacity var(--mo-base) var(--mo-out)}
 .tl-card[data-i="0"]{box-shadow:0 14px 32px -10px var(--stack-sh)}
@@ -1746,7 +1745,6 @@ body.set-open #pageMain{overflow:hidden}
 @media (max-width:640px){
   .tl-row{grid-template-columns:4.6em minmax(0,1fr);padding:13px 14px;gap:10px 12px}
   .tl-d b{font-size:22px}
-  .tl-more{padding-left:calc(4.6em + 12px)}
   .tl-stack{height:140px}
   .tl-card{grid-template-columns:4.6em minmax(0,1fr);gap:12px;padding:0 16px}
 }
