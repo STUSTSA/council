@@ -64,7 +64,7 @@ function renderGantt(){
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     const l=pos(s),w=Math.max(.8,pos(e)-l);
-    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
+    const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const p=pos(m.date);return `<span class="g-mk ${p<6?"edgeL":p>94?"edgeR":""} ${m.id!==gL?"quiet":""}${mkPending(m)?" pend":""}" style="left:${p}%;--mc:${cssColor(m.color,MARK_COLORS[0])}"><span class="stem"></span><span class="dot"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
     return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${fmt(s).slice(5)} – ${fmt(e).slice(5)}</span></div>
       <div class="g-track">${grid}<div class="g-bar">${ticksHTML(nT,l,l+w,tN)}</div>${mk}</div></div>`;
   }).join("");
@@ -92,7 +92,7 @@ function markerHTML(m,latest,it){
 const sortedMarkers=it=>[...it.markers].sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")||a.at-b.at);
 function logHTML(it){
   const ms=sortedMarkers(it);if(!ms.length)return "";
-  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
+  return `<details class="log" open><summary>處理紀錄<span class="count">${ms.length}</span></summary><ol>${ms.map(m=>`<li${mkPending(m)?' class="pend"':""}><span class="log-dot" style="background:${cssColor(m.color,MARK_COLORS[0])}"></span><span class="num log-d">${m.date?fmt(m.date):"—"}</span>${m.stage?`<span class="tag cur sm">${esc(m.stage)}</span>`:""}<span>${esc(m.text)}</span>${m.evId?`<span class="sub">（即時回報）</span>`:""}</li>`).join("")}</ol></details>`;
 }
 
 /* ---------- 議題詳情的時程條（DESIGN-next 第八節：比照 Android Material 的音量滑桿） ----------

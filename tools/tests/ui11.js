@@ -50,6 +50,36 @@ const outside=async p=>{await p.mouse.click(60,860);await p.waitForTimeout(800)}
   await login(p);await p.waitForTimeout(400);
 
 
+  /* B. 母議題處理紀錄的半透明 */
+  await seedB(p);await p.waitForTimeout(400);
+  {const r=await marks(p);
+    ok(r.gP.pend&&r.gP.op==='0.5'&&r.lP.pend&&r.lP.op==='0.5',`那一行還沒勾：甘特圖註記與處理紀錄半透明（註記 ${r.gP.op}、紀錄 ${r.lP.op}）`);
+    ok(r.gF.t&&!r.gF.pend&&r.gF.op==='1'&&r.lF.t&&!r.lF.pend&&r.others,`沒有核取框的舊時間標記、其他紀錄：不透明（${JSON.stringify([r.gF,r.lF])}）`);
+    const m=await p.evaluate(([iss,evId])=>state.issues.find(i=>i.id===iss).markers.filter(x=>x.evId===evId).map(x=>Object.keys(x).sort().join(',')),[ISS,EV]);
+    ok(m.length===2&&m.every(k=>k.split(',').every(x=>['at','date','evId','id','pos','stage','text','tmId'].includes(x))),`議題的 markers 沒有多存欄位（${m.join(' | ')}）`);}
+  /* 在卡片裡勾：存檔後註記與紀錄變回不透明；遠端這一行 check=true */
+  await p.click(`#events .cp[data-cp="${EV}"]`);await p.waitForTimeout(900);
+  await p.click('#evDetail .ln.tm .ln-dot[data-kpck="bP"]');await p.waitForTimeout(500);await outside(p);await p.waitForTimeout(300);
+  {const r=await marks(p),rm=(remote().events.find(e=>e.id===EV)||{}).blocks||[];
+    ok(!r.gP.pend&&r.gP.op==='1'&&!r.lP.pend&&r.lP.op==='1',`在卡片裡勾了、存檔：註記與紀錄不透明（${r.gP.op}／${r.lP.op}）`);
+    ok((rm.find(x=>x.id==='bP')||{}).check===true,'存檔：遠端這一行 check=true');}
+  /* 取消勾選：回到半透明 */
+  await p.click('#evDetail .ln.tm .ln-dot[data-kpck="bP"]');await p.waitForTimeout(500);await outside(p);await p.waitForTimeout(300);
+  {const r=await marks(p);ok(r.gP.pend&&r.gP.op==='0.5'&&r.lP.pend&&r.lP.op==='0.5',`取消勾選、存檔：回到半透明（${r.gP.op}／${r.lP.op}）`);}
+  if(SHOT){for(const [w,h,sc] of [[412,860,'dark'],[1300,900,'light']]){const q=await mk(w,h,sc,w<900);
+      await q.evaluate(sc=>{localStorage.setItem('stustsa-ui',JSON.stringify(sc==='light'?{pal:'neu',mode:'light',sound:false}:{pal:'fin',mode:'dark',sound:false}))},sc);await q.reload();await q.waitForTimeout(1600);
+      await seedB(q);await q.evaluate(()=>{const t=document.querySelector('.tb-tabs [data-tab="progress"]');if(t)t.click()});await q.waitForTimeout(900);
+      await q.evaluate(iss=>{const r=document.querySelector(`#gantt .g-issue[data-jump="${iss}"]`);r&&r.scrollIntoView({block:'center'})},ISS);await q.waitForTimeout(500);
+      await q.screenshot({path:`${SHOT}/B-gantt-${w}-${sc}.png`});
+      await q.evaluate(iss=>{const a=document.querySelector(`#gantt a[data-jump="${iss}"]`);a&&a.click()},ISS);await q.waitForTimeout(1200);
+      await q.evaluate(()=>{const l=document.querySelector('#cardDetail .log');l&&l.scrollIntoView({block:'center'})});await q.waitForTimeout(500);
+      await q.screenshot({path:`${SHOT}/B-log-${w}-${sc}.png`});await q.context().close()}}
+  /* 找不到來源：卡片刪掉（連結拿掉）、evId 指到不存在的卡片＝不透明 */
+  {const r=await p.evaluate(([iss,evId])=>{const it=state.issues.find(i=>i.id===iss);it.markers.push({id:'mGone',evId:'eGone',tmId:'tGone',at:50,date:'2026-11-11',text:'來源不見了',stage:'',pos:'down'});
+      const a=mkPending(it.markers.find(m=>m.id==='mGone'));const ev=state.events.find(e=>e.id===evId);unlinkEv(ev);
+      const b=it.markers.filter(m=>/待勾的事/.test(m.text)).map(mkPending);return {a,b,ck:ev.blocks.find(x=>x.id==='bP').check}},[ISS,EV]).catch(e=>({err:e.message}));
+    ok(!r.err&&r.a===false&&r.b.length===1&&r.b[0]===false&&r.ck===false,`找不到來源（evId 指到不存在的卡片、卡片刪掉拿掉連結）：不透明（${JSON.stringify(r)}）`);}
+  await p.evaluate(()=>{if(editing&&typeof kpCommit==='function')kpCommit()});await p.waitForTimeout(600);await p.reload();await p.waitForTimeout(1800);
 
 
 
