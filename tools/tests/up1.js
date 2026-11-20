@@ -31,7 +31,11 @@ for(const [w,h,sc,tc] of [[1300,900,'light',false],[412,860,'light',true]]){c.q=
   await p.click('#lcFull [data-lcback]');await p.waitForTimeout(1100);s=await st();A(!s.card&&!s.up,w+' 手機卡片全螢幕蓋住標題列、用卡片自己的返回鈕；退回後是首頁');
   /* 系統返回鍵跟著一致 */
   await p.click('#setBtn');await p.waitForTimeout(900);await p.goBack();await p.waitForTimeout(1000);s=await st();A(!s.set&&!s.up,w+' 系統返回鍵：設定關掉、變回首頁')}
- /* 主頁按首頁鍵＝離開看板 */
- await p.click('.dh-home');await p.waitForTimeout(1500);A(/home\.html/.test(p.url()),w+' 主頁按首頁鍵：離開看板 '+p.url());
+ /* 改到一半連按：設定面板還有沒完成的存檔（paneJob）時，連按兩下（上一頁、首頁）要等存完才離開 */
+ await p.click('#setBtn');await p.waitForTimeout(900);
+ await p.evaluate(()=>{window.__rel=null;paneJob=new Promise(r=>{window.__rel=r})});
+ await p.click('.dh-home');await p.waitForTimeout(900);await p.click('.dh-home');await p.waitForTimeout(1500);
+ A(!/home\.html/.test(p.url())&&await p.evaluate(()=>!setOpen),w+' 存檔沒完成：連按兩下不離開看板');
+ await p.evaluate(()=>{window.__rel();paneJob=null});await p.waitForTimeout(1500);A(/home\.html/.test(p.url()),w+' 存完之後才離開 '+p.url());
  const er=p.errs.filter(x=>!x.includes('404'));A(!er.length,w+' 沒有錯誤 '+er.join('|'));await p.context().close()}
 await b.close()})();
