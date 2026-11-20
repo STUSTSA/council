@@ -103,7 +103,7 @@ function render(){
     document.body.classList.toggle("locked",boardLocked());
     renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();layoutAll();flowWatch();
   }finally{rendering=false}
-  kpFocusSet(kf);
+  kpFitAll();kpFocusSet(kf);
   Anim.play(flip);Anim.syncPings();
 }
 
