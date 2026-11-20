@@ -19,8 +19,7 @@ ICONS.user='<circle cx="12" cy="8.2" r="3.4"/><path d="M5.2 19.2c.7-3.4 3.4-5.2 
 ICONS.clock='<circle cx="12" cy="12" r="7.6"/><path d="M12 7.8V12l2.8 1.8"/>';
 ICONS.pin='<path d="M12 20.1s6-5.3 6-10.2a6 6 0 0 0-12 0c0 4.9 6 10.2 6 10.2z"/><circle cx="12" cy="9.8" r="2"/>';
 ICONS.box='<rect x="4.8" y="4.8" width="14.4" height="14.4" rx="4"/><path d="M8.6 12.3l2.4 2.4 4.4-4.9"/>';
-/* 2026-11-17 新介面：通知頁逾期卡片堆的延後（往右的箭頭）、行事曆月份鈕的往下箭頭 */
-ICONS.go='<path d="M5 12h14M13 6l6 6-6 6"/>';
+/* 2026-11-17 新介面：行事曆月份鈕的往下箭頭 */
 ICONS.down='<path d="M7 9.5l5 5 5-5"/>';
 ICONS.link='<path d="M10.2 13.8a3.8 3.8 0 0 0 5.4 0l2.9-2.9a3.8 3.8 0 0 0-5.4-5.4l-1 1"/><path d="M13.8 10.2a3.8 3.8 0 0 0-5.4 0l-2.9 2.9a3.8 3.8 0 0 0 5.4 5.4l1-1"/>';
 const ico=(n,mod="")=>`<svg class="ico ${mod}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]||""}</svg>`;
