@@ -46,7 +46,7 @@ out = out.replace("<title>", "<title>03 即時回報預覽｜");
 if (/<script src=|<link [^>]*href=/.test(out)) fail("還有外部的 script 或 link");
 const ext = out.match(/(?:src|href)\s*=\s*["']https?:\/\/[^"']+|@import\s+url\(\s*["']?https?:|url\(\s*["']?https?:\/\/[^)]+\)/gi);
 if (ext) fail("還有外部資源：" + ext.slice(0, 3).join("、"));
-for (const bad of [/AIza[0-9A-Za-z_-]{20,}/, /stustsa-council-dev/, /firebaseapp\.com/, /ghp_[0-9A-Za-z]{20,}/, /github_pat_/])
+for (const bad of [/AIza[0-9A-Za-z_-]{20,}/, /stustsa-council/, /firebaseapp\.com/, /ghp_[0-9A-Za-z]{20,}/, /github_pat_/])
   if (bad.test(out)) fail("出現不該內嵌的字樣：" + bad);   /* 整份檔案：權杖、Firebase 設定 */
 for (const bad of [/"sync"/, /"tokenEnc"/, /"tokenAll"/, /"pwHash"/, /"pwKdf"/, /"kdf"\s*:/, /"tok"\s*:/, /"owner"\s*:\s*"[^"]/, /apiKey/])
   if (bad.test(dataJSON) || bad.test(cfg)) fail("內嵌的資料或設定出現不該有的欄位：" + bad);   /* 程式碼本身會提到這些欄位名稱，只檢查資料與設定 */

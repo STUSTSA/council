@@ -3,7 +3,7 @@
  "id": "board-main",
  "title": "學生權益部",
  "locked": false,
- "savedAt": "2026-11-20 11:20",
+ "savedAt": "2026-11-20 17:25",
  "range": {
   "start": "2026-09",
   "end": "2027-09"
@@ -354,7 +354,7 @@
   {
    "id": "emvt1pwvqrhyw",
    "name": "停車場冷氣機報廢後續",
-   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考\n☐ ",
+   "desc": "確認第二次協商時間\n\n本會提出時段供各處室參考\n☐ 處室大亂鬥",
    "createdAt": "2026-10-29",
    "staff": [],
    "touched": [
@@ -363,22 +363,23 @@
     "2026-11-05",
     "2026-11-09",
     "2026-11-16",
-    "2026-11-19"
+    "2026-11-19",
+    "2026-11-20"
    ],
    "links": [],
    "times": [
     {
      "id": "tmwnoj7tb2p91",
-     "label": "",
-     "start": "2026-11-23T20:00",
+     "label": "處室大亂鬥",
+     "start": "2026-12-03T14:00",
      "end": "",
      "place": "",
      "toIssue": false
     }
    ],
    "round": 3,
-   "touchedAt": "2026-11-19T23:03",
-   "report": false,
+   "touchedAt": "2026-11-20T17:21",
+   "report": true,
    "roundAt": "2026-11-16T17:33",
    "labels": [],
    "issueId": "imvpc3f0dcpi6",
@@ -403,7 +404,7 @@
     },
     {
      "id": "bmwnoj7tbf47q",
-     "text": "",
+     "text": "處室大亂鬥",
      "check": false,
      "timeId": "tmwnoj7tb2p91"
     }
@@ -753,20 +754,21 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-16",
-    "2026-11-17"
+    "2026-11-17",
+    "2026-11-20"
    ],
    "times": [
     {
      "id": "tmw3bt7meduhn",
      "label": "打招呼",
-     "start": "2026-11-19T14:00",
+     "start": "2026-11-23T15:40",
      "end": "",
      "toIssue": false,
      "place": ""
     }
    ],
    "round": 3,
-   "touchedAt": "2026-11-17T19:22",
+   "touchedAt": "2026-11-20T17:18",
    "roundAt": "2026-11-05T17:12",
    "report": true,
    "labels": [],
@@ -892,7 +894,7 @@
   {
    "id": "emvpd6qonvam7",
    "name": "社群內容排程",
-   "desc": "交付行銷部五天前\n\n\n選舉系列貼文已發布\n\n世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n\n☐ ",
+   "desc": "世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點\n\n青民協圖片請公關協助處裡授權問候\n",
    "doneAt": null,
    "staff": [],
    "touched": [
@@ -901,7 +903,8 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-20"
    ],
    "links": [
     {
@@ -960,41 +963,11 @@
     }
    ],
    "round": 2,
-   "touchedAt": "2026-11-18T22:56",
+   "touchedAt": "2026-11-20T17:15",
    "report": true,
    "roundAt": "2026-11-05T16:44",
    "labels": [],
    "blocks": [
-    {
-     "id": "L0",
-     "text": "交付行銷部五天前",
-     "check": null,
-     "timeId": null
-    },
-    {
-     "id": "L1",
-     "text": "",
-     "check": null,
-     "timeId": null
-    },
-    {
-     "id": "L2",
-     "text": "",
-     "check": null,
-     "timeId": null
-    },
-    {
-     "id": "L3",
-     "text": "選舉系列貼文已發布",
-     "check": null,
-     "timeId": null
-    },
-    {
-     "id": "L4",
-     "text": "",
-     "check": null,
-     "timeId": null
-    },
     {
      "id": "L5",
      "text": "世新報導記錄各事件時間點 簡易說明事態變化 前因後果 最終導入簡易引導觀點",
@@ -1017,12 +990,6 @@
      "id": "bmwm8uygjb6hz",
      "text": "",
      "check": null,
-     "timeId": null
-    },
-    {
-     "id": "bmwm8vcg9jrks",
-     "text": "",
-     "check": false,
      "timeId": null
     }
    ]
@@ -1048,9 +1015,10 @@
     "2026-11-05",
     "2026-11-06",
     "2026-11-10",
-    "2026-11-16"
+    "2026-11-16",
+    "2026-11-20"
    ],
-   "touchedAt": "2026-11-16T17:38",
+   "touchedAt": "2026-11-20T17:07",
    "report": true,
    "roundAt": "2026-11-16T17:38",
    "labels": [],
@@ -1115,42 +1083,12 @@
      "check": null,
      "timeId": null
     }
-   ]
-  },
-  {
-   "id": "emwj2z9n02k6g",
-   "name": "婉如日聲明",
-   "desc": "討論聲明內容與校內環境檢視",
-   "createdAt": "2026-11-16",
-   "staff": [],
-   "links": [
-    {
-     "id": "lmwj33pk67jjt",
-     "name": "婉如日聲明",
-     "url": "https://drive.google.com/file/d/1syFs51V7FCsfoZocGqtD8x62GDdo1Vau/view",
-     "color": "#6a4fd8"
-    }
    ],
-   "times": [],
-   "round": 1,
-   "touched": [
-    "2026-11-16"
-   ],
-   "touchedAt": "2026-11-16T17:52",
-   "report": true,
-   "labels": [],
-   "blocks": [
-    {
-     "id": "L0",
-     "text": "討論聲明內容與校內環境檢視",
-     "check": null,
-     "timeId": null
-    }
-   ]
+   "doneAt": "2026-11-20"
   },
   {
    "id": "emvz5bo0gi726",
-   "name": "車禍事件",
+   "name": "交通事件後續",
    "desc": "昨日勘查現場已無花束\n\n盤點校地周邊區域交通安全死角\n\n123",
    "createdAt": "2026-11-02",
    "staff": [],
@@ -1198,10 +1136,11 @@
     "2026-11-03",
     "2026-11-05",
     "2026-11-10",
-    "2026-11-12"
+    "2026-11-12",
+    "2026-11-20"
    ],
-   "touchedAt": "2026-11-12T03:01",
-   "report": false,
+   "touchedAt": "2026-11-20T17:22",
+   "report": true,
    "roundAt": "2026-11-05T17:37",
    "labels": [],
    "blocks": [
@@ -1334,9 +1273,7 @@
    "name": "衛生棉補給站點",
    "desc": "目前補給盒已見底\n\n11/12前往衛保組確認",
    "createdAt": "2026-11-10",
-   "staff": [
-    "mmvz4b7d5emiy"
-   ],
+   "staff": [],
    "links": [],
    "times": [],
    "round": 1,
@@ -1347,7 +1284,7 @@
    ],
    "touchedAt": "2026-11-13T12:22",
    "issueId": "imvpc1cuefjii",
-   "report": false,
+   "report": true,
    "labels": [],
    "blocks": [
     {
@@ -1983,9 +1920,10 @@
    "touched": [
     "2026-11-03",
     "2026-11-06",
-    "2026-11-10"
+    "2026-11-10",
+    "2026-11-20"
    ],
-   "touchedAt": "2026-11-10T19:08",
+   "touchedAt": "2026-11-20T17:25",
    "report": false,
    "labels": [],
    "roundAt": "2026-11-06T00:35",
@@ -1996,7 +1934,8 @@
      "check": null,
      "timeId": null
     }
-   ]
+   ],
+   "doneAt": "2026-11-20"
   },
   {
    "id": "emwj2gm2bmzjb",
@@ -2192,18 +2131,13 @@
   "repo": "-",
   "branch": "main",
   "path": "data.json",
-  "tokenEnc": {
-   "s": "/NUTU+hXv4evBWDh/KtxLQ==",
-   "i": "0X8VFuE47eL5iayN",
-   "c": "8Hh4DyZJ+lqHEKTPZX1pPl1EggomqyDXqqla6zDffsw5Zd8L/Tv6fcK/MP76qHj1QzsHnKmgcUW2d/v40pNpJGWIZJf/EaK/n98RE0YIc+oewnJuoWO8/pyctfShmmf0YAXfVcYN7HaHpEM55Q=="
-  },
   "tokenAll": {
    "s": "Dt0dxgLoR2ZWHOD4XA/jmg==",
    "i": "O2Kev3fyzYV0N7C7",
    "c": "aN2uc+MrRSeLAx6OmD6FxQRVtbxQap15uH+/7IuBBWF5wBCp0pB+eP97mjNih4iaU/RZIvdA0hSLmNorwfw+yIXYWcbPX3FZAmkDIJoN8vwAiCO5sTsn9DfMIn4Qj5TOpGrfJQKdW9cQX7lapA=="
   }
  },
- "pwKdf": "rQfwjiQjTGPRWifOAuO0bw==:vsYYW5+doH1lk3vytEhM89Wm9AuZDXTvwdShkCssLXs=",
+ "pwKdf": "QLFAaR51uhtPxzMcBVMsDQ==:Wi+JGOK+VZUiiIYi/9BtdlfdQrkawcmVDt5qmVtGVi4=",
  "schemaVersion": 14,
  "members": [
   {
@@ -2216,18 +2150,6 @@
     "s": "WAEGN3YWpYkX/Y4iUqv8jQ==",
     "i": "CasvY+1Xa3Zh+bPK",
     "c": "6cBQQgQaMc19S27fQQj6536b3z73lQ9TUFuG6uAauHK+r/p6F/QGP0xzUNrhnLOnLPlr+8eQ4s575sKg5N2qMMWGb2PgkbLLZn9iW9+IiUNA60lFListl8bTRW8OTRLYJaDnVDGxpXFeap8nlA=="
-   }
-  },
-  {
-   "id": "mmvz4b7d5emiy",
-   "name": "雜草",
-   "role": "member",
-   "kdf": "QAW2U8DAzGrC2Z4jIrB+Lg==:R7PDCU57PE8xHCknL4e1GxEGDkLIiCDOv/JGv0Na5fQ=",
-   "createdAt": "2026-11-02 18:30",
-   "tok": {
-    "s": "dicTBUumoIR9HYaPzBvKAg==",
-    "i": "PS8/34qijvZs9d8b",
-    "c": "YfPUNRQLUVD4+obl6x2Vf79oMhMYidyr1/yGn0wQ+6JbpJSrAXbhsnkOvj6eSAFVAHQGUsyAwziUAQ1KHy+Xp4k8ueUXPfPq4y8z7cqGkflhaM5at0bxB8HD4mqSjuPpNRCMHtjaiwGQSIYz7w=="
    }
   }
  ],
