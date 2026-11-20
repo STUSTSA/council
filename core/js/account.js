@@ -471,6 +471,7 @@ function auditWhat(l){
   if(l.col==="cards"&&l.action==="purge")return {act:"刪除卡片",obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};
   if(l.action==="delete"&&{issues:1,weeks:1,labels:1}[l.col])return {act:{issues:"刪除議題",weeks:"刪除週報",labels:"刪除標籤"}[l.col],obj:`${(l.before||{}).title||""}`,diff:deptNameOf((l.before||{}).deptId||"")};   /* 02D D-d */
   if(l.col==="invitations")return {act:l.action==="create"&&l.ref?"重新產生 QR":l.action==="revoke"&&l.ref?"撤銷 QR（重新產生）":{create:"建立 QR",redeem:"QR 加入",revoke:"撤銷 QR"}[l.action]||l.action,obj:`QR #${l.docId.slice(0,6)}`,diff:""};
+  if(l.col==="grants")return {act:{open:"開放秘書處會議編輯",close:"關閉秘書處會議編輯",import:"匯入會議授權"}[l.action]||l.action,obj:"會議授權",diff:""};   /* 2026-11-20：會長室的開關（store-write.js 的 setMeetGrant） */
   if(l.col==="roleRequests")return {act:{request:"送出申請",approve:"核准申請",reject:"拒絕申請",cancel:"撤回申請"}[l.action]||l.action,obj:`申請 #${l.docId.slice(0,6)}`,diff:""};
   const col={legacyIdentities:"舊身分",deptSettings:"部門設定",grants:"會議授權",migrations:"遷移",bookings:"預約"}[l.col]||l.col;
   return {act:ACT_T[l.action]||l.action,obj:`${col} ${l.docId}`,diff:""};

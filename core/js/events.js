@@ -125,6 +125,7 @@ function evFldAct(fx){
   const tid=k.startsWith("t:")?k.slice(2):null,lid=k.startsWith("l:")?k.slice(2):null;
   if(a==="ok"){if(evFldCommit(box)){evFld=null;changed()}return}
   if(a==="del"){
+    if(mtOf(box)&&fsMode())return;   /* 秘書處在 firestore 模式的會議編輯不能刪時間標記、超連結（畫面沒有這個鈕；規則也不允許） */
     const run=()=>{if(tid)ev.times=ev.times.filter(x=>x.id!==tid);if(lid)ev.links=ev.links.filter(x=>x.id!==lid);evTouch(ev);syncLink(ev)},m=mtOf(box);
     if(m){withState(m.data,run);m.dirty=true}else run();
     evFld=null;changed();return}

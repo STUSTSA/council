@@ -15,7 +15,7 @@ async function loadDept(cfg, dept) {
   await authReady(cfg);
   const d = fb(cfg).db, by = c => where("deptId", "==", dept);
   const orig = { settings: {}, cards: {}, issues: {}, weeks: {}, labels: {}, events: {} };
-  const [settings, org, grant, cards, issues, weeks, labels, events, legacy] = await Promise.all([
+  const [settings, org, grant, cards, issues, weeks, labels, events, legacy, minutes] = await Promise.all([
     one(doc(d, "deptSettings", dept), orig.settings),
     one(doc(d, "org", "config")),
     dept === "president" ? one(doc(d, "grants", "meetingEdit")) : null,
@@ -25,8 +25,10 @@ async function loadDept(cfg, dept) {
     many(query(collection(d, "labels"), by()), orig.labels),
     many(query(collection(d, "events"), by()), orig.events),
     many(query(collection(d, "legacyIdentities"), by())),
+    /* 秘書處的會議紀錄（2026-11-20）：只有秘書處與總管理員讀得到；其他人讀不到就當成沒有（不影響看板） */
+    dept === "secretariat" ? many(collection(d, "meetingMinutes")).catch(() => null) : null,
   ]);
-  const src = { settings, org, grant, cards, issues, weeks, labels, events, legacy };
+  const src = { settings, org, grant, cards, issues, weeks, labels, events, legacy, minutes };
   return { data: window.StoreMap.toState(dept, src), src, orig };
 }
 

@@ -278,6 +278,9 @@
     s.meetGrant = null;
     if (src.grant && src.grant.until) s.meetGrant = { date: fmtTaipei(src.grant.until.__ts - 86400000, true), by: src.grant.by || "",
       at: src.grant.at ? fmtTaipei(src.grant.at.__ts, false) : "" };
+    /* 會議紀錄（秘書處；2026-11-20）：一天一份 meetingMinutes/{日期}，items 是那一天的會議。讀不到（沒有權限）時 src.minutes 是 null：不設，保留原本的 */
+    if (Array.isArray(src.minutes)) s.minutes = src.minutes.flatMap(m => Array.isArray(m.items) ? m.items.filter(x => x && typeof x === "object").map(copy) : [])
+      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     s.members = (src.legacy || []).filter(m => m.deptId === dept).map(m => ({ id: oid(dept, m.id), name: m.name, role: m.oldRole, createdAt: m.createdAt }));
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);

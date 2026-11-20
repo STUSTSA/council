@@ -4,8 +4,12 @@
      做法：畫面與存回時把全域 state 暫時換成那個部門的資料（withState），所以 views.js／events.js 的逐欄編輯不用另寫一份。
    - 按「儲存並同步」：秘書處自己的資料照常存；改過的部門各自寫回 data-代號.json（同一個 repo、同一把權杖），
      commit 訊息照現行格式，作者是秘書處目前登入的身分（該部門的編輯紀錄會看到「〔秘書處 名字〕」）。按「取消」放棄。
+   - firestore 模式（2026-11-20）：秘書處看板是 firestore 時，改的是已搬到新資料庫的部門（還在 GitHub 的部門不能改，反過來也一樣）。
+     會長室的開放存在 grants/meetingEdit（總管理員才能開關，有稽核紀錄；到期時間＝當天結束）；寫回用 store-write.js 的 saveMeeting，
+     只能改報告卡片的名稱、說明（逐行內容）、已有時間標記的內容（規則 cards 的 meetingEdit、events 的 meetingEditOfReportedCard）；
+     會議紀錄寫進 meetingMinutes/{日期}（秘書處與總管理員讀得到）。
    - 「會議要報告」標記仍由各部門生成週報時自動清掉；這裡不改標記本身。 */
-const MT={depts:new Map(),loading:false,at:0};   /* dept id → {data,base,sha,err,dirty} */
+const MT={depts:new Map(),loading:false,at:0};   /* dept id → {data,base,sha,err,dirty,fs}；fs＝{src,orig}（firestore 的部門，寫回用） */
 function withState(s,fn){const keep=state;state=s;try{return fn()}finally{state=keep}}
 const mtOf=el=>{const b=el&&el.closest&&el.closest("[data-mtdept]");return b?MT.depts.get(b.dataset.mtdept):null};
 async function mtLoadAll(force){
@@ -14,21 +18,23 @@ async function mtLoadAll(force){
   MT.loading=true;renderMeet();
   const cc=cloudCfg(),tok=ghToken();
   await Promise.all((window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId).map(async d=>{
-    let data=null,sha=null,err="";
-    if(deptSourceOf(d.id)==="firestore"){try{data=await storeDeptData(d.id)}catch(e){fsReadErr("讀部門 "+d.id,e);err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore（只讀；寫回時 mtPushAll 擋下） */
+    let data=null,sha=null,err="",fsr=null;
+    if(deptSourceOf(d.id)==="firestore"){try{const r=await storeDeptFull(d.id);data=r.data;fsr={src:r.src,orig:r.orig}}catch(e){fsReadErr("讀部門 "+d.id,e);err=STORE_XERR(e)}}   /* 02D D-b：已切到新資料庫的部門讀 Firestore；src／orig 留著給 firestore 模式的會議編輯寫回 */
     else try{
       if(cc.owner&&cc.repo&&tok){const r=await fetch(apiURL({...cc,path:d.path})+`?ref=${encodeURIComponent(cc.branch)}&t=${Date.now()}`,{headers:{Accept:"application/vnd.github+json",Authorization:"Bearer "+tok},cache:"no-store"});
         if(r.ok){const j=await r.json();sha=j.sha;data=JSON.parse(b64dec(j.content))}else if(r.status===404)err="還沒有資料"}
       if(!data&&!err&&location.protocol!=="file:"){const r=await fetch(d.path,{cache:"no-cache"});if(r.ok)data=await r.json();else err="還沒有資料"}
     }catch(_){err="讀不到資料"}
     if(data)data=normalize(data);
-    MT.depts.set(d.id,{id:d.id,name:d.name,data,base:data&&JSON.parse(JSON.stringify(data)),sha,err,dirty:false});
+    MT.depts.set(d.id,{id:d.id,name:d.name,data,base:data&&JSON.parse(JSON.stringify(data)),sha,err,dirty:false,fs:fsr});
   }));
   MT.loading=false;MT.at=Date.now();render();
 }
 /* 會長室的授權：會長室資料的 meetGrant.date 是今天才算開放（過了那天自動失效） */
 function mtGrant(){const pr=MT.depts.get("president"),g=pr&&pr.data&&pr.data.meetGrant;return g&&g.date===today()?g:null}
 const mtCanEdit=()=>secEd("meetedit")&&!!mtGrant();
+const mtSrcOk=id=>deptSourceOf(id)===(fsMode()?"firestore":"github");   /* 能改的部門：跟秘書處看板同一邊（GitHub 模式改 GitHub 的部門、firestore 模式改新資料庫的部門） */
+const mtWho=()=>(fsMode()&&typeof acct!=="undefined"&&acct.user&&acct.user.name)||meName();
 /* 一個部門的報告事項（ed＝畫成可以點欄位編輯）。一次只畫一個部門（MTS.sel）。
    2026-11-06 使用者：秘書處看起來依然很臃腫，不要直接粗暴地條列——每一筆收成跟即時回報同一種膠囊（<details class="ev">，motion.js 的展開收合動畫），
    收合只看燈號、名稱、狀態，點了才展開說明、時間、連結；哪幾筆開著記在 MTS.open，重畫後照舊 */
@@ -40,7 +46,7 @@ function mtGroupHTML(m,ed){
     <div class="events mt-list">${withState(m.data,()=>evs.map(e=>{const st=evStatus(e),par=parentOf(e);
       return `<details class="ev mt-ev" data-ev="${esc(e.id)}" data-mtev="${esc(e.id)}" data-st="${st}"${MTS.open.has(e.id)?" open":""}>
         <summary><span class="live-dot" aria-hidden="true"></span><b>${esc(e.name)}</b><span class="mt-st">${EV_ST[st]}</span><span class="ev-chev" aria-hidden="true">▾</span></summary>
-        <div class="ev-body">${ed?evFieldsHTML(e):`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${e.desc?`<p>${esc(e.desc)}</p>`:`<p class="sub">沒有說明</p>`}${evTimesHTML(e)}${staffHTML(e.staff)}${labelChipsHTML(e.labels)}${evLinksHTML(e)}`}</div></details>`}).join(""))}</div></section>`;
+        <div class="ev-body">${ed?evFieldsHTML(e,fsMode()):`${par?`<p class="ev-parent-full">母議題：${esc(par.title)}</p>`:""}${e.desc?`<p>${esc(e.desc)}</p>`:`<p class="sub">沒有說明</p>`}${evTimesHTML(e)}${staffHTML(e.staff)}${labelChipsHTML(e.labels)}${evLinksHTML(e)}`}</div></details>`}).join(""))}</div></section>`;
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#meetEdList .mt-ev"))return;if(d.open)MTS.open.add(d.dataset.mtev);else MTS.open.delete(d.dataset.mtev)},true);
 /* 秘書處「會議」分頁的報告事項（2026-11-06 使用者：一個一個編輯每個部門釘選要報告的即時回報，最後根據改動的紀錄匯出會議紀錄 PDF）：
@@ -53,16 +59,17 @@ function renderMeet(){
   const ms=[...MT.depts.values()],has=ms.filter(m=>mtEvs(m).length),none=ms.filter(m=>m.data&&!mtEvs(m).length),errs=ms.filter(m=>!m.data&&m.err!=="還沒有資料");
   if(!has.some(m=>m.id===MTS.sel))MTS.sel=has[0]?has[0].id:"";
   const g=mtGrant(),btn=edp.querySelector("[data-edit]");
-  btn.hidden=!g||fsMode();   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段）；firestore 模式不開放會議編輯（render.js 的 fsSecOk） */
+  btn.hidden=!g||!fsSecOk("s:meetedit");   /* 會長室今天有開放才有「編輯」（登入才看得到，見 board.css「單卡編輯」段）；firestore 模式要秘書處的編輯者以上（render.js 的 fsSecOk） */
   /* 狀態只寫一行短的 */
   $("#meetEdSt").innerHTML=g?`<span class="grant-on">開放修改中</span> · ${esc(g.by||"會長室")} ${esc((g.at||"").slice(11,16))} 開，今天有效`
     :`<span class="grant-off">未開放修改</span> · 會長室開放當天才能改`;
   $("#meetPick").innerHTML=has.map(m=>`<button type="button" role="tab" class="wk-d" data-mtpick="${esc(m.id)}" aria-selected="${m.id===MTS.sel}">${m.dirty?'<i class="wk-new" aria-label="已修改"></i>':""}${esc(m.name)}<span class="num">${mtEvs(m).length}</span></button>`).join("")
     +(MTS.sel?`<a class="fw-open mt-open" href="?d=${encodeURIComponent(MTS.sel)}" target="_blank" rel="noopener">開啟看板 →</a>`:"");   /* 開啟看板放在部門膠囊那一排的右邊，不另外佔一列 */
-  const ed=mtCanEdit()&&deptSourceOf(MTS.sel)==="github",loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
+  const ed=mtCanEdit()&&mtSrcOk(MTS.sel),loading=MT.loading&&!MT.depts.size?`<p class="sub">讀取各部門資料中…</p>`:"";
   $("#meetEdList").innerHTML=loading+(MTS.sel?mtGroupHTML(MT.depts.get(MTS.sel),ed):MT.depts.size?`<p class="empty">目前沒有部門標「會議要報告」。各部門在自己的即時回報按「會議要報告」後會出現在這裡。</p>`:"")
     +(none.length?`<p class="sub mt-none">沒有報告事項：${none.map(m=>esc(m.name)).join("、")}</p>`:"")
-    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(mtCanEdit()&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"");
+    +(errs.length?`<p class="sub">讀不到：${errs.map(m=>esc(m.name)).join("、")}</p>`:"")+(mtCanEdit()&&!fsMode()&&!ghToken()?`<p class="sub">這台裝置沒有權杖，改了也寫不回其他部門。</p>`:"")
+    +(mtCanEdit()&&MTS.sel&&!mtSrcOk(MTS.sel)?`<p class="sub">${fsMode()?"這個部門還在 GitHub，這裡不能改。":"這個部門已搬到新資料庫，秘書處看板也切換後才能在這裡改。"}</p>`:"");
   const i=has.findIndex(m=>m.id===MTS.sel);
   $("#meetStep").innerHTML=has.length>1?`<button type="button" class="icon" data-mtstep="-1"${i>0?"":" disabled"}>${ico("prev")}${i>0?esc(has[i-1].name):"上一個部門"}</button><span class="sub num">${i+1} / ${has.length}</span><button type="button" class="icon" data-mtstep="1"${i<has.length-1?"":" disabled"}>${i<has.length-1?esc(has[i+1].name):"下一個部門"}${ico("next")}</button>`:"";
   const mins=state.minutes||[];
@@ -82,25 +89,40 @@ document.addEventListener("click",e=>{
 });
 /* ---------- 會長室：開放秘書處會議編輯的開關（設定檔 grant:true） ----------
    切到「開放今天」＝寫入 state.meetGrant＝{date:今天,by,at}，立刻儲存並同步（編輯中就併入這次編輯）；隔天自動失效。
-   要登入才能切；取消登入或儲存失敗就切回原本的位置 */
+   要登入才能切；取消登入或儲存失敗就切回原本的位置。
+   firestore 模式（2026-11-20）：寫 grants/meetingEdit（store-write.js 的 setMeetGrant；規則只允許總管理員，同一批稽核紀錄）：
+   開放＝到期時間是今天結束（台灣時間隔天 0 點，store-map.js 讀回來就是 date＝今天）；關閉＝到期時間是寫入的那一刻。寫完重新讀會長室看板 */
 const grantOn=()=>!!(state.meetGrant&&state.meetGrant.date===today());
 /* 會長室的開關（2026-11-06 使用者：不用這麼大，小小一個開關；在「會長室」分頁）：點一下切換，要登入；狀態只寫一句短的 */
 function renderGrant(){
   const p=$("#grantPanel");if(!p)return;p.hidden=!CFG.grant;if(!CFG.grant)return;
   const sw=$("#grantSw"),on=grantOn(),g=state.meetGrant;
-  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);sw.disabled=fsMode();   /* firestore 模式：授權存在 grants/meetingEdit（只有總管理員＋稽核），這個開關還沒接上 */
+  sw.setAttribute("aria-checked",on);sw.classList.toggle("on",on);sw.disabled=fsMode()&&fsRole()!=="super";   /* firestore 模式：授權存在 grants/meetingEdit，只有總管理員能切（規則） */
   $("#grantSt").textContent=on?`今天開放中（${g.by||""} ${(g.at||"").slice(11,16)} 開，23:59 自動關閉）`:"關閉：秘書處只能看各部門的報告事項";
   if(!sw._wired){sw._wired=true;sw.addEventListener("click",async()=>{
-    if(fsMode())return;
+    if(fsMode()){await fsGrantSet(!grantOn());return}
     const want=!grantOn();sw.classList.toggle("on",want);
     if(readOnly()||!(await ensureLogin())){renderGrant();return}
     await settingSave(()=>{state.meetGrant=want?{date:today(),by:meName(),at:nowStr()}:null},want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");
     render()})}
 }
+let grantBusy=false;
+async function fsGrantSet(want){
+  if(grantBusy||fsRole()!=="super")return;grantBusy=true;
+  const sw=$("#grantSw");sw.classList.toggle("on",want);
+  try{
+    const W=await storeWriteGet();
+    await W.setMeetGrant(CFG.firebase,want?StoreMap.parseTaipei(today()).ms+864e5:null,mtWho()||"會長室");
+    try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("會長室看板",e)}
+    toast(want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");
+  }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?"沒有權限，沒有切換":"切換失敗，請稍後再試")}
+  grantBusy=false;render();
+}
 /* 存回：秘書處自己的資料存完後，改過的部門各自寫回 */
 async function mtPushAll(){
-  const cc=cloudCfg(),tok=ghToken(),who=meName()?`秘書處 ${meName()}`:"秘書處";
   const dirty=[...MT.depts.values()].filter(m=>m.dirty&&m.data);if(!dirty.length)return;
+  if(fsMode())return mtPushFs(dirty);
+  const cc=cloudCfg(),tok=ghToken(),who=meName()?`秘書處 ${meName()}`:"秘書處";
   if(!tok){toast("沒有權杖，其他部門的修改沒有寫回");return}
   /* 寫回前再讀一次會長室的授權（可能剛被關掉或已過了當天） */
   const pr=await fwLoad("president",true),g=pr&&pr.data&&pr.data.meetGrant;
@@ -119,6 +141,27 @@ async function mtPushAll(){
   render();toast(fails.length?`沒有寫回：${fails.join("、")}`:`已寫回 ${dirty.map(m=>m.name).join("、")}`);
   if(rec.length){mtRecord(rec);await persist("已記進今天的會議紀錄");render()}   /* 寫回成功的修改記進秘書處自己的資料（state.minutes），再存一次 */
 }
+/* firestore 模式的寫回（2026-11-20）：跟 GitHub 模式同一個流程——寫回前再讀一次會長室的授權、逐部門寫、成功的記進今天的會議紀錄。
+   每個部門用 saveMeeting 寫（只寫規則允許秘書處改的欄位）；寫完重新讀那個部門。失敗的部門畫面上的修改留著（跟 GitHub 模式一樣，重新整理再改） */
+const MT_FS_ERR={conflict:"（對方剛存過，請重新整理再改）","permission-denied":"（沒有權限，或會長室的授權已經關閉）","meeting-field":"（有會議裡不能改的欄位）",unavailable:"（沒有連上網路）",badtime:"（時間格式不正確）"};
+async function mtPushFs(dirty){
+  const pr=await fwLoad("president",true),g=pr&&pr.data&&pr.data.meetGrant;
+  if(!g||g.date!==today()){dirty.forEach(m=>{m.data=JSON.parse(JSON.stringify(m.base));m.dirty=false});render();toast("會長室的授權已經關閉或過期，其他部門的修改沒有寫回");return}
+  const W=await storeWriteGet(),fails=[],rec=[];
+  for(const m of dirty){
+    if(!mtSrcOk(m.id)||!m.fs){fails.push(m.name+"（還在 GitHub）");continue}
+    const items=mtDiff(m);
+    try{await W.saveMeeting(CFG.firebase,m.id,{src:m.fs.src,orig:m.fs.orig,state:m.base},m.data);rec.push(...items)}
+    catch(e){console.error(e);fails.push(m.name+(MT_FS_ERR[e&&e.code]||""));continue}
+    try{const r=await storeDeptFull(m.id),d=normalize(r.data);Object.assign(m,{data:d,base:JSON.parse(JSON.stringify(d)),fs:{src:r.src,orig:r.orig},dirty:false})}
+    catch(e){fsReadErr("讀部門 "+m.id,e);m.base=JSON.parse(JSON.stringify(m.data));m.fs=null;m.dirty=false}   /* 已寫入但重新讀取失敗：先不能再改這個部門，重新整理後再改 */
+  }
+  render();toast(fails.length?`沒有寫回：${fails.join("、")}`:`已寫回 ${dirty.map(m=>m.name).join("、")}`);
+  if(!rec.length)return;
+  mtRecord(rec);render();
+  try{await W.saveMinutes(CFG.firebase,today(),(state.minutes||[]).filter(x=>x.date===today()));toast("已記進今天的會議紀錄")}
+  catch(e){console.error(e);toast("今天的會議紀錄沒有寫進去，請稍後重新整理再看")}
+}
 /* ---------- 會議紀錄（2026-11-06）：寫回各部門成功時，記下改了哪一筆、哪些欄位、改完的內容 ----------
    state.minutes[]＝{id,date,by:[名字],items:[{dept,deptName,ev,name,desc,times:[{label,start,end,place}],changed:[欄位],before:{desc}|null,at}]}，
    同一天的修改併成一次會議；同一筆改很多次只留一列（欄位累加、內容是最後的樣子、before 是當天第一次改之前的說明）。
@@ -132,7 +175,7 @@ function mtDiff(m){
   return out;
 }
 function mtRecord(items){
-  const day=today(),who=meName()||"秘書處";state.minutes=state.minutes||[];
+  const day=today(),who=mtWho()||"秘書處";state.minutes=state.minutes||[];
   let mn=state.minutes.find(x=>x.date===day);if(!mn){mn={id:uid("mn"),date:day,by:[],items:[]};state.minutes.push(mn)}
   if(!mn.by.includes(who))mn.by.push(who);
   items.forEach(x=>{const o=mn.items.find(y=>y.dept===x.dept&&y.ev===x.ev);
