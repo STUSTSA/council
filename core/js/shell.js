@@ -30,6 +30,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <section class="panel grant-panel" id="grantPanel" hidden>
         <div class="grant-row"><span class="grant-l" id="grH">秘書處會議編輯</span><button type="button" class="sw" id="grantSw" role="switch" aria-checked="false" aria-labelledby="grH"><i aria-hidden="true"></i></button><p class="sub grant-st" id="grantSt"></p></div>
       </section>
+      <!-- 會長室：會長預約（06，booking.js）：待審申請、已核准的預約、開放時段；只有會長室管理員與總管理員看得到 -->
+      <section class="panel bk-panel" id="bkPanel" aria-labelledby="bkH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="bkH" data-en="BOOKING">會長預約</h2></div>
+        <div id="bkBody"></div>
+      </section>
       <section class="panel act-panel" id="actPanel" aria-labelledby="acH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="acH" data-en="ACTIVITY">各部門編輯量</h2><button type="button" class="icon" id="actRefresh">重新整理</button></div>
         <p class="sub ac-info" id="actInfo"></p>
@@ -153,7 +158,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#docsPanel","#grantPanel","#followPanel","#actPanel","#meetEdPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
+    ["#docsPanel","#grantPanel","#bkPanel","#followPanel","#actPanel","#meetEdPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();
