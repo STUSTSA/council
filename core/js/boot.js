@@ -63,6 +63,6 @@ if(HOSTED)(async()=>{
 boardSplashOut();
 {const t0=Date.now();   /* firestore 模式等角色讀到（account.js 的 acctKnown，最多 5 秒）再判斷，有編輯權限的人不提示唯讀 */
   (fsMode()?Promise.race([acctKnown,new Promise(r=>setTimeout(r,5000))]):Promise.resolve()).then(()=>setTimeout(()=>{
-    if(storeLocked())toast(storeFsErr&&storeFsErr.code==="permission-denied"?(inAppBrowser()?"這個部門要登入才能看：請用瀏覽器開啟":"這個部門要登入才能看"):STORE_NOTE[storeSource()])},Math.max(0,1200-(Date.now()-t0))));}   /* LINE 等內建瀏覽器不能用 Google 登入（account.js） */
+    if(storeLocked()&&(storeSource()!=="firestore"||acct.user))toast(storeFsErr&&storeFsErr.code==="permission-denied"?(inAppBrowser()?"這個部門要登入才能看：請用瀏覽器開啟":"這個部門要登入才能看"):STORE_NOTE[storeSource()])},Math.max(0,1200-(Date.now()-t0))));}   /* LINE 等內建瀏覽器不能用 Google 登入（account.js） */
 if(MIGRATE_NOTE.staffDropped)setTimeout(()=>toast(`專員改成引用帳號：有 ${MIGRATE_NOTE.staffDropped} 筆專員標記找不到同名帳號，已拿掉（儲存後生效）`),4200);
 });

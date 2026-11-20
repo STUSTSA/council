@@ -33,7 +33,7 @@ describe('權限矩陣', () => {
   });
   it('deptSettings：L1 讀；該部門管理員改（要 rev＋稽核）；編輯者、別部門不能', async () => {
     await seed(t, d => d.doc('deptSettings/rights').set({ title: 'A', rev: 1, updatedAt: TS.now(), updatedBy: 'boss' }));
-    await assertFails(anon(t).doc('deptSettings/rights').get());
+    await assertSucceeds(anon(t).doc('deptSettings/rights').get());   // 06：對外公開
     await assertSucceeds(db('nb').doc('deptSettings/rights').get());
     await assertSucceeds(db('vw').doc('deptSettings/rights').get());
     const w = (u, withAudit = true) => { const x = db(u), b = x.batch();
@@ -70,7 +70,7 @@ describe('權限矩陣', () => {
     await assertSucceeds(db('ed').doc('issues/i1').set(iss('ed')));
     await assertSucceeds(db('vw').doc('issues/i1').get());
     await assertSucceeds(db('nb').doc('issues/i1').get());
-    await assertFails(anon(t).doc('issues/i1').get());
+    await assertSucceeds(anon(t).doc('issues/i1').get());   // 06：對外公開
     await assertFails(db('ed').doc('issues/i1').set({ ...iss('ed'), deptId: 'events', rev: 2 }));
     await assertSucceeds(db('ed').doc('issues/i1').set({ ...iss('ed'), title: '改', rev: 2 }));
     await assertSucceeds(db('ed').doc('weeks/w1').set({ deptId: 'rights', date: '2026-11-11', text: 'x', auto: false, createdAt: NOW(), updatedAt: NOW(), updatedBy: 'ed' }));
@@ -120,8 +120,8 @@ describe('時間事件', () => {
     await assertSucceeds(db('ed').doc('events/i1').set(ev('ed')));
     await assertSucceeds(anon(t).doc('events/p1').get());
     await assertSucceeds(anon(t).collection('events').where('visibility', '==', 'public').get());
-    await assertFails(anon(t).doc('events/i1').get());
-    await assertFails(anon(t).collection('events').get());
+    await assertSucceeds(anon(t).doc('events/i1').get());   // 06：看板內容（internal 事件不能帶 title／summary）
+    await assertSucceeds(anon(t).collection('events').get());
   });
   it('全會範圍：活動部可標 all-activity、秘書處可標 all-meeting、其他人不行', async () => {
     await seed(t, d => d.doc('events/e1').set({ ...ev('ed'), updatedAt: TS.now() }));
@@ -267,10 +267,11 @@ describe('卡片與版本 C-01～C-20', () => {
       await d.doc('events/e1').set({ deptId: 'rights', visibility: 'internal' }); });
     for (const p of ['cards/c1', 'issues/i1', 'events/e1', 'profiles/ed', 'slots/p_1', 'cards/c1/versions/1']) {
       await assertSucceeds(db('nb').doc(p).get());
-      await assertFails(anon(t).doc(p).get());
+      if (['profiles/ed', 'slots/p_1', 'cards/c1/versions/1'].includes(p)) await assertFails(anon(t).doc(p).get());
+      else await assertSucceeds(anon(t).doc(p).get());   // 06：卡片、議題、時間事件對外公開
     }
     await assertSucceeds(db('nb').collection('cards').where('state', 'in', ['open', 'done']).get());
-    await assertFails(anon(t).collection('cards').where('state', 'in', ['open', 'done']).get());
+    await assertSucceeds(anon(t).collection('cards').where('state', 'in', ['open', 'done']).get());   // 06：對外公開
   });
   it('C-18 一般登入者寫任何看板內容：拒絕', async () => {
     await assertFails(createCard(db('vw'), 'vw', 'c1'));

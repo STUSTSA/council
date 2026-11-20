@@ -4,7 +4,7 @@
 
 | 等級 | 誰能讀 | 內容 |
 |---|---|---|
-| L0 公開 | 任何人，不用登入 | `departments`（部門名稱與外觀）、`org/config`、`events` 中 `visibility == 'public'` 的公開活動 |
+| L0 公開 | 任何人，不用登入 | `departments`（部門名稱與外觀）、`org/config`、**06 起：看板內容** `cards`（不含永久刪除中）、`issues`、`weeks`、`labels`、`events`、`deptSettings` |
 | L1 內部 | **任何已登入的 Google 帳號，不需審核**（02A 定案，取代 01A-R 的已授權檢視者，見第 2.1 節） | 看板內容：`deptSettings`、`cards`（`open`／`done`）、`cards/{id}/versions`（只限 `open`／`done` 的卡片）、`issues`、`weeks`、`labels`、`events`（全部非公開的）、`profiles`、`legacyIdentities`、`grants`、`calendars`、`openWindows`、`slots`（只有忙／閒） |
 | 本人 | 登入者自己 | `users/{自己}`、`roles/{自己}`、自己的 `roleRequests`、自己的 `bookings`、`bookingQuota` |
 | L2 部門 | 該部門管理員／編輯者 | 該部門**刪除中**的卡片（`state == 'purging'`）與它的版本，只給前端接續清除用（02A 修正：沒有「已刪除、可復原」的卡片了，見第 5.1 節） |
@@ -424,3 +424,9 @@ match /events/{id} {
 | 依 IP 限流 | 不做；靠 App Check（D7）與 Spark 額度上限 | |
 
 結論：01A 範圍內沒有「非 Functions 不可」的需求。上表左欄的取捨要請你確認（決策 D8）。
+
+### 5.1j 06 對外公開讀取（`backend/tests/rules-06-public.test.js`，N6-01～N6-07）
+- 看板內容不用登入就讀得到：卡片（永久刪除中的除外，list 要帶 `state in [open, done]`）、議題、完成紀錄（卡片 done）、週報、標籤、時間事件、部門設定、部門名稱與 org。這些在切換前本來就是公開 repo 裡的資料檔。
+- 一律不公開：users（信箱）、roles、invitations、roleRequests、deptMembers、legacyIdentities、profiles（顯示名稱）、auditLogs、卡片版本歷史（編輯紀錄）、meetingMinutes 與秘書處其他資料、grants、預約相關（calendars、openWindows、slots、busyBlocks、bookings）。拿不準的不公開。
+- 寫入不變：未登入、沒有角色的登入者都不能寫。internal 的時間事件不能帶 title、summary（整個 events 集合公開，不能夾帶文字）。
+- 畫面：沒登入時看板照常顯示，負責人（舊身分、帳號名稱）不顯示（名字在 profiles、舊身分，要登入）。

@@ -18,13 +18,13 @@ async function loadDept(cfg, dept) {
   const [settings, org, grant, cards, issues, weeks, labels, events, legacy, minutes] = await Promise.all([
     one(doc(d, "deptSettings", dept), orig.settings),
     one(doc(d, "org", "config")),
-    dept === "president" ? one(doc(d, "grants", "meetingEdit")) : null,
+    dept === "president" ? one(doc(d, "grants", "meetingEdit")).catch(() => null) : null,   /* 06：沒登入讀不到（只有登入的人看得到會議授權），不影響看板 */
     many(query(collection(d, "cards"), by(), where("state", "in", ["open", "done"])), orig.cards),
     many(query(collection(d, "issues"), by()), orig.issues),
     many(query(collection(d, "weeks"), by()), orig.weeks),
     many(query(collection(d, "labels"), by()), orig.labels),
     many(query(collection(d, "events"), by()), orig.events),
-    many(query(collection(d, "legacyIdentities"), by())),
+    many(query(collection(d, "legacyIdentities"), by())).catch(() => []),   /* 06：舊身分（歷史卡片負責人的名字）要登入才讀得到；沒登入時負責人不顯示（team.js staffName） */
     /* 秘書處的會議紀錄（2026-11-20）：只有秘書處與總管理員讀得到；其他人讀不到就當成沒有（不影響看板） */
     dept === "secretariat" ? many(collection(d, "meetingMinutes")).catch(() => null) : null,
   ]);
