@@ -36,10 +36,10 @@ html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
 h1{margin:0;font-size:clamp(26px,3.2vw,38px);font-weight:400;letter-spacing:.08em;line-height:1.2}
-button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:7px 16px 5px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
+button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:6.35px 16px 5.65px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
 button.primary{background:var(--teal);border-color:var(--teal);color:var(--onteal)}   /* 按鈕：一般＝外框（次要動作，--hair）；primary＝主要動作的實心（--pri）；被指到放大、按下縮回，沒有光暈 */
 button.ghost{border-style:dashed;color:var(--muted)}
-button.icon{min-height:30px;font-size:13px;padding:4px 12px 2px}
+button.icon{min-height:30px;font-size:13px;padding:3.4px 12px 2.6px}
 button.danger{color:var(--warn)}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 input{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;border-radius:var(--r-sm);-webkit-user-select:text;user-select:text}
@@ -225,7 +225,7 @@ body.searching .layout{display:none}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .panel-head>.sec-h{flex:1}   /* 標題佔掉剩下的寬，右邊的按鈕靠右（以前是全站 h2 的 flex:1；ui-09 審查） */
-.count{font-size:12px;border-radius:999px;padding:2px 8px 0;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.count{font-size:12px;border-radius:999px;padding:1.25px 8px .75px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 新增鈕（+ 新增議題、+ 新增文件、+ 追蹤項目；即時回報 2026-11-17 起是右下角的浮動圓鈕）：2026-11-06 使用者：平常檢視太明顯，不常用。
    低調的小字：沒有框、灰字 13px、靠左，滑過／按下才變文字色 */
 button.add-row{justify-self:start;align-self:start;justify-content:flex-start;align-items:center;gap:4px;width:auto;min-height:32px;margin-top:10px;padding:0 10px 0 4px!important;border-color:transparent;border-radius:999px;background:none;color:var(--muted);font-size:13px;letter-spacing:.04em;box-shadow:none}
@@ -269,7 +269,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    寬螢幕沒打開卡片時排成格；打開時左邊一欄膠囊、右邊卡片（.split）。全螢幕卡片從哪一顆長出去，那一顆留著位置但看不到（.away） */
 .ev-list .cps{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
 .cps .sepr{grid-column:1/-1;height:1px;margin:8px 0;background:color-mix(in srgb,var(--ink) 22%,transparent)}
-.cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:0 20px;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
+.cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:1.2px 20px 0;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
 @media (hover:hover){.cp:hover{transform:scale(1.025)}}
 .cp:active{transform:scale(.97)}
 .cp b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -380,7 +380,7 @@ button.ln-empty{cursor:text}
 .ln.tm span.tx{padding:0}
 .tmc{flex:none;font-size:13px;line-height:1.5;color:var(--muted);white-space:nowrap}
 .tmc.late{color:var(--late)}
-button.tmc{display:inline-flex;align-items:center;height:26px;min-height:26px;padding:0 11px;border:0;border-radius:999px;background:var(--bg);color:var(--ink)}
+button.tmc{display:inline-flex;align-items:center;height:26px;min-height:26px;padding:0 11px 1px;border:0;border-radius:999px;background:var(--bg);color:var(--ink)}
 button.tmc.late{color:var(--late)}
 /* 超連結：檢視是膠囊（.lnks）；編輯中一組兩欄（按鈕名稱、網址）＋刪除 */
 .lnks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -397,7 +397,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
    人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
 .lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
 .lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:3px 17px 0 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
+.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:1.9px 17px 1.1px 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
 .lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
 .lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
@@ -584,7 +584,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
    編輯中：一個文件一列（膠囊＋小字網址＋修改／上下移／刪除），列與列之間細線 */
 .docs{display:flex;flex-wrap:wrap;gap:10px}
 .docs .empty{margin:0}
-.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:3.5px 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
+.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:2.2px 16px 1.3px 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
 .doc-pill .ico{font-size:16px;flex:none}
 .doc-pill b{font-weight:500;overflow-wrap:anywhere}
 .doc-go{font-size:13px;color:var(--muted);transition:transform .35s var(--mo-spring),color .2s}
@@ -690,7 +690,7 @@ a.doc-pill:active{scale:.96}
    上面一排部門膠囊（選到的實心；後面是份數；這週有新的亮綠點），下面週次小膠囊＋全文（等寬換行）＋複製 */
 .wk-panel[hidden]{display:none}
 .wk-depts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.wk-d{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:3px 12px;font-size:13px;border-color:var(--hair)}
+.wk-d{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:3.7px 12px 2.3px;font-size:13px;border-color:var(--hair)}
 .wk-d .num{font-size:12px;color:var(--muted)}
 .wk-d.none{color:var(--muted)}
 .wk-d[aria-selected="true"],.wk-d[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -784,7 +784,7 @@ a.doc-pill:active{scale:.96}
    實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
 .pg-head{flex-wrap:wrap;gap:12px 16px;margin-bottom:16px}
 .g-term{flex:none}
-.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:2px 22px 0;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
+.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:1.25px 22px .75px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
 .pg-add .ico{width:18px;height:18px;margin:0;stroke-width:2}
 #progPanel.pv-on :is(.g-term,.pg-add){display:none}
 @media (max-width:640px){.pg-head .sec-h{flex-basis:100%}}
@@ -814,7 +814,7 @@ a.doc-pill:active{scale:.96}
 /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝實心小膠囊（文字色底）＋細線連到條；其他＝條上方的短線（位置照日期），滑過才顯示標籤 */
 .g-mk{position:absolute;top:0;bottom:0;width:0;transition:opacity .2s}
 .g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（標籤與短線都是；跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
-.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:6.5px 9px 2.5px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
+.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:5.3px 9px 3.7px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
 .g-mk .stem{position:absolute;left:-.5px;width:1px;background:var(--ink);z-index:1;opacity:.5}
 .g-mk.edgeL .lbl{transform:translateX(-8px)}
 .g-mk.edgeR .lbl{transform:translateX(calc(-100% + 8px))}
@@ -855,7 +855,7 @@ a.doc-pill:active{scale:.96}
 .log li{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:3px 0 7px 16px;border-left:2px solid var(--hair);font-size:13.5px;line-height:1.45;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s}
 .log li.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾：半透明（同 .g-mk.pend；淡入淡出用上面 .log li 的 opacity 過渡） */
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
-.log-d{min-width:74px;font-size:14px}
+.log-d{flex:none;width:84px;font-size:14px}   /* 日期欄固定寬：每一列的膠囊與標題左緣才會對齊（以前最小寬 74px，數字寬度不同就差 1～2px） */
 .log li>.sub{text-spacing-trim:trim-start}   /* 「（即時回報）」換到下一行時，全形括號左半邊的空白不留，跟上一行的日期左緣對齊 */
 .log-p{margin-left:auto;font-size:12px}
 /* 進度卡片（甘特圖＋議題詳情合成一張）：預設 #pvGantt，點議題列換成 #pvDetail（切換動畫在 views.js 的 progShow）。
@@ -878,7 +878,7 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
 .hpct small{font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;margin-right:6px;color:var(--muted);vertical-align:.45em}
 .hpct.none{font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:400;color:var(--muted)}
 .closed-tag{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.tag.sm{font-size:11px;min-height:20px;padding:3px 7px 0!important;line-height:17px}
+.tag.sm{font-size:11px;min-height:20px;padding:2.6px 7px .4px!important;line-height:17px}
 .card{padding:16px var(--cpx,18px);display:flex;flex-direction:column;gap:8px;scroll-margin-top:60px;border-radius:0;transition:background-color .25s,opacity .2s;background:transparent;border:0;border-top:1px solid var(--line)}
 .card.open{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .card-title{font-weight:700;font-size:16px;line-height:1.4}
@@ -981,7 +981,7 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 進度條上的註記 ===== */
 .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:18px;border-radius:999px;padding:0 8px;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
+.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:16.7px;border-radius:999px;padding:1.3px 8px 0;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
 .marker .stem{z-index:1;position:absolute;left:-.5px;width:1px;background:var(--mc);opacity:.55}
 /* 註記：時程條「上方」一根細長條（2026-11-05 改長條；2026-11-06 使用者嫌疊在刻度上又半透明粗糙，改成立在刻度上方、不重疊、實色）：
    最新一筆 3×16px 註記色，其他 12px、淡一點；透明可點範圍左右各 9px、往下蓋到刻度（::before） */
@@ -1061,7 +1061,7 @@ a.link:active{transform:scale(.96)}
 .week summary::before{color:var(--muted);transition:transform .15s;content:"";display:inline-block;flex:none;width:7px;height:9px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);margin:0 2px 0 1px}
 .week[open] summary::before{transform:rotate(90deg)}
 .week summary .num{font-size:18px;transition:letter-spacing .25s var(--ease)}
-.badge{font-size:11.5px;border-radius:999px;padding:3px 8px 0;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
+.badge{font-size:11.5px;border-radius:999px;padding:2.1px 8px .9px;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
 .week-tools{display:flex;gap:6px;justify-content:flex-end;padding:0 12px;flex-wrap:wrap;animation:none}
 .week-text{white-space:pre-wrap;line-height:1.85;padding:6px 14px 14px;font-size:14.5px;word-break:break-word;animation:none;-webkit-user-select:text;user-select:text}
 .gen-btn{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);display:inline-flex;align-items:center;gap:6px}
@@ -1768,7 +1768,7 @@ body.set-open #pageMain{overflow:hidden}
 .tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
 .tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
 .tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.tl-btn{height:40px;min-height:0;padding:3.5px 22px 0;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-btn{height:40px;min-height:0;padding:2.9px 22px .6px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
 .tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
@@ -1788,7 +1788,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
 .cal-h .sec-h{margin-right:auto}
 .cal-mp{position:relative;flex:none}
-.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:1px 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
 .cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
 .cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
 /* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
@@ -1833,7 +1833,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal-modes{margin:0 -6px;padding:0 6px;overflow-x:auto;scrollbar-width:none}
 .cal-modes::-webkit-scrollbar{display:none}
 .cal-oth{display:flex;flex-wrap:wrap;gap:8px;margin-top:-6px}
-.cal-chip{height:36px;min-height:0;padding:4px 16px 0;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
+.cal-chip{height:36px;min-height:0;padding:2.9px 16px 1.1px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
 .cal-chip[aria-checked="true"]{background:var(--ink);color:var(--blk)}
 .cal-chip:active{transform:scale(.94)}
 .cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
@@ -1896,7 +1896,7 @@ body.set-open #pageMain{overflow:hidden}
 .pc-d:active{transform:scale(.9)}
 @media (hover:hover){.pc-d:not(.sel):hover::before{opacity:.28;transform:none}}
 .pc-pad{visibility:hidden}
-.pc-n{font-size:19px;line-height:1;padding-top:2px}
+.pc-n{font-size:19px;line-height:1;padding-top:.9px}
 .pc-d.has .pc-n{font-weight:500}
 .pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
@@ -1930,7 +1930,7 @@ body.set-open #pageMain{overflow:hidden}
 .lseg{display:inline-flex;padding:4px;border-radius:999px;background:var(--blk2);box-shadow:none;transform-origin:0 50%;   /* 按下時往右放大，貼著內容左邊也不會被切到 */
   touch-action:none;-webkit-user-select:none;user-select:none}
 .lseg-lens{position:absolute;left:0;top:4px;bottom:4px;z-index:0;border-radius:999px;background:var(--pri);pointer-events:none;will-change:transform}
-.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:6px 18px 2px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
+.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:4.9px 18px 3.1px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
 .lseg>[data-k][aria-selected="true"]{font-weight:500}
 .lseg>[data-k].lit{color:var(--pri-ink)}
 .lseg>[data-k]:hover,.lseg>[data-k]:active{transform:none;box-shadow:none}
@@ -1962,13 +1962,13 @@ body.set-open #pageMain{overflow:hidden}
 .lbl-n+.lbl-x{margin-left:-10px}
 .lbl-x{display:grid;place-items:center;width:30px;height:30px;min-height:0;margin-right:3px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font-size:16px;line-height:1}
 .lbl-tag .lbl-in{width:8em;height:36px;padding:0 16px;border:0;border-radius:999px;background:transparent;font-size:13.5px}   /* 改名中：膠囊裡的輸入框 */
-.lbl-add{display:inline-grid;place-items:center;min-width:84px;height:36px;min-height:0;padding:0 16px;border:1.5px dashed var(--ink);border-radius:999px;background:transparent;color:var(--ink);font-size:17px;line-height:1}
+.lbl-add{display:inline-grid;place-items:center;min-width:84px;height:36px;min-height:0;padding:0 16px 2.4px;border:1.5px dashed var(--ink);border-radius:999px;background:transparent;color:var(--ink);font-size:17px;line-height:1}
 input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛線膠囊本身變成輸入框 */
 .tm-sec{display:grid;gap:8px;padding-top:4px}
 .tm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .tm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 14px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .tm-name{font-weight:500}
-.tm-pill{display:inline-flex;align-items:center;height:22px;padding:4px 10px 0;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
+.tm-pill{display:inline-flex;align-items:center;height:22px;padding:2.9px 10px 1.1px;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
 .tm-pill.on{background:var(--acc2);color:var(--acc2-ink)}   /* 管理員：焦點色（紅色只給逾期、刪除、報告） */
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -1991,12 +1991,12 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .lg-item.old{border-color:var(--hair)}
 .lg-time{font-family:"Jost",sans-serif;font-size:15px;padding-top:2px;color:var(--muted)}
 .lg-main{display:grid;gap:8px;min-width:0}
-.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:2px 12px 0;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
+.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:1.4px 12px .6px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
 .lg-old{color:var(--muted);font-size:13px;padding-top:2px}
 .lg-lines{list-style:none;margin:0;padding:0;display:grid;gap:5px}
 .lg-lines li{display:flex;gap:8px;align-items:center;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 .lg-lines li>span:not(.lg-cat){padding-top:1px}   /* 膠囊跟旁邊的字上下對齊中線（字面中心比行盒中心高約 1px，補回） */
-.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:2px 8px 0;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
+.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:1.4px 8px .6px;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
 .log-more{display:block;margin:20px auto 0;border-radius:999px;padding-left:22px;padding-right:22px}
 .log-more[hidden]{display:none}
 .log-msg{text-align:center;margin:18px 0 0}
