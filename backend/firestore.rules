@@ -813,6 +813,31 @@ service cloud.firestore {
       allow delete: if isSuper();
     }
 
+    // 會議結論的待合併提案（2026-11-21）：秘書處在會議紀錄寫的結論，送到該部門「待合併」；部門編輯者自己按合併才動到卡片（照一般卡片規則），
+    // 秘書處不能藉這個集合改別部門的卡片。kind＝note（附在某張卡片）｜new（臨時項目，合併時才建新卡片）。
+    match /mergeProposals/{pid} {
+      function pk()        { return ['deptId', 'cardId', 'kind', 'title', 'note', 'meetingDate', 'status', 'createdBy', 'createdAt',
+                                     'updatedAt', 'updatedBy', 'resolvedBy', 'resolvedAt']; }
+      function secWriter() { return isEditor('secretariat') || isSuper(); }
+      function bodyOk()    { return short(d().title, 100) && short(d().note, 1000) && d().note.size() > 0 && dayStr(d().meetingDate); }
+      function cardOk()    { return d().kind == 'new' ? d().cardId == null
+                              : (safeId(d().cardId) && exists(doc('cards', d().cardId)) && get(doc('cards', d().cardId)).data.deptId == d().deptId); }
+      allow get, list: if secWriter() || (resource != null && isEditor(resource.data.deptId));
+      allow create: if secWriter() && safeId(pid) && d().keys().hasOnly(pk())
+        && d().deptId in deptIds() && d().kind in ['note', 'new'] && cardOk() && bodyOk()
+        && d().status == 'pending' && d().createdBy == me() && d().createdAt == request.time && stamped()
+        && !d().keys().hasAny(['resolvedBy', 'resolvedAt']);
+      // 秘書處：待合併的可以改標題與結論，或撤回；部門編輯者：待合併的標成已合併或略過（卡片本身照一般規則另外寫）
+      allow update: if resource.data.status == 'pending' && d().keys().hasOnly(pk()) && stamped()
+        && ( (secWriter() && d().status == 'pending' && onlyChanged(['title', 'note', 'updatedAt', 'updatedBy']) && bodyOk())
+          || (secWriter() && d().status == 'withdrawn' && onlyChanged(['status', 'resolvedBy', 'resolvedAt', 'updatedAt', 'updatedBy'])
+              && d().resolvedBy == me() && d().resolvedAt == request.time)
+          || ((isEditor(resource.data.deptId) || isSuper()) && d().status in ['merged', 'dismissed']
+              && onlyChanged(['status', 'resolvedBy', 'resolvedAt', 'updatedAt', 'updatedBy'])
+              && d().resolvedBy == me() && d().resolvedAt == request.time) );
+      allow delete: if isSuper();
+    }
+
     // ===================== 遷移批次 =====================
     match /migrations/{batch} {
       allow get, list: if isSuper();
