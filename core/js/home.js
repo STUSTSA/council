@@ -154,9 +154,13 @@
      跨頁：播完主頁這一半才換頁，交接 sessionStorage「pfx-burst」＝{d,k}（只給下一頁讀一次，index.html 開頭讀完就刪），
      看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
      減少動態時直接換頁、不交接 */
+  /* 進部門提速（2026-11-21）：點下去的那一刻，請 Service Worker 先把看板的檔案跟網路對一遍（sw.js 的 warm；換頁後 15 秒內直接用這一份，不用再等一輪），
+     並提前下載 Firebase 模組（store.js 的 storePreload）。沒有 Service Worker、不支援時什麼都不做，進部門照舊 */
+  function hmWarm(){try{storePreload();const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c)c.postMessage({type:"warm"})}catch(_){}}
   function hmEnter(i){
     const d=D[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
+    hmWarm();   /* 過場動畫播的這一秒不浪費：看板的檔案與 Firebase 模組同時開始準備（動畫與換頁的時間都不變） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
     dockMove(false);   /* 下排跟主頁其他東西一起退場（桌面、手機都是） */
@@ -446,7 +450,7 @@
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
   $id("hmPub").innerHTML=ico("calendar","solo");
   $id("hmBk").innerHTML=ico("clock","solo")+"<span>預約會長</span>";
-  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");   /* 直接進會長室的「會長室」分頁：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
+  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");hmWarm();   /* 直接進會長室的「會長室」分頁：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
     try{sessionStorage.setItem("hm-dept","president")}catch(_){}
     const go=()=>{location.href=`index.html?d=president&tab=ext`};
     if(reduceMotion()){go();return}dockMove(false);setTimeout(go,MO.base)});
@@ -454,6 +458,7 @@
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
+  setTimeout(()=>(window.requestIdleCallback||setTimeout)(storePreload),2500);   /* 開場與主頁動畫都過了、閒下來才提前下載 Firebase 模組（進部門時才下載會多等好幾趟網路來回；下載一次之後瀏覽器會留著） */
   swReg(D.map(d=>deptLogo(d.id)));   /* 安裝成 App、離線打開：主頁也註冊 Service Worker，並把主頁用到的檔案與九個部門標誌收進離線備份（util.js） */
   if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */

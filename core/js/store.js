@@ -29,7 +29,23 @@ function storeModLoad(file,ev,name){
   });
 }
 const storeFsGet=()=>storeFsMod||(storeFsMod=storeModLoad("store-firestore.js","board-firestore-ready","BoardFirestore"));
-function storeFsLoad(){return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
+/* 進部門提速（2026-11-21）：Firebase 的模組（fb-app／store-firestore／fb-account 加 gstatic 的三個 SDK 檔，約 190KB gzip）只提前下載（modulepreload，不執行、不連線），
+   讓真正要用時直接從瀏覽器快取拿。SDK 版本要跟 fb-app.js 的 import 網址同一個（改版時兩邊一起改）。
+   看板頁（index.html）一載入 store.js 就開始，並且立刻讀這個部門的資料（storeFsPre）：不用等後面四十幾支腳本載完、boot.js 才開始；主頁（home.js）在點進部門的那一刻與閒置時呼叫 */
+const FB_SDK="https://www.gstatic.com/firebasejs/11.10.0/";
+let storePreDone=false;
+function storePreload(){
+  if(storePreDone||!(CFG.firebase&&CFG.firebase.projectId)||!BOARD_DEPTS.some(d=>d.source==="firestore"))return;
+  storePreDone=true;
+  [...["firebase-app","firebase-firestore","firebase-auth"].map(f=>FB_SDK+f+".js"),...["fb-app","store-firestore","fb-account"].map(f=>"core/js/"+f+".js")]
+    .forEach(u=>{const l=document.createElement("link");l.rel="modulepreload";l.href=u;document.head.append(l)});
+}
+let storeFsPre=null;   /* 看板頁提早讀的第一份資料（boot.js 開始讀時拿走，只用一次；之後的重新讀取照常重讀） */
+function storeFsLoad(){if(storeFsPre){const p=storeFsPre;storeFsPre=null;return p}return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
+if(document.getElementById("state")&&fsMode()&&location.protocol!=="file:"&&CFG.firebase&&CFG.firebase.projectId){   /* 只有看板頁（index.html 有 #state）、而且這個部門讀新資料庫 */
+  storePreload();
+  storeFsPre=storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId));storeFsPre.catch(()=>{});   /* 失敗也要等 boot.js 拿去處理，這裡只是避免「沒人接的錯誤」警告 */
+}
 /* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、行事曆的「會長室」「其他」）跟著那個部門的資料來源：
    firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
    回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
