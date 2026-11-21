@@ -1,14 +1,15 @@
 /* 核心｜點名，秘書處端（07，docs/architecture/data-model.md 第 5 節；設定檔 meeting:true 的秘書處看板、firestore 模式）
    「會議」分頁的一張卡片 #attPanel：
    - 名冊：「匯入名冊」貼上一行一人（部門 職稱 姓名）。名冊由秘書處自己維護，不從帳號帶（帳號的角色不是會議出席名單）；已有的（同部門同姓名）略過，不會重複。
-   - 整理名冊：「名冊」列出全部人（部門＋姓名），取消勾選＝停用（不再出現在點名；過去的紀錄還在），勾回來＝恢復。不刪文件。
+   - 整理名冊（2026-11-21）：「名冊」進入整理模式（再按一次或「完成」離開）；模式裡「+ 成員」一筆一筆新增（部門、職稱、姓名）、「匯入名冊」批次貼上，點任何一個人開編輯視窗（改部門、職稱、姓名；取消「在名冊中」＝停用，不再出現在點名，過去的紀錄還在，勾回來＝恢復）。不刪文件。
+   - 部門：名冊上方一排部門膠囊，只看某個部門的人（點名與整理都適用）；數字與複製結果仍是全部。
    - 複製結果：「複製結果」把這一場的出席數與請假、缺席、還沒點的名單複製成文字。
    - 場次：「+ 場次」新增一次點名（名稱＋日期）；上面一排場次膠囊（最近 40 場，新的在前），一次點一場。
    - 點名：每個人一顆按鈕，點一下依序換 出席→請假→缺席→出席（實心＝出席、外框＝請假、斜紋＝缺席、平面＝還沒點，DESIGN-next 第三節）。
      畫面先換、背景寫入；寫入失敗就換回來並提示。點過的人不能退回「還沒點」（規則不讓秘書處刪除）。
    - 只有秘書處編輯者以上與總管理員看得到整張卡（個人出缺席資料不公開；規則同樣擋，這裡只管顯示）。
    資料讀寫在 attendance-fs.js（ES module，用到才載入）。畫面插入的文字一律 esc。 */
-const AT={key:"",members:undefined,sessions:[],sel:"",recs:{},loading:false,err:"",html:null,busy:false};
+const AT={key:"",members:undefined,sessions:[],sel:"",recs:{},loading:false,err:"",html:null,busy:false,edit:false,dept:""};   /* edit：整理名冊中；dept：只看某個部門（空＝全部） */
 const AT_ST=["present","leave","absent"],AT_LB={present:"出席",leave:"請假",absent:"缺席"},AT_CL={present:"on",leave:"lv",absent:"ab"};
 const AT_ERR={"permission-denied":"沒有權限，沒有變更",unavailable:"沒有連上網路，沒有變更"};
 const atMod=()=>storeModLoad("attendance-fs.js","board-attendance-ready","BoardAttendance");
@@ -17,9 +18,9 @@ const atSee=()=>CFG.meeting&&fsMode()&&!!atMe()&&((typeof acctSuper==="function"
 const atRank=r=>/^(會長|部長|處長|秘書長|主任)$/.test(r)?0:/^副/.test(r)?1:/長$/.test(r)?2:3;
 const atSess=()=>AT.sessions.find(s=>s.id===AT.sel)||null;
 /* 名單排序：部門照看板的部門順序，同部門部長、副部長、其他 */
-function atSorted(){
+function atSorted(all){
   const order=(window.BOARD_DEPTS||[]).map(d=>d.name),di=n=>{const i=order.indexOf(n);return i<0?99:i};
-  return AT.members.filter(m=>m.active).sort((a,b)=>di(a.dept)-di(b.dept)||atRank(a.role)-atRank(b.role)||a.name.localeCompare(b.name,"zh-Hant"));
+  return AT.members.filter(m=>all||m.active).sort((a,b)=>di(a.dept)-di(b.dept)||atRank(a.role)-atRank(b.role)||a.name.localeCompare(b.name,"zh-Hant"));
 }
 async function atLoad(){
   if(AT.loading)return;AT.loading=true;AT.err="";
@@ -31,17 +32,22 @@ async function atLoad(){
   AT.loading=false;renderAttendance(true);
 }
 const atCount=ms=>{const c={present:0,leave:0,absent:0};ms.forEach(m=>{const s=AT.recs[m.id];if(c[s]!==undefined)c[s]++});c.none=ms.length-c.present-c.leave-c.absent;return c};
+const atGroups=ms=>{const gs=[];ms.forEach(m=>{const g=gs[gs.length-1];if(g&&g.dept===m.dept)g.ms.push(m);else gs.push({dept:m.dept,ms:[m]})});return gs};
+const atAddBtns=`<button type="button" class="icon" data-at="add">+ 成員</button><button type="button" class="icon" data-at="import">匯入名冊</button>`;
 function atHTML(){
   if(AT.err)return `<p class="sub at-st">${esc(AT.err)}</p>`;
   if(AT.members===undefined)return `<p class="sub at-st">讀取中…</p>`;
-  const ms=atSorted();
-  if(!ms.length)return `<p class="sub at-st">還沒有名冊。按「匯入名冊」貼上名單，一行一人：部門、職稱、姓名。</p>`;
-  const s=atSess(),b=AT.busy?" disabled":"";
-  const pick=AT.sessions.length?`<div class="wk-depts at-pick" role="tablist" aria-label="場次">${AT.sessions.map(x=>`<button type="button" role="tab" class="wk-d" data-at="pick" data-id="${esc(x.id)}" aria-selected="${x.id===AT.sel}">${esc(x.title)}<span class="num">${esc(x.date.slice(5).replace("-","/"))}</span></button>`).join("")}</div>`:"";
+  const all=atSorted(AT.edit),act=atSorted();
+  if(!AT.members.length)return `<p class="sub at-st">還沒有名冊。一筆一筆新增，或貼上名單一次匯入（一行一人：部門、職稱、姓名）。</p><div class="at-bar">${atAddBtns}</div>`;
+  const depts=[...new Set(all.map(m=>m.dept))];if(AT.dept&&!depts.includes(AT.dept))AT.dept="";
+  const dp=depts.length>1?`<div class="wk-depts at-dept" role="tablist" aria-label="部門">${["",...depts].map(d=>`<button type="button" role="tab" class="wk-d" data-at="dept" data-d="${esc(d)}" aria-selected="${d===AT.dept}">${d?esc(d):"全部"}</button>`).join("")}</div>`:"";
+  const shown=AT.dept?all.filter(m=>m.dept===AT.dept):all,dh=g=>`<h3 class="at-h">${esc(g.dept||"（沒有部門）")}<span class="num">${AT.edit?g.ms.length:g.ms.filter(m=>AT.recs[m.id]==="present").length+"/"+g.ms.length}</span></h3>`;
+  if(AT.edit)return `<div class="at-bar">${atAddBtns}</div>${dp}`+atGroups(shown).map(g=>dh(g)+`<div class="at-grid">${g.ms.map(m=>`<button type="button" class="at-m${m.active?"":" off"}" data-at="edit1" data-id="${esc(m.id)}" aria-label="編輯 ${esc(m.role)} ${esc(m.name)}"><span class="nm">${esc(m.name)}<small>${esc(m.role)}</small></span><i>${m.active?"編輯":"停用中"}</i></button>`).join("")}</div>`).join("");
+  const s=atSess(),pick=AT.sessions.length?`<div class="wk-depts at-pick" role="tablist" aria-label="場次">${AT.sessions.map(x=>`<button type="button" role="tab" class="wk-d" data-at="pick" data-id="${esc(x.id)}" aria-selected="${x.id===AT.sel}">${esc(x.title)}<span class="num">${esc(x.date.slice(5).replace("-","/"))}</span></button>`).join("")}</div>`:"";
   if(!s)return pick+`<p class="sub at-st">還沒有點名場次。按「+ 場次」開始第一次點名。</p>`;
-  const c=atCount(ms),groups=[];ms.forEach(m=>{const g=groups[groups.length-1];if(g&&g.dept===m.dept)g.ms.push(m);else groups.push({dept:m.dept,ms:[m]})});
-  return pick+`<div class="at-sum"><div><b class="num">${c.present}</b><small>出席</small></div><div><b class="num">${c.leave}</b><small>請假</small></div><div><b class="num">${c.absent}</b><small>缺席</small></div><div><b class="num">${c.none}</b><small>還沒點</small></div></div>`
-    +groups.map(g=>`<h3 class="at-h">${esc(g.dept||"（沒有部門）")}<span class="num">${g.ms.filter(m=>AT.recs[m.id]==="present").length}/${g.ms.length}</span></h3><div class="at-grid">${g.ms.map(m=>{const st=AT.recs[m.id];
+  const c=atCount(act);
+  return pick+dp+`<div class="at-sum"><div><b class="num">${c.present}</b><small>出席</small></div><div><b class="num">${c.leave}</b><small>請假</small></div><div><b class="num">${c.absent}</b><small>缺席</small></div><div><b class="num">${c.none}</b><small>還沒點</small></div></div>`
+    +atGroups(shown).map(g=>dh(g)+`<div class="at-grid">${g.ms.map(m=>{const st=AT.recs[m.id];
       return `<button type="button" class="at-m${st?" "+AT_CL[st]:""}" data-at="mark" data-id="${esc(m.id)}" aria-label="${esc(m.role)} ${esc(m.name)}：${st?AT_LB[st]:"還沒點"}"><span class="nm">${esc(m.name)}<small>${esc(m.role)}</small></span><i>${st?AT_LB[st]:"還沒點"}</i></button>`}).join("")}</div>`).join("");
 }
 /* 畫面：沒變就不重畫（render() 很常被呼叫）。登入者或身分變了就重新讀（角色比登入晚到） */
@@ -53,7 +59,7 @@ function renderAttendance(force){
   p.hidden=!atSee();if(p.hidden)return;
   const h=atHTML();if(h!==AT.html||force){AT.html=h;$("#attBody").innerHTML=h}
   p.querySelector("[data-at=addsess]").disabled=!AT.members||!AT.members.some(m=>m.active);
-  p.querySelector("[data-at=roster]").disabled=!AT.members||!AT.members.length;
+  const rb=p.querySelector("[data-at=roster]");rb.disabled=!AT.members;rb.textContent=AT.edit?"完成":"名冊";
   p.querySelector("[data-at=copy]").disabled=!atSess()||!AT.members||!AT.members.some(m=>m.active);
 }
 /* 匯入名冊：一行一人，部門、職稱、姓名用逗號、Tab 或空白隔開，順序不拘；認得出部門的才收，職稱沒寫當成部員 */
@@ -83,14 +89,19 @@ async function atImport(){
   if(!fresh.length){toast("名單裡的人都已經在名冊裡");return}
   await atRun(async()=>(await atMod()).addMembers(CFG.firebase,fresh),`已加入 ${fresh.length} 人${skip?`，略過 ${skip} 行`:""}`);
 }
-async function atRoster(){
-  const all=[...AT.members].sort((a,b)=>a.dept.localeCompare(b.dept,"zh-Hant")||atRank(a.role)-atRank(b.role)||a.name.localeCompare(b.name,"zh-Hant"));
-  const v=await ask("整理名冊",[{name:"on",type:"multi",label:"取消勾選＝停用（不再出現在點名）",options:all.map(m=>[m.id,`${m.dept} ${m.name}`]),value:all.filter(m=>m.active).map(m=>m.id)}],
-    {wide:true,note:"停用不會刪除過去的點名紀錄，之後可以再勾回來。"});
+/* 新增一個人、或編輯一個人（m 有值）：部門、職稱、姓名；編輯時多一個「在名冊中」（取消＝停用） */
+async function atMember(m){
+  const names=(window.BOARD_DEPTS||[]).map(d=>d.name);if(m&&m.dept&&!names.includes(m.dept))names.push(m.dept);
+  const v=await ask(m?"編輯名冊":"新增成員",[
+    {name:"dept",label:"部門",type:"select",value:m?m.dept:(AT.dept||names[0]),options:names.map(n=>[n,n])},
+    {name:"role",label:"職稱",value:m?m.role:"",ph:"沒填就是部員"},
+    {name:"name",label:"姓名",value:m?m.name:""},
+    ...(m?[{name:"active",label:"在名冊中（取消勾選＝停用，不再出現在點名）",type:"check",value:m.active}]:[])],
+    {validate:o=>!o.name?"請填姓名":o.name.length>30?"姓名最多 30 字":(o.role||"").length>20?"職稱最多 20 字":AT.members.some(x=>x.id!==(m&&m.id)&&x.dept===o.dept&&x.name===o.name)?"這個部門已經有同名的人":""});
   if(!v)return;
-  const on=new Set(v.on),ch=all.filter(m=>on.has(m.id)!==m.active).map(m=>({id:m.id,active:on.has(m.id)}));
-  if(!ch.length)return;
-  await atRun(async()=>(await atMod()).setActive(CFG.firebase,ch),`已更新名冊（停用 ${ch.filter(c=>!c.active).length}、恢復 ${ch.filter(c=>c.active).length}）`);
+  const row={dept:v.dept,role:v.role||"部員",name:v.name};
+  if(!m)await atRun(async()=>(await atMod()).addMembers(CFG.firebase,[row]),"已加入名冊");
+  else await atRun(async()=>(await atMod()).updateMember(CFG.firebase,m.id,{...row,active:!!v.active}),"已更新");
 }
 function atText(){
   const s=atSess(),ms=atSorted();if(!s)return "";
@@ -115,7 +126,10 @@ document.addEventListener("click",async ev=>{
   const k=t.dataset.at;
   if(k==="import")return atImport();
   if(k==="addsess")return atAddSession();
-  if(k==="roster")return atRoster();
+  if(k==="roster"){AT.edit=!AT.edit;return renderAttendance(true)}
+  if(k==="add")return atMember(null);
+  if(k==="edit1")return atMember(AT.members.find(x=>x.id===t.dataset.id));
+  if(k==="dept"){AT.dept=t.dataset.d;return renderAttendance(true)}
   if(k==="copy")return navigator.clipboard.writeText(atText()).then(()=>toast("已複製點名結果"),()=>toast("複製失敗"));
   if(k==="mark")return atMark(t.dataset.id);
   if(k==="pick"&&t.dataset.id!==AT.sel){AT.sel=t.dataset.id;AT.recs={};renderAttendance(true);

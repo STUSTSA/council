@@ -28,6 +28,11 @@ async function addMembers(cfg, rows) {
     await b.commit();
   }
 }
+/* 編輯一個人：{name, dept, role, active}（不刪文件，過去的點名紀錄用成員 ID 連著，不受影響） */
+async function updateMember(cfg, id, f) {
+  const { db, me } = await ctx(cfg);
+  await updateDoc(doc(db, "attendanceMembers", id), { name: f.name, dept: f.dept, role: f.role, active: f.active, updatedAt: NOW(), updatedBy: me });
+}
 /* 停用／恢復（不刪文件：規則只讓總管理員刪）：changes＝[{id, active}] */
 async function setActive(cfg, changes) {
   const { db, me } = await ctx(cfg);
@@ -59,5 +64,5 @@ async function mark(cfg, session, mid, status) {
   await setDoc(doc(db, "attendanceRecords", `${session.id}_${mid}`), { sessionId: session.id, memberId: mid, status, sessionAt: dayStart(session.date), updatedAt: NOW(), updatedBy: me });
 }
 
-window.BoardAttendance = { members, addMembers, setActive, sessions, addSession, records, mark };
+window.BoardAttendance = { members, addMembers, updateMember, setActive, sessions, addSession, records, mark };
 dispatchEvent(new Event("board-attendance-ready"));

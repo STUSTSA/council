@@ -38,7 +38,7 @@ document.addEventListener("click",async e=>{
   if(t.closest("#addEvent")&&!editing&&canEdit()){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpFocus("title",true)}return}
   /* 「+ 議題」：加一個議題、換到它的詳情，游標直接在名稱上（整段選取，打字就換掉；沒有對話框）；沒命名就點外面／Esc＝不留（inmCommit） */
-  if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
+  if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新"+ISS,tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
     if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);inm={id:it.id,isNew:true};dirty=true}))progShow(it.id,()=>inmFocus(true));return}
   /* 議題詳情：點名稱＝原地改名稱 */
   const ing=t.closest("[data-iname-go]");if(ing){if(!editing&&canEdit()){const id=ing.closest("[data-issue]").dataset.issue;if(await startEdit("i:"+id,()=>{const it=state.issues.find(i=>i.id===id);inm={id,isNew:false,orig:it?it.title:""}}))inmFocus(false)}return}
@@ -65,7 +65,7 @@ document.addEventListener("click",async e=>{
   const ifx=t.closest("[data-iffx]");if(ifx){ifFldAct(ifx);return}
 
   /* issues */
-  if(t.closest("#autoRange")){const ds=state.issues.flatMap(i=>[i.start,i.end,...i.markers.map(m=>m.date)]).filter(Boolean).sort();if(!ds.length){toast("還沒有填日期的議題");return}state.range={start:ds[0].slice(0,7),end:ds[ds.length-1].slice(0,7)};changed();return}
+  if(t.closest("#autoRange")){const ds=state.issues.flatMap(i=>[i.start,i.end,...i.markers.map(m=>m.date)]).filter(Boolean).sort();if(!ds.length){toast("還沒有填日期的"+ISS);return}state.range={start:ds[0].slice(0,7),end:ds[ds.length-1].slice(0,7)};changed();return}
   const it=findIssue(t);if(!it)return;
   if(t.closest("[data-restore]")){if(!fldCommitOpen())return;it.doneAt=null;dirty=true;await saveFlow();toast("已取消結案，移回進行中");return}   /* 卡片會離開完成紀錄：直接儲存 */
   /* 結案／取消結案（編輯中，卡片工具列）：結案的議題儲存後移到完成紀錄 */
@@ -89,7 +89,7 @@ async function inmCommit(how){
   if(!it){inm=null;return}
   const v=(f?f.value:it.title).trim();
   if(!v&&how==="enter"){toast("請填名稱");if(f){f.classList.add("bad");f.focus()}return}
-  if(!v||(isNew?how!=="enter"&&v==="新議題":v===inm.orig)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改（跟開始改名時的原名比，不跟 it.title 比：上一次存檔被取消時 it.title 已經是新名稱）：只離開；新增的沒命名：不留，回甘特圖 */
+  if(!v||(isNew?how!=="enter"&&v==="新"+ISS:v===inm.orig)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改（跟開始改名時的原名比，不跟 it.title 比：上一次存檔被取消時 it.title 已經是新名稱）：只離開；新增的沒命名：不留，回甘特圖 */
   it.title=v;dirty=true;inmBusy=true;
   try{await saveFlow()}finally{inmBusy=false}
 }

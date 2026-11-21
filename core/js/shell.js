@@ -37,7 +37,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
       </section>
       <!-- 秘書處：點名（07，attendance.js）：名冊、場次、逐人點名；只有秘書處編輯者以上與總管理員看得到 -->
       <section class="panel at-panel" id="attPanel" aria-labelledby="atH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="atH" data-en="ATTENDANCE">點名</h2><span class="at-tools"><button type="button" class="icon" data-at="import">匯入名冊</button><button type="button" class="icon" data-at="roster" disabled>名冊</button><button type="button" class="icon" data-at="copy" disabled>複製結果</button><button type="button" class="icon" data-at="addsess" disabled>+ 場次</button></span></div>
+        <div class="panel-head"><h2 class="sec-h" id="atH" data-en="ATTENDANCE">點名</h2><span class="at-tools"><button type="button" class="icon" data-at="roster" disabled>名冊</button><button type="button" class="icon" data-at="copy" disabled>複製結果</button><button type="button" class="icon" data-at="addsess" disabled>+ 場次</button></span></div>
         <div id="attBody"></div>
       </section>
       <section class="panel act-panel" id="actPanel" aria-labelledby="acH" hidden>
@@ -89,9 +89,9 @@ const SHELL_HTML=`<div class="pager" id="pager">
           <section class="panel" id="progPanel" aria-labelledby="ganttH">
             <!-- 標題列（DESIGN-next 第八節、模擬頁 TIMELINE；ui-09）：英文小標＋「進度」，右邊全部／上學期／下學期、實心「+ 議題」、甘特圖時間軸的「編輯」；
                  分段切換與「+ 議題」只在甘特圖那一頁（議題詳情時藏起來，board.css「進度頁標題列」） -->
-            <div class="panel-head pg-head"><h2 class="sec-h" id="ganttH" data-en="TIMELINE">進度</h2>
+            <div class="panel-head pg-head"><h2 class="sec-h" id="ganttH" data-en="${ISS==="專案"?"PROJECTS":"TIMELINE"}">${ISS==="專案"?"專案":"進度"}</h2>
               <div class="g-term lseg" id="gTerm" role="tablist" aria-label="甘特圖範圍"><span class="lseg-lens" aria-hidden="true"></span><button type="button" role="tab" data-k="all" aria-selected="true">全部</button><button type="button" role="tab" data-k="up" aria-selected="false">上學期</button><button type="button" role="tab" data-k="down" aria-selected="false">下學期</button></div>
-              <button type="button" class="pg-add auth-only" id="addIssue"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>議題</button>
+              <button type="button" class="pg-add auth-only" id="addIssue"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${ISS}</button>
               <button type="button" class="icon card-edit-btn" id="ganttEdBtn" data-edit="s:gantt" aria-label="編輯甘特圖時間軸">編輯</button></div>
             <div class="pv-page" id="pvGantt" data-edbox="s:gantt">
             <div class="legend" aria-label="圖例"><span><i class="lg-now" aria-hidden="true"></i>今天</span><span><i class="lg-sl lg-a" aria-hidden="true"></i>已過時程</span><span><i class="lg-sl lg-b" aria-hidden="true"></i>剩餘時程</span></div>
