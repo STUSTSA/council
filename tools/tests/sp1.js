@@ -44,7 +44,6 @@ const login=async p=>{await p.click('#setOv .set-gate .primary');await p.waitFor
  await p.keyboard.press('Escape');await p.waitForTimeout(800);log('esc1 -> hub:',await hub(),await st(p));
  await p.keyboard.press('Escape');await p.waitForTimeout(800);log('esc2 -> list:',await hub(),await st(p));
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(700);log('report hub:',await hub());
- await p.click('#setOv [data-hub=report]');await p.waitForTimeout(800);log('work report dlg:',await st(p));
  await p.click('#setOv [data-set=backup]');await p.waitForTimeout(900);log('switch to backup:',await hub(),await st(p));
  await p.click('#setOv [data-set=backup]');await p.waitForTimeout(800);log('reclick closes:',await st(p));
  await p.click('#setOv [data-set=device]');await p.waitForTimeout(700);log('device hub:',await hub(),await p.evaluate(()=>!!document.querySelector('#setOv .set-hub .set-p')));
@@ -63,11 +62,8 @@ remote=JSON.parse(fs.readFileSync('data_test.json','utf8'));   /* 手機重新�
  await p.click('#dlg [data-act=cancel]');await p.waitForTimeout(900);
  const sub=()=>p.evaluate(()=>({sub:subOpen,set:setOpen,subHidden:document.querySelector('#setSub').hidden,listHidden:document.querySelector('#setOv').hidden,hub:(()=>{const h=document.querySelector('#setSub .set-hub');return h&&{hidden:h.hidden,rows:[...h.querySelectorAll('[data-hub]')].map(r=>r.dataset.hub)}})(),dlg:document.querySelector('#dlg').open,logo:!!document.querySelector('#setSub .set-top .logo')}));
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);log('m report hub:',await sub());await p.screenshot({path:'sp_m_hub.png'});
- await p.click('#setSub [data-hub=report]');await p.waitForTimeout(900);log('m work report:',await sub());
  await p.goBack();await p.waitForTimeout(900);log('m system back -> hub:',await sub());
  await p.click('.dh-home');await p.waitForTimeout(900);log('m back -> list:',await sub());
  await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);
- await p.click('#setSub [data-hub=week]');await p.waitForTimeout(1300);log('m week from hub:',await sub(),await p.evaluate(()=>onWeek));
- await p.click('.dh-home');await p.waitForTimeout(1300);log('m week back -> settings:',await sub(),await p.evaluate(()=>onWeek));
  log('m errs',p.errs)}
 await b.close()})();

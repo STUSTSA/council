@@ -95,7 +95,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok((await board(anon)).length===0&&await toastHas(anon,'要登入才能看'),'未登入：讀不到看板、提示要登入');
   await openSet(anon);
   let s=await setText(anon);
-  ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有每週概述與「用 Google 登入」');
+  ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有「用 Google 登入」');
   await anon.ctx.close();
   const line=await open(`${BASE}/index.html?d=fruit`,{ua:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Line/14.0.0'});
   await openSet(line);s=await setText(line);

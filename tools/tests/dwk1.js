@@ -14,8 +14,9 @@ const dir=process.env.SHOTS||'.';
 for(const [w,h,sc,touch,tag] of [[1366,800,'light',false,'desk'],[390,780,'light',true,'mob'],[390,780,'dark',true,'mobdark'],[1366,800,'dark',false,'deskdark']]){
  const p=await open(w,h,sc,touch);const exp=await expected(p);const weeks=Object.keys(exp).sort().reverse();
  ok(weeks.length>=3,tag+'：測試資料至少跨三週：'+weeks.join(','));
- ok(await p.$$eval('#doneList .wkf',x=>x.length)===weeks.length&&!(await p.$('#doneList .cp')),tag+'：總覽是每週一張資料夾（沒有直接列膠囊）');
- const ds=await p.$$eval('#doneList .wkf',x=>x.map(e=>e.dataset.wk));ok(JSON.stringify(ds)===JSON.stringify(weeks),tag+'：最新的一週在最上面');
+ const ds=await p.$$eval('#doneList .wkf',x=>x.map(e=>e.dataset.wk));
+ ok(weeks.every(k=>ds.includes(k))&&!(await p.$('#doneList .cp')),tag+'：總覽是每週一張格子（沒有直接列膠囊），有完成紀錄的週都在（另外會多列有每週報告的週與當週）');
+ ok(JSON.stringify(ds)===JSON.stringify([...ds].sort().reverse())&&ds[0]===weeks[0],tag+'：最新的一週在最上面');
  ok(weeks.every(k=>new Date(k+'T00:00:00').getDay()===1),tag+'：每一週都從週一開始');
  const t0=await p.$eval('#doneList .wkf',e=>e.textContent);ok(t0.includes('第 8 週')&&t0.includes('10/26 – 11/01')&&!t0.includes('張完成'),tag+'：第一張只寫第幾週與小字日期：'+t0.slice(0,40));
  ok(!(await homeUp(p)),tag+'：總覽時左上角還是首頁鍵');
