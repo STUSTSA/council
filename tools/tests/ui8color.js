@@ -1,12 +1,12 @@
 /* ui8color：ui-08 G 顏色全部走主題變數（docs/DESIGN-next.md 第二節「新主題只能改變數的值」）。github 模式，固定 8300 埠（run-tests.sh 換埠時會一起換）。
-   做法（替換法）：同一個畫面、同一個深淺色，把 <html data-pal> 依序換成九組主題（測試時關掉顏色過渡），每次抓畫面上所有看得見的元素（含 ::before／::after）的
+   做法（替換法）：同一個畫面、同一個深淺色，把 <html data-pal> 依序換成十三組主題（測試時關掉顏色過渡），每次抓畫面上所有看得見的元素（含 ::before／::after）的
    color（自己有字才算）、background-color、background-image 裡的顏色、border-*-color（有框才算）、outline-color（有外框線才算）、fill、stroke、box-shadow 的顏色，
-   html 的 scrollbar-color、打開的對話框的 ::backdrop。某個元素的某個屬性在九組主題都是同一個值＝沒有跟著主題變＝寫死，除非是允許的例外：
+   html 的 scrollbar-color、打開的對話框的 ::backdrop。某個元素的某個屬性在十三組主題都是同一個值＝沒有跟著主題變＝寫死，除非是允許的例外：
    部門標誌的藍 rgb(10,91,170)、黃 rgb(240,188,35)（主頁部門色塊的 .dg 整個略過，檔案裡還有行銷部的橘）；陰影用的半透明黑（box-shadow 裡的 rgba(0,0,0,a)）；透明；工作報告的白紙（.rpt-paper、.rpt-ov 裡面）。
    畫面：主頁、即時回報、卡片（展開）、通知頁、設定頁、進度頁、對話框；412（觸控）與 1300，淺色與深色。
    「處」＝不重複的（元素標籤＋class＋偽元素, 屬性）。環境變數 LIST=1 印出每一處。失敗會印 FAIL 並以非 0 結束 */
 const C=require('./common.js');
-const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun'];
+const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun','sakura','forest','ocean','wisteria'];
 const ALLOW=new Set(['rgb(10, 91, 170)','rgb(240, 188, 35)']);
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 const W=ms=>new Promise(r=>setTimeout(r,ms));
@@ -64,16 +64,16 @@ const GRAB=()=>{
     await p.click('#notiBtn').catch(()=>{});await W(1500);await scan(p,'通知頁',tag);await close(p);await W(600);
     await p.click('#setBtn').catch(()=>{});await W(1300);await scan(p,'設定頁',tag);await close(p);
     await p.click('#tabbar .tab[data-tab="progress"]').catch(()=>{});await W(1400);await scan(p,'進度頁',tag);
-    /* 綠底 --ok 上的字（--ok-ink：今天膠囊、狀態「進行中」「完成」、已複製）、學生會黃上的字（--st-go-ink）：九組主題都 ≥ 4.5:1 */
+    /* 綠底 --ok 上的字（--ok-ink：今天膠囊、狀態「進行中」「完成」、已複製）、學生會黃上的字（--st-go-ink）：十三組主題都 ≥ 4.5:1 */
     if(w>=700){const low=await p.evaluate(PALS=>{const lin=c=>(c/=255)<=.03928?c/12.92:((c+.055)/1.055)**2.4,L=s=>{const [r,g,b]=s.match(/\d+(\.\d+)?/g).map(Number);return .2126*lin(r)+.7152*lin(g)+.0722*lin(b)};
         const cr=(a,b)=>{const x=L(a),y=L(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};const d=document.createElement('i');d.style.transition='none';document.body.append(d);const pal0=document.documentElement.dataset.pal,out=[];
         for(const pal of PALS){document.documentElement.dataset.pal=pal;
           for(const [fg,bg] of [['--ok-ink','--ok'],['--st-ok-ink','--st-ok'],['--st-go-ink','--st-go']]){d.style.color=`var(${fg})`;d.style.backgroundColor=`var(${bg})`;const cs=getComputedStyle(d),k=cr(cs.color,cs.backgroundColor);if(!(k>=4.5))out.push(`${pal} ${fg}/${bg} ${k.toFixed(2)}`)}}
         d.remove();document.documentElement.dataset.pal=pal0;return out},PALS);
-      ok(!low.length,`${tag} 綠底、黃底上的字九組主題都 ≥ 4.5:1 ${low.join('；')}`)}
+      ok(!low.length,`${tag} 綠底、黃底上的字十三組主題都 ≥ 4.5:1 ${low.join('；')}`)}
     await p.evaluate(()=>{editBoardInfo('year')});await W(1100);await scan(p,'對話框',tag);await close(p);
     ok(!p.errs.length,`${tag} 沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
   const LIST=!!process.env.LIST;
   if(LIST)for(const [k,o] of total)console.log(`LIST ${k}＝${o.v}（${[...o.at].slice(0,4).join('、')}${o.at.size>4?'…':''}）`);
-  ok(total.size===0,`九組主題 × 深淺色，七個畫面沒有跟著主題變的顏色：${total.size} 處`+(total.size&&!LIST?'：'+[...total.keys()].slice(0,12).join('；'):''));
+  ok(total.size===0,`十三組主題 × 深淺色，七個畫面沒有跟著主題變的顏色：${total.size} 處`+(total.size&&!LIST?'：'+[...total.keys()].slice(0,12).join('；'):''));
   await s.b.close();console.log(`\n${passes} OK，${fails} FAIL`);process.exit(fails?1:0)})().catch(e=>{console.error('FAIL 例外',e);process.exit(1)});

@@ -1,4 +1,4 @@
-/* 主題色彩（docs/DESIGN-next.md 第二節）：九組主題 × 淺色／深色，看板（index.html）與總覽（home.html）共用。
+/* 主題色彩（docs/DESIGN-next.md 第二節）：十三組主題 × 淺色／深色，看板（index.html）與總覽（home.html）共用。
    主題放在 <html data-pal="代號">、深淺色放在 <html data-theme="light|dark">，兩個都由 core/js/theme.js 在開頁前設好（存在這台裝置的 localStorage）。
    每一組都定義同一整組變數；新主題只能改這些值，不能針對某個主題另寫元件樣式。
    任何元素加上 data-pal 屬性，裡面的變數就換成那一組主題的顏色（深淺跟著外層的 data-theme）：設定 → 帳號 → 外觀的主題按鈕用這個顯示各自的顏色。
@@ -39,6 +39,18 @@
 /* 暖陽（sun） */
 [data-pal="sun"]{--bg:#efedea;--blk:#fff;--blk2:#e3ded7;--ink:#1f1f1f;--muted:#7d7466;--hair:#dedad3;--acc:#fdb92e;--acc-ink:#1f1f1f;--acc2:#7a4a3e;--acc2-ink:#fff;--pri:#fdb92e;--pri-ink:#1f1f1f;--ok:#7f9a34;--late:#d8412f;--ok-ink:#1f1f1f}
 [data-theme="dark"][data-pal="sun"],[data-theme="dark"] [data-pal="sun"]{--bg:#131211;--blk:#1e1c1a;--blk2:#2c2926;--ink:#f3f0ec;--muted:#a39a8d;--hair:#32302c;--acc:#fdb92e;--acc-ink:#1a1712;--acc2:#d9a08f;--acc2-ink:#131211;--pri:#fdb92e;--pri-ink:#1a1712;--ok:#a9c45a;--late:#ff6a58;--ok-ink:#131211}
+/* 櫻花（sakura） */
+[data-pal="sakura"]{--bg:#f8eef0;--blk:#fffafb;--blk2:#f0d9de;--ink:#3a1a24;--muted:#7a5560;--hair:#ecd3d9;--acc:#e58aa0;--acc-ink:#3a1a24;--acc2:#a63a5c;--acc2-ink:#fff;--pri:#3a1a24;--pri-ink:#fffafb;--ok:#2f9d62;--late:#d8412f;--ok-ink:#2e1119}
+[data-theme="dark"][data-pal="sakura"],[data-theme="dark"] [data-pal="sakura"]{--bg:#140b0e;--blk:#1f1317;--blk2:#2f1e24;--ink:#f7e9ed;--muted:#b3939c;--hair:#37232a;--acc:#f2a0b5;--acc-ink:#2a1018;--acc2:#f7e9ed;--acc2-ink:#140b0e;--pri:#f7e9ed;--pri-ink:#1f1317;--ok:#58d48c;--late:#ff6a58;--ok-ink:#140b0e}
+/* 森林（forest） */
+[data-pal="forest"]{--bg:#eaeedf;--blk:#fbfcf5;--blk2:#d8dfc9;--ink:#17301f;--muted:#5c6b58;--hair:#d3dac2;--acc:#2f7d4f;--acc-ink:#fff;--acc2:#d9a441;--acc2-ink:#17301f;--pri:#17301f;--pri-ink:#fbfcf5;--ok:#2f9d62;--late:#d8412f;--ok-ink:#0f2417}
+[data-theme="dark"][data-pal="forest"],[data-theme="dark"] [data-pal="forest"]{--bg:#08110b;--blk:#101b13;--blk2:#1b2c20;--ink:#e8f2e6;--muted:#8fa68f;--hair:#1f3024;--acc:#6cc58c;--acc-ink:#07140b;--acc2:#e0b457;--acc2-ink:#08110b;--pri:#e8f2e6;--pri-ink:#101b13;--ok:#58d48c;--late:#ff6a58;--ok-ink:#08110b}
+/* 海洋（ocean） */
+[data-pal="ocean"]{--bg:#e2f0f6;--blk:#f6fbfd;--blk2:#c8e1ec;--ink:#0b2e44;--muted:#4d6a7c;--hair:#c9e0ea;--acc:#0b7fa6;--acc-ink:#fff;--acc2:#f2a65a;--acc2-ink:#0b2e44;--pri:#0b2e44;--pri-ink:#f6fbfd;--ok:#2f9d62;--late:#d8412f;--ok-ink:#07202f}
+[data-theme="dark"][data-pal="ocean"],[data-theme="dark"] [data-pal="ocean"]{--bg:#06131b;--blk:#0e202c;--blk2:#173244;--ink:#e4f3fa;--muted:#86a5b6;--hair:#1b3547;--acc:#4cc2ee;--acc-ink:#05141c;--acc2:#f2a65a;--acc2-ink:#06131b;--pri:#e4f3fa;--pri-ink:#0e202c;--ok:#58d48c;--late:#ff6a58;--ok-ink:#06131b}
+/* 紫藤（wisteria） */
+[data-pal="wisteria"]{--bg:#eeeaf7;--blk:#fbfaff;--blk2:#dcd5ee;--ink:#261a40;--muted:#675f82;--hair:#dbd4ec;--acc:#6d4fcf;--acc-ink:#fff;--acc2:#f0bc23;--acc2-ink:#261a40;--pri:#261a40;--pri-ink:#fbfaff;--ok:#2f9d62;--late:#d8412f;--ok-ink:#261a40}
+[data-theme="dark"][data-pal="wisteria"],[data-theme="dark"] [data-pal="wisteria"]{--bg:#0d0a16;--blk:#171229;--blk2:#251e3d;--ink:#eeeafa;--muted:#a199bd;--hair:#2a2243;--acc:#a78bfa;--acc-ink:#130c26;--acc2:#f0bc23;--acc2-ink:#0d0a16;--pri:#eeeafa;--pri-ink:#171229;--ok:#58d48c;--late:#ff6a58;--ok-ink:#0d0a16}
 /* 沒有 JavaScript（theme.js 沒跑、沒有 data-pal／data-theme）時：米黃，深淺色跟系統 */
 @media (prefers-color-scheme:dark){
   :root:not([data-pal]):not([data-theme]){color-scheme:dark;--wal-sh:rgba(0,0,0,.62);--bg:#000;--blk:#151517;--blk2:#232327;--ink:#f1f1f4;--muted:#9a9aa6;--hair:#2c2c34;--acc:#f0bc23;--acc-ink:#111114;--acc2:#f0bc23;--acc2-ink:#111114;--pri:#f1f1f4;--pri-ink:#151517;--ok:#3ccf7f;--late:#ff5a4e;--ok-ink:#000}
