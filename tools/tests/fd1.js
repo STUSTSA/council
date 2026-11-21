@@ -114,7 +114,7 @@ const LIT=[MARK,MARK.slice(0,10),MARK.slice(5,10)];
     const out={};const lit=t=>LIT.some(x=>t.includes(x));const put=(k,html)=>{box.innerHTML=html;out[k]={n:box.querySelectorAll('.fdx').length,lit:lit(box.textContent)}};
     let err='';
     try{
-      renderWeeks();const wl=document.querySelector('#weekList');out.weeks={n:wl.querySelectorAll('.fdx').length,lit:lit(wl.textContent)};
+      const wl=document.createElement('div');wl.innerHTML=repHTML(wkStart(state.weeks[0].date));out.weeks={n:wl.querySelectorAll('.fdx').length,lit:lit(wl.textContent)};
       renderGantt();const g=document.querySelector('#gantt');out.gantt={n:g.querySelectorAll('.fdx').length,lit:lit(g.textContent)};
       put('detail',cardHTML(it));put('marker',markerHTML(it.markers[0],null,it));put('log',logHTML(it));
       put('done',doneCardHTML('iD',true));put('doneFields',doneFieldsHTML(dn,false));

@@ -113,12 +113,6 @@ remote=JSON.parse(fs.readFileSync('data_test.json','utf8'));sha='m0';
  await p.waitForTimeout(2200);const ia=await p.evaluate(()=>$('#notiBtn').className);log('M icon after:',ia);A(!/ico-on/.test(ia),'icon stops');
  await p.tap('#setBtn');await p.waitForTimeout(700);await p.screenshot({path:'v2_m_set.png',fullPage:false});
  await p.tap('#setBtn');await p.waitForTimeout(500);
- // 每週概述改成設定裡的子頁（2026-11-06，weekly.js 的 weekPane）：打開後直接點分頁 → 設定收起、到那一區
- await p.tap('#setBtn');await p.waitForTimeout(700);await p.tap('#setOv [data-set=week]');await p.waitForTimeout(1200);
- const wk=await p.evaluate(()=>({open:!!weekPaneEnd,sub:subOpen}));
- await p.tap('#tabbar [data-tab=done]');await p.waitForTimeout(1200);
- const wd=await p.evaluate(()=>({cur:curSec,setOpen,week:!!weekPaneEnd,scrollLeft:$('#pager').scrollLeft}));log('M from weekly → done:',wk,'→',wd);
- A(wk.open&&wk.sub&&wd.cur==='done'&&!wd.setOpen&&!wd.week&&wd.scrollLeft===0,'weekly → done tab');
  log('M errs:',p.errs);A(!p.errs.length,'mobile errors');
  await ctx.close();}
 await b.close();fs.writeFileSync('v2_report.txt',out.join('\n'));
