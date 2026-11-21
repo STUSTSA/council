@@ -122,10 +122,10 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .pager{display:flex;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
 .page{flex:none;height:100%;overflow-x:hidden;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}   /* 不橫向捲動：手機換分頁時左右滑進滑出的內容超出畫面也不會撐出橫捲 */
 .page-main{width:100vw}
-.wrap{max-width:1500px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
+.wrap{--wrap-pt:calc(20px + env(safe-area-inset-top));max-width:1500px;margin:0 auto;padding:var(--wrap-pt) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
 .pager::-webkit-scrollbar{display:none}
 @media (max-width:640px){
-  .wrap{padding-top:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
+  .wrap{--wrap-pt:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
 }
 @supports selector(::-webkit-scrollbar){
   .pager{scrollbar-width:auto}
@@ -140,7 +140,16 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 /* ===== 部門標題列（shell.js 的 .dhead；DESIGN-next 第六節「部門內」、第十四節） =====
    首頁鍵、部門標誌（dept/icons 的學生會標誌，藍黃不跟主題）、英文小標（Jost 10.5px、字距 .22em）與部門名（700 加字距）、
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
-   標題列跟著頁面捲動；換分頁不重建。深色只靠變數 */
+   標題列（連同下面的搜尋列）固定在畫面最上面（.dtop，ui-15）：往下捲時內容從它下面滑過，下緣用一段底色漸層淡出，不畫線、不加陰影；
+   平常捲到最上面時位置跟以前一樣。換分頁不重建。深色只靠變數 */
+/* 固定的頂部區（.dtop＝標題列＋搜尋列，shell.js）：黏在捲動容器（.page）最上面。底色蓋住從下面滑過的內容；往上多出的 --wrap-pt 內距在黏住時捲到畫面外，
+   只留 8px＋瀏海／狀態列安全區，固定區不吃多餘的高度。左右各多 12px 讓圓鈕的柔光陰影、聚焦框不被切掉。
+   下緣的淡出（::after）接在標題列／搜尋列原本的下邊距上（最後一個子元素的下邊距會穿出去變成 .dtop 的下邊距），所以捲到最上面時看不到。
+   --dtop-h＝固定時佔的高度（shell.js 的 dtopSync 量），黏在下面的卡片（.lc-pane）、捲動定位（scroll-padding）、卡片高度都用它 */
+.dtop{--dtop-x:12px;position:sticky;top:calc(8px + env(safe-area-inset-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) 0;background:var(--bg)}
+.dtop::after{content:"";position:absolute;left:0;right:0;top:100%;height:20px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
+.page-main{scroll-padding-top:var(--dtop-h,0px)}
+@media print{.dtop{position:static}.dtop::after{display:none}}
 .dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 18px;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;transition:transform .22s var(--ease),background-color .2s,color .2s}
 /* 被指到放大、按下縮回：首頁鍵是 <a>，一般按鈕（button）的規則套不到，這裡三顆統一寫（只有能 hover 的裝置才放大） */
@@ -152,6 +161,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn[hidden]{display:none}
 /* 設定開著時（設定層 z-index 38、手機子頁 39，從標題列下緣開始蓋）：標題列疊在設定層上面，柔光主題圓鈕往下畫的陰影、聚焦框不被設定層的底色蓋掉（ui-10 C）。
    標題列跟設定層不重疊，其他主題畫面不變；只在設定開著時抬高（今日層 .td-ov 也是 39、要蓋過標題列） */
+body.set-open .dtop{position:static}   /* 設定開著時頁面鎖在最上面：固定區改回一般排版，才不會把標題列框成自己的層、蓋不過設定層 */
 body.set-open .dhead{position:relative;z-index:40}
 .dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
@@ -292,11 +302,11 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    第一排：（全螢幕時）返回鍵、燈號、名稱、編輯次數的小膠囊；第二排：上一張／下一張（實心三角的外框膠囊）、報告；第三排：狀態、負責人、時間；
    內容、儲存回饋、底部工具列（編輯權限才有）。寬螢幕在右邊（.lc-pane，黏在上面、內容自己捲動）；其他全螢幕（.lc.full，在 #lcFull）。
    卡片裡的排法看卡片自己的寬度（@container lc） */
-.lc-pane{position:sticky;top:12px;min-width:0}
+.lc-pane{position:sticky;top:calc(var(--dtop-h,150px) + 12px);min-width:0}   /* 黏在固定頂部區（.dtop）下面 */
 .lc{--pad:24px;position:relative;display:flex;flex-direction:column;min-height:340px;padding:22px var(--pad) 0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);container:lc/inline-size}
 .lc.ro{min-height:0;padding-bottom:16px}
-.lc-pane .lc{max-height:calc(100dvh - 150px)}
-.lc-pane .lc:not(.ro){height:calc(100dvh - 250px);min-height:340px}   /* 可編輯的詳情卡高度跟著視窗（上面標題與搜尋列約 224px）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
+.lc-pane .lc{max-height:calc(100dvh - var(--dtop-h,150px) - 24px)}
+.lc-pane .lc:not(.ro){height:calc(100dvh - var(--dtop-h,150px) - 56px);min-height:340px}   /* 可編輯的詳情卡高度跟著視窗（上面固定的標題列與搜尋列＝--dtop-h）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
 .lc-in{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
 .lc-head{display:flex;align-items:center;gap:10px;min-height:40px}
 .lc-head .live-dot{width:10px;height:10px}
@@ -518,11 +528,6 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 左右兩欄（寬螢幕、打開一張時；live.js 的 lvWide）：左邊一欄膠囊、右邊卡片（.lc-pane，見「卡片外框」）。完成紀錄（#doneMD）共用 --- */
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
-/* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），可編輯的卡片多出約 100px 高 */
-.wrap:has(#liveMD.split) #dSearch{width:clamp(240px,34%,320px)}
-#liveMD.split .lc-pane{margin-top:calc(-1 * var(--rise,0px))}
-#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - 250px + var(--rise,0px))}
-#liveMD.split .lc-pane .lc{max-height:calc(100dvh - 150px + var(--rise,0px))}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
