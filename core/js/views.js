@@ -86,7 +86,7 @@ function renderGantt(){
   /* 每一列＝滑桿式時程條（ui-12，DESIGN.md 第八節；跟議題詳情同一個元件 sliderHTML）：條只畫在議題期間，把手＝今天在期間的位置。
      今天＝每列一條細綠線（在條的後面，從把手上下露出來），時間軸上方綠色小膠囊寫日期 */
   const grid=inRange?`<span class="today" style="left:${tp}%"></span>`:"";
-  let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name sub" style="font-weight:400">議題</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
+  let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name sub" style="font-weight:400">${ISS}</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     /* p：把手的位置（%）＝今天在條上的位置，不四捨五入（才跟今天線對齊）；還沒開始＝0（把手在最左）、已經結束＝100（最右）。
@@ -101,8 +101,8 @@ function renderGantt(){
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
   /* 空狀態：唯讀＝「目前沒有進行中的議題」；已登入＝只寫狀態（DESIGN.md「介面不放教學說明文字」；ui-11）；github 模式還沒登入的照舊 */
-  if(!act.length)h+=`<p class="empty">${boardLocked()?"目前沒有進行中的議題。":loggedIn()?"還沒有議題。":"還沒有議題，登入後按「+ 議題」開始。"}</p>`;
-  else if(!all.length)h+=`<p class="empty">這段期間沒有議題。</p>`;
+  if(!act.length)h+=`<p class="empty">${boardLocked()?`目前沒有進行中的${ISS}。`:loggedIn()?`還沒有${ISS}。`:`還沒有${ISS}，登入後按「+ ${ISS}」開始。`}</p>`;
+  else if(!all.length)h+=`<p class="empty">這段期間沒有${ISS}。</p>`;
   morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、時程條、註記都是同一個節點 */
 }
 
@@ -214,7 +214,7 @@ function cardHTML(it){
   const nm=!!inm&&inm.id===it.id&&cardEd("i",it.id),ed=cardEd("i",it.id)&&!nm;   /* nm：只在改名稱（原位編輯，events.js 的 inmCommit）；ed：整張卡片編輯中 */
   return `<article class="card open ${it.doneAt?"closed":""} ${ed?"sec-edit":""}" data-issue="${esc(it.id)}" data-edbox="i:${esc(it.id)}">
     <div class="card-top">
-      <div class="card-head">${nm?`<input class="card-title" data-iname value="${esc(it.title)}" maxlength="500" aria-label="議題名稱" autocomplete="off" enterkeyhint="done">`:`<b class="card-title"${canEdit()&&!editing?` data-iname-go tabindex="0" role="button"`:""}>${esc(it.title)}</b>`}${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></div>
+      <div class="card-head">${nm?`<input class="card-title" data-iname value="${esc(it.title)}" maxlength="500" aria-label="${ISS}名稱" autocomplete="off" enterkeyhint="done">`:`<b class="card-title"${canEdit()&&!editing?` data-iname-go tabindex="0" role="button"`:""}>${esc(it.title)}</b>`}${it.tags[it.cur]?`<span class="tag cur sm">${esc(it.tags[it.cur])}</span>`:""}${it.doneAt?'<span class="tag sm closed-tag">已結案</span>':""}<span class="hpct num${schedPct(it)==null?" none":""}" data-hpct>${schedPct(it)==null?"未排程":`<small>時程</small>${schedPct(it)}%`}</span></div>
       ${editBtnHTML("i:"+it.id)}<div class="card-tools"><button type="button" class="icon" data-addmarker>+ 註記</button><button type="button" class="icon" data-closeissue>${it.doneAt?"取消結案":"結案"}</button><button type="button" class="icon" data-move="-1" aria-label="往前移">↑</button><button type="button" class="icon" data-move="1" aria-label="往後移">↓</button>${fsDelOk()?`<button type="button" class="icon danger" data-delissue aria-label="刪除議題「${esc(it.title)}」">刪除</button>`:""}</div>
     </div>
     ${ed?issueFieldsHTML(it):`<div class="meta"><span class="sub">${hasDates(it)?`${esc(fmt(it.start))} – ${esc(fmt(it.end))}`:"未排入甘特圖"}</span></div>
@@ -396,7 +396,7 @@ function doneCardHTML(id,full){
       ${o.markers.length?`<ul class="dn-mk">${sortedMarkers(o).map(m=>`<li>${m.date?`<span class="num">${esc(fmt(m.date))}</span> `:""}${m.stage?`【${esc(m.stage)}】`:""}${esc(m.text)}</li>`).join("")}</ul>`:""}
       ${o.links.length?`<div class="lnks">${o.links.map(doneLink).join("")}</div>`:""}`;
   return lcFrame({k:"done",id:o.id,key,st:"done",ids,full,ro:true,sec:ed,attr:`data-issue="${esc(o.id)}"`,title:`<b class="lc-title">${esc(o.title)}</b>`,
-    meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>議題</span>`,body,tail,save:""});
+    meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>${ISS}</span>`,body,tail,save:""});
 }
 /* ---------- 完成紀錄：一週一張資料夾 ----------
    完成紀錄先列「一週一張」的資料夾（週一到週日，最新的在最上面；沒有完成紀錄的週不出現），點一張進去是那一週的膠囊清單，卡片的開法沿用即時回報（live.js）。
@@ -434,7 +434,7 @@ function renderDone(){
   const thisWk=wkStart(today());
   const folder=([w,a])=>`<button type="button" class="wkf" data-wk="${esc(w)}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><b class="wkf-d num">${esc(wkLabel(w))}</b><span class="wkf-n num">${esc(wkRange(w))}</span></button>`;
   const inWk=doneWeek?items.filter(x=>wkStart(x.d)===doneWeek):[];
-  morphTo($("#doneList"),!items.length?`<p class="empty">結案的議題和完成的即時回報會收進這裡。</p>`
+  morphTo($("#doneList"),!items.length?`<p class="empty">結案的${ISS}和完成的即時回報會收進這裡。</p>`
     :doneWeek?`<div class="wk-head"><h3 class="num">${esc(wkLabel(doneWeek))}</h3><span><span class="num">${esc(wkRange(doneWeek))}</span> · ${inWk.length} 張完成</span></div><div class="cps">${inWk.map(cp).join("")}</div>`
     :`<div class="wkfs">${doneWeeks(items).map(folder).join("")}</div>`);   /* 原位更新（morph.js） */
   if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
