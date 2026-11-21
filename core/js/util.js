@@ -75,3 +75,6 @@ function swReg(extra){
   vv.addEventListener("resize",upd);vv.addEventListener("scroll",upd);
   addEventListener("focusin",()=>{clearTimeout(t);t=setTimeout(reveal,320)});   /* 鍵盤還在升起：等它到位再看有沒有被蓋住 */
 })();
+
+/* 固定頂部區（.dtop）佔的高度（shell.js 量好寫進 --dtop-h）：捲動到某個元素時，要讓出這段 */
+function dtopH(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0}
