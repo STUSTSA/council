@@ -91,12 +91,17 @@ const Anim=(()=>{
   async function hide(el,kind="fade"){if(!el||el.hidden)return;await leave(el,kind);el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}
   /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播。
      一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉 */
-  function toggle(el,on){
+  function toggle(el,on,{reflow=[]}={}){
     if(!el)return;on=!!on;if(el._tgl===on)return;const first=el._tgl===undefined;el._tgl=on;
+    /* reflow：這顆出現／消失時會被擠到別處的兄弟元素（例如唯讀檢視時鈴鐺消失、眼睛鈕補到它的位置；設定圓鈕消失、分頁列重新置中）。
+       藏起來（或顯示）前後各量一次位置，位置變了的從舊位置滑到新位置（FLIP，MO.slow／out），不會瞬間跳 */
+    const snap=()=>reflow.filter(r=>r&&r.getClientRects().length).map(r=>[r,r.getBoundingClientRect()]);
+    const flip=sn=>{if(off())return;sn.forEach(([r,a])=>{const b=r.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top,dw=a.width-b.width;if(Math.abs(dx)<1&&Math.abs(dy)<1&&Math.abs(dw)<1)return;
+      r.animate([{transform:`translate(${dx}px,${dy}px)`,maxWidth:a.width+"px"},{transform:"none",maxWidth:b.width+"px"}],{duration:MO.slow,easing:MO.out})})};
     el.getAnimations().forEach(a=>a.cancel());el.inert=!on;
-    if(on){el.hidden=false;if(!first)enter(el,"pop");return}
+    if(on){const sn=snap();el.hidden=false;if(!first){enter(el,"pop");flip(sn)}return}
     if(first||el.hidden||reduced()){el.hidden=true;return}
-    leave(el,"pop").then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
+    leave(el,"pop").then(()=>{if(el._tgl===false){const sn=snap();el.hidden=true;el.getAnimations().forEach(a=>a.cancel());flip(sn)}});
   }
   /* 燈號擴散（CSS 動畫 ping）：重畫後新的燈號會從頭播，跟原本的節奏對不上、看起來像跳一下。
      把每個 ping 動畫的起點都對齊到頁面時間軸 0，重畫前後相位一樣，所有燈號也同步 */

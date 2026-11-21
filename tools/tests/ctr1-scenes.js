@@ -50,6 +50,17 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       <div class="at-tools" style="margin-top:14px"><button type="button" class="icon">匯入名冊</button><button type="button" class="icon">+ 場次</button></div>`;document.body.appendChild(d)});
     await W(300);await measure(p,'點名預約會議元件',tag);await p.evaluate(()=>document.getElementById('__syn').remove());
     ok(!p.errs.length,`${tag} 部門沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
+  /* ---- 唯讀狀態：沒登入的看板（三個分頁、設定的鎖頭頁、通知）、登入後按眼睛進唯讀檢視（頁首「唯讀」膠囊、唯讀的設定頁） ---- */
+  {const p=await mk(w,h,scheme);await p.goto(U+'index.html');await W(2200);
+    for(const k of ['live','progress','done']){await p.evaluate(k=>{if(curSec!==k)setSection(k,{instant:true})},k);await W(900);await measure(p,'未登入-'+k,tag)}
+    if(await tap(p,'#setBtn')){await W(1300);await measure(p,'未登入-設定',tag);await p.evaluate(()=>{if(setOpen)closeSettings(true)});await W(700)}
+    if(await tap(p,'#notiBtn')){await W(1500);await measure(p,'未登入-通知',tag)}
+    ok(!p.errs.length,`${tag} 未登入沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
+  {const p=await mk(w,h,scheme);await p.goto(U+'index.html');await W(2200);await login(p);
+    if(await tap(p,'#peekBtn')){await W(1000);
+      for(const k of ['live','progress','done']){await p.evaluate(k=>{if(curSec!==k)setSection(k,{instant:true})},k);await W(900);await measure(p,'唯讀檢視-'+k,tag)}
+      if(await tap(p,'#setBtn')){await W(1300);await measure(p,'唯讀檢視-設定',tag)}}
+    ok(!p.errs.length,`${tag} 唯讀檢視沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
   /* ---- 工作報告（設定→報告→工作報告）：預設排版、封面、圖片工具列 ---- */
   {const p=await mk(w,h,scheme);await p.goto(U+'index.html');await W(2200);await login(p);
     if(await tap(p,'#setBtn')){await W(1300);await p.evaluate(()=>{const e=document.querySelector('#setOv [data-set="report"]');e&&e.click()});await W(1100);

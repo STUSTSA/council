@@ -43,7 +43,7 @@ function renderHero(){
   if(roView&&!deptCan())roView=false;   /* 登出、權限被撤掉：唯讀檢視跟著結束 */
   Anim.toggle($("#dhRo"),deptRO());
   Anim.toggle(eye,deptCan());eye.setAttribute("aria-pressed",String(roView));eye.classList.toggle("on",roView);
-  Anim.toggle(nb,!deptRO());
+  Anim.toggle(nb,!deptRO(),{reflow:[eye]});   /* 鈴鐺縮小消失後，眼睛鈕滑到它的位置（Anim.toggle 的 reflow） */
   if(notiOpen&&deptRO())closeNoti(true);   /* 通知與行事曆那一頁開著時變成唯讀（唯讀檢視、權限被撤）：直接回原分頁（notify.js） */
   if(setOpen&&roView)closeSettings(true);   /* 設定開著時按眼睛鈕（ui-09 起設定是部門內的一頁，標題列按得到）：唯讀檢視沒有設定鍵，設定直接收起（面板裡改到一半的照離開處理） */
   hsBar();   /* 搜尋列（search.js）：只在即時回報、進度、完成紀錄三頁 */

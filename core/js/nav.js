@@ -102,7 +102,7 @@ function renderTabbar(){
   const act=tbActive();
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
-  Anim.toggle(g,!roView);   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
+  Anim.toggle(g,!roView,{reflow:[tb.querySelector(".tb-main")]});   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
   requestAnimationFrame(()=>lensTo(act));
   fabSync();
 }
