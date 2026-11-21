@@ -100,15 +100,14 @@ function acctGateHTML(){
   return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button>${t||"<b>未登入</b>"}<button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
 }
 function acctSettingsInner(){
-  const wk=setRow("week","doc","每週概述");
-  if(!FB_ON)return setSec(wk)+lookSec();
-  if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
-  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
+  if(!FB_ON)return lookSec();
+  if(!acct.ready)return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
+  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")
       +setRow("backup","download","備份")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
-  return setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
+  return (fsWriter()?setSec(setRow("report","doc","工作報告")+setRow("log","history","編輯紀錄")):"")
     +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
