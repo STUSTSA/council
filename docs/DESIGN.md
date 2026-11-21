@@ -185,6 +185,7 @@
   1. 長度：容器內容變高變矮時從舊高度滑到新高度（`FLOW_SEL` 或 `data-flow`，motion.js `flowWatch`）。
   2. 位置／順序／進出：容器加 `data-flip`，裡面的項目位置變了就滑過去（slow、out）；新出現的由下往上淡入（base、逐項 24ms 錯開）；消失的留分身淡出縮小（base、in）。
   3. 上下層：移動中的項目暫時浮到同一區上面（最多 z-index 8）；疊層頁的開關一律用換頁動畫。
+- **小膠囊的字置中**：文字直接放在膠囊裡的（唯讀、今天、甘特圖與時程條標籤），用 `text-box:trim-both cap alphabetic`＋`padding-block:calc((高 - 1cap)/2)`，不要再用跟字型度量有關的 padding 微調（ascent／descent 取整會讓不同字型差 1～2px）。高度：唯讀 26、今天標籤 19、甘特圖與時程條註記標籤 22（px）。
 - 顯示／隱藏用 `Anim.show`／`Anim.hide`，換內容用 `Anim.swap`，單獨進退場用 `Anim.enter`／`Anim.leave`。
 - 一個元件在排版裡佔位置、消失／出現時旁邊要補位或讓位（頁首鈴鐺、「唯讀」膠囊、底部設定鍵），用 `Anim.toggle(el,on,{collapse:true})`：自己的長度與間距從 0 長到原大小（或反過來），旁邊的跟著排版滑動；縮的用 `MO.base`、長的用 `MO.slow`，進退同一條路、不疊在一起，減少動態時直接切換。
 - 展開收合：高度、圓角同步，展開 560ms、收合 380ms，曲線 `cubic-bezier(.2,.9,.25,1)`；內容 `dropIn` .55s。

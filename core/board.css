@@ -161,7 +161,7 @@ body.set-open .dhead{position:relative;z-index:40}
 .dh-en[hidden]{display:none}
 .dh-name b{font-size:19px;font-weight:700;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 唯讀：外框標籤（次要，不是按鈕，不放大） */
-.dh-ro{flex:none;display:inline-flex;align-items:center;height:26px;padding:3px 12px 0;border-radius:999px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 32%,transparent);font-size:12.5px;letter-spacing:.14em;line-height:1;white-space:nowrap}
+.dh-ro{flex:none;display:inline-block;padding:calc((26px - 1cap)/2 + .05em) calc(12px - .14em) calc((26px - 1cap)/2 - .05em) 12px;border-radius:999px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 32%,transparent);font-size:12.5px;letter-spacing:.14em;line-height:1;white-space:nowrap;text-box:trim-both cap alphabetic}   /* 字置中（對字型不敏感）：文字框裁到大寫高度，上下內距用 1cap 算，高度 26px；「唯讀」兩字的墨跡中心比大寫高度中心高約 .05em，往下補；letter-spacing 尾端多出的 .14em 從右內距扣回 */
 .dh-ro[hidden]{display:none}
 .dh-st{display:contents}
 .dh-sp{flex:1;min-width:0}
@@ -177,8 +177,9 @@ body.set-open .dhead{position:relative;z-index:40}
   .dhead{gap:10px;margin-bottom:14px;padding-top:0}
   .dh-logo{width:40px;height:40px;margin-left:0}
   .dh-name b{font-size:18px}
-  .dh-ro{padding:3px 10px 0}
+  .dh-ro{padding-inline:10px calc(10px - .14em)}
 }
+@supports not (text-box:trim-both cap alphabetic){.dh-ro{display:inline-flex;align-items:center;height:26px;padding:2px calc(12px - .14em) 0 12px}@media (max-width:640px){.dh-ro{padding:2px calc(10px - .14em) 0 10px}}}   /* 後備（Firefox、舊 Safari 沒有 text-box）：照字型量出的內距 */
 
 /* ===== 部門搜尋列與結果（search.js；DESIGN-next 第六節「部門內」） =====
    標題列下面、高 50 的膠囊（平面色塊 --blk），只在即時回報、進度、完成紀錄三頁。聚焦框用 outline（不跟 --blk-sh 串在 box-shadow 裡）。
@@ -814,7 +815,7 @@ a.doc-pill:active{scale:.96}
 /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝實心小膠囊（文字色底）＋細線連到條；其他＝條上方的短線（位置照日期），滑過才顯示標籤 */
 .g-mk{position:absolute;top:0;bottom:0;width:0;transition:opacity .2s}
 .g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（標籤與短線都是；跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
-.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:5.3px 9px 3.7px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
+.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:calc((22px - 1cap)/2) 9px;text-box:trim-both cap alphabetic;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底），高 22px（字置中：同「唯讀」，見 .dh-ro） */
 .g-mk .stem{position:absolute;left:-.5px;width:1px;background:var(--ink);z-index:1;opacity:.5}
 .g-mk.edgeL .lbl{transform:translateX(-8px)}
 .g-mk.edgeR .lbl{transform:translateX(calc(-100% + 8px))}
@@ -834,7 +835,7 @@ a.doc-pill:active{scale:.96}
 .lg-a{border-radius:6px 3px 3px 6px;background:var(--sl-fc)}
 .lg-b{border-radius:3px 6px 6px 3px;background:var(--sl-rest)}
 /* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
-.g-axis .today-tag{top:25px;transform:translateX(calc(-50% + var(--tt,0px)));color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:25px;transform:translateX(calc(-50% + var(--tt,0px)));color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:calc((19px - 1cap)/2) 8px;line-height:1;text-box:trim-both cap alphabetic}   /* 今天：綠色小膠囊，高 19px（字置中：同「唯讀」，見 .dh-ro） */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -981,19 +982,21 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 進度條上的註記 ===== */
 .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:16.7px;border-radius:999px;padding:1.3px 8px 0;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
+.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:1;border-radius:999px;padding:calc((22px - 2px - 1cap)/2) 8px;text-box:trim-both cap alphabetic;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
 .marker .stem{z-index:1;position:absolute;left:-.5px;width:1px;background:var(--mc);opacity:.55}
 /* 註記：時程條「上方」一根細長條（2026-11-05 改長條；2026-11-06 使用者嫌疊在刻度上又半透明粗糙，改成立在刻度上方、不重疊、實色）：
    最新一筆 3×16px 註記色，其他 12px、淡一點；透明可點範圍左右各 9px、往下蓋到刻度（::before） */
 .marker .dot{z-index:2;position:absolute;top:35px;border-radius:2px;background:var(--mc);transition:transform .18s var(--ease),box-shadow .18s;width:3px;height:16px;left:-1.5px;border:0;box-shadow:none;transform-origin:50% 100%;cursor:pointer}
 .marker .dot::before{content:"";position:absolute;inset:-6px -9px -24px}   /* 透明可點範圍：左右各 9px、往下蓋到刻度 */
 .marker{position:absolute;top:0;bottom:0;width:0;touch-action:none;--mc:var(--tone)!important}
-.marker.up .stem{top:22px;height:14px}
+.marker.up .stem{top:24px;height:12px}
 .marker.down .stem{top:48px;height:16px}
 .marker.up .lbl{top:2px}
 .marker.down .lbl{top:62px}
 .marker.edgeL .lbl{transform:translateX(-10px)}
 .marker.edgeR .lbl{transform:translateX(calc(-100% + 10px))}
+/* 字置中的後備（Firefox、舊 Safari 沒有 text-box）：照字型量出的內距；今天標籤、甘特圖與時程條的註記標籤共用 */
+@supports not (text-box:trim-both cap alphabetic){.g-axis .today-tag{padding:3px 8px 0;line-height:14px}.g-mk .lbl{padding:5.3px 9px 3.7px}.marker .lbl{line-height:16.7px;padding:1.3px 8px 0}}
 .sec-edit .marker{cursor:grab}
 .marker.pending .lbl{border-style:dashed;color:var(--tone-ink)}
 .marker.pending .dot{animation:pulse 1.1s ease-in-out infinite}
