@@ -6,6 +6,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
     <div class="wrap">
       <!-- 部門標題列（DESIGN-next 第六節「部門內」）：首頁鍵、部門標誌、英文小標與部門名、（沒有權限）唯讀標籤、（可編輯的單位）唯讀檢視的眼睛鈕、通知鈕。
            換分頁、進出設定與通知都是同一個節點（data-fx-keep，不參加進場動畫）；顯示哪些鈕由 views.js 的 renderHero 決定 -->
+      <div class="dtop" id="dTop">   <!-- 固定在畫面最上面：標題列（.dtop）與搜尋列（.dsrow）；往下捲內容從下面滑過（board.css「部門標題列」段） -->
       <header class="dhead" data-fx-keep>
         <a class="dh-btn dh-home" href="home.html" aria-label="首頁"></a>   <!-- 在部門主頁是首頁鍵；進到更深的頁面（設定、通知、卡片詳情…）自動變成上一頁（views.js 的 homeSync） -->
         <span class="dh-logo" aria-hidden="true"></span>
@@ -16,8 +17,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <button type="button" class="dh-btn dh-eye" id="peekBtn" aria-pressed="false" aria-label="用唯讀檢視看這個單位" hidden></button>
         <button type="button" class="dh-btn noti-btn" id="notiBtn" aria-label="通知" aria-pressed="false" hidden><span class="noti-n num" hidden></span></button>
       </header>
+      </div>
+      <div class="dsrow" id="dsRow">
       <!-- 搜尋列（即時回報、進度、完成紀錄三頁；search.js）：有輸入時內容換成分區的結果清單（#boardRes），點結果跳到那一項並打開 -->
       <label class="dsearch" id="dSearch"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋" aria-controls="boardRes"><button type="button" class="ds-x" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+      </div>
       <div class="dres" id="boardRes" role="region" aria-label="搜尋結果" data-flip="sres" hidden></div>
 
       <!-- 會長室：會長預約（06，booking.js）：同學看「可預約時段」與「我的預約」，會長室管理員與總管理員看待審申請、已核准的預約、開放時段；所有人都看得到這張卡（沒登入、還沒啟用也寫明原因） -->
@@ -148,6 +152,11 @@ function suLogoColor(label){
   if(en){en.textContent=DEPT_EN[CFG.deptId]||"";en.hidden=!en.textContent}
   /* 部門標誌放進頁面（不用 <img>）：深色時標誌裡的藍改成白、秘書處的白色零件跟著標題列的底色，都要 CSS 吃得到（board.css「部門標誌」段） */
   const lg=document.querySelector(".dhead .dh-logo");if(lg)PageFx.svg(deptLogo(CFG.deptId)).then(s=>{if(s&&!lg.firstChild)lg.append(s)});
+  /* 固定區的高度（黏在下面的卡片、捲動定位、卡片高度用）：--dhd-h＝標題列，--dtop-h＝標題列＋搜尋列；高度＝區塊高＋黏住時的 top（負值，往上多出的內距捲到畫面外） */
+  const dt=document.getElementById("dTop"),dr=document.getElementById("dsRow");
+  if(dt&&dr){const sync=()=>{const h=Math.max(0,Math.round(dt.offsetHeight+(parseFloat(getComputedStyle(dt).top)||0))),s=document.documentElement.style;
+      s.setProperty("--dhd-h",h+"px");s.setProperty("--dtop-h",h+dr.offsetHeight+"px")};
+    sync();if(window.ResizeObserver){const ro=new ResizeObserver(sync);ro.observe(dt);ro.observe(dr)}addEventListener("resize",sync)}
   const q=document.getElementById("boardQ");if(q)q.setAttribute("aria-label","搜尋"+(CFG.dept.name||""));
   /* 部門主色 → CSS 變數（只覆寫設定檔有給的值）。完成綠（ok）、螢光綠（neon、okDot）2026-11-17 起跟著主題（core/theme.css 的 --ok），
      設定檔的值不再套用，不然會蓋掉主題（:root 的同權重規則寫在後面）；紅色只剩白紙報告用的 --accent-light（accentDark 沒有樣式用到，不再寫入） */
