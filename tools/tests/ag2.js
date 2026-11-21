@@ -1,6 +1,6 @@
 /* 秘書處「行政會議議程」（2026-11-21）：各部門最新週報併成一份議程（本週預設併入、舊的預設不併入、可切換）→ 定版存進秘書處資料（state.agendas）→ 重整後還在、同日重新定版會取代。
    也檢查週報文字裡的 HTML 不會變成標籤。GitHub API 用 common.js 模擬，固定 8300 埠。壞了以非 0 結束 */
-const c=require('./common');c.q='?d=secretariat';(async()=>{const {b,mk,login,st}=await c.setup();
+const c=require('./common');c.q='?d=secretariat';(async()=>{const {b,mk,login,st,remote}=await c.setup();const SEC=()=>remote();   /* 2026-11-21：common.js 把 data-部門.json 的寫入也記在 remote */
 let bad=0;const A=(x,m)=>{if(!x){bad++;console.log('FAIL',m)}else console.log('ok',m)};
 const API=c.API,d0=new Date(),T=`${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,'0')}-${String(d0.getDate()).padStart(2,'0')}`;
 const wk=(id,date,text)=>({id,date,text});
@@ -19,13 +19,13 @@ A(/公關部貼文延到下週/.test(t0)&&!/活動部/.test(t0),'文件最前面
 A(await p.evaluate(()=>!document.querySelector('#xx')),'決議文字裡的 HTML 不會變成標籤');
 await p.click('#agOv [data-ag=pasteall]');await p.waitForTimeout(300);
 await p.click('#agGo');await p.waitForTimeout(600);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(3500);
-let ag=st.puts[API+'data-secretariat.json'].agendas;const nw=ag.find(a=>a.date===T);
+let ag=SEC().agendas;const nw=ag.find(a=>a.date===T);
 A(ag.length===2&&nw&&nw.prev&&nw.prev.date==='2026-11-13'&&nw.prev.items.length===1,'匯出時存下上次決議快照：'+JSON.stringify(nw&&nw.prev));
 await p.click('#agDone [data-agcap="'+nw.id+'"] summary');await p.waitForTimeout(700);
 await p.fill('#agDone [data-agdec="'+nw.id+'"] [data-agdi="0"]','本週決議：照原案 <i id=yy>斜</i>');
 await p.screenshot({path:'ag2_dec.png'});
 await p.click('#agDone [data-agdec="'+nw.id+'"] [data-agdsave]');await p.waitForTimeout(3500);
-ag=st.puts[API+'data-secretariat.json'].agendas;
+ag=SEC().agendas;
 A(ag.find(a=>a.date===T).items[0].decision.startsWith('本週決議'),'決議存進該部門那一行');
 A(ag.find(a=>a.id==='agold').items[0].decision.startsWith('貼文延到下週'),'舊的議程沒被動到');
 A(await p.evaluate(()=>!document.querySelector('#yy')&&!document.querySelector('#xx')),'畫面沒有被決議文字塞進標籤');

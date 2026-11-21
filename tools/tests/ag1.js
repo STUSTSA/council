@@ -1,6 +1,6 @@
 /* 秘書處「行政會議資料」（2026-11-21 重做）：小卡「編輯」進全螢幕文件，各部門最新週報按「貼上」放進來（本週的可一次全貼）、貼上後可改 → 「匯出」存進秘書處資料（state.agendas）→ 重整後還在、同日重新定版會取代。
    也檢查週報文字裡的 HTML 不會變成標籤。GitHub API 用 common.js 模擬，固定 8300 埠。壞了以非 0 結束 */
-const c=require('./common');c.q='?d=secretariat';(async()=>{const {b,mk,login,st}=await c.setup();
+const c=require('./common');c.q='?d=secretariat';(async()=>{const {b,mk,login,st,remote}=await c.setup();const SEC=()=>remote();   /* 2026-11-21：common.js 把 data-部門.json 的寫入也記在 remote */
 let bad=0;const A=(x,m)=>{if(!x){bad++;console.log('FAIL',m)}else console.log('ok',m)};
 const API=c.API,d0=new Date(),T=`${d0.getFullYear()}-${String(d0.getMonth()+1).padStart(2,'0')}-${String(d0.getDate()).padStart(2,'0')}`;
 const wk=(id,date,text)=>({id,date,text});
@@ -28,7 +28,7 @@ await p.fill('#agOv [data-agf=title]','第十二次行政會議');
 await p.screenshot({path:'ag1_mobile.png'});
 await p.click('#agGo');await p.waitForTimeout(700);
 await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(3500);
-const sc=st.puts[API+'data-secretariat.json'];
+const sc=SEC();
 A(sc&&sc.agendas&&sc.agendas.length===1&&sc.agendas[0].date===T&&sc.agendas[0].items.length===2&&sc.agendas[0].title==='第十二次行政會議','匯出寫進秘書處資料（含名稱）：'+JSON.stringify(sc&&sc.agendas&&sc.agendas.map(a=>[a.date,a.title,a.items.map(i=>i.dept)])));
 A(sc.agendas[0].items.find(i=>i.dept==='events').text.includes('改過的內容'),'貼上後改過的文字有存進去');
 A(await p.evaluate(()=>!document.querySelector('#agOv')&&document.querySelectorAll('#agDone [data-agdoc]').length===1&&/已匯出/.test(document.querySelector('#agSt').textContent)),'匯出後全螢幕關掉、小卡出現已匯出的議程');
@@ -36,11 +36,13 @@ A(!st.puts[API+'data-marketing.json'].agendas&&st.commits.every(m=>!/marketing/.
 await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);
 A(await p.evaluate(()=>document.querySelectorAll('#agDone [data-agdoc]').length===1),'重新整理後匯出的議程還在');
 /* 同一天再開：載入已匯出的內容，再匯出＝取代 */
-await p.click('#agEdit');await p.waitForSelector('#agOv .ag-paper');await p.waitForTimeout(800);
+await p.click('#agEdit');await p.waitForTimeout(800);
+if(await p.$('#dlgForm input[name=pw]')){await p.fill('#dlgForm input[name=pw]','password-long-1');await p.click('#dlgForm [data-act=ok]')}   /* 重新整理後要再選一次編輯身分 */
+await p.waitForSelector('#agOv .ag-paper');await p.waitForTimeout(800);
 A(/改過的內容/.test((await sec('events')).ta||''),'同一天再開：載入已匯出的內容');
 await p.click('#agOv [data-ag=drop][data-d=events]');await p.waitForTimeout(300);
 await p.click('#agGo');await p.waitForTimeout(600);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(3500);
-A(st.puts[API+'data-secretariat.json'].agendas.length===1&&st.puts[API+'data-secretariat.json'].agendas[0].items.length===1,'同一天再匯出是取代，不是新增');
+A(SEC().agendas.length===1&&SEC().agendas[0].items.length===1,'同一天再匯出是取代，不是新增');
 await p.screenshot({path:'ag1_done.png'});
 {const e=p.errs.filter(x=>!x.startsWith('console:Failed to load resource'));A(!e.length,'沒有程式錯誤 '+JSON.stringify(e))};
 c.q='?d=secretariat';await b.close();process.exit(bad?1:0)})();
