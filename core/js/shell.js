@@ -51,11 +51,12 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="follows" id="follows" data-flip></div>
         <button class="ghost edit-only add-row" id="addFollow">+ 追蹤項目</button>
       </section>
-      <!-- 秘書處：行政會議資料（2026-11-21，meeting.js 的 renderAgenda／agOpen）：頁面上只有狀態一行與「編輯」，編輯進全螢幕文件（#agOv）；下面列出匯出過的議程 -->
+      <!-- 秘書處：行政會議資料（2026-11-21，meeting.js 的 renderAgenda）：卡片本身就是文件，要改的地方點一下就地編輯；上面一排切換以前的會議 -->
       <section class="panel follow-panel meet-panel ag-panel" id="agPanel" aria-labelledby="agH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agEdit">編輯</button></div>
+        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="primary" id="agGo">儲存</button></div>
+        <div class="wk-depts ag-past" id="agPast" role="tablist" aria-label="會議"></div>
+        <article class="md-doc" id="agDoc"></article>
         <p class="sub ag-st" id="agSt"></p>
-        <div class="ag-done" id="agDone" data-flow></div>
       </section>
       <section class="panel follow-panel meet-panel wk-panel" id="wkPanel" aria-labelledby="wkH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="wkH" data-en="WEEKLY">各部門週報</h2><button type="button" class="icon" data-mtrefresh>擷取最新</button></div>
