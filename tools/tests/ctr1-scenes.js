@@ -50,4 +50,19 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       <div class="at-tools" style="margin-top:14px"><button type="button" class="icon">匯入名冊</button><button type="button" class="icon">+ 場次</button></div>`;document.body.appendChild(d)});
     await W(300);await measure(p,'點名預約會議元件',tag);await p.evaluate(()=>document.getElementById('__syn').remove());
     ok(!p.errs.length,`${tag} 部門沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
+  /* ---- 工作報告（設定→報告→工作報告）：預設排版、封面、圖片工具列 ---- */
+  {const p=await mk(w,h,scheme);await p.goto(U+'index.html');await W(2200);await login(p);
+    if(await tap(p,'#setBtn')){await W(1300);await p.evaluate(()=>{const e=document.querySelector('#setOv [data-set="report"]');e&&e.click()});await W(1100);
+      const clickText=async t=>p.evaluate(t=>{const e=[...document.querySelectorAll('button')].find(b=>b.offsetParent&&b.textContent.includes(t));if(e){e.click();return true}return false},t);
+      for(const t of ['工作報告','匯出工作報告']){if(await clickText(t)){await W(1500);await measure(p,'報告-'+t,tag);await p.keyboard.press('Escape');await W(900)}}}
+    await p.context().close()}
+  /* ---- 其他部門：會長室、秘書處、活動部、財務部的每個分頁（各自的元件：追蹤、各部門編輯量、會議、專案） ---- */
+  for(const d of ['president','secretariat','events','finance']){
+    /* 先不登入量一輪；再登入量一輪（登入後出現編輯用的元件）。某個部門的畫面讓瀏覽器掛掉時只記一筆失敗、不影響其他畫面 */
+    for(const mode of ['唯讀','登入']){let p;
+      try{p=await mk(w,h,scheme);await p.goto(U+'index.html?d='+d);await W(2400);if(mode==='登入')await login(p);
+        for(const k of await p.evaluate(()=>SECS.slice())){await p.evaluate(k=>{if(curSec!==k)setSection(k,{instant:true})},k);await W(1100);await measure(p,'部門'+d+'-'+k+(mode==='登入'?'-登入':''),tag)}
+        ok(!p.errs.length,`${tag} ${d}（${mode}）沒有錯誤 ${p.errs.join('｜')}`)}
+      catch(e){ok(false,`${tag} ${d}（${mode}）量測中斷：${String(e.message).split('\n')[0]}`)}
+      await p?.context().close().catch(()=>{})}}
 };

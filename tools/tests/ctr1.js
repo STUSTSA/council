@@ -11,7 +11,7 @@ const {chromium}=require('playwright');const fs=require('fs');
 const U='http://127.0.0.1:8300/';
 const remote0=JSON.parse(fs.readFileSync(__dirname+'/data_test.json','utf8'));
 const W=ms=>new Promise(r=>setTimeout(r,ms));
-const DPR=3;
+const DPR=+(process.env.DPR||3);
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
 
 /* 頁面裡：找候選、把文字變透明、還原 */
@@ -36,7 +36,7 @@ const PAGE_LIB=()=>{
         /* 往上找最近的有形狀容器（最多 3 層） */
         let box=null;for(let e=el,i=0;e&&i<4&&e!==document.body;e=e.parentElement,i++){const r=e.getBoundingClientRect();if(r.height>96||r.width<8)break;if(shaped(e,r)){box=e;break}}
         if(!box)continue;cand.set(box,1)}
-      const SKIP='.look-pal,.tb-main,.tabbar,.tab,.pc-wk,.g-name,.pc-foot,.today-tag';   /* 今天標籤貼著甘特圖左緣會被裁掉 */
+      const SKIP='.look-pal,.tb-main,.tabbar,.tab,.pc-wk,.g-name,.pc-foot,.today-tag,.log li,.week-top';   /* 今天標籤貼著甘特圖左緣會被裁掉 */
       /* 預設另外量：行事曆日期（字在 40×40 的圓裡；有事件（小點或事件條）的日子字本來就往上讓，不量）；EXTRA 環境變數可再加選擇器 */
       for(const el of document.querySelectorAll('.pc-d:not(:has(i)):not(.has) .pc-n'+(window.__extra?','+window.__extra:'')))cand.set(el,1);
       const out=[];
@@ -91,12 +91,15 @@ const CALC=async(calc,a,b,cands,dpr)=>calc.evaluate(async([a,b,cands,dpr])=>{
   const all=new Map();
   const mk=async(w,h,scheme,dept)=>{const touch=w<700;let remote=JSON.parse(JSON.stringify(remote0)),sha='s0';
     const ctx=await b.newContext({viewport:{width:w,height:h},deviceScaleFactor:DPR,colorScheme:scheme,hasTouch:touch,isMobile:touch,serviceWorkers:'block'});
-    await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
+    /* 字型：跟正式網站一樣當網頁字型載入（Google Fonts 的 Jost、Noto Sans TC 用本機字型檔回應；字型檔放 FONTDIR，預設 ~/.fonts 的 Jost.ttf、NotoSansTC.ttf）。
+       不能只靠系統安裝的字型：系統字型與網頁字型的行高度量取整不同（11px 的字，基線差 1px），在系統字型下量到「置中」，手機上實際會偏下 */
+    await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:`@font-face{font-family:"Jost";font-weight:200 700;src:url(https://wf.test/Jost.ttf)}@font-face{font-family:"Noto Sans TC";font-weight:100 900;src:url(https://wf.test/NotoSansTC.ttf)}`}));
+    await ctx.route('https://wf.test/*',r=>{const f=r.request().url().split('/').pop();const dir=process.env.FONTDIR||process.env.HOME+'/.fonts';try{r.fulfill({contentType:'font/ttf',body:fs.readFileSync(dir+'/'+f)})}catch(e){r.fulfill({status:404,body:''})}});
     await ctx.route(/\/dept\/config\.js(\?|$)/,async r=>{const res=await r.fetch();r.fulfill({response:res,body:(await res.text()).replace(/(\{ id: "[a-z]+",[^\n]*?), source: "[a-z]+"/g,'$1')})});
     await ctx.route('https://api.github.com/**',async r=>{const q=r.request(),u=q.url();if(u.includes('/commits?'))return r.fulfill({status:200,contentType:'application/json',body:'[]'});
       if(q.method()==='GET'){if(!u.includes('data.json'))return r.fulfill({status:404,body:'{}'});if(/raw/.test(q.headers().accept||''))return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(remote)});return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({sha,content:Buffer.from(JSON.stringify(remote)).toString('base64')})})}
       const bd=JSON.parse(q.postData());if(u.includes('data.json'))remote=JSON.parse(Buffer.from(bd.content,'base64').toString());sha='s'+Date.now();return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({content:{sha}})})});
-    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)(?!api\.github\.com)(?!fonts\.googleapis\.com)/,r=>r.abort());
+    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)(?!api\.github\.com)(?!fonts\.googleapis\.com)(?!wf\.test)/,r=>r.abort());
     await ctx.addInitScript(PAGE_LIB);if(process.env.EXTRA)await ctx.addInitScript(x=>{window.__extra=x},process.env.EXTRA);
     const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));return p};
   const measure=async(p,screen,tag)=>{if(process.env.ONLY&&!new RegExp(process.env.ONLY).test(screen))return [];await p.mouse.move(1,1).catch(()=>{});await W(200);
