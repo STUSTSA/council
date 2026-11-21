@@ -418,12 +418,43 @@ function wkSet(w){
   if(w===doneWeek)return;const was=doneWeek;doneWeek=w;
   if(w&&!was)Back.opened("doneweek",()=>doneWeekShow(null));else if(!w&&was)Back.closed("doneweek");
 }
+/* 週格子翻開（點格子＝格子的分身長大鋪滿清單區，換成那一週的卡片；回上一頁＝倒著收回那一格）。
+   動畫時間與曲線用 MO.slow／MO.out（DESIGN.md「動畫」）；關掉動態時直接換頁。分身只在動畫中存在，結束就移除，不碰資料與格子本身。 */
+const wkBig=()=>{const r=$("#doneList").getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:Math.max(r.height,innerHeight-r.top-96)}};
+const wkBox=(el,r,rad)=>{const o=el.style;o.left=r.left+"px";o.top=r.top+"px";o.width=r.width+"px";o.height=r.height+"px";o.borderRadius=rad+"px"};
+const wkTile=w=>$(`#doneList .wkf[data-wk="${CSS.escape(w)}"]`);
+function wkFx(w,open,swap){
+  const tile=wkTile(w),big=wkBig(),rad=tile?parseFloat(getComputedStyle(tile).borderRadius)||20:20,fx=document.createElement("div"),E={duration:MO.slow,easing:MO.out,fill:"forwards"},
+    box=(a,b)=>[a,b].map(r=>({left:r.left+"px",top:r.top+"px",width:r.width+"px",height:r.height+"px"})),fade=()=>fx.animate([{opacity:1},{opacity:0}],{duration:MO.base,easing:MO.in,fill:"forwards"}).finished;
+  fx.className="wk-fx";fx.setAttribute("aria-hidden","true");fx.innerHTML=`<b class="wkf-d num">${esc(wkLabel(w))}</b><span class="wkf-n num">${esc(wkRange(w))}</span>`;
+  const done=()=>fx.remove();
+  if(open){
+    const r=tile.getBoundingClientRect();wkBox(fx,r,rad);document.body.append(fx);
+    fx.animate(box(r,big),E).finished.then(()=>{swap();return fade()}).then(done,done);
+  }else{
+    wkBox(fx,big,rad);document.body.append(fx);swap();   /* 分身蓋著，底下換成格子總覽，再收回那一格 */
+    const t=wkTile(w);if(!t){fade().then(done,done);return}
+    t.style.visibility="hidden";const r2=t.getBoundingClientRect(),end=()=>{t.style.visibility="";done()};
+    fx.animate(box(big,r2),E).finished.then(end,end);
+  }
+}
 function doneWeekShow(w,{instant}={}){
   if(w===doneWeek)return;
+  const fx=!instant&&!reduceMotion(),was=doneWeek;
   if(!w&&dnOpen){if(!lvWide())Back.closed("card");lcSet("done",null)}   /* 離開這一週時卡片一起收起來 */
-  wkSet(w);renderDone();
-  if(!instant&&!reduceMotion())pvIn($("#doneList"));
+  const swap=()=>{wkSet(w);renderDone()};
+  if(fx&&w&&wkTile(w)){wkFx(w,true,swap);return}
+  if(fx&&!w&&was){wkFx(was,false,swap);return}
+  swap();
+  if(fx)pvIn($("#doneList"));
 }
+/* 完成紀錄的週內頁：Esc＝回週格子總覽（開著卡片時 Esc 先由 live.js 收卡片）；輸入中、對話框、設定、通知開著時不處理 */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape"||e.isComposing||!doneWeek||dnOpen||setOpen||notiOpen||$("#dlg").open||document.querySelector(".csel.open"))return;
+  const a=document.activeElement;if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
+  if(!$("#donePanel")||$("#donePanel").offsetParent===null)return;
+  e.preventDefault();doneWeekShow(null);
+});
 /* 要開某一筆（搜尋、其他地方跳過來）：先進到它那一週 */
 function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkStart(x.d));renderDone()}}
 function renderDone(){
