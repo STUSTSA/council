@@ -125,7 +125,8 @@ function lcLiveHTML(ev,o){
 /* 分欄時詳情卡往上延伸到搜尋列的高度（搜尋列縮到左欄寬，右邊讓出來）：--rise＝#liveMD 頂端比搜尋列頂端低多少，CSS 的 .lc-pane 用負邊距往上拉（board.css「左右兩欄」） */
 function lvRise(split){
   const md=$("#liveMD"),bar=$("#dSearch");let r=0;
-  if(split&&bar&&!bar.hidden)r=Math.max(0,Math.round(md.getBoundingClientRect().top-bar.getBoundingClientRect().top));
+  if(split&&bar&&!bar.hidden){const row=bar.parentElement;row.style.position="static";   /* 搜尋列固定住時位置會變：量的時候暫時放回原位 */
+    r=Math.max(0,Math.round(md.getBoundingClientRect().top-bar.getBoundingClientRect().top));row.style.position=""}
   md.style.setProperty("--rise",r+"px");
 }
 addEventListener("resize",()=>{const md=$("#liveMD");if(md&&md.classList.contains("split"))lvRise(true)});

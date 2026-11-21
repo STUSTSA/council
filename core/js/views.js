@@ -299,7 +299,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
   const swap=()=>{if(tok!==pvTok)return;progOpen=id;homeSync();if(id)ganttSel=id;renderCards();if(!id)renderGantt();layoutAll();   /* 回到甘特圖：剛看過的議題是選中的那一列 */
-    const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
+    const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-dtopH()-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
     pvIn($(id?"#pvDetail":"#pvGantt"));
     if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */
     if(then)then()};
