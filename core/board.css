@@ -829,7 +829,7 @@ a.doc-pill:active{scale:.96}
 .lg-a{border-radius:6px 3px 3px 6px;background:var(--sl-fc)}
 .lg-b{border-radius:3px 6px 6px 3px;background:var(--sl-rest)}
 /* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
-.g-axis .today-tag{top:25px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:25px;transform:translateX(calc(-50% + var(--tt,0px)));color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}

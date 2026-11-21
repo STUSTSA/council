@@ -86,7 +86,7 @@ function renderGantt(){
   /* 每一列＝滑桿式時程條（ui-12，DESIGN.md 第八節；跟議題詳情同一個元件 sliderHTML）：條只畫在議題期間，把手＝今天在期間的位置。
      今天＝每列一條細綠線（在條的後面，從把手上下露出來），時間軸上方綠色小膠囊寫日期 */
   const grid=inRange?`<span class="today" style="left:${tp}%"></span>`:"";
-  let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name g-nh sub">${ISS}</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:clamp(36px,${tp}%,calc(100% - 36px))">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
+  let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name g-nh sub">${ISS}</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
   h+=list.map(it=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     /* p：把手的位置（%）＝今天在條上的位置，不四捨五入（才跟今天線對齊）；還沒開始＝0（把手在最左）、已經結束＝100（最右）。
@@ -206,7 +206,12 @@ function layoutTrack(tr){
   tr.style.height=(nDown?below+nDown*LH+4:below+(isG?0:4))+"px";
   if(isG){const row=tr.parentElement,H=tr.offsetHeight,pt=Math.max(0,2*(barTop+barH/2)-H-8);row.style.setProperty("--g-pt",pt+"px");row.style.setProperty("--g-pb","0px")}   /* 甘特圖：名稱對齊條的中線（board.css .g-name） */
 }
-const layoutAll=()=>document.querySelectorAll(".c-track,.g-track").forEach(layoutTrack);
+/* 甘特圖的「今天」膠囊：甘特圖可以左右滑，膠囊貼著可見範圍的邊時往內收（--tt），不被切掉；左邊讓開固定的名稱欄 */
+function fitTodayTag(){const g=$("#gantt"),t=g&&g.querySelector(".today-tag");if(!t)return;
+  t.style.setProperty("--tt","0px");const gr=g.getBoundingClientRect(),r=t.getBoundingClientRect(),nm=g.querySelector(".g-name")?.getBoundingClientRect().width||0;
+  const dx=r.right>gr.right-6?gr.right-6-r.right:r.left<gr.left+nm+4?gr.left+nm+4-r.left:0;t.style.setProperty("--tt",dx+"px")}
+const layoutAll=()=>{document.querySelectorAll(".c-track,.g-track").forEach(layoutTrack);fitTodayTag()};
+document.addEventListener("DOMContentLoaded",()=>$("#gantt")?.addEventListener("scroll",fitTodayTag,{passive:true}),{once:true});
 let _rz;window.addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(layoutAll,120)});
 document.fonts?.ready.then(layoutAll);
 
