@@ -7,7 +7,7 @@
      （分段鈕的鏡片是 anim.js 的彈簧、不是 CSS 過渡，照常滑）。淡的途中再點別的地方：淡出立刻結束，那一下照樣算數；按住拖走不算（見下面的 pointerdown）。
      不支援 View Transitions 或關掉動態時，整頁直接換。 */
 const UI_KEY="stustsa-ui";
-const UI_PALS=[["fin","米黃"],["b3","白藍"],["ink","黑白黃"],["sage","灰綠"],["mist","霧藍"],["fire","爐火"],["pastel","粉彩"],["neu","柔光"],["sun","暖陽"]];
+const UI_PALS=[["fin","米黃"],["b3","白藍"],["ink","黑白黃"],["sage","灰綠"],["mist","霧藍"],["fire","爐火"],["pastel","粉彩"],["neu","柔光"],["sun","暖陽"],["sakura","櫻花"],["forest","森林"],["ocean","海洋"],["wisteria","紫藤"]];
 const UI=(()=>{
   const root=document.documentElement,sys=matchMedia("(prefers-color-scheme: dark)");
   const clean=o=>{o=o&&typeof o==="object"&&!Array.isArray(o)?o:{};
