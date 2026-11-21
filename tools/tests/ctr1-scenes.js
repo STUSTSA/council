@@ -21,7 +21,7 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       if(await tap(p,'[data-calfind]')){await W(1500);await measure(p,'找重疊',tag);await tap(p,'[data-calfind]');await W(900)}
       if(await tap(p,'[data-calmon]')){await W(900);await measure(p,'月份清單',tag);await tap(p,'[data-calmon]');await W(600)}
       for(const k of await p.$$eval('.cal-seg [data-k]',e=>e.map(x=>x.dataset.k))){await p.evaluate(k=>{const x=document.querySelector(`.cal-seg [data-k="${k}"]`);x&&x.click()},k);await W(1100);await measure(p,'行事曆模式-'+k,tag)}
-      await p.fill('[data-calq]','會').catch(()=>{});await W(900);await measure(p,'行事曆搜尋',tag);await p.fill('[data-calq]','').catch(()=>{});await W(500);
+      await p.fill('#calBarQ','會').catch(()=>{});await W(900);await measure(p,'行事曆搜尋',tag);await p.fill('#calBarQ','').catch(()=>{});await W(500);
       if(await tap(p,'#notiPage .nd-card.today')){await W(1500);await measure(p,'今日層',tag);await p.keyboard.press('Escape');await W(1100)}
       await p.keyboard.press('Escape');await W(1100)}
     /* 設定 */

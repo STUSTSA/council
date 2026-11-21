@@ -21,6 +21,8 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <div class="dsrow" id="dsRow">
       <!-- 搜尋列（即時回報、進度、完成紀錄三頁；search.js）：有輸入時內容換成分區的結果清單（#boardRes），點結果跳到那一項並打開 -->
       <label class="dsearch" id="dSearch"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋" aria-controls="boardRes"><button type="button" class="ds-x" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+      <!-- 通知與行事曆頁的搜尋列（notify.js；「搜尋事件」）：跟上面那條同一個元件、同一個位置，只在通知頁顯示（search.js 的 hsBar 切換） -->
+      <label class="dsearch" id="dSearchCal" hidden><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="calBarQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="calHRes"><button type="button" class="ds-x" id="calBarX" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
       </div>
       <div class="dres" id="boardRes" role="region" aria-label="搜尋結果" data-flip="sres" hidden></div>
 
