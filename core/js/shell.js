@@ -20,6 +20,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <label class="dsearch" id="dSearch"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="boardQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋" aria-controls="boardRes"><button type="button" class="ds-x" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
       <div class="dres" id="boardRes" role="region" aria-label="搜尋結果" data-flip="sres" hidden></div>
 
+      <!-- 會長室：會長預約（06，booking.js）：同學看「可預約時段」與「我的預約」，會長室管理員與總管理員看待審申請、已核准的預約、開放時段；所有人都看得到這張卡（沒登入、還沒啟用也寫明原因） -->
+      <section class="panel bk-panel" id="bkPanel" aria-labelledby="bkH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="bkH" data-en="BOOKING">跟會長預約</h2></div>
+        <div id="bkBody"></div>
+      </section>
       <!-- 會長室：文件連結（follow.js 的 renderDocs）。會長自己新增的超連結按鈕，點了用新分頁打開 -->
       <section class="panel docs-panel" id="docsPanel" data-edbox="s:docs" aria-labelledby="dcH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="dcH" data-en="DOCS">文件</h2><button type="button" class="icon card-edit-btn" data-edit="s:docs">編輯</button></div>
@@ -29,11 +34,6 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <!-- 會長室：秘書處會議編輯的開關（2026-11-06 使用者：不用這麼大，小小一個開關） -->
       <section class="panel grant-panel" id="grantPanel" hidden>
         <div class="grant-row"><span class="grant-l" id="grH">秘書處會議編輯</span><button type="button" class="sw" id="grantSw" role="switch" aria-checked="false" aria-labelledby="grH"><i aria-hidden="true"></i></button><p class="sub grant-st" id="grantSt"></p></div>
-      </section>
-      <!-- 會長室：會長預約（06，booking.js）：待審申請、已核准的預約、開放時段；只有會長室管理員與總管理員看得到 -->
-      <section class="panel bk-panel" id="bkPanel" aria-labelledby="bkH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="bkH" data-en="BOOKING">會長預約</h2></div>
-        <div id="bkBody"></div>
       </section>
       <!-- 秘書處：點名（07，attendance.js）：名冊、場次、逐人點名；只有秘書處編輯者以上與總管理員看得到 -->
       <section class="panel at-panel" id="attPanel" aria-labelledby="atH" hidden>
@@ -161,7 +161,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#docsPanel","#grantPanel","#bkPanel","#followPanel","#actPanel","#meetEdPanel","#attPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
+    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel","#meetEdPanel","#attPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();

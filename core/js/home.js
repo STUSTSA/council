@@ -4,7 +4,7 @@
    - 手機（640px 以下）：錢包式卡片堆（見下面 WAL）。
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
-   - 下排：全會行事曆圓鈕、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
+   - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（連到會長室分頁最上面的預約卡）、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
@@ -268,7 +268,7 @@
     LK.list=nx;return true;
   }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
-  DKN.set("pub",$id("hmPub"));
+  DKN.set("pub",$id("hmPub"));DKN.set("bk",$id("hmBk"));
   /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
      Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
      （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零五。）
@@ -328,7 +328,7 @@
       else{n.className="hm-lkf";n.innerHTML=`<input class="hm-lku" id="hmLkU" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="https://" aria-label="網址"><input class="hm-lkn" id="hmLkN" type="text" autocomplete="off" maxlength="${LK_NAME}" enterkeyhint="done" placeholder="名稱" aria-label="名稱"><button type="button" class="primary hm-lkok">加入</button>`}}
     DKN.set(k,n);return n;
   }
-  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub","dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
+  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub",...(D.some(d=>d.id==="president")?["bk"]:[]),"dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
   /* 畫下排：沿用節點（照代號），只增減有變的；anim＝寬度與位置用動畫滑過去，show＝這一個要捲進可見範圍（手機、編輯中放不下時） */
   function dkPaint(anim,show){
     const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
@@ -445,6 +445,11 @@
   addEventListener("popstate",()=>{if(LY)layerClose(true)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
   $id("hmPub").innerHTML=ico("calendar","solo");
+  $id("hmBk").innerHTML=ico("clock","solo")+"<span>預約會長</span>";
+  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");   /* 直接進會長室的「會長室」分頁：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
+    try{sessionStorage.setItem("hm-dept","president")}catch(_){}
+    const go=()=>{location.href=`index.html?d=president&tab=ext`};
+    if(reduceMotion()){go();return}dockMove(false);setTimeout(go,MO.base)});
   $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 

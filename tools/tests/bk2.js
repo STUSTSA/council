@@ -74,7 +74,8 @@ const XSS='<img src=x onerror="window.__xss=1">';
     await d.doc(`auditLogs/bookings_${id}_1`).set(au(id,1,'request',who,null,'pending'));
   });
   const bkOpen=async p=>{await ext(p);await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined),10000);await p.waitForTimeout(300)};
-  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden);
+  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden&&!!$('#bkPanel [data-bk]'));   /* 卡片人人看得到（2026-11-21）；vis＝卡裡有可以按的預約／管理按鈕 */
+  const say=p=>p.evaluate(()=>$('#bkPanel').hidden?'':$('#bkBody').textContent);
 
   /* ---------- 1. 還沒啟用 ---------- */
   const ps=await open('president','boss');const suUid=await uidOf(ps);await setRole(suUid,{},true);
@@ -83,7 +84,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
   await until(()=>ps.evaluate(()=>fsRole()==='super'));await ps.evaluate(()=>render());await bkOpen(ps);
   ok(await ps.evaluate(()=>!$('#bkPanel').hidden&&!!$('#bkPanel [data-bk=enable]')),'總管理員：還沒啟用，看到「啟用會長預約」');
   await until(()=>pa.evaluate(()=>fsRole()==='admin'));await pa.evaluate(()=>render());await bkOpen(pa);
-  ok(!(await vis(pa))&&!(await vis(gp)),'會長室管理員、一般登入者：還沒啟用時看不到這張卡');
+  ok(!(await vis(pa))&&!(await vis(gp))&&/還沒開放/.test(await say(pa))&&/還沒開放/.test(await say(gp)),'會長室管理員、一般登入者：還沒啟用時沒有按鈕，卡片寫「還沒開放」');
 
   /* ---------- 2. 啟用 ---------- */
   await ps.click('#bkPanel [data-bk=enable]');
@@ -91,7 +92,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
   const c=await read(`calendars/${O}`);
   ok(c&&c.rev===1&&c.gridMin===30&&c.managers.includes(paUid)&&c.managers.includes(suUid)&&c.updatedBy===suUid,`calendars/president：rev ${c&&c.rev}、管理者含會長室管理員與總管理員`);
   await pa.evaluate(()=>{BK.key='';render()});await until(()=>pa.evaluate(()=>!BK.loading&&!$('#bkPanel').hidden));
-  ok(await vis(pa)&&!(await vis(gp)),'啟用後：會長室管理員看得到卡片，一般登入者還是看不到');
+  ok(await vis(pa)&&!(await vis(gp)),'啟用後：會長室管理員有管理按鈕，一般登入者沒有（只看到說明）');
 
   /* ---------- 3. 開放時段 ---------- */
   const addWin=async(p,date,st,et)=>{await p.click('#bkPanel [data-bk=wadd]');await p.waitForSelector('#dlgForm [name=date]');
@@ -134,7 +135,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
   /* ---------- 6. 沒有管理者身分 ---------- */
   const gpErr=await gp.evaluate(async()=>{try{const B=await bkMod();await B.decide(CFG.firebase,'bk3','approved');return 'ok'}catch(e){return e.code||e.message}});
   ok(gpErr==='permission-denied'&&(await read('bookings/bk3')).status==='pending','一般登入者直接呼叫 decide：被規則拒絕，預約不變');
-  ok(!(await vis(gp)),'一般登入者：看不到卡片');
+  ok(!(await vis(gp)),'一般登入者：卡片沒有任何按鈕');
 
   ok(!ps.errs.length&&!pa.errs.length&&!pa2.errs.length&&!gp.errs.length,'沒有頁面錯誤：'+[ps,pa,pa2,gp].flatMap(p=>p.errs).join('|'));
 
