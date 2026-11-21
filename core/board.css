@@ -68,11 +68,11 @@ body.log-open{overflow:hidden}
   button:hover{transform:none!important}
 }
 /* 被指到放大、按下縮回。自己有指到／按壓樣子的按鈕在這裡用 :not(:where()) 排除（權重不變，不用在各元件再蓋回去）：
-   今日／明日卡片（notify.js 的 ndPress 做按壓、指到只換底色）、海報月曆的日期（指到＝淡圓、按下 .pc-d:active）、月份選單的月份（指到只換底色） */
+   今日／明日卡片（notify.js 的 ndPress 做按壓、指到只換底色）、海報月曆的日期（指到＝淡圓、按下 .pc-d:active）、月份選單的月份（指到只換底色）、完成紀錄的週疊卡標題（整張卡片的標題條，放大會蓋到別張） */
 @media (hover:hover){
-  button:not(:where(.nd-card,.pc-d,.cal-pop button)):hover{transform:scale(1.05)}
+  button:not(:where(.nd-card,.pc-d,.wks-h,.cal-pop button)):hover{transform:scale(1.05)}
 }
-button:not(:where(.nd-card)):active{transform:scale(.96)}
+button:not(:where(.nd-card,.wks-h)):active{transform:scale(.96)}
 button.ghost{border-color:var(--muted)}
 @media (max-width:640px){
   h1{font-size:24px;letter-spacing:.04em}
@@ -1025,19 +1025,22 @@ a.link:active{transform:scale(.96)}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
-/* 週格子（views.js 的 renderDone）：完成紀錄先列「一週一格」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；格子底色、圓角、陰影跟即時回報卡片一樣，沒有資料夾造型 */
-.wkfs{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding-top:4px}   /* 填滿整排寬度：手機一排三格、電腦十格左右，格子隨寬度均分 */
-.wkf,.wk-fx{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;border:0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:center;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
-.wkf{aspect-ratio:1;padding:8px}
-.wk-fx{position:fixed;z-index:60;box-sizing:border-box;pointer-events:none;will-change:left,top,width,height}   /* 翻開／收回時的分身（views.js wkFx）：底色、圓角、陰影跟格子一樣，從格子長到整個清單區 */
-.wkf-d{font-size:17px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
-.wkf-n{font-size:11px;color:var(--muted);white-space:nowrap}
-.wk-head{display:flex;align-items:baseline;gap:12px;margin:0 2px 14px}
-.wk-head h3{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
-.wk-head span{font-size:13px;color:var(--muted)}
-@media (hover:hover){.wkf:hover{transform:translateY(-3px)}}
-.wkf:active{transform:scale(.97)}
-@media (prefers-reduced-motion:reduce){.wkf:hover,.wkf:active{transform:none}}
+/* 週疊卡（views.js 的 renderDone；跟主頁手機的部門卡片堆 .hm-wc 同一套外觀：底色、圓角、往上的柔和陰影、英文小標 .hm-en＋名稱 .hm-nm，見上面「主頁」段）：
+   一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝這一張就地展開（高度用 grid 0fr→1fr 長出來），裡面是那一週的膠囊（.cps），
+   再點一次收起、點別週換那張。沒展開的內容用 inert 擋住。整排寬度由卡片填滿，電腦上展開的膠囊清單自己排多欄。#doneList.snap＝直接換、不跑過渡（views.js doneWeekShow） */
+.wks{padding:4px 0 8px}
+.wks-c{position:relative;border-radius:var(--r-lg)}
+.wks-c+.wks-c{margin-top:-14px}   /* 後面那張壓住前面那張的下緣 14px */
+.wks-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;padding:16px 22px 18px;border:0;border-radius:var(--r-lg);background:none;color:var(--ink);font:inherit;text-align:left}
+.wks-h:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.wks-r{font-size:12px;color:var(--muted)}
+.wks-n{font-size:30px;font-weight:300;line-height:1;margin-top:6px}
+.wks-b{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--mo-slow) var(--mo-out)}
+.wks-c.on .wks-b{grid-template-rows:1fr}
+.wks-bi{min-height:0;overflow:hidden}
+.wks-bi .cps{padding:2px 14px 32px}   /* 下面多留一段：下一張壓上來 14px，還要留呼吸 */
+#doneList.snap .wks-b{transition:none}
+@media (prefers-reduced-motion:reduce){.wks-b{transition:none}}
 @media (prefers-reduced-motion:reduce){
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}
@@ -1384,7 +1387,8 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 /* 手機（640px 以下）：錢包式卡片堆（.hm-wal；位置、縮放、淡出都由 home.js 的 walDraw 寫 transform／opacity）。
    卡片疊在一起，用一層柔和的陰影分出前後（陰影只給浮在內容上面的東西：手機卡片堆、主頁下排；--wal-sh 在 core/theme.css） */
 .hm-wal{position:relative;flex:1;min-height:0;margin-top:22px;touch-action:none}
-.hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
+.hm-wc,.wks-c{background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink)}   /* 卡片堆的共用外觀（主頁手機部門卡片、完成紀錄週疊卡）：底色、往上的陰影；圓角各自 --r-lg */
+.hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .hm-wc .hm-nm{font-size:20px}
 .hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
