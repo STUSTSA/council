@@ -372,6 +372,21 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 - **攻擊測試 MT-01～MT-12**：開關關著、授權過期、不是秘書處（活動部編輯者、會長室管理員、一般登入者、未登入、撤權後）、改 `deptId`／`staff`／`state`／`report`／`labels`／`links`／`issueId`／`order`／`touched`／`createdBy`、非報告卡片（含把它改成報告）、`timeIds`（加別部門或別張卡片的事件、加不存在的 ID、拿掉）、時間事件（新建、刪除、改 `deptId`／`cardId`／`visibility`／`blockId`）、版本（不建、內容不同、作者是別人、沿用舊號）、授權本身（秘書處、會長室管理員、一般登入者不能開；超過 7 天、沒稽核拒絕；總管理員開到今天結束、關閉可以）、會議紀錄、刪除中的卡片、部門編輯者照常編輯。
 - **網頁**（`store-write.js` 的 `saveMeeting`／`setMeetGrant`／`saveMinutes`）：`saveMeeting` 比對讀到時與現在的畫面資料，只寫上表的欄位，其他差異整次不寫（`meeting-field`）；每張卡片一個交易（先確認 `version`、`report` 沒變），時間事件確認 `rev`。寫回前再讀一次會長室的授權（跟 GitHub 模式一樣）。秘書處看板讀 `meetingMinutes`（只有秘書處與總管理員讀得到，其他人當成沒有）。
 
+
+### 5.1k 會議結論的待合併提案（2026-11-21，`backend/tests/rules-merge-proposals.test.js`，MP-01～MP-08）
+
+使用者（DievE 11/21）要求：秘書處在會議紀錄寫的結論，要送到該部門頁面「等待合併」，由部門自己合併。這取代 5.1j 開頭「不採用待併入流程」的決定（那次是照當時的做法；這次使用者明講要）。5.1j 的「會長室開放當天直接改部門卡片」不動。
+
+新集合 `mergeProposals/{id}`（文件 ID：英數、底線、連字號，≤ 120 字）：`deptId`、`cardId`（`kind: 'note'` 才有，是那個部門的卡片；`kind: 'new'` 為 null＝臨時項目，合併時才建新卡片）、`title`（≤ 100）、`note`（1～1000 字）、`meetingDate`、`status`（`pending`｜`merged`｜`dismissed`｜`withdrawn`）、`createdBy`／`createdAt`、`updatedAt`／`updatedBy`、`resolvedBy`／`resolvedAt`。
+
+| 誰 | 能做什麼 |
+|---|---|
+| 秘書處編輯者以上、總管理員 | 讀全部；新建（`status` 一定是 `pending`、`createdBy`＝自己、`createdAt`＝伺服器時間、卡片要存在而且屬於那個部門）；待合併時改 `title`／`note`；撤回（`withdrawn`） |
+| 部門編輯者（該提案的部門）、總管理員 | 讀自己部門的（查詢要帶 `deptId`）；把待合併的標成 `merged` 或 `dismissed`（只能改狀態與處理者／時間）。卡片本身用一般卡片規則另外寫，秘書處**不能**藉這個集合改別部門的卡片 |
+| 其他人 | 不能讀、不能寫；刪除只有總管理員；已處理（merged／dismissed／withdrawn）的不能再改 |
+
+不新增索引（只用 `deptId`＋單欄位篩選，前端排序在本機做）。測試涵蓋：誰能讀、誰能建、欄位與大小限制、卡片不屬於該部門、秘書處不能自己標成已合併、部門只能處理自己的、處理過就定了、刪除。
+
 ### 5.2 時間事件
 
 ```
