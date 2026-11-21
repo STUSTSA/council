@@ -645,7 +645,7 @@ a.doc-pill:active{scale:.96}
 .ac-cur circle{fill:var(--bg);stroke:var(--c);stroke-width:2;transition:opacity var(--mo-fast) var(--mo-out)}
 .ac-cur circle.dim{opacity:0}
 /* 小標籤：在圖的上方（padding-top 留的空間），左右跟著游標、不超出區塊 */
-.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:6px 12px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
+.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:7px 12px 5px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
 .ac-tip[hidden]{display:none}
 .ac-tip b{font-weight:500;letter-spacing:.04em;margin-right:2px}
 .ac-tip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -654,7 +654,7 @@ a.doc-pill:active{scale:.96}
 .ac-none{opacity:.7}
 /* 圖例：每個部門一顆小膠囊（色點＋名稱＋這週總數）；點了只看那個部門 */
 .ac-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.ac-k{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:3px 12px;font-size:12.5px;border-color:var(--hair);transition:opacity var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .22s var(--ease)}
+.ac-k{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px 2px;font-size:12.5px;border-color:var(--hair);transition:opacity var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .22s var(--ease)}
 .ac-k i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 .ac-k .num{color:var(--muted)}
 .ac-k.zero{color:var(--muted)}
@@ -664,7 +664,7 @@ a.doc-pill:active{scale:.96}
 @media (max-width:640px){
   .ac-chart{padding-top:64px}
   .ac-xl{font-size:10px;letter-spacing:0}
-  .ac-k{min-height:28px;padding:2px 10px;font-size:12px}
+  .ac-k{min-height:28px;padding:3px 10px 1px;font-size:12px}
 }
 
 /* ===== 會議報告事項（秘書處，meeting.js） =====
@@ -793,10 +793,12 @@ a.doc-pill:active{scale:.96}
 .range input{width:auto}
 .gantt{overflow-x:auto;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border-color:var(--hair)}
 .g-row{display:grid;grid-template-columns:170px 1fr;transition:background-color .2s,opacity .2s}   /* 不畫格線（每一列的時程條本身就分得出每一列） */
-.g-name{position:sticky;left:0;padding:8px 10px 8px 0;font-size:13.5px;font-weight:500;line-height:1.35;display:flex;flex-direction:column;justify-content:center;z-index:6;background:var(--surface)}
+.g-name{position:sticky;left:0;padding:calc(8px + var(--g-pt,0px)) 10px var(--g-pb,8px) 0;font-size:13.5px;font-weight:500;line-height:1.35;display:flex;flex-direction:column;justify-content:center;z-index:6;background:var(--surface)}
 .g-name a{color:var(--ink);text-decoration:none}
+/* 名稱跟時程條上下置中：條不在列的正中（上方要留註記標籤的位置），layoutTrack 量好條的中線，把名稱的上內距加大（--g-pt）補上，下內距 --g-pb 歸零；表頭「議題」（.g-nh）跟月份標籤同一條中線 */
+.g-nh{justify-content:flex-start;padding-top:5px;padding-bottom:0;line-height:19px;font-weight:400}
 .g-name a:hover{text-decoration:underline}
-.g-axis{position:relative;height:40px}
+.g-axis{position:relative;height:44px}
 .g-axis span{position:absolute;top:5px;font-size:12px;color:var(--muted);transform:translateX(5px);white-space:nowrap}
 .g-track{position:relative;height:58px}
 /* ---- 細刻度（views.js 的 ticksHTML；會長室追蹤 .fw-bar、工作報告的期間甘特圖 .rg-bar 用。看板的甘特圖從 ui-12 起改用滑桿式時程條，見「滑桿式時程條」小節）----
@@ -832,7 +834,7 @@ a.doc-pill:active{scale:.96}
 .lg-a{border-radius:6px 3px 3px 6px;background:var(--sl-fc)}
 .lg-b{border-radius:3px 6px 6px 3px;background:var(--sl-rest)}
 /* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
-.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:25px;transform:translateX(calc(-50% + var(--tt,0px)));color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:3px 8px 0;line-height:14px}   /* 今天：綠色小膠囊 */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -854,6 +856,7 @@ a.doc-pill:active{scale:.96}
 .log li.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾：半透明（同 .g-mk.pend；淡入淡出用上面 .log li 的 opacity 過渡） */
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
 .log-d{min-width:74px;font-size:14px}
+.log li>.sub{text-spacing-trim:trim-start}   /* 「（即時回報）」換到下一行時，全形括號左半邊的空白不留，跟上一行的日期左緣對齊 */
 .log-p{margin-left:auto;font-size:12px}
 /* 進度卡片（甘特圖＋議題詳情合成一張）：預設 #pvGantt，點議題列換成 #pvDetail（切換動畫在 views.js 的 progShow）。
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
@@ -1984,11 +1987,12 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .lg-item.old{border-color:var(--hair)}
 .lg-time{font-family:"Jost",sans-serif;font-size:15px;padding-top:2px;color:var(--muted)}
 .lg-main{display:grid;gap:8px;min-width:0}
-.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:0 12px 1px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
+.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:2px 12px 0;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
 .lg-old{color:var(--muted);font-size:13px;padding-top:2px}
 .lg-lines{list-style:none;margin:0;padding:0;display:grid;gap:5px}
-.lg-lines li{display:flex;gap:8px;align-items:baseline;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
-.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px 1px;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
+.lg-lines li{display:flex;gap:8px;align-items:center;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.lg-lines li>span:not(.lg-cat){padding-top:1px}   /* 膠囊跟旁邊的字上下對齊中線（字面中心比行盒中心高約 1px，補回） */
+.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:2px 8px 0;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
 .log-more{display:block;margin:20px auto 0;border-radius:999px;padding-left:22px;padding-right:22px}
 .log-more[hidden]{display:none}
 .log-msg{text-align:center;margin:18px 0 0}
