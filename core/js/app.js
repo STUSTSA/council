@@ -4,5 +4,6 @@
    以前每個部門各一個 App、打開時回到上次停的部門與區塊（localStorage「board-app:last:…」）：這一套拿掉了，不然在總覽選了部門會被跳回上次的部門。
    dept/app/*.webmanifest 留著給已經裝過的舊 App 讀（start_url 也改成總覽），新安裝不會再用到。
    這個檔在 dept/config.js 前面載入。 */
-let appStartSec="";   /* render.js 的 curSec 初始值會讀它；現在都從第一個區塊開始 */
+let appStartSec="";   /* render.js 的 curSec 初始值會讀它；預設從第一個區塊開始，網址帶 ?tab=ext 時從那個分頁開始（首頁下排的「預約會長」連到會長室分頁；不認得的值 render.js 會忽略） */
+try{const t=new URLSearchParams(location.search).get("tab");if(/^(live|progress|done|ext)$/.test(t||""))appStartSec=t}catch(_){}
 try{localStorage.removeItem("board-app:last:");Object.keys(localStorage).filter(k=>k.startsWith("board-app:last:")).forEach(k=>localStorage.removeItem(k));sessionStorage.removeItem("board-app:id")}catch(_){}   /* 清掉舊版記的位置 */

@@ -1,5 +1,5 @@
 /* 會長預約（同學申請，2026-11-21，06 第二個 PR）：Auth＋Firestore 模擬器、正式規則；會長室看板切成 firestore。
-   1. 沒有部門角色的登入者看不到卡；有部門角色的同學看到「可預約時段」（還有幾格），沒有管理按鈕
+   1. 沒有部門角色的登入者只看到說明、沒有按鈕；有部門角色的同學看到「可預約時段」（還有幾格），沒有管理按鈕
    2. 預約表單：沒填事由／超出時段＝對話框提示、沒有寫入
    3. 送出（15:00 起 1 小時）：bookings pending、rev 1、兩格時段鎖、額度 1、稽核 request；畫面「我的預約」出現、剩 6 格
    4. 兩個同學搶重疊的時段：第二個得到「已經被預約」，沒有重複的預約或鎖；別人取消不了、讀不到我的預約
@@ -75,7 +75,8 @@ const XSS='<img src=x onerror="window.__xss=1">';
   });
 
   const bkOpen=async p=>{await ext(p);await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined),10000);await p.waitForTimeout(400)};
-  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden);
+  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden&&!!$('#bkPanel [data-bk]'));   /* 卡片人人看得到（2026-11-21）；vis＝卡裡有可以按的預約／管理按鈕 */
+  const say=p=>p.evaluate(()=>$('#bkPanel').hidden?'':$('#bkBody').textContent);
   const reload=async p=>{await p.evaluate(()=>{BK.key='';render()});await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined),10000);await p.waitForTimeout(300)};
   const fillReq=async(p,s,n,topic)=>{await p.click('#bkPanel [data-bk=req]');await p.waitForSelector('#dlgForm [name=s]',{state:'attached'});
     await p.evaluate(([s,n,t])=>{const f=document.querySelector('#dlgForm');f.querySelector('[name=s]').value=s;f.querySelector('[name=n]').value=n;f.querySelector('[name=topic]').value=t},[String(base+s),String(n),topic]);
@@ -95,7 +96,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
   });
   await until(()=>hasDept(s1));await until(()=>hasDept(s2));
   for(const p of [nb,s1,s2,mg]){await reload(p);await ext(p)}
-  ok(!(await vis(nb)),'沒有部門角色的登入者：看不到卡');
+  ok(!(await vis(nb))&&/只開放給各部門的成員/.test(await say(nb)),'沒有部門角色的登入者：沒有按鈕，卡片寫明只開放給部門成員');
   ok(await s1.evaluate(()=>!$('#bkPanel').hidden&&/還有 8 格/.test($('#bkBody').textContent)&&!$('#bkPanel [data-bk=wadd]')&&!$('#bkPanel [data-bk=ok]')),'同學：看到可預約時段（還有 8 格），沒有管理按鈕');
 
   /* ---------- 2. 表單檢查 ---------- */

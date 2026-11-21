@@ -1,6 +1,8 @@
 /* 核心｜會長預約，會長室端（06，docs/architecture/booking.md；設定檔 follow:true 的會長室看板、firestore 模式）
    「會長室」分頁的一張卡片 #bkPanel：
-   - 管理者（calendars/president 的 managers）與總管理員看得到：待審申請（核准／拒絕）、已核准的預約（可退回）、開放時段（新增、刪除）。
+   - 這張卡是會長室分頁的第一張，所有人都看得到（2026-11-21 使用者找不到入口）：沒登入、還沒啟用、沒有部門角色、沒有開放時段時各寫一行原因，不整張消失。
+     首頁下排的「預約會長」鈕（home.js）直接連到這裡（index.html?d=president&tab=ext）。
+   - 管理者（calendars/president 的 managers）與總管理員：待審申請（核准／拒絕）、已核准的預約（可退回）、開放時段（新增、刪除）。
    - 還沒啟用（calendars/president 不存在）：總管理員看到「啟用」，按下去建立，管理者名單＝目前會長室的管理員（roles 裡 president 是 admin 的人）。
    - 同學（有部門角色的人，規則 D6）：行事曆已啟用時，這張卡顯示「可預約時段」（開放時段裡還沒被鎖的 30 分鐘格）與「我的預約」（待審、已核准，可取消）；
      按「預約」跳出表單：開始時間、時長（30 分鐘～2 小時）、事由。沒有部門角色的人整張不顯示。管理者與總管理員看管理畫面，不顯示申請區。
@@ -11,11 +13,10 @@ const BK_ERR={taken:"這段時間已經被預約了，請選別的時間",confli
 const bkMod=()=>storeModLoad("booking-fs.js","board-booking-ready","BoardBooking");
 const bkMe=()=>acct.user&&acct.user.uid||"";
 const bkSuper=()=>typeof acctSuper==="function"&&acctSuper();
-/* 看得到這張卡：總管理員，或名單裡的管理者（未啟用時只有總管理員） */
+/* 管理者：總管理員，或名單裡的管理者（未啟用時只有總管理員） */
 const bkManager=()=>!!BK.cal&&(BK.cal.managers||[]).includes(bkMe());
 const bkMgr=()=>bkSuper()||bkManager();
 const bkCanReq=()=>!!(acct.roles&&Object.keys(acct.roles.depts||{}).length);   /* 規則 hasDeptRole：有部門角色的人才能申請（D6） */
-const bkSee=()=>CFG.follow&&fsMode()&&!!bkMe()&&(bkMgr()||(!!BK.cal&&bkCanReq()));
 /* 台灣時間顯示：11/24（二）10:00–11:00 */
 const BK_WD="日一二三四五六";
 function bkFmt(s,e){const t=new Date(s+8*36e5),u=new Date(e+8*36e5),p=n=>String(n).padStart(2,"0");
@@ -54,8 +55,8 @@ function bkHTML(){
   if(BK.err)return `<p class="sub bk-st">${esc(BK.err)}</p>`;
   if(BK.cal===undefined)return `<p class="sub bk-st">讀取中…</p>`;
   if(!BK.cal)return bkSuper()?`<p class="sub bk-st">還沒啟用。啟用後，會長室的管理員（${esc(CFG.dept.adminTitle||"管理員")}）可以開放時段、處理預約。</p><button type="button" class="primary" data-bk="enable"${BK.busy?" disabled":""}>啟用會長預約</button>`
-    :`<p class="sub bk-st">還沒啟用，請總管理員啟用。</p>`;
-  if(!bkMgr())return bkReqHTML();
+    :`<p class="sub bk-st">會長預約還沒開放。會長室啟用、開出時段後，這裡就能預約。</p>`;
+  if(!bkMgr())return bkCanReq()?bkReqHTML():`<p class="sub bk-st">預約只開放給各部門的成員（部長、次長、部員）。請先用 Google 登入並申請加入你的部門，通過後這裡就能預約。</p>`;
   const sec=(h,n,body,empty)=>`<h3 class="bk-h">${h}<span class="num">${n}</span></h3>${n?body:`<p class="sub bk-none">${empty}</p>`}`;
   const b=BK.busy?" disabled":"";
   return sec("待審申請",BK.pend.length,BK.pend.map(x=>bkRow(bkFmt(x.start,x.end),`${bkName(x.requester)}：${x.topic}`,
@@ -69,11 +70,12 @@ function bkHTML(){
 const bkKey=()=>`${bkMe()}|${bkSuper()}|${bkCanReq()}`;
 function renderBooking(force){
   const p=$("#bkPanel");if(!p)return;
-  if(!CFG.follow||!fsMode()||!bkMe()){p.hidden=true;return}
+  if(!CFG.follow||!fsMode()){p.hidden=true;return}
+  p.hidden=false;
+  const paint=h=>{if(h!==BK.html||force){BK.html=h;$("#bkBody").innerHTML=h}};
+  if(!bkMe())return paint(`<p class="sub bk-st">要先登入才能預約。按工具列的設定鈕，用 Google 登入。</p>`);
   if(BK.key!==bkKey()&&!BK.loading){BK.key=bkKey();BK.cal=undefined;bkLoad();return}
-  p.hidden=!bkSee();
-  if(p.hidden)return;
-  const h=bkHTML();if(h!==BK.html||force){BK.html=h;$("#bkBody").innerHTML=h}
+  paint(bkHTML());
 }
 async function bkRun(fn,okMsg){
   if(BK.busy)return;BK.busy=true;renderBooking(true);

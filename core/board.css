@@ -599,11 +599,11 @@ a.doc-pill:active{scale:.96}
 .docs-panel[hidden]{display:none}
 
 /* ===== 追蹤（會長室） ===== */
-/* 一筆一張：寬的時候兩欄、只有一筆時佔滿整列（auto-fit），每張上方細線；時程用細刻度（.tk，views.js 的 ticksHTML） */
+/* 一筆一張：寬的時候兩欄、只有一筆時佔滿整列（auto-fit），每張是圓角色塊；時程用細刻度（.tk，views.js 的 ticksHTML） */
 .follow-panel[hidden]{display:none}
-.follows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:0 28px}
+.follows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:10px}
 .follows .empty{grid-column:1/-1}
-.fw{display:grid;gap:6px;align-content:start;padding:14px 0 16px;border-top:1px solid var(--hair);min-width:0}
+.fw{display:grid;gap:6px;align-content:start;padding:14px 16px 16px;border-radius:var(--r-lg);background:var(--blk2);min-width:0}   /* 一筆一個圓角色塊（跟即時回報、預約同一種，2026-11-21 取代細線分隔） */
 .fw.gone{opacity:.55}
 .fw-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .fw-k{letter-spacing:.08em}
@@ -617,7 +617,7 @@ a.doc-pill:active{scale:.96}
 .fw-week{margin:0;max-height:220px;overflow:auto;font:inherit;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
 .follow-panel .add-row{margin-top:12px}
 @media (max-width:640px){
-  .fw{padding:12px 0 14px}
+  .fw{padding:12px 14px 14px}
 }
 
 /* ===== 各部門編輯量（會長室，activity.js） =====
@@ -738,7 +738,7 @@ a.doc-pill:active{scale:.96}
 .meet-edit{margin-top:var(--gap,16px)}
 
 /* ===== 會長預約（會長室分頁的 #bkPanel，booking.js；06） =====
-   一張卡片三段：待審申請、已核准的預約、開放時段。每段小標題＋件數，下面每筆一列（左邊時間與申請人、右邊按鈕）；列與列之間只用細線隔開。
+   一張卡片三段：待審申請、已核准的預約、開放時段。每段小標題＋件數，下面每筆一個圓角色塊（跟追蹤、即時回報同一種；左邊時間與申請人、右邊按鈕），塊與塊之間留空隙、不畫細線。
    按鈕沿用 .icon（次要）與 .primary（核准）；處理中按鈕停用（disabled 的外觀沿用全站）。沒有深色／手機專用規則：顏色全用變數，列在窄螢幕自動換行 */
 .bk-panel[hidden]{display:none}
 .bk-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
@@ -746,12 +746,12 @@ a.doc-pill:active{scale:.96}
 .bk-h:first-of-type{margin-top:0}
 .bk-h .num{font-size:12px;font-weight:400;color:var(--muted)}
 .bk-none{margin:0 0 4px;font-size:12.5px}
-.bk-row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--hair)}
+.bk-row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;border-radius:var(--r-lg);background:var(--blk2)}
 .bk-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 200px}
 .bk-t b{font-size:14px;font-weight:600;letter-spacing:.03em}
 .bk-t .sub{overflow-wrap:anywhere}
 .bk-b{display:flex;gap:8px;flex:none}
-.bk-foot{margin-top:10px;border-top:1px solid var(--hair);padding-top:10px}
+.bk-foot{margin-top:12px}
 
 /* ===== 點名（秘書處會議分頁的 #attPanel，attendance.js；07） =====
    一張卡片：右上「名冊」（進整理模式：+ 成員、匯入名冊、點人編輯／停用）「複製結果」「+ 場次」；場次膠囊一排、部門膠囊一排（沿用週報的 .wk-d）；四個數字（出席、請假、缺席、還沒點）；下面一個部門一段，每人一顆按鈕，點一下換狀態。
@@ -1412,6 +1412,10 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-lkb{width:calc(var(--hm-dot) - 4px);height:calc(var(--hm-dot) - 4px)}
 .hm-pub{background:var(--pri);color:var(--pri-ink)}
 .hm-pub .ico{width:calc(var(--hm-dot)*20/44);height:calc(var(--hm-dot)*20/44)}
+/* 「預約會長」：下排唯一帶字的鈕（2026-11-21，找不到預約入口），高度跟圓鈕一樣，左圖示右文字；連到會長室分頁第一張卡 */
+.hm-bk{display:flex;align-items:center;gap:7px;height:var(--hm-dot);min-height:0;padding:0 calc(var(--hm-dot)*16/44);border:0;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:14px;font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.hm-bk .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44);flex:none}
+@media (max-width:640px){.hm-bk{width:var(--hm-dot);padding:0;justify-content:center;border-radius:50%}.hm-bk span{display:none}}   /* 手機下排放不下文字：只留圖示圓鈕（aria-label 仍是「跟會長預約」） */
 .hm-lkc{position:relative;background:var(--blk2);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--ease)}
 .hm-lkadd{box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
 .hm-lkadd .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44)}
