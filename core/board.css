@@ -184,12 +184,15 @@ body.set-open .dhead{position:relative;z-index:40}
 /* ===== 部門搜尋列與結果（search.js；DESIGN-next 第六節「部門內」） =====
    標題列下面、高 50 的膠囊（平面色塊 --blk），只在即時回報、進度、完成紀錄三頁。聚焦框用 outline（不跟 --blk-sh 串在 box-shadow 裡）。
    有輸入時 body.searching：看板內容（.layout）藏起來，換成分區的結果清單（#boardRes）：區名（英文小標＋700）＋件數，每一筆是一顆膠囊 */
-.dsearch{display:flex;align-items:center;gap:10px;height:50px;margin:0 0 18px;padding:0 8px 0 18px;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--muted);cursor:text;-webkit-user-select:none;user-select:none}
+.dsearch{display:flex;align-items:center;gap:10px;height:50px;margin:0 0 18px;padding:0 8px 0 18px;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--muted);cursor:text;-webkit-user-select:none;user-select:none;outline:1.5px solid transparent;outline-offset:-1.5px;transition:outline-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .dsearch[hidden]{display:none}
-.dsearch:focus-within{outline:1.5px solid var(--ink);outline-offset:-1.5px}
-.ds-ico{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+/* 聚焦過渡（手機、桌面一樣）：外框從透明漸現成 ink、整條略放大 1.015（回彈）、放大鏡轉 90° 並變 ink 色、提示字淡開；失焦反向。時間、曲線用 --mo-*；減少動態由檔案開頭的全域規則關掉 */
+.dsearch:focus-within{outline-color:var(--ink);color:var(--ink);transform:scale(1.015)}
+.ds-ico{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;transition:transform var(--mo-base) var(--mo-spring)}
+.dsearch:focus-within .ds-ico{transform:rotate(90deg) scale(1.08)}
 .dsearch input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
-.dsearch input::placeholder{color:var(--muted);opacity:1}
+.dsearch input::placeholder{color:var(--muted);opacity:1;transition:opacity var(--mo-base) var(--mo-out)}
+.dsearch input:focus::placeholder{opacity:.5}
 .dsearch input:focus,.dsearch input:focus-visible{outline:none}
 .ds-x{flex:none;display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--bg);color:var(--ink)}
 .ds-x[hidden]{display:none}
@@ -1449,7 +1452,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 @media (hover:none){.hm-tip{display:none}}
 /* 下排（手機 640px 以下）：固定在畫面底部、膠囊底板（陰影朝上）；輸入框 16px（iPhone：16px 以下聚焦時會整頁放大），寬度讓返回鍵到「加入」在 412 寬放得下 */
 @media (max-width:640px){
-  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0}
+  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom) + var(--kb,0px));z-index:40;margin:0;transition:bottom var(--mo-base) var(--mo-out)}   /* --kb＝螢幕鍵盤高度（util.js 的 kbTrack）：鍵盤跳出時整條浮到鍵盤正上方 */
   .hm-dk-bg{display:block}
   .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
   .hm-lkf input{width:88px;font-size:16px}
