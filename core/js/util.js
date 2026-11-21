@@ -17,7 +17,7 @@ const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-const pd=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
+const pd=s=>{const [y,m,d]=String(s).slice(0,10).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
 const today=()=>ymd(new Date());
 const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const nowStr=()=>{const d=new Date();return `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
