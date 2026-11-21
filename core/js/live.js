@@ -122,6 +122,13 @@ function lcLiveHTML(ev,o){
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
     save:done?"":lcSaveHTML(ev),tools:ro?"":lcToolsHTML(ev,ed)});
 }
+/* 分欄時詳情卡往上延伸到搜尋列的高度（搜尋列縮到左欄寬，右邊讓出來）：--rise＝#liveMD 頂端比搜尋列頂端低多少，CSS 的 .lc-pane 用負邊距往上拉（board.css「左右兩欄」） */
+function lvRise(split){
+  const md=$("#liveMD"),bar=$("#dSearch");let r=0;
+  if(split&&bar&&!bar.hidden)r=Math.round(bar.offsetHeight+(parseFloat(getComputedStyle(bar).marginBottom)||0));   /* 搜尋列加下邊距（不看位置：搜尋列固定住、內容捲動時位置會變） */
+  md.style.setProperty("--rise",r+"px");
+}
+addEventListener("resize",()=>{const md=$("#liveMD");if(md&&md.classList.contains("split"))lvRise(true)});
 /* 整區：膠囊清單（報告在上、細線、其他）＋寬螢幕右邊的卡片；全螢幕的卡片在 #lcFull（lcFullSync） */
 function renderEvents(){
   const live=liveOrder(),ids=live.map(e=>e.id),rep=live.filter(e=>e.report),rest=live.filter(e=>!e.report);
@@ -129,6 +136,7 @@ function renderEvents(){
   if(!editing){kp=null;lvPane=null;lvPop=false;lvSeg=null;if(kpSt&&kpSt.st!=="saving"&&kpSt.id!==lvOpen)kpSt=null}   /* 收合（或換成別張）＝儲存回饋與「復原」消失 */
   const wide=lvWide(),split=wide&&!!lvOpen,pane=$("#evDetail");
   $("#liveMD").classList.toggle("split",split);
+  lvRise(split);
   const cp=ev=>cpHTML(ev,{sel:split&&ev.id===lvOpen,away:!wide&&ev.id===lvOpen});
   /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著。新增鈕是右下角的浮動圓鈕（nav.js 的 fabSync） */
   morphTo($("#events"),live.length?`<div class="cps">${rep.map(cp).join("")}${rep.length&&rest.length?'<span class="sepr" aria-hidden="true"></span>':""}${rest.map(cp).join("")}</div>`:`<p class="empty">目前沒有即時回報。</p>`);

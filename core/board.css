@@ -142,15 +142,18 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
    標題列（連同下面的搜尋列）固定在畫面最上面（.dtop，ui-15）：往下捲時內容從它下面滑過，下緣用一段底色漸層淡出，不畫線、不加陰影；
    平常捲到最上面時位置跟以前一樣。換分頁不重建。深色只靠變數 */
-/* 固定的頂部區（.dtop＝標題列＋搜尋列，shell.js）：黏在捲動容器（.page）最上面。底色蓋住從下面滑過的內容；往上多出的 --wrap-pt 內距在黏住時捲到畫面外，
-   只留 8px＋瀏海／狀態列安全區，固定區不吃多餘的高度。左右各多 12px 讓圓鈕的柔光陰影、聚焦框不被切掉。
-   下緣的淡出（::after）接在標題列／搜尋列原本的下邊距上（最後一個子元素的下邊距會穿出去變成 .dtop 的下邊距），所以捲到最上面時看不到。
-   --dtop-h＝固定時佔的高度（shell.js 的 dtopSync 量），黏在下面的卡片（.lc-pane）、捲動定位（scroll-padding）、卡片高度都用它 */
-.dtop{--dtop-x:12px;position:sticky;top:calc(8px + env(safe-area-inset-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) 0;background:var(--bg)}
-.dtop::after{content:"";position:absolute;left:0;right:0;top:100%;height:20px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
+/* 固定在畫面最上面（ui-15）：標題列（.dtop）與搜尋列（.dsrow，shell.js）各自黏住，底色蓋住從下面滑過的內容；往上多出的 --wrap-pt 內距在黏住時捲到畫面外，
+   只留 8px＋瀏海／狀態列安全區，固定區不吃多餘的高度。標題列左右各多 12px 讓圓鈕的柔光陰影、聚焦框不被切掉；標題列與搜尋列的間距（--dgap）算在標題列的底內距裡。
+   下緣的淡出（.dsrow 的 ::after）接在搜尋列的下邊距上（.dsearch 下邊距會穿出 .dsrow），所以捲到最上面時看不到；搜尋列藏起來（別的分頁）時 .dsrow 是空的、高度 0，淡出就接在標題列下緣。
+   搜尋列分兩塊是為了桌面即時回報分欄：搜尋列只佔左欄寬，右邊詳情卡往上延伸到搜尋列那一行（見「左右兩欄」），那一塊不能有底色。
+   --dhd-h＝標題列固定時佔的高度、--dtop-h＝標題列加搜尋列（shell.js 量）：黏在下面的卡片（.lc-pane）、捲動定位（scroll-padding）、卡片高度都用 */
+:is(.dtop,.dsrow){--dtop-x:12px}
+.dtop{--dgap:18px;position:sticky;top:calc(8px + env(safe-area-inset-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) var(--dgap);background:var(--bg)}
+.dsrow{position:sticky;top:var(--dhd-h,64px);z-index:31;margin:0 calc(-1 * var(--dtop-x));padding:0 var(--dtop-x);background:var(--bg)}
+.dsrow::after{content:"";position:absolute;left:0;right:0;top:100%;height:20px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
 .page-main{scroll-padding-top:var(--dtop-h,0px)}
-@media print{.dtop{position:static}.dtop::after{display:none}}
-.dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 18px;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+@media print{:is(.dtop,.dsrow){position:static}.dsrow::after{display:none}}
+.dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;transition:transform .22s var(--ease),background-color .2s,color .2s}
 /* 被指到放大、按下縮回：首頁鍵是 <a>，一般按鈕（button）的規則套不到，這裡三顆統一寫（只有能 hover 的裝置才放大） */
 @media (hover:hover){.dh-btn:hover{transform:scale(1.05)}}
@@ -161,7 +164,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn[hidden]{display:none}
 /* 設定開著時（設定層 z-index 38、手機子頁 39，從標題列下緣開始蓋）：標題列疊在設定層上面，柔光主題圓鈕往下畫的陰影、聚焦框不被設定層的底色蓋掉（ui-10 C）。
    標題列跟設定層不重疊，其他主題畫面不變；只在設定開著時抬高（今日層 .td-ov 也是 39、要蓋過標題列） */
-body.set-open .dtop{position:static}   /* 設定開著時頁面鎖在最上面：固定區改回一般排版，才不會把標題列框成自己的層、蓋不過設定層 */
+body.set-open :is(.dtop,.dsrow){position:static}   /* 設定開著時頁面鎖在最上面：固定區改回一般排版，才不會把標題列框成自己的層、蓋不過設定層 */
 body.set-open .dhead{position:relative;z-index:40}
 .dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
@@ -184,7 +187,8 @@ body.set-open .dhead{position:relative;z-index:40}
 .offline-pill .live-dot{width:7px;height:7px}
 @media print{.dh-btn{display:none}}
 @media (max-width:640px){
-  .dhead{gap:10px;margin-bottom:14px;padding-top:0}
+  .dhead{gap:10px;padding-top:0}
+  .dtop{--dgap:14px}
   .dh-logo{width:40px;height:40px;margin-left:0}
   .dh-name b{font-size:18px}
   .dh-ro{padding-inline:10px calc(10px - .14em)}
@@ -528,6 +532,11 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 左右兩欄（寬螢幕、打開一張時；live.js 的 lvWide）：左邊一欄膠囊、右邊卡片（.lc-pane，見「卡片外框」）。完成紀錄（#doneMD）共用 --- */
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
+/* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
+.wrap:has(#liveMD.split) .dsrow{width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
+#liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px))}
+#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
+#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
