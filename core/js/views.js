@@ -466,7 +466,7 @@ function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkSt
 function renderDone(){
   const items=doneItems(),ids=new Set(items.map(x=>x.id));
   const dnew=id=>prevDone&&!prevDone.has(id)?" new":"";
-  if(dnOpen&&!ids.has(dnOpen))dnOpen=null;
+  if(dnOpen&&!ids.has(dnOpen)){dnOpen=null;lcGone()}
   const open=dnOpen&&items.find(x=>x.id===dnOpen);
   if(open)wkSet(wkStart(open.d));   /* 卡片開著＝一定在它那一週 */
   else if(doneWeek&&!doneWeeks(items).some(([w])=>w===doneWeek))wkSet(null);   /* 那一週什麼都沒有了（紀錄移回、刪除，也沒有每週報告） */
