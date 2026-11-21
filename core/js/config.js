@@ -20,6 +20,9 @@ const CFG=(()=>{
   return Object.freeze(o);
 })();
 const secOn=k=>k==="progress"?(CFG.sections.timeline||CFG.sections.cards):k==="ext"?!!CFG.ext:CFG.sections[k]!==false;
+/* 進度頁裡「議題」的叫法：活動部的議題就是活動專案（名稱、起訖、專員、階段、說明），畫面叫「專案」；資料欄位、規則、其他部門都不變（2026-11-21）。
+   只改畫面上的字：資料仍存在 issues，之後要換成獨立專案資料集時，改這一個地方與讀取處 */
+const ISS=CFG.deptId==="events"?"專案":"議題";
 /* 底部工具列的分頁（區塊）：完成紀錄併進即時回報的部門（mergeDone）不另外算一區；secOf＝某一區實際在哪個分頁裡 */
 const secTab=k=>secOn(k)&&!(k==="done"&&CFG.mergeDone);
 const secOf=k=>k==="done"&&CFG.mergeDone?"live":k;
