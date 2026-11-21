@@ -104,7 +104,7 @@ function weekRange(){
    （二）完成事項：完成紀錄裡這一整週（今天往前 7 天）完成、或完成後在這七天內編輯過（touchedAt）的項目標題（議題結案、即時回報結案、完成一段都算；議題沒有編輯時間，只看結案日），由新到舊 */
 function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
-  const inP=d=>!!d&&d>start&&d<=end;
+  const inP=d=>!!d&&d.slice(0,10)>start&&d.slice(0,10)<=end;   /* 完成時間可能帶時間（2026-11-21 07:54）：只比日期，否則最後一天的不算 */
   const dept=CFG.dept.name;
   const live=liveOrder(),rep=live.filter(e=>e.report);
   /* 完成事項：每張卡只列一次、只寫標題（分段完成的紀錄 fromEv 與最後結案的那張算同一張，不帶「第 N 段」「結案」） */
