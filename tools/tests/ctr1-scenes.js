@@ -46,6 +46,7 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       <div class="acct-chips" style="margin:14px 0"><span class="acct-chip on">總管理員</span><span class="acct-chip">秘書處・處長</span><span class="acct-chip">唯讀</span></div>
       <div style="margin:14px 0"><a class="doc-pill" href="#"><b>會議文件</b></a> <span class="grant-st"><span class="grant-on">開放修改中</span></span></div>
       <div style="margin:14px 0"><button type="button" class="tl-btn pri">完成</button><button type="button" class="tl-btn">改期</button></div>
+      <ol class="lg-day" style="list-style:none;padding:0;margin:14px 0"><li class="lg-item"><span class="lg-time num">07:52</span><div class="lg-main"><span class="lg-who">DievE Dai</span><ul class="lg-lines"><li><span class="lg-cat">即時回報</span><span>修改｜社群內容排程</span></li></ul></div></li></ol>
       <div class="at-tools" style="margin-top:14px"><button type="button" class="icon">匯入名冊</button><button type="button" class="icon">+ 場次</button></div>`;document.body.appendChild(d)});
     await W(300);await measure(p,'點名預約會議元件',tag);await p.evaluate(()=>document.getElementById('__syn').remove());
     ok(!p.errs.length,`${tag} 部門沒有錯誤 ${p.errs.join('｜')}`);await p.context().close()}
