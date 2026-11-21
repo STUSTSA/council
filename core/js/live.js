@@ -133,7 +133,7 @@ addEventListener("resize",()=>{const md=$("#liveMD");if(md&&md.classList.contain
 /* 整區：膠囊清單（報告在上、細線、其他）＋寬螢幕右邊的卡片；全螢幕的卡片在 #lcFull（lcFullSync） */
 function renderEvents(){
   const live=liveOrder(),ids=live.map(e=>e.id),rep=live.filter(e=>e.report),rest=live.filter(e=>!e.report);
-  if(lvOpen&&!ids.includes(lvOpen))lvOpen=null;
+  if(lvOpen&&!ids.includes(lvOpen)){lvOpen=null;lcGone()}
   if(!editing){kp=null;lvPane=null;lvPop=false;lvSeg=null;if(kpSt&&kpSt.st!=="saving"&&kpSt.id!==lvOpen)kpSt=null}   /* 收合（或換成別張）＝儲存回饋與「復原」消失 */
   const wide=lvWide(),split=wide&&!!lvOpen,pane=$("#evDetail");
   $("#liveMD").classList.toggle("split",split);
@@ -161,6 +161,8 @@ const lcCard=k=>{const h=lcHostOf(k);return h&&h.querySelector(":scope>.lc")};
 const lcPill=(k,id)=>id&&document.querySelector(`${k==="live"?"#events":"#doneList"} [data-cp="${CSS.escape(id)}"]`);
 const lcCap=el=>{if(!el)return null;const r=el.getBoundingClientRect(),b=el.querySelector(".lc-title,b");return r.width?{r,tr:b?b.getBoundingClientRect():null,rad:parseFloat(getComputedStyle(el).borderRadius)||0}:null};
 const lcSet=(k,id)=>{if(k==="live"){lvOpen=id;if(id)dnOpen=null}else{dnOpen=id;if(id)lvOpen=null}};
+/* 卡片被資料變動收掉（結案、被刪、別人改了）而不是使用者收的：Back 的「card」那一層也要拿掉，不然左上角還顯示「上一頁」、按了沒有任何反應 */
+const lcGone=()=>{if(!lvOpen&&!dnOpen)Back.closed("card")};
 const lcCur=()=>lvOpen?["live",lvOpen]:dnOpen?["done",dnOpen]:null;
 /* 外框從膠囊的位置與圓角展開（clip-path），標題從膠囊的名稱滑到卡片標題，其餘淡入 */
 function lcGrow(el,from){
@@ -207,7 +209,7 @@ function lcShow(k,id){
   if(!wide){if(id&&!cur)Back.opened("card",lcBack);else if(!id)Back.closed("card")}
 }
 /* 系統返回鍵、卡片左上的返回鍵：編輯中先存檔（名稱空白等就留在原地），再縮回膠囊 */
-async function lcBack(){const cur=lcCur();if(!cur)return;
+async function lcBack(){const cur=lcCur();if(!cur){lcGone();return}
   if(!(await lvEndEdit())){if(!lvWide())Back.opened("card",lcBack);return}
   const c=lcCur();if(c)lcShow(c[0],null);
 }
@@ -640,7 +642,7 @@ function lvComplete(ev,el,s){
     el.animate([{transform:el.style.transform,opacity:1},{transform:`translate(${s.dx+tx*.6}px,${s.dy+ty*.6}px) rotate(${s.tilt+14}deg) scale(.6)`,opacity:1,offset:.55},{transform:`translate(${s.dx+tx}px,${s.dy+ty}px) rotate(${s.tilt+30}deg) scale(.12)`,opacity:0}],{duration:440,easing:"cubic-bezier(.5,0,.6,1)",fill:"forwards"})}
   lvCelebrate();
   setTimeout(async()=>{el.style.visibility="hidden";document.documentElement.classList.remove("ev-drag-on");
-    if(lvOpen===ev.id)lcSet("live",null);
+    if(lvOpen===ev.id){lcSet("live",null);lcGone()}
     const ok=await settingSave(()=>{ev.doneAt=today();evTouch(ev);syncLink(ev)},parentOf(ev)?`已結案，並記錄到「${parentOf(ev).title}」`:"已結案，移到完成紀錄");
     if(ok===false){el.style.visibility="";el.classList.remove("drag");el.getAnimations().forEach(a=>a.cancel());el.style.transform="";el.style.backgroundColor=""}},rm?0:300);
 }
