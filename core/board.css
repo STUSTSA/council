@@ -1823,6 +1823,12 @@ body.set-open #pageMain{overflow:hidden}
 .ce-k.pri{background:var(--pri);color:var(--pri-ink)}
 .ce-k.acc{background:var(--acc);color:var(--acc-ink)}
 .ce-k.line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+/* 會長預約（會長室模式，booking.js）：開放時段與我的預約是普通的一列，右邊按鈕；月曆下面一小塊寫狀態與提醒（顏色全用變數，深色、手機不另寫） */
+.cal-ev.bk .ce-pl{flex:1 1 auto}
+.ce-act{margin-left:auto;display:flex;gap:8px;flex:none}
+.cal-bk{display:grid;justify-items:start;gap:10px;margin-top:12px}
+.cal-bk .sub{margin:0;font-size:12.5px;line-height:1.6}
+.cal-bk a{color:var(--ink);text-decoration:underline}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
 /* 桌面寬版（行事曆容器 1000px 以上）：左邊一欄放標題、搜尋、模式切換與找重疊（400px），右邊放海報月曆；月曆本身的縮小在「海報月曆」段 */
 @container cal (min-width:1000px){

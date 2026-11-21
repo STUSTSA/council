@@ -4,7 +4,7 @@
    - 手機（640px 以下）：錢包式卡片堆（見下面 WAL）。
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
-   - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（連到會長室分頁最上面的預約卡）、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
+   - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（進你的部門看板、打開行事曆的會長室模式（沒記到部門時到會長室頁））、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
@@ -446,9 +446,11 @@
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
   $id("hmPub").innerHTML=ico("calendar","solo");
   $id("hmBk").innerHTML=ico("clock","solo")+"<span>預約會長</span>";
-  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");   /* 直接進會長室的「會長室」分頁：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
-    try{sessionStorage.setItem("hm-dept","president")}catch(_){}
-    const go=()=>{location.href=`index.html?d=president&tab=ext`};
+  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");   /* 直接進你的部門看板、打開行事曆的會長室模式：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
+    let mine="";try{mine=localStorage.getItem("stustsa-mydept")||""}catch(_){}
+    const to=D.some(d=>d.id===mine&&d.id!=="president")?mine:"president";   /* 你的部門看板的行事曆「會長室」模式；還不知道你的部門時到會長室頁（那裡有指路） */
+    try{sessionStorage.setItem("hm-dept",to)}catch(_){}
+    const go=()=>{location.href=to==="president"?`index.html?d=president&tab=ext`:`index.html?d=${to}&noti=pres`};
     if(reduceMotion()){go();return}dockMove(false);setTimeout(go,MO.base)});
   $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
