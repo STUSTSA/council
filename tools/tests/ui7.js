@@ -238,7 +238,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
     await ctx.close()}
 
-  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v51（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v52（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
