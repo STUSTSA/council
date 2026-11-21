@@ -33,6 +33,8 @@ function acctLoad(){
   if(!acctMod)acctMod=storeModLoad("fb-account.js","board-account-ready","BoardAccount").then(A=>A.init(CFG.firebase));   /* 載入方式同 store.js */
   return acctMod;
 }
+/* 記下這台裝置上「你有部門角色」的部門代號（只存代號、不是機密）：首頁的「預約會長」靠它進你的部門行事曆（home.js）。總管理員與沒有角色的不記 */
+function acctMyDept(r){try{if(r&&r.depts&&r.depts[CFG.deptId]&&CFG.deptId!=="president")localStorage.setItem("stustsa-mydept",CFG.deptId)}catch(_){}}
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
 const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
@@ -59,7 +61,7 @@ async function acctStart(){
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;acctMyDept(r);A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */

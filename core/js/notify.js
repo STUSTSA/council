@@ -103,7 +103,9 @@ function calListHTML(c,r){
   const d=c.day,xs=r.xs.filter(x=>covers(x,d)),ed=!c.pub&&canEdit();
   /* 勾選：只有本部門看板上的時間（x.tid；別的部門、活動、會議沒有）而且有編輯權的人看得到框；已勾的留在清單裡、標題淡化加刪除線。勾＝清點「完成」同一個函式 notiDone */
   const ck=x=>ed&&x.tid&&x.dept===(CFG.deptId||"rights");
-  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div>${ck(x)?`<div class="ce-n ck${x.done?" done":""}"><label class="fld-check"><input type="checkbox" data-calck="${esc(x.evId)}" data-caltid="${esc(x.tid)}"${x.done?" checked":""} aria-label="完成"></label><span>${esc(x.title)}</span></div>`:`<div class="ce-n${x.done?" done":""}">${esc(x.title)}</div>`}
+  const bkEv=x=>`<div class="cal-ev bk"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div><div class="ce-n">${esc(x.title)}</div>
+      <div class="ce-b"><span class="ce-pl">${esc(x.place)}</span><span class="ce-act">${x.act}</span></div></div>`;   /* 預約的列：右邊是按鈕（預約、取消；booking.js 組好、值都 esc 過），不放所屬膠囊 */
+  const body=xs.length?xs.map(x=>x.kind==="bk"?bkEv(x):`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div>${ck(x)?`<div class="ce-n ck${x.done?" done":""}"><label class="fld-check"><input type="checkbox" data-calck="${esc(x.evId)}" data-caltid="${esc(x.tid)}"${x.done?" checked":""} aria-label="完成"></label><span>${esc(x.title)}</span></div>`:`<div class="ce-n${x.done?" done":""}">${esc(x.title)}</div>`}
       <div class="ce-b">${x.place?`<span class="ce-pl">${ico("pin","solo")}${esc(x.place)}</span>`:""}<span class="ce-k${calKind(c,x)}">${esc(calPill(c,x))}</span></div></div>`).join("")
     :r.loading?`<p class="cal-none">讀取中…</p>`:r.err?`<p class="cal-none">${esc(r.err)}</p>`:`<p class="cal-none num">${nmd(d)}</p>`;
   return `<div class="cal-list" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
@@ -131,6 +133,7 @@ function calKeys(c){
 }
 function calItems(c){
   let xs=!c.pub&&(c.mode==="mine"||c.mode==="pres"&&CFG.deptId==="president")?notiMine():[],loading=false,err="";
+  if(!c.pub&&c.mode==="pres")xs=xs.concat(bkItems());   /* 會長預約（booking.js）：開放時段與我的預約也是這個模式裡的事，標在月曆上、點日期看得到 */
   calKeys(c).forEach(k=>{const v=CAL_DATA.get(k);if(!v||v.loading)loading=true;else{if(v.err)err=err||v.err;xs=xs.concat(v.items)}});
   return {xs:xs.sort(byWhen),loading,err};
 }
@@ -141,6 +144,7 @@ function scopeItems(docs,kind){
     return {key:`scope:${e.id}`,date:d,end:ed&&ed>d?ed:"",time:s.slice(11,16),etime:en.slice(11,16),title:e.label||e.title||"（未命名）",place:e.place||"",ev:"",dept:e.deptId||"",kind}}).filter(x=>x.date);
 }
 function calLoad(c){
+  if(!c.pub&&c.mode==="pres"&&!c.find)bkEnsure();   /* 切到會長室：讀預約的開放時段與我的預約（booking.js；沒登入、不是新資料庫時什麼都不做） */
   calKeys(c).forEach(k=>{if(CAL_DATA.has(k))return;CAL_DATA.set(k,{loading:true});
     let p;
     if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
@@ -232,7 +236,7 @@ function calHTML(c){
     <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
     <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
-    ${f?calFindHTML(c,f):calListHTML(c,r)}</section>`;
+    ${f?calFindHTML(c,f):calListHTML(c,r)}${!f&&!c.pub&&c.mode==="pres"?bkNoteHTML():""}</section>`;
 }
 /* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
 const calHost=c=>c===NOTI?$("#notiPage"):c.host;
@@ -261,6 +265,8 @@ function calUnmount(host){
   c.host=null;c.pop=false;delete host._cal;delete host.dataset.calhost;host.replaceChildren();
 }
 function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
+/* 跳到某一天（月份跟著換；預約的「下一個可預約時段」用） */
+function calJump(c,d){c.month=d.slice(0,7);c.day=d;c.pop=false;calLoad(c);calPaint(c);calHost(c)?.querySelector(".cal-list")?.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"})}
 /* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
 function calMonth(c,m){
   if(m===c.month){calPop(c,false);return}
@@ -287,6 +293,7 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-calmon]")){calPop(c,!c.pop);return}
   const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
   const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
+  const gd=t.closest("[data-calgoday]");if(gd){calJump(c,gd.dataset.calgoday);return}
   const oth=t.closest("[data-caloth]");if(oth){calOth(c,oth.dataset.caloth);return}
   const qx=t.closest("[data-calqx]");if(qx){c.q="";host.querySelector("[data-calq]").value="";calQ(c,host);host.querySelector("[data-calq]").focus({preventScroll:true});return}
   const go=t.closest("[data-calgo]");if(go){calGo(c,go.dataset.calgo);return}
@@ -507,6 +514,9 @@ function closeToday(instant){
   tdCardShow(card,false);   /* 收合期間卡片藏著（底板收到卡片的位置與圓角時換回卡片，看起來就是同一張；剩下的縮過頭、彈回由卡片接著播） */
   todayMorph(ov,card,true).then(tail=>{done();tdCardLand(card,tail)}).catch(done);
 }
+/* 網址帶 ?noti=pres（首頁下排的「預約會長」）：進看板後等登入與權限就緒，自動打開通知頁、行事曆切到會長室；只做一次 */
+let notiAuto=false;try{notiAuto=new URLSearchParams(location.search).get("noti")==="pres"}catch(_){}
+function notiAutoGo(){if(!notiAuto||notiOpen||deptRO()||!loggedIn())return;notiAuto=false;NOTI.mode="pres";openNoti()}
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
