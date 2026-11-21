@@ -1024,7 +1024,9 @@ a.link:active{transform:scale(.96)}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
 /* 週格子（views.js 的 renderDone）：完成紀錄先列「一週一格」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；格子底色、圓角、陰影跟即時回報卡片一樣，沒有資料夾造型 */
 .wkfs{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding-top:4px}   /* 填滿整排寬度：手機一排三格、電腦十格左右，格子隨寬度均分 */
-.wkf{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;aspect-ratio:1;padding:8px;border:0;border-radius:var(--r-md);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:center;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
+.wkf,.wk-fx{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;border:0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:center;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
+.wkf{aspect-ratio:1;padding:8px}
+.wk-fx{position:fixed;z-index:60;box-sizing:border-box;pointer-events:none;will-change:left,top,width,height}   /* 翻開／收回時的分身（views.js wkFx）：底色、圓角、陰影跟格子一樣，從格子長到整個清單區 */
 .wkf-d{font-size:17px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .wkf-n{font-size:11px;color:var(--muted);white-space:nowrap}
 .wk-head{display:flex;align-items:baseline;gap:12px;margin:0 2px 14px}
