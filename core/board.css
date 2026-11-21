@@ -514,6 +514,11 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 左右兩欄（寬螢幕、打開一張時；live.js 的 lvWide）：左邊一欄膠囊、右邊卡片（.lc-pane，見「卡片外框」）。完成紀錄（#doneMD）共用 --- */
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
+/* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），可編輯的卡片多出約 100px 高 */
+.wrap:has(#liveMD.split) #dSearch{width:clamp(240px,34%,320px)}
+#liveMD.split .lc-pane{margin-top:calc(-1 * var(--rise,0px))}
+#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - 250px + var(--rise,0px))}
+#liveMD.split .lc-pane .lc{max-height:calc(100dvh - 150px + var(--rise,0px))}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
@@ -1015,15 +1020,11 @@ a.link:active{transform:scale(.96)}
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
 /* 週資料夾（views.js 的 renderDone）：完成紀錄先列「一週一張」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；卡片底色、圓角、陰影跟即時回報一樣，左上角多一個資料夾的耳朵 */
-.wkfs{display:grid;gap:26px 14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));padding-top:12px}
-.wkf{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;min-width:0;padding:22px 22px 18px;border:0;border-radius:0 var(--r-lg) var(--r-lg) var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
-.wkf::before{content:"";position:absolute;left:0;top:-10px;width:68px;height:11px;border-radius:10px 10px 0 0;background:var(--blk)}
+.wkfs{display:grid;gap:22px 14px;grid-template-columns:repeat(auto-fill,minmax(116px,132px));padding-top:12px}
+.wkf{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;aspect-ratio:1;padding:12px;border:0;border-radius:0 var(--r-lg) var(--r-lg) var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:center;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
+.wkf::before{content:"";position:absolute;left:0;top:-10px;width:44px;height:11px;border-radius:10px 10px 0 0;background:var(--blk)}
 .wkf-d{font-size:19px;font-weight:700;letter-spacing:.04em}
-.wkf-n{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-.wkf-n::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--done)}
-.wkf-pv{display:grid;width:100%;gap:3px;margin:6px 0 0;padding:0;list-style:none;font-size:14px;opacity:.7}
-.wkf-pv li{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.wkf-more{font-size:12.5px;color:var(--muted)}
+.wkf-n{font-size:12px;color:var(--muted)}
 .wk-head{display:flex;align-items:baseline;gap:12px;margin:0 2px 14px}
 .wk-head h3{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
 .wk-head span{font-size:13px;color:var(--muted)}
@@ -1684,6 +1685,14 @@ body.set-open #pageMain{overflow:hidden}
 /* 沒有事件：卡片下方一條短細線 */
 .nd-empty{margin-top:auto}
 .nd-empty i{display:block;width:28px;height:1px;background:var(--nd-mut)}
+/* 桌面（1000px 以上）：兩張卡壓矮（約 130px），一個畫面能看到下面的行事曆；數字、件數縮小，內容不變 */
+@media (min-width:1000px){
+  .noti-days{gap:12px}
+  .nd-card{min-height:0;gap:10px;padding:14px 18px 12px}
+  .nd-head{padding-bottom:8px}
+  .nd-num{font-size:40px}
+  .nd-count{font-size:20px}
+}
 @media (max-width:640px){
   .noti-days{gap:10px}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
@@ -1767,7 +1776,7 @@ body.set-open #pageMain{overflow:hidden}
 /* ===== 行事曆（notify.js 的 calHTML；通知頁最下面，主頁的全會行事曆是公共版 .cal.pub） =====
    上面一大塊色塊（.cal-top）：英文小標＋「行事曆」、右上月份鈕（外框膠囊，點開月份選單）、模式切換、海報月曆；
    下面＝選到那一天的清單（.cal-list，一件事一張色塊；寬的時候兩欄）。換內容時舊的清單分身（.cal-ghost）原地淡出 */
-.cal{position:relative;display:grid;gap:14px;container-type:inline-size}
+.cal{position:relative;display:grid;gap:14px;container:cal/inline-size}
 .cal-top{display:grid;gap:18px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
 .cal-h .sec-h{margin-right:auto}
@@ -1801,6 +1810,12 @@ body.set-open #pageMain{overflow:hidden}
 .ce-k.acc{background:var(--acc);color:var(--acc-ink)}
 .ce-k.line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
+/* 桌面寬版（行事曆容器 1000px 以上）：左邊一欄放標題、搜尋、模式切換與找重疊（400px），右邊放海報月曆；月曆本身的縮小在「海報月曆」段 */
+@container cal (min-width:1000px){
+  .cal-top{grid-template-columns:minmax(300px,400px) minmax(0,1fr);column-gap:36px;align-content:start}
+  .cal-top>*{grid-column:1}
+  .cal-top>.pc{grid-column:2;grid-row:1/span 12}
+}
 @media (max-width:640px){
   .cal-top{padding:18px 16px}
   .cal-mon{height:46px;padding:0 14px 0 17px}
@@ -1888,6 +1903,14 @@ body.set-open #pageMain{overflow:hidden}
 .pc-e.cont-r::before{right:0;--dr:none;--lr:0px}
 .pc-e:not(.span)::after{content:"";position:absolute;top:0;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
 .pc-foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);letter-spacing:.24em}
+/* 桌面寬版（放在行事曆左右兩欄時，見「行事曆」段）：月份標題最大 84px、日期圓 36px、一列 42px，首屏就看得到整個月 */
+@container cal (min-width:1000px){
+  .cal-top .pc-mon{font-size:clamp(56px,12cqw,84px)}
+  .cal-top .pc-yr{font-size:clamp(22px,4cqw,32px)}
+  .cal-top .pc-d{width:36px;height:36px;margin-top:2px}
+  .cal-top .pc-week{min-height:calc(42px + var(--lanes) * var(--pc-lane))}
+  .cal-top .pc-e{top:calc(42px + var(--ln) * var(--pc-lane))}
+}
 @media (max-width:640px){
   .pc-n{font-size:17px}
   .pc-wk{font-size:10.5px;letter-spacing:.02em}
