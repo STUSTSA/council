@@ -2,7 +2,7 @@
    A. 開場：暫停全部動畫、逐格（16ms）推進 currentTime：任何一個字只要看得見（透明度 > 0 且在自己的窗裡露出來），它的邊界框就不能跟兩個小人的邊界框重疊；
       每個字第一次露出來時露的是左邊（由左到右揭開，不是先露出一截淡字再往左補）；開始前沒有字露出來。412、811×612、1300×800，淺深色各一次。
       關掉動態：沒有程式動畫、字直接是完成的樣子
-   E. 主頁左上學生會標誌：沒有膠囊底（沒有底色、陰影、內距）；九組主題 × 深淺色：字與右邊小人跟頁面底的對比 ≥ 3、
+   E. 主頁左上學生會標誌：沒有膠囊底（沒有底色、陰影、內距）；十三組主題 × 深淺色：字與右邊小人跟頁面底的對比 ≥ 3、
       淺色左邊小人是黃色實心，深色只留線稿（線寬照畫面像素至少 1px）
    H. 下排個人常用連結（只存這台裝置 localStorage「stustsa-links」）：「+」進入編輯、新增（Enter、「加入」）、名稱空的用網域、只收 http(s)
       （javascript:、data:、mailto:、ftp: 拒絕）、跳脫（名稱含 <img onerror> 不執行）、名稱 30 字、最多 12 個（滿了「+」不出現）、× 移除、
@@ -59,21 +59,21 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
     ok(r.an===0&&r.full,`關掉動態：開場沒有程式動畫、字直接是完成的樣子（${r.an}）`);
     await p.ctx.close()}
 
-  /* ---------- E. 主頁左上標誌：沒有膠囊底、九組主題深淺色都看得清楚 ---------- */
+  /* ---------- E. 主頁左上標誌：沒有膠囊底、十三組主題深淺色都看得清楚 ---------- */
   {const lum=c=>{const m=c.match(/[\d.]+/g).map(Number).slice(0,3).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*m[0]+.7152*m[1]+.0722*m[2]};
     const con=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
     const p=await mk(1300,800,{rm:1});await p.goto(U+'home.html');await p.waitForTimeout(600);
     const box=await p.evaluate(()=>{const m=getComputedStyle(document.getElementById('hmMe'));return {bg:m.backgroundColor,sh:m.boxShadow,pl:m.paddingLeft,pr:m.paddingRight}});
     ok(box.bg==='rgba(0, 0, 0, 0)'&&box.sh==='none'&&box.pl==='0px'&&box.pr==='0px',`左上標誌沒有膠囊底（底 ${box.bg}、陰影 ${box.sh}、內距 ${box.pl}/${box.pr}）`);
     const bad=[];
-    for(const mode of ['light','dark'])for(const pal of ['fin','b3','ink','sage','mist','fire','pastel','neu','sun']){
+    for(const mode of ['light','dark'])for(const pal of ['fin','b3','ink','sage','mist','fire','pastel','neu','sun','sakura','forest','ocean','wisteria']){
       const r=await p.evaluate(([pal,mode])=>{const h=document.documentElement;h.dataset.pal=pal;h.dataset.theme=mode;
         const bg=getComputedStyle(document.body).backgroundColor,g=s=>getComputedStyle(document.querySelector('#hmMe '+s));
         const y=g('.su-y');return {bg,k:g('.su-k').fill,t:g('.su-t').fill,b:g('.su-b').fill,yf:y.fill,ys:y.stroke,yw:parseFloat(y.strokeWidth),ve:y.vectorEffect}},[pal,mode]);
       const c=Math.min(con(r.k,r.bg),con(r.t,r.bg),con(r.b,r.bg));
       const yok=mode==='light'?r.yf==='rgb(240, 188, 35)':r.yf==='none'&&r.ys!=='none'&&con(r.ys,r.bg)>=3&&r.yw>=1&&r.ve==='non-scaling-stroke';
       if(c<3||!yok)bad.push(`${pal}/${mode} 對比 ${c.toFixed(2)} 左小人 ${r.yf}/${r.ys}/${r.yw}`)}
-    ok(!bad.length,'九組主題 × 深淺色：字與右邊小人對比 ≥ 3；淺色左小人黃色實心、深色只留線稿且線寬 ≥ 1px（照畫面像素） '+bad.join('；'));
+    ok(!bad.length,'十三組主題 × 深淺色：字與右邊小人對比 ≥ 3；淺色左小人黃色實心、深色只留線稿且線寬 ≥ 1px（照畫面像素） '+bad.join('；'));
     await p.ctx.close()}
 
   /* ---------- H. 下排個人常用連結 ---------- */

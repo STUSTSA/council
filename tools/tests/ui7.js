@@ -83,7 +83,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const rs2=await p.evaluate(()=>window.__rs);
     ok(rs2===rs1,`反覆開關行事曆 resize 監聽不累積（${rs1} → ${rs2}）`);
     await p.click('#hmSet');await p.waitForTimeout(600);
-    ok(await p.evaluate(()=>{const l=document.getElementById('hmLook');return !!l&&!l.hidden&&l.querySelectorAll('[data-look-pal]').length===9&&!!l.querySelector('.look-mode')}),'設定鈕打開外觀（九組主題、深淺色）');
+    ok(await p.evaluate(()=>{const l=document.getElementById('hmLook');return !!l&&!l.hidden&&l.querySelectorAll('[data-look-pal]').length===13&&!!l.querySelector('.look-mode')}),'設定鈕打開外觀（九組主題、深淺色）');
     await p.keyboard.press('Escape');await p.waitForTimeout(400);
     /* 進部門（桌面）：焦點那張鋪滿 */
     await p.evaluate(()=>{window.__kp=new Set()});
@@ -111,7 +111,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
   {const p=await mk(412,860);await go(p,'home.html');
     const ws=()=>p.evaluate(()=>[...document.querySelectorAll('.hm-wc')].map(c=>{const m=new DOMMatrix(getComputedStyle(c).transform);return {y:+m.m42.toFixed(1),s:+m.a.toFixed(3),h:c.offsetHeight,o:+getComputedStyle(c).opacity,on:c.classList.contains('on')}}));
     let w=await ws();
-    ok(w.length===9&&w[2].on&&w.every(x=>x.h===196),'九張卡片、焦點卡權益部、每張高 196');
+    ok(w.length===13&&w[2].on&&w.every(x=>x.h===196),'九張卡片、焦點卡權益部、每張高 196');
     ok(w[0].y===0&&w[1].y===60&&w[2].y===120,`退到後面的疊在上方、每張露 60、貼齊上緣（${w[0].y} ${w[1].y} ${w[2].y}）`);
     ok(w[3].y-w[2].y===206&&w[4].y-w[3].y===60&&w[5].y-w[4].y===60,`焦點卡整張露出、與下一張留 10、還沒輪到的每張露 60（${w[3].y-w[2].y} ${w[4].y-w[3].y}）`);
     ok(w[1].s===.95&&w[0].s===.9&&w[2].s===1,`退一張縮 5%（${w[1].s} ${w[0].s}）`);
