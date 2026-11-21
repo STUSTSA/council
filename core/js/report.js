@@ -5,7 +5,7 @@ let rptOpen=false,rptRange=null,rptDoc=null;   /* rptDoc：預覽的不是工作
 
 /* ---------- 資料：期間內處理過的議題、即時回報、週報 ---------- */
 function rptData(from,to){
-  const inP=d=>!!d&&d>=from&&d<=to;
+  const inP=d=>!!d&&d.slice(0,10)>=from&&d.slice(0,10)<=to;   /* 完成時間可能帶時間：只比日期 */
   const act=state.issues.filter(i=>(!i.doneAt||i.doneAt>to)&&(!i.start||i.start<=to));
   const done=state.issues.filter(i=>i.doneAt&&inP(i.doneAt)).sort((a,b)=>a.doneAt.localeCompare(b.doneAt));
   const extra=state.issues.filter(i=>!act.includes(i)&&!done.includes(i)&&i.markers.some(m=>inP(m.date)));
