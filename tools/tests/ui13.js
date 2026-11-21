@@ -1,7 +1,7 @@
 /* ui13：2026-11-20 ui-13（docs/DESIGN.md「進度」甘特圖顏色、「網址」；交接說明該節）。github 模式（data_test.json 加三個議題），固定 8300 埠。
    A. 甘特圖沒選中的列：「已過時程」「剩餘時程」兩段一眼分得出來——兩段亮度比 ≥ 1.8、剩餘段跟卡片底色也分得出來（≥ 1.2）、已過段不是選中色；
       選中的議題維持選中色、它的剩餘段跟其他列同色；圖例兩個色塊跟條同色。412／1300 × 淺色／深色各跑一次；
-      另外在 1300 把九組主題 × 淺深色全部換過一遍，同樣的比值都要成立。
+      另外在 1300 把十三組主題 × 淺深色全部換過一遍，同樣的比值都要成立。
    B. 權益部的網址：index.html（沒帶 d）打開後網址列換成 ?d=rights（不重新載入、沒有多一筆歷史、其他參數與 # 後面照留）；
       資料夾網址、?admin、#x 同；帶了 ?d=（含不存在的代號）不動；重新整理仍是權益部；主頁（home.html）本身網址不動，
       兩種主頁（卡片堆、翻頁）所有部門的連結都是 index.html?d=代號（權益部也是），點權益部色塊進到 ?d=rights；報告的看板網址（boardURL）帶 ?d=rights。
@@ -21,7 +21,7 @@ const iss=(id,title,start,end)=>({id,title,tags:['收案','處理中','結案'],
 D.issues.push(iss('iNS','還沒開始的議題',ymdOff(20),ymdOff(80)),iss('iEN','已經結束的議題',ymdOff(-80),ymdOff(-10)),iss('iDN','只在下學期的議題','2027-03-01','2027-04-30'));
 const DF=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'ui13-')),'data.json');fs.writeFileSync(DF,JSON.stringify(D));
 const BASE='http://127.0.0.1:8300/';
-const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun'];
+const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun','sakura','forest','ocean','wisteria'];
 
 /* 把任何 CSS 顏色（rgb()、color(srgb …)）用畫布轉成 [r,g,b] */
 const rgbIn=`(col=>{const k=document.createElement('canvas');k.width=k.height=1;const x=k.getContext('2d',{willReadFrequently:true});x.fillStyle='#000';x.fillStyle=col;x.fillRect(0,0,1,1);return [...x.getImageData(0,0,1,1).data].slice(0,3)})`;
@@ -57,7 +57,7 @@ const fmt=c=>c?`rgb(${c.join(',')})`:'無';
     ok(!!se&&se.sel&&same(se.a,k.acc),tag+`選中的議題維持選中色（${fmt(se&&se.a)}＝${fmt(k.acc)}）`);
     ok(!!se&&!!se.b&&un.length>0&&same(se.b,un[0].b),tag+'選中的議題剩餘段跟其他列同色');
     ok(same(k.la,un[0]&&un[0].a)&&same(k.lb,un[0]&&un[0].b),tag+`圖例的兩個色塊跟條同色（${fmt(k.la)}、${fmt(k.lb)}）`);
-    /* 九組主題 × 淺深色（只在 1300 做一次；直接換 <html> 的 data-pal／data-theme，看計算後的顏色） */
+    /* 十三組主題 × 淺深色（只在 1300 做一次；直接換 <html> 的 data-pal／data-theme，看計算後的顏色） */
     if(w===1300&&sc==='light'){
       const bad=[];
       for(const th of ['light','dark'])for(const pal of PALS){
@@ -65,7 +65,7 @@ const fmt=c=>c?`rgb(${c.join(',')})`:'無';
         const q=await colors(p),u=q.rows.filter(r=>!r.sel&&r.a&&r.b);
         const r1=u.length?cr(u[0].a,u[0].b):0,r2=u.length?cr(u[0].b,q.card):0;
         if(!(u.length&&r1>=1.8&&r2>=1.2&&u.every(r=>!same(r.a,q.acc))&&same(q.la,u[0].a)&&same(q.lb,u[0].b)))bad.push(`${pal}/${th}:${r1.toFixed(2)}/${r2.toFixed(2)}`);}
-      ok(!bad.length,tag+`九組主題 × 淺深色：兩段亮度比 ≥ 1.8、剩餘段與卡片底色 ≥ 1.2、圖例同色（不合格：${bad.join('、')||'無'}）`);}
+      ok(!bad.length,tag+`十三組主題 × 淺深色：兩段亮度比 ≥ 1.8、剩餘段與卡片底色 ≥ 1.2、圖例同色（不合格：${bad.join('、')||'無'}）`);}
     ok(!p.errs.length,tag+'沒有錯誤：'+p.errs.slice(0,3).join(' | '));
     await p.context().close();
   }
