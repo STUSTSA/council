@@ -1,5 +1,5 @@
 /* 畫面骨架：核心程式的 HTML 結構。部門資訊（logo、名稱）由 dept/ 提供，這裡不寫死任何部門。 */
-const SHELL_IDS=["pager","weekWrap","importFile","dlg","toast","splash"];
+const SHELL_IDS=["pager","importFile","dlg","toast","splash"];
 const SHELL_HTML=`<div class="pager" id="pager">
   <!-- main page -->
   <div class="page page-main" id="pageMain">
@@ -119,18 +119,6 @@ const SHELL_HTML=`<div class="pager" id="pager">
   </div>
 
 </div>
-
-  <!-- 每週概述（2026-11-06 起是設定裡的一頁：weekly.js 的 weekPane 打開時搬進設定的右側面板／手機子頁，平常藏在這裡） -->
-    <div class="week-wrap" id="weekWrap" role="region" aria-labelledby="weekH" hidden>
-      <div class="week-top">
-        <h2 class="sec-h" id="weekH" data-en="WEEKLY">每週概述</h2>
-        <a class="week-sec" id="weekSecLink" href="?d=secretariat">秘書處調閱 →</a>
-        <button class="gen-btn" id="genWeek"><svg class="spark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M10 3l1.9 5.1L17 10l-5.1 1.9L10 17l-1.9-5.1L3 10l5.1-1.9z"/><path fill="currentColor" d="M18.5 2l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/><path fill="currentColor" d="M18 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/></svg>生成週報</button>
-        <button class="ghost auth-only" id="addWeek">+ 新增週報</button>
-      </div>
-      <div id="weekList" data-flip></div>
-    </div>
-
 
 
 <input type="file" id="importFile" accept=".html,.htm,.json" hidden>

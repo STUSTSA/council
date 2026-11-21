@@ -72,7 +72,7 @@ const LIT=[MARK,MARK.slice(0,10),MARK.slice(5,10)];
     const keep=state;let err='';
     try{state=normalize({title:'t',weeks:[{id:'w1',date:5,text:'a'},{id:'w2',date:'x',text:'b'}],issues:[{id:'i1',title:'t',start:7,end:{},tags:'x',markers:'m',cur:'z'}],
       events:[{id:'e1',name:'n',desc:'d',report:true,touched:[1],createdAt:9,times:[{id:'t1',start:5,end:6,label:1}]}],range:5,follows:5,docs:5});
-      render();renderWeeks();renderGantt()}catch(e){err=String(e&&e.message)}
+      render();renderDone();repHTML(wkStart(today()));doneWeeks([]);renderGantt()}catch(e){err=String(e&&e.message)}
     const s={w:state.weeks.map(w=>w.date),i:[state.issues[0].start,state.issues[0].end],r:typeof state.range.start};
     state=keep;render();return {err,s};
   });
@@ -114,7 +114,7 @@ const LIT=[MARK,MARK.slice(0,10),MARK.slice(5,10)];
     const out={};const lit=t=>LIT.some(x=>t.includes(x));const put=(k,html)=>{box.innerHTML=html;out[k]={n:box.querySelectorAll('.fdx').length,lit:lit(box.textContent)}};
     let err='';
     try{
-      renderWeeks();const wl=document.querySelector('#weekList');out.weeks={n:wl.querySelectorAll('.fdx').length,lit:lit(wl.textContent)};
+      const wl=document.createElement('div');wl.innerHTML=repHTML(wkStart(state.weeks[0].date));out.weeks={n:wl.querySelectorAll('.fdx').length,lit:lit(wl.textContent)};
       renderGantt();const g=document.querySelector('#gantt');out.gantt={n:g.querySelectorAll('.fdx').length,lit:lit(g.textContent)};
       put('detail',cardHTML(it));put('marker',markerHTML(it.markers[0],null,it));put('log',logHTML(it));
       put('done',doneCardHTML('iD',true));put('doneFields',doneFieldsHTML(dn,false));

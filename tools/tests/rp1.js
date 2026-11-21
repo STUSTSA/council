@@ -29,9 +29,8 @@ for(const [w,h,sc,tag] of [[1300,860,'dark','d'],[412,915,'light','m']]){
   A(await p.evaluate(()=>loggedIn()),tag+' logged in');
   await p.$eval('#setOv [data-set=report]',e=>e.scrollIntoView({block:'center'}));await p.waitForTimeout(150);
   const row=await p.$eval('#setOv [data-set=report]',e=>e.textContent+'|'+e.getAttribute('aria-disabled'));console.log(tag,'row:',row);A(/工作報告/.test(row)&&/\|null$/.test(row),tag+' report row');
-  /* 2026-11-06：「報告」是合併頁（nav.js 的 SET_HUBS.report：每週概述、工作報告），工作報告在裡面 */
+  /* 2026-11-21：設定裡的「工作報告」直接開對話框（每週報告搬進完成紀錄，不再有合併頁） */
   await p.click('#setOv [data-set=report]');await p.waitForTimeout(900);
-  await p.click('.set-hub [data-hub=report]');await p.waitForTimeout(800);
   const dl=await p.evaluate(()=>[$('#dlgForm b').textContent,...[...document.querySelectorAll('#dlgForm input')].map(i=>i.name+'='+i.value)]);console.log(tag,'dialog:',dl);A(/工作報告/.test(dl[0]),tag+' report dialog');
   await ok();await p.waitForTimeout(900);
   const rp=await p.evaluate(()=>({open:rptOpen,secs:[...document.querySelectorAll('.rpt-ch')].map(c=>c.querySelector('.rpt-ch-n').textContent+c.querySelector('h2').textContent),pages:[...document.querySelectorAll('.rpt-page')].map(x=>x.classList[1]).join(','),toc:[...document.querySelectorAll('.toc-list b')].map(x=>x.textContent).join('/'),issues:document.querySelectorAll('.rpt-issue').length,gantt:!!document.querySelector('.rpt-gantt svg'),stats:[...document.querySelectorAll('.rpt-stats b')].map(b=>b.textContent)}));console.log(tag,'report:',rp);
