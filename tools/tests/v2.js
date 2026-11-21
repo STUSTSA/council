@@ -1,6 +1,6 @@
 // 新介面結構：功能測試（模擬 GitHub）
 /* 2026-11-18（ui-07）改兩條舊規格斷言（其他不變）：
-   - 「only weekly row before login」：登入前設定清單原本只有「每週概述」；ui-02 起最後多一列「外觀」（nav.js 的 lookSec，DESIGN-next：主題在設定 → 外觀，沒登入時放清單最後），改成要求正好「每週概述、外觀」兩列。
+   - 「only weekly row before login」：登入前設定清單原本只有「每週概述」；ui-02 起最後多一列「外觀」（nav.js 的 lookSec，DESIGN-next：主題在設定 → 外觀，沒登入時放清單最後），原本要求「每週概述、外觀」兩列；2026-11-21 每週概述搬進完成紀錄（改名每週報告），現在只剩「外觀」一列。
    - 「mobile header: no edit, 44px bell」：44px 是 2026-11-06 舊頁首搜尋欄右邊的通知鈕；ui-04 起通知鈕在新標題列 .dhead 裡，跟首頁鍵同樣是 52px 圓鈕（board.css「部門標題列」.dh-btn、模擬頁同尺寸），
      改成「沒有編輯鈕、通知鈕在標題列裡、52×52」。
    另外只印不判斷的「D header」從舊頁首 .hero-rule .actions 改印標題列 .dhead 的圓鈕 */
@@ -39,7 +39,7 @@ const vis=p=>p.evaluate(()=>[...document.querySelectorAll('.layout>.sgroup')].ma
  // 動畫：不自動全螢幕、工具列留在 body
  // 設定頁（未登入）
  await p.click('#setBtn');await p.waitForTimeout(600);await p.screenshot({path:'v2_d_set.png'});
- const sr0=await p.$$eval('#setOv .set-row',x=>x.map(r=>(r.dataset.set||'log')+(r.getAttribute('aria-disabled')?'(off)':'')));log('D settings rows:',sr0);A(sr0.join()==='week,look','before login: weekly row and appearance row only');
+ const sr0=await p.$$eval('#setOv .set-row',x=>x.map(r=>(r.dataset.set||'log')+(r.getAttribute('aria-disabled')?'(off)':'')));log('D settings rows:',sr0);A(sr0.join()==='look','before login: appearance row only');   /* 2026-11-21：每週概述改名每週報告、搬進完成紀錄，設定清單不再有這一列 */
  const gt=await p.$$eval('#setOv .set-gate-ico',x=>x.length);log('D gate:',gt);A(gt===1,'lock gate');
  // 登入前只有鎖頭 → 按「登入」→ 舊版看板：先共用密碼、再建立身分
  await p.click('#setOv .set-gate .primary');await p.waitForTimeout(500);const g1=await dlgTitle(p);log('D dlg1:',g1);A(g1==='輸入目前的編輯密碼','dlg1');

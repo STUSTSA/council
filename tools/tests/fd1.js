@@ -72,7 +72,7 @@ const LIT=[MARK,MARK.slice(0,10),MARK.slice(5,10)];
     const keep=state;let err='';
     try{state=normalize({title:'t',weeks:[{id:'w1',date:5,text:'a'},{id:'w2',date:'x',text:'b'}],issues:[{id:'i1',title:'t',start:7,end:{},tags:'x',markers:'m',cur:'z'}],
       events:[{id:'e1',name:'n',desc:'d',report:true,touched:[1],createdAt:9,times:[{id:'t1',start:5,end:6,label:1}]}],range:5,follows:5,docs:5});
-      render();renderWeeks();renderGantt()}catch(e){err=String(e&&e.message)}
+      render();renderDone();repHTML(wkStart(today()));doneWeeks([]);renderGantt()}catch(e){err=String(e&&e.message)}
     const s={w:state.weeks.map(w=>w.date),i:[state.issues[0].start,state.issues[0].end],r:typeof state.range.start};
     state=keep;render();return {err,s};
   });
