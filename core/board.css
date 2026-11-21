@@ -2365,10 +2365,12 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-trk b{display:inline-block;min-width:4.5em;margin-right:8px;color:var(--muted);font-weight:500}
 .ag-ta{width:100%;box-sizing:border-box;min-height:7em;font:inherit;font-size:14px;line-height:1.75;resize:vertical}
 @media (max-width:640px){.ag-meta{grid-template-columns:minmax(0,1fr)}}
-/* 會議決議（定版議程裡逐部門一行，秘書處填；下次議程最前面列「上次決議追蹤」） */
-.ag-dec{margin-top:12px;padding-top:4px;border-top:1px solid var(--hair)}
-.ag-dec .ag-h{margin:10px 0 8px}
-.ag-dec-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px}
-.ag-dec-row span{flex:none;min-width:4.5em;color:var(--muted)}
-.ag-dec-row input{flex:1;min-width:0}
+/* 會議紀錄編輯（meeting.js 的 mnOpen；同一個全螢幕外框 .ag-ov）：每個部門一段，報告事項卡展開後最下面是「這項的結論」；段落尾端臨時項目與整體決議 */
+.mn-f{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.mn-f textarea,.mn-f input,.mn-ex textarea{width:100%;box-sizing:border-box;font:inherit;font-size:14px;color:var(--ink)}
+.mn-ex{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}
+.mn-ex textarea{grid-column:1/-1}
+.mn-dec{margin-top:14px}
+.mn-saved{color:var(--muted)}
+/* 匯出過的議程展開後的「編輯會議紀錄」鈕 */
 .ag-dec-act{display:flex;justify-content:flex-end;margin-top:8px}
