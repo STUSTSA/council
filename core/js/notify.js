@@ -232,7 +232,7 @@ function calHTML(c){
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
     <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
       ${c.pub?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
-    <label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+    ${c===NOTI?"":`<label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>`}
     <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
     <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
@@ -300,7 +300,14 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-calfind]")){calFindToggle(c);return}
   const fp=t.closest("[data-calfp]");if(fp){calFindPick(c,fp.dataset.calfp);return}
 });
-function calQ(c,host){const r=host.querySelector("[data-calres]"),x=host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+function calQ(c,host){const r=host.querySelector("[data-calres]"),x=c===NOTI?$("#calBarX"):host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+/* 通知頁的搜尋列在固定區（shell.js 的 #dSearchCal）、不在卡片裡：輸入、清除、Esc 都在這裡接到 NOTI */
+function calBarSync(){const i=$("#calBarQ"),x=$("#calBarX");if(i&&i.value!==NOTI.q)i.value=NOTI.q;if(x)x.hidden=!NOTI.q}
+(()=>{const i=$("#calBarQ");if(!i)return;
+  i.addEventListener("input",()=>{NOTI.q=i.value;const h=$("#notiPage");if(h)calQ(NOTI,h)});
+  i.addEventListener("keydown",e=>{if(e.key!=="Escape"||!NOTI.q)return;e.preventDefault();e.stopImmediatePropagation();NOTI.q="";i.value="";const h=$("#notiPage");if(h)calQ(NOTI,h)},true);
+  $("#calBarX").addEventListener("click",e=>{e.preventDefault();NOTI.q="";i.value="";const h=$("#notiPage");if(h)calQ(NOTI,h);i.focus({preventScroll:true})});
+})();
 document.addEventListener("input",e=>{const i=e.target.closest&&e.target.closest("[data-calq]");if(!i)return;const host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c)return;c.q=i.value;calQ(c,host)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!e.target.closest||!e.target.closest("[data-calq]"))return;const i=e.target,host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c||!c.q)return;e.preventDefault();e.stopImmediatePropagation();c.q="";i.value="";calQ(c,host)},true);
 /* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
