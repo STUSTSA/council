@@ -398,7 +398,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&AG.open&&!$("#dlg")
 /* ---------- 會議紀錄編輯（2026-11-21）：匯出過的議程 → 全螢幕文件（#mnOv） ----------
    一個部門一段：該部門「要報告」的卡片一張一行，點開是完整卡片（跟會議報告事項同一種），底下一個「這項的結論」欄；段落最下面「整體決議」（會進下次議程的「上次決議追蹤」）
    與「＋ 臨時項目」（會上臨時加的，標題＋結論，可刪）。全部存在那份議程自己裡面（items[].notes／decision／extra），打字停下來就自動存（狀態「已儲存」），關閉時也會存；
-   不改各部門的卡片，也沒有送回部門的動作（送回部門等待合併要新的資料位置與規則，等使用者決定）。畫面插入的文字一律 esc。 */
+   不改各部門的卡片；每個部門有「送到部門等待合併」（proposals.js 的 mpSend，規則見 permissions.md 5.1k）。畫面插入的文字一律 esc。 */
 const MN={id:"",a:null,t:0,dirty:false,busy:false,again:false};
 const mnCut=(v,n)=>String(v||"").slice(0,n);
 const mnData=id=>id===CFG.deptId?state:(MT.depts.get(id)&&MT.depts.get(id).data)||null;
@@ -411,6 +411,7 @@ function mnHTML(open){
         +(evs.length?`<div class="events mt-list">${withState(data,()=>evs.map(e=>mtEvHTML(e,false,open.has(e.id),`<label class="mn-f">這項的結論<textarea data-mnn="${esc(e.id)}" rows="2" maxlength="1000" placeholder="沒有結論就留白">${esc(notes[e.id]||"")}</textarea></label>`)).join(""))}</div>`:`<p class="sub">這個部門現在沒有要報告的卡片。</p>`)
         +extra.map((x,j)=>`<div class="mn-ex" data-mnx="${j}"><input type="text" data-mnxt maxlength="100" value="${esc(x.title)}" placeholder="臨時項目名稱"><button type="button" class="icon" data-mn="xdel" data-k="${k}" data-j="${j}" aria-label="刪除臨時項目">刪除</button><textarea data-mnxn rows="2" maxlength="1000" placeholder="結論">${esc(x.note||"")}</textarea></div>`).join("")
         +`<button type="button" class="ghost add-row" data-mn="xadd" data-k="${k}">+ 臨時項目</button>`
+        +`<div class="mn-send"><button type="button" class="icon" data-mn="send" data-k="${k}"${fsMode()&&deptSourceOf(it.dept)==="firestore"?"":" disabled"}>送到部門等待合併</button><span class="sub">${it.sentAt?`上次送出 ${esc(it.sentAt.slice(5,16))}（${it.sentN||0} 項）`:(fsMode()&&deptSourceOf(it.dept)==="firestore"?"":"這個部門還在舊資料，不能送")}</span></div>`
         +`<label class="mn-f mn-dec">整體決議（下次議程最前面會列出）<input type="text" data-mnd maxlength="300" value="${esc(it.decision||"")}" placeholder="沒有決議就留白"></label></section>`}).join("");
 }
 const mnOpenSet=()=>new Set([...document.querySelectorAll("#mnDoc details[open]")].map(d=>d.dataset.mtev));
@@ -469,6 +470,7 @@ document.addEventListener("click",e=>{
   const b=t.closest("#mnOv [data-mn]");if(!b||!MN.a)return;const it=MN.a.items[+b.dataset.k];if(!it)return;
   if(b.dataset.mn==="xadd"){it.extra=it.extra||[];if(it.extra.length>=20){toast("臨時項目最多 20 個");return}it.extra.push({id:uid("x"),title:"",note:""});mnDraw();const r=$(`#mnOv [data-mnk="${b.dataset.k}"] [data-mnx]:last-of-type [data-mnxt]`);if(r)r.focus();mnLater()}
   else if(b.dataset.mn==="xdel"){it.extra.splice(+b.dataset.j,1);mnDraw();mnLater()}
+  else if(b.dataset.mn==="send"){b.disabled=true;mpSend(it).then(n=>{b.disabled=false;if(n){it.sentAt=nowStr();it.sentN=n;mnDraw();mnLater()}})}
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#mnOv")&&!$("#dlg").open)mnClose()});
 

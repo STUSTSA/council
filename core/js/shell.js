@@ -75,6 +75,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
       </section>
       <div class="layout">
         <div class="sgroup" data-sec="live">
+          <!-- 會議結論（proposals.js）：秘書處送來、還沒處理的提案；沒有提案或不是該部門編輯者就整張不顯示 -->
+          <section class="panel mp-panel" id="mpPanel" aria-labelledby="mpH" hidden>
+            <div class="panel-head"><h2 class="sec-h" id="mpH" data-en="MEETING">會議結論</h2><span class="sub" id="mpCnt"></span></div>
+            <div id="mpList"></div>
+          </section>
           <section class="panel" id="livePanel" aria-labelledby="evH">
             <div class="panel-head"><h2 class="sec-h" id="evH" data-en="LIVE">即時回報</h2></div>
             <div class="md" id="liveMD"><div class="ev-list" id="events" data-flip></div><div class="lc-pane" id="evDetail" hidden></div></div>
