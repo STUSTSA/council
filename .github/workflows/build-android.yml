@@ -10,7 +10,7 @@ on:
       - ".github/workflows/build-android.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   apk:
@@ -32,3 +32,11 @@ jobs:
           name: council-apk
           path: tools/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+      # 另外放到 Release，手機點連結就能直接下載 .apk（不用登入、不用解壓縮 zip）
+      - name: Publish APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp tools/android/app/build/outputs/apk/release/app-release.apk council.apk
+          gh release delete apk-latest --cleanup-tag --yes || true
+          gh release create apk-latest council.apk --title "安卓 APK（最新）" --notes "自用安卓外殼，每次建置會覆蓋。" --target "$GITHUB_SHA"
