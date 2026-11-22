@@ -1,6 +1,6 @@
 # 安卓外殼（自用 APK）
 
-用 Trusted Web Activity 把 https://stustsa.github.io/council/home.html 包成 App，走 Chrome，Google 登入可用。
+用 Chrome 自訂分頁（Custom Tab）把 https://stustsa.github.io/council/home.html 包成 App，Google 登入可用。（原本用 TWA 啟動器，裝機後閃退，改成自己的 MainActivity。）
 不放進網站、網頁不載入；只由 `.github/workflows/build-android.yml` 在 GitHub 上建置。
 
 - 取得 APK：https://github.com/STUSTSA/council/releases/tag/apk-latest 直接點 council.apk 下載（每次建置覆蓋）；也可到 Actions 該次執行下載 council-apk。
