@@ -1,6 +1,6 @@
 /* ui9logo：深色模式的部門標誌（docs/DESIGN-next.md 第二節：標誌的藍 #0a5baa、黃 #f0bc23 不跟主題變；深色時藍改成白 #fff、黃不變；
    原本就是白色的零件（秘書處 .dg-w）跟著所在底板的底色。DievE 11/16 定、11/19 確認）。github 模式，固定 8300 埠。
-   1. 九組主題 × 淺色／深色：主頁桌面 1300 的色塊、手機 412 的卡片堆、部門標題列（秘書處，有白色零件）：
+   1. 十三組主題 × 淺色／深色：主頁桌面 1300 的色塊、手機 412 的卡片堆、部門標題列（秘書處，有白色零件）：
       深色時標誌裡沒有任何零件是 #0a5baa、藍零件（.dg-b）是白、黃零件是 #f0bc23；淺色時藍零件是 #0a5baa；白色零件＝所在底板的底色
    2. 進部門的過場（米黃、柔光，淺深各一）：桌面鋪滿時跟著飛的標誌（.hm-fxl）、手機翻面的部門底板（.hm-fb）、看板開頁的底板（.pfx-cover）同一條規則
    3. 標題列的標誌放進頁面（不是 <img>），沒有 pageerror
@@ -8,7 +8,7 @@
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
 let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)passes++;else fails++};
-const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun'];
+const PALS=['fin','b3','ink','sage','mist','fire','pastel','neu','sun','sakura','forest','ocean','wisteria'];
 const BLUE='rgb(10, 91, 170)',YEL='rgb(240, 188, 35)',WHITE='rgb(255, 255, 255)';
 /* 頁面裡：掃一個容器內所有標誌零件的填色；plate＝白色零件應該跟著的底板 */
 const SCAN=([sel,plateSel])=>{const out=[];document.querySelectorAll(sel).forEach(h=>{const s=h.matches('svg')?h:h.querySelector('svg');if(!s)return;
@@ -30,7 +30,7 @@ const judge=(list,dark,tag)=>{if(!list.length)return ok(false,`${tag}：找不�
     await ctx.addInitScript(([pal,mode])=>{try{localStorage.setItem('stustsa-ui',JSON.stringify({pal,mode,sound:false}))}catch(_){}},[pal,mode]);
     const p=await ctx.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));p.ctx=ctx;return p};
   const errs=[];
-  /* ---------- 1. 九組主題 × 淺深 ---------- */
+  /* ---------- 1. 十三組主題 × 淺深 ---------- */
   for(const pal of PALS)for(const mode of ['light','dark']){const dark=mode==='dark',T=`${pal} ${mode}`;
     {const p=await mk(1300,860,pal,mode);await p.goto(U+'home.html');await p.waitForFunction(()=>document.querySelectorAll('.hm-tile .hm-lg svg').length>=9,null,{timeout:8000}).catch(()=>{});
       judge(await p.evaluate(SCAN,['.hm-tile .hm-lg','.hm-tile']),dark,`${T} 桌面色塊`);errs.push(...p.errs);await p.ctx.close()}

@@ -46,26 +46,26 @@ const mkDept=(name,times)=>({schemaVersion:13,title:name,issues:[],weeks:[],labe
   ok(JSON.stringify(u.d2)==='[[540,630]]'&&u.d4.length===0&&u.none.length===0,`跨天算那幾天整段、只有日期的不算（${JSON.stringify(u)}）`);
   /* 4 搜尋 */
   await p.click('.cal-fb');await p.waitForTimeout(500);
-  await p.evaluate(()=>{window.__q=document.querySelector('[data-calq]')});
-  await p.fill('[data-calq]','會議');await p.waitForTimeout(300);
-  const s1=await p.evaluate(()=>({same:document.querySelector('[data-calq]')===window.__q,items:[...document.querySelectorAll('.cal-res .dr-item')].map(x=>x.textContent),mark:[...document.querySelectorAll('.cal-res mark')].map(x=>x.textContent).join(),x:!$('[data-calqx]').hidden}));
+  await p.evaluate(()=>{window.__q=document.querySelector('#calBarQ')});
+  await p.fill('#calBarQ','會議');await p.waitForTimeout(300);
+  const s1=await p.evaluate(()=>({same:document.querySelector('#calBarQ')===window.__q,items:[...document.querySelectorAll('.cal-res .dr-item')].map(x=>x.textContent),mark:[...document.querySelectorAll('.cal-res mark')].map(x=>x.textContent).join(),x:!$('#calBarX').hidden}));
   ok(s1.same&&s1.items.length===1&&/本部門會議/.test(s1.items[0])&&/10:00/.test(s1.items[0])&&s1.mark==='會議'&&s1.x,`搜尋「會議」：輸入框沒重畫、一筆含部門日期時刻、命中反白（${s1.items}）`);
-  await p.fill('[data-calq]','會長');await p.waitForTimeout(300);
+  await p.fill('#calBarQ','會長');await p.waitForTimeout(300);
   ok(await p.evaluate(()=>[...document.querySelectorAll('.cal-res .dr-item')].some(x=>/會長例會/.test(x.textContent))),'已載入的會長室也搜得到');
   await p.click('.cal-res .dr-item');await p.waitForTimeout(900);
   ok(await p.evaluate(t=>NOTI.mode==='pres'&&NOTI.day===t&&/會長例會/.test($('.cal-list').textContent),T),'點結果：跳到那天、模式換成會長室、清單看得到那件事');
-  await p.fill('[data-calq]','zzzz不存在');await p.waitForTimeout(300);
+  await p.fill('#calBarQ','zzzz不存在');await p.waitForTimeout(300);
   ok(await p.evaluate(()=>/沒有符合/.test($('.cal-res').textContent)),'沒有結果有說明');
-  await p.fill('[data-calq]','<img');await p.waitForTimeout(300);
+  await p.fill('#calBarQ','<img');await p.waitForTimeout(300);
   ok(await p.evaluate(()=>document.querySelectorAll('.cal-res img').length===0&&!window.__xss&&[...document.querySelectorAll('.cal-res .dr-item')].length===1),'標題含 HTML：結果裡是文字、沒有執行');
-  await p.press('[data-calq]','Escape');await p.waitForTimeout(200);
+  await p.press('#calBarQ','Escape');await p.waitForTimeout(200);
   ok(await p.evaluate(()=>NOTI.q===''&&!$('.cal-res').children.length&&notiOpen),'Esc 清掉搜尋、通知頁不關');
   const errs=p.errs.filter(e=>!/404/.test(e));ok(errs.length===0,'沒有錯誤（模擬讀不到的 404 不算）：'+errs.join('|'));
   /* 5 手機 */
   const m=await mk(412,860,'dark',true);await login(m);await dismiss(m);
   await m.route(/data-president\.json/,r=>r.fulfill({status:200,contentType:'application/json',body:JSON.stringify(mkDept('會長室',[{label:'會長例會',start:T+'T11:00',end:T+'T13:00'}]))}));
   await m.click('#notiBtn');await m.waitForTimeout(900);await m.evaluate(()=>$('#notiPage .cal').scrollIntoView());
-  await m.click('.cal-fb');await m.waitForTimeout(900);await m.fill('[data-calq]','會');await m.waitForTimeout(300);
+  await m.click('.cal-fb');await m.waitForTimeout(900);await m.fill('#calBarQ','會');await m.waitForTimeout(300);
   ok(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'412 寬沒有橫捲');
   await m.screenshot({path:'ov1_mob.png'});
   await b.close();console.log(`${passes} 項通過，${fails} 項失敗`);process.exit(fails?1:0);

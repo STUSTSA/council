@@ -1,5 +1,5 @@
-/* 會長預約（同學申請，2026-11-21，06 第二個 PR）：Auth＋Firestore 模擬器、正式規則；會長室看板切成 firestore。
-   1. 沒有部門角色的登入者看不到卡；有部門角色的同學看到「可預約時段」（還有幾格），沒有管理按鈕
+/* 會長預約（同學申請，2026-11-21，06 第二個 PR；11/21 起畫面在各部門「通知」頁的行事曆「會長室」模式）：Auth＋Firestore 模擬器、正式規則；各部門看板切成 firestore。
+   1. 沒有部門角色的登入者在會長室頁只看到指路、沒有按鈕；有部門角色的同學在自己部門的行事曆「會長室」模式看到可預約時段（還有幾格），沒有管理按鈕
    2. 預約表單：沒填事由／超出時段＝對話框提示、沒有寫入
    3. 送出（15:00 起 1 小時）：bookings pending、rev 1、兩格時段鎖、額度 1、稽核 request；畫面「我的預約」出現、剩 6 格
    4. 兩個同學搶重疊的時段：第二個得到「已經被預約」，沒有重複的預約或鎖；別人取消不了、讀不到我的預約
@@ -75,9 +75,14 @@ const XSS='<img src=x onerror="window.__xss=1">';
   });
 
   const bkOpen=async p=>{await ext(p);await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined),10000);await p.waitForTimeout(400)};
-  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden);
+  const vis=p=>p.evaluate(()=>!$('#bkPanel').hidden&&!!$('#bkPanel [data-bk]'));   /* 卡片人人看得到（2026-11-21）；vis＝卡裡有可以按的預約／管理按鈕 */
+  const say=p=>p.evaluate(()=>$('#bkPanel').hidden?'':$('#bkBody').textContent);
+  /* 同學的畫面：打開通知頁、行事曆切到「會長室」、跳到時段那一天 */
+  const calOpen=async p=>{await p.evaluate(()=>{if(!notiOpen)NOTI.mode='pres'});await p.evaluate(()=>{if(!notiOpen)openNoti()});await p.waitForFunction(()=>notiOpen,null,{timeout:8000});
+    await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined));await p.evaluate(d=>calJump(NOTI,d),day);await p.waitForTimeout(600)};
+  const calSay=p=>p.evaluate(()=>$('#notiPage .cal').textContent);
   const reload=async p=>{await p.evaluate(()=>{BK.key='';render()});await until(()=>p.evaluate(()=>!BK.loading&&BK.cal!==undefined),10000);await p.waitForTimeout(300)};
-  const fillReq=async(p,s,n,topic)=>{await p.click('#bkPanel [data-bk=req]');await p.waitForSelector('#dlgForm [name=s]',{state:'attached'});
+  const fillReq=async(p,s,n,topic)=>{await p.click('#notiPage [data-bk=req]');await p.waitForSelector('#dlgForm [name=s]',{state:'attached'});
     await p.evaluate(([s,n,t])=>{const f=document.querySelector('#dlgForm');f.querySelector('[name=s]').value=s;f.querySelector('[name=n]').value=n;f.querySelector('[name=topic]').value=t},[String(base+s),String(n),topic]);
     await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(400)};
   const bks=async()=>{let v=[];await admin(async d=>{v=(await d.collection('bookings').get()).docs.map(s=>({id:s.id,...s.data()}))});return v};
@@ -86,17 +91,23 @@ const XSS='<img src=x onerror="window.__xss=1">';
 
   /* ---------- 1. 可見性 ---------- */
   const nb=await open('president','nobody');await setRole(await uidOf(nb),{});
-  const s1=await open('president','stu1');const s1U=await uidOf(s1);await setRole(s1U,{rights:'editor'});
-  const s2=await open('president','stu2');const s2U=await uidOf(s2);await setRole(s2U,{rights:'editor'});
+  const s1=await open('rights','stu1');const s1U=await uidOf(s1);await setRole(s1U,{rights:'editor'});
+  const s2=await open('rights','stu2');const s2U=await uidOf(s2);await setRole(s2U,{rights:'editor'});
   const mg=await open('president','mgr');const mgU=await uidOf(mg);await setRole(mgU,{president:'admin'});
   await admin(async d=>{
     await d.doc(`calendars/${O}`).set({name:'會長室',managers:[mgU],gridMin:30,maxSlots:4,horizonDays:60,maxPendingPerUser:3,rev:1,updatedAt:TS.now(),updatedBy:'su'});
     await d.doc('openWindows/w1').set({ownerId:O,start:TS.fromMillis(base*SLOT),end:TS.fromMillis((base+8)*SLOT),updatedAt:TS.now(),updatedBy:'su'});
   });
   await until(()=>hasDept(s1));await until(()=>hasDept(s2));
-  for(const p of [nb,s1,s2,mg]){await reload(p);await ext(p)}
-  ok(!(await vis(nb)),'沒有部門角色的登入者：看不到卡');
-  ok(await s1.evaluate(()=>!$('#bkPanel').hidden&&/還有 8 格/.test($('#bkBody').textContent)&&!$('#bkPanel [data-bk=wadd]')&&!$('#bkPanel [data-bk=ok]')),'同學：看到可預約時段（還有 8 格），沒有管理按鈕');
+  for(const p of [nb,mg]){await reload(p);await ext(p)}
+  ok(!(await vis(nb))&&/到你的部門看板/.test(await say(nb)),'沒有部門角色的登入者：會長室頁沒有按鈕，只有一行指路');
+  for(const p of [s1,s2])await calOpen(p);
+  ok(await s1.evaluate(()=>!$('#bkPanel')||$('#bkPanel').hidden||!$('#bkPanel [data-bk]')),'同學：各部門看板沒有預約卡的按鈕，預約在行事曆');
+  ok(await s1.evaluate(()=>/還有 8 格/.test($('#notiPage .cal-list').textContent)&&!!$('#notiPage .cal-ev.bk [data-bk=req]')&&!$('#notiPage [data-bk=wadd]')&&!$('#notiPage [data-bk=ok]')&&!!$('#notiPage .pc-d.has')),'同學：行事曆會長室模式看到可預約時段（還有 8 格）、月曆有標記，沒有管理按鈕');
+  ok(await s1.evaluate(()=>/下一個可預約時段/.test($('#notiPage .cal-bk').textContent)&&/最多 3 筆待審/.test($('#notiPage .cal-bk').textContent)),'月曆下面一小塊：下一個可預約時段與規則提醒');
+  await s1.evaluate(()=>{NOTI.mode='mine';calPaint(NOTI)});await s1.waitForTimeout(800);   /* 舊清單的淡出分身要等它走完 */
+  ok(await s1.evaluate(()=>!document.querySelector('#notiPage [data-bk]')&&!document.querySelector('#notiPage .cal-bk')),'切到「本部門」模式：預約的東西不出現');
+  await s1.evaluate(()=>{NOTI.mode='pres';calPaint(NOTI)});
 
   /* ---------- 2. 表單檢查 ---------- */
   await fillReq(s1,0,2,'');
@@ -111,12 +122,12 @@ const XSS='<img src=x onerror="window.__xss=1">';
   await until(()=>s1.evaluate(()=>!BK.busy&&BK.mine.length===1));
   const bk=await bks(),q1=await read(`bookingQuota/${O}_${s1U}`),a1=await read(`auditLogs/bookings_${bk[0]&&bk[0].id}_1`);
   ok(bk.length===1&&bk[0].status==='pending'&&bk[0].rev===1&&bk[0].requester===s1U&&bk[0].startSlot===base+2&&bk[0].slotCount===2&&(await slotsN())===2&&q1.pending===1&&a1&&a1.action==='request','送出：pending、rev 1、兩格鎖、額度 1、稽核 request');
-  ok(await s1.evaluate(()=>/等會長確認/.test($('#bkBody').textContent)&&/還有 6 格/.test($('#bkBody').textContent)&&window.__xss!==1&&!document.querySelector('#bkBody img')),'畫面：我的預約出現、剩 6 格、事由帶 HTML 照字面顯示');
+  ok(await s1.evaluate(()=>/等會長確認/.test($('#notiPage .cal-list').textContent)&&/還有 6 格/.test($('#notiPage .cal-list').textContent)&&window.__xss!==1&&!document.querySelector('#notiPage img')),'畫面：我的預約出現、剩 6 格、事由帶 HTML 照字面顯示');
   await reload(mg);await until(()=>mg.evaluate(()=>BK.pend.length===1));
   ok(await mg.evaluate(()=>window.__xss!==1&&!document.querySelector('#bkBody img')&&/預算 <img/.test($('#bkBody').textContent)),'會長室管理員的畫面：也照字面顯示');
 
   /* ---------- 4. 兩個同學搶同一時段 ---------- */
-  await reload(s2);
+  await reload(s2);await calOpen(s2);
   await s2.evaluate(()=>{BK.taken=new Set()});   /* 模擬 s2 在 s1 送出之前讀的畫面（沒有被鎖的格） */
   await fillReq(s2,3,2,'我也想約');   /* 15:30 起：和 s1 的 15:00–16:00 重疊 */
   await until(()=>s2.evaluate(()=>!BK.busy));
@@ -135,19 +146,19 @@ const XSS='<img src=x onerror="window.__xss=1">';
   ok(out==='permission-denied','不在開放時段內的申請（繞過畫面）：被規則拒絕');
 
   /* ---------- 6. 取消 ---------- */
-  await s1.click(`#bkPanel [data-bk=cancel][data-id="${bk[0].id}"]`);await s1.waitForSelector('#dlgForm [data-act=delete]');await s1.click('#dlgForm [data-act=delete]');
+  await s1.click(`#notiPage [data-bk=cancel][data-id="${bk[0].id}"]`);await s1.waitForSelector('#dlgForm [data-act=delete]');await s1.click('#dlgForm [data-act=delete]');
   await until(()=>s1.evaluate(()=>!BK.busy&&BK.mine.length===2));
   const c1=await read(`bookings/${bk[0].id}`),a2=await read(`auditLogs/bookings_${bk[0].id}_2`);let left=-1;await admin(async d=>{left=(await d.collection('slots').where('ref','==',bk[0].id).get()).size});
   ok(c1.status==='cancelled'&&c1.rev===2&&left===0&&(await read(`bookingQuota/${O}_${s1U}`)).pending===2&&a2&&a2.action==='cancelled','取消：cancelled、鎖全部刪掉、額度減 1、稽核');
-  await reload(s2);await fillReq(s2,3,2,'取消後我來約');await until(()=>s2.evaluate(()=>!BK.busy&&BK.mine.length===1));
+  await reload(s2);await calOpen(s2);await fillReq(s2,3,2,'取消後我來約');await until(()=>s2.evaluate(()=>!BK.busy&&BK.mine.length===1));
   ok((await bks()).filter(b=>b.requester===s2U&&b.status==='pending').length===1,'取消後別人立刻可以約同一時段');
 
-  if(process.env.SHOTS){await reload(s2);
-    for(const [n,w,h,cs] of [['req_mob',390,844,'light'],['req_dark',390,844,'dark']]){
-      await s2.setViewportSize({width:w,height:h});await s2.emulateMedia({colorScheme:cs});await s2.waitForTimeout(500);
-      await s2.evaluate(()=>document.getElementById('bkPanel').scrollIntoView());await s2.waitForTimeout(300);
-      await s2.locator('#bkPanel').screenshot({path:path.join(process.env.SHOTS,`bk_${n}.png`)})}
-    await s2.setViewportSize({width:390,height:844});await s2.click('#bkPanel [data-bk=req]');await s2.waitForTimeout(600);
+  if(process.env.SHOTS){await reload(s2);await calOpen(s2);
+    for(const [n,w,h,cs] of [['cal_mob',390,844,'light'],['cal_dark',390,844,'dark'],['cal_desk',1366,900,'light']]){
+      await s2.setViewportSize({width:w,height:h});await s2.emulateMedia({colorScheme:cs});await s2.waitForTimeout(600);
+      await s2.evaluate(()=>document.querySelector('#notiPage .cal').scrollIntoView());await s2.waitForTimeout(300);
+      await s2.screenshot({path:path.join(process.env.SHOTS,`bk_${n}.png`),fullPage:false})}
+    await s2.setViewportSize({width:390,height:844});await s2.click('#notiPage [data-bk=req]');await s2.waitForTimeout(600);
     await s2.screenshot({path:path.join(process.env.SHOTS,'bk_req_form.png')})}
   ok([nb,s1,s2,mg].every(p=>!p.errs.length),'沒有頁面錯誤：'+[nb,s1,s2,mg].flatMap(p=>p.errs).join('|'));
   for(const p of pages)await p.context().close().catch(()=>{});

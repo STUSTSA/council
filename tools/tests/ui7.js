@@ -3,7 +3,7 @@
    1. 桌面 1300：只有左上標誌、時間、設定、色塊、下排（沒有工具列、通知）；九張色塊（英文小標、名稱、標誌）；焦點框只用 transform 滑到焦點那張；方向鍵、滾輪、點擊換焦點；到兩端頂一下
    2. 部門標誌：九個 dept/icons/dept-代號.svg 都載得到，色塊裡放的是同一份 SVG（零件 dg- class）；部門標題列用自己的標誌
    3. 手機 412：卡片堆露出 196／60、焦點卡與下一張留 10、退後的縮 5%（量 transform）；手指往上滑 140px 換下一張；點露出的那一條叫到焦點；點焦點卡進入
-   4. 下排置中、全會行事曆圓鈕、帶陰影（ui-08 起有個人常用連結與「+」，在 ui8home.js 測）；打開公共版行事曆（全部／活動／會議，沒有今日／明日、逾期），Esc、返回鍵、關閉鈕關；反覆開關 resize 監聽不累積；設定鈕打開外觀
+   4. 下排置中、全會行事曆圓鈕＋預約會長鈕（兩顆）、帶陰影（ui-08 起有個人常用連結與「+」，在 ui8home.js 測）；打開公共版行事曆（全部／活動／會議，沒有今日／明日、逾期），Esc、返回鍵、關閉鈕關；反覆開關 resize 監聽不累積；設定鈕打開外觀
    5. 開場：小人先滑入、標誌再上移、字由左到右揭開（各動畫的延遲順序），播完收掉（現有流程沒有開場登入鈕）；關掉動態直接是結果
    6. 進部門過場（桌面鋪滿、手機翻面）與看板到達的底板：Element.animate 的 keyframes 只有 transform／opacity；交接 pfx-burst 用完就刪；回主頁焦點是那個部門
    7. 進行中的張數（資料檔讀一次）；跳脫（部門名含 <img onerror>）；頁面沒有 title 屬性；412 沒有橫捲；深色左邊小人只留線稿
@@ -63,9 +63,9 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(!p.errs.length,'桌面沒有錯誤 '+p.errs.join(' | '));
     /* 下排與全會行事曆 */
     /* ui-08：下排＝跟畫面一樣寬的一條（#hmDock）裡置中的膠囊（#hmDk），底色與陰影在膠囊左右兩半的底板（.hm-dk-bg）上；個人常用連結的「+」與連結在 ui8home.js 測 */
-    const dk=await p.evaluate(()=>{const d=document.getElementById('hmDk'),r=d.getBoundingClientRect();return {c:r.left+r.width/2,btn:d.querySelectorAll('button:not(.hm-lkadd),a').length,pub:!!d.querySelector('.hm-pub[aria-label="全會行事曆"]'),sh:getComputedStyle(d.querySelector('.hm-dk-bg>span')).boxShadow,
+    const dk=await p.evaluate(()=>{const d=document.getElementById('hmDk'),r=d.getBoundingClientRect();return {c:r.left+r.width/2,btn:d.querySelectorAll('button:not(.hm-lkadd),a').length,pub:!!d.querySelector('.hm-pub[aria-label="全會行事曆"]'),bk:!!d.querySelector('.hm-bk[aria-label="跟會長預約"]'),dy:(()=>{const a=d.querySelector('.hm-pub').getBoundingClientRect(),b=d.querySelector('.hm-bk').getBoundingClientRect();return Math.abs((a.top+a.height/2)-(b.top+b.height/2))})(),sh:getComputedStyle(d.querySelector('.hm-dk-bg>span')).boxShadow,
       bg:getComputedStyle(d.querySelector('.hm-pub')).backgroundColor,pri:getComputedStyle(document.documentElement).getPropertyValue('--pri').trim()}});
-    ok(Math.abs(dk.c-650)<2&&dk.btn===1&&dk.pub&&dk.sh!=='none',`下排置中、全會行事曆圓鈕（主要動作色）、帶陰影（${dk.c} ${dk.btn}；個人常用連結與「+」在 ui8home.js）`);
+    ok(Math.abs(dk.c-650)<2&&dk.btn===2&&dk.pub&&dk.bk&&dk.dy<1&&dk.sh!=='none',`下排置中、兩顆鈕＝全會行事曆圓鈕（主要動作色）＋預約會長（2026-11-21 新增，兩顆垂直中心差 ${dk.dy.toFixed(2)}px）、帶陰影（${dk.c} ${dk.btn}；個人常用連結與「+」在 ui8home.js）`);
     const hl=await p.evaluate(()=>history.length);
     await p.click('#hmPub');await p.waitForTimeout(700);
     const cal=await p.evaluate(()=>{const l=document.getElementById('hmCal');return {vis:!!l&&!l.hidden,pub:!!l.querySelector('.cal.pub'),modes:[...l.querySelectorAll('.cal-seg [data-k]')].map(x=>x.textContent).join(),
@@ -83,7 +83,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     const rs2=await p.evaluate(()=>window.__rs);
     ok(rs2===rs1,`反覆開關行事曆 resize 監聽不累積（${rs1} → ${rs2}）`);
     await p.click('#hmSet');await p.waitForTimeout(600);
-    ok(await p.evaluate(()=>{const l=document.getElementById('hmLook');return !!l&&!l.hidden&&l.querySelectorAll('[data-look-pal]').length===9&&!!l.querySelector('.look-mode')}),'設定鈕打開外觀（九組主題、深淺色）');
+    ok(await p.evaluate(()=>{const l=document.getElementById('hmLook');return !!l&&!l.hidden&&l.querySelectorAll('[data-look-pal]').length===13&&!!l.querySelector('.look-mode')}),'設定鈕打開外觀（九組主題、深淺色）');
     await p.keyboard.press('Escape');await p.waitForTimeout(400);
     /* 進部門（桌面）：焦點那張鋪滿 */
     await p.evaluate(()=>{window.__kp=new Set()});
@@ -238,11 +238,11 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
     await ctx.close()}
 
-  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v58（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v80（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
-    ok(sw.CACHE==='board-cache-v58'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v58（今日／明日卡片改成一項＋件數要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
+    ok(sw.CACHE==='board-cache-v80'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v65（今日／明日卡片改成一項＋件數要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
     const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
     ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
     const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];

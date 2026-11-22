@@ -75,20 +75,20 @@ const XSS='<img src=x onerror="window.__xss=1">';
   const aid='agt1';
   await pe.evaluate(async([T,aid])=>{const a={id:aid,date:T,title:'行政會議',by:'x',at:T+' 10:00',items:[{dept:'rights',deptName:'權益部',weekDate:T,text:'三、學權部'},{dept:'works',deptName:'工務部',weekDate:T,text:'x'}]};
     await (await storeWriteGet()).saveAgenda(CFG.firebase,T,a);state.agendas=[a];render()},[T,aid]);
-  await pe.evaluate(()=>{AG.key='';render()});await ext(pe);
+  await pe.evaluate(()=>{AG.doc=null;render()});await ext(pe);
   await pe.evaluate(()=>mtLoadAll(true));await until(()=>pe.evaluate(()=>!MT.loading&&MT.depts.get('rights')&&MT.depts.get('rights').data),10000);
-  await pe.evaluate(id=>mnOpen(id),aid);await pe.waitForSelector('#mnOv [data-mnk]');await pe.waitForTimeout(800);
-  const evSel='#mnOv [data-mnk="0"]';
-  {ok(await pe.evaluate(s=>!!document.querySelector(s+' [data-mtev=ec1]'),evSel),'會議紀錄裡有權益部的報告卡片')}
-  await pe.click(evSel+' [data-mtev=ec1] summary');await pe.fill(evSel+' [data-mnn=ec1]','結論：照原案 '+XSS);
-  await pe.click(evSel+' [data-mn=xadd]');await pe.fill(evSel+' [data-mnxt]','臨時動議 A');await pe.fill(evSel+' [data-mnxn]','下週討論');
-  ok(await pe.evaluate(s=>document.querySelector(s+' [data-mn=send]').disabled===false,evSel),'權益部（新資料庫）：「送到部門等待合併」可按');
-  await pe.click(evSel+' [data-mn=send]');await until(async()=>(await list('mergeProposals')).length===2,10000);
+  await pe.waitForSelector('#agDoc [data-md=rights]');await pe.waitForTimeout(800);
+  const evSel='#agDoc [data-md=rights]',E=async(sel,txt)=>{await pe.click(sel);await pe.fill(sel+' input,'+sel+' textarea',txt);await pe.keyboard.press('Control+Enter');await pe.waitForTimeout(300)};
+  {ok(await pe.evaluate(s=>!!document.querySelector(s+' [data-mtev=ec1]'),evSel),'行政會議文件裡有權益部的報告卡片')}
+  await pe.click(evSel+' [data-mtev=ec1] summary');await pe.waitForTimeout(300);await E(evSel+' [data-ed=note][data-ev=ec1]','結論：照原案 '+XSS);
+  await pe.click(evSel+' [data-md-xadd]');await pe.waitForTimeout(300);await pe.keyboard.press('Enter');await E(evSel+' [data-ed=xt]','臨時動議 A');await E(evSel+' [data-ed=xn]','下週討論');
+  ok(await pe.evaluate(s=>document.querySelector(s+' [data-md-send]').disabled===false,evSel),'權益部（新資料庫）：「送到部門等待合併」可按');
+  await pe.click(evSel+' [data-md-send]');await until(async()=>(await list('mergeProposals')).length===2,10000);
   let ps=await list('mergeProposals');const pn=ps.find(p=>p.kind==='note'),pw=ps.find(p=>p.kind==='new');
   ok(pn&&pn.cardId===card.id&&pn.deptId==='rights'&&pn.status==='pending'&&pn.note.startsWith('結論：照原案')&&pn.meetingDate===T,'note 提案：附在那張卡片、待合併、帶會議日期');
   ok(pw&&pw.cardId===null&&pw.title==='臨時動議 A'&&pw.note==='下週討論','new 提案：臨時項目、沒有 cardId');
   /* 重送：改結論 → 更新、不新增 */
-  await pe.fill(evSel+' [data-mnn=ec1]','結論：改成延後');await pe.click(evSel+' [data-mn=send]');
+  await E(evSel+' [data-ed=note][data-ev=ec1]','結論：改成延後');await pe.click(evSel+' [data-md-send]');
   await until(async()=>(await list('mergeProposals')).find(p=>p.kind==='note').note==='結論：改成延後',10000);
   ok((await list('mergeProposals')).length===2,'重送：更新那一則，沒有多出新的');
   /* 部門端 */
@@ -109,12 +109,12 @@ const XSS='<img src=x onerror="window.__xss=1">';
   await until(async()=>(await list('mergeProposals')).every(p=>p.status==='merged'),10000);
   ok(await ped.evaluate(()=>$('#mpPanel').hidden),'都處理完：這張卡片收起來');
   /* 略過 */
-  await pe.fill(evSel+' [data-mnn=ec1]','再一個結論');await pe.click(evSel+' [data-mn=send]');
+  await E(evSel+' [data-ed=note][data-ev=ec1]','再一個結論');await pe.click(evSel+' [data-md-send]');
   await until(async()=>(await list('mergeProposals')).find(p=>p.kind==='note').status==='merged'&&true,3000);
   const cnt=(await list('mergeProposals')).length;
   ok(cnt===2,'部門已處理過的不會被重送蓋掉（仍 2 筆、仍是已合併）');
-  await pe.click(evSel+' [data-mn=xadd]');await pe.fill(evSel+' [data-mnx="1"] [data-mnxt]','臨時動議 B');await pe.fill(evSel+' [data-mnx="1"] [data-mnxn]','b');
-  await pe.click(evSel+' [data-mn=send]');await until(async()=>(await list('mergeProposals')).length===3,10000);
+  await pe.click(evSel+' [data-md-xadd]');await pe.waitForTimeout(300);await pe.keyboard.press('Enter');await E(evSel+' [data-ed=xt][data-j="1"]','臨時動議 B');await E(evSel+' [data-ed=xn][data-j="1"]','b');
+  await pe.click(evSel+' [data-md-send]');await until(async()=>(await list('mergeProposals')).length===3,10000);
   await ped.reload();await ped.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});
   await until(()=>ped.evaluate(()=>!$('#mpPanel').hidden),10000);
   await ped.click('#mpPanel [data-mp=skip]');await until(async()=>(await list('mergeProposals')).some(p=>p.status==='dismissed'),10000);
@@ -126,7 +126,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
   const dn=await pv.evaluate(async()=>{try{const B=await mpMod();await B.pending(CFG.firebase,'rights');return 'ok'}catch(e){return e.code||e.message}});
   ok(dn==='permission-denied','一般登入者直接讀提案：被規則拒絕');
   ok(![ped,pe,pv,po].some(p=>p.errs.length),'沒有頁面錯誤：'+[ped,pe,pv,po].flatMap(p=>p.errs).join('|'));
-  if(process.env.SHOTS){await pe.setViewportSize({width:390,height:844});await pe.waitForTimeout(400);await pe.locator('#mnOv').screenshot({path:path.join(process.env.SHOTS,'mn_send.png')});
+  if(process.env.SHOTS){await pe.setViewportSize({width:390,height:844});await pe.waitForTimeout(400);await pe.locator('#agDoc').screenshot({path:path.join(process.env.SHOTS,'mn_send.png')});
 }
   for(const p of pages)await p.context().close().catch(()=>{});
   await b.close();await t.cleanup();srv.close();

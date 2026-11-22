@@ -154,8 +154,8 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const iid=await ed.evaluate(()=>(state.issues.find(i=>i.title==='FW 新議題')||{}).id);
   const is=iid&&await read(`issues/${DEPT}__${iid}`);ok(is&&is.rev===1&&is.updatedBy===edUid,'新增議題：issues 文件（rev 1）');
   /* g. 新增週報 */
-  await openSet(ed);await ed.click('[data-set="report"]');await ed.waitForTimeout(800);await ed.click('[data-hub="week"]');await ed.waitForTimeout(900);
-  await ed.click('#addWeek');await dlg(ed);await dlgSet(ed,{text:'FW 週報內容'});await dlgAct(ed,'ok');await settled(ed);await closeSet(ed);
+  await ed.evaluate(()=>{setSection('done',{instant:true});doneWeekShow(wkStart(today()),{instant:true})});await ed.waitForTimeout(700);   /* 每週報告在完成紀錄的週頁最上方 */
+  await ed.click('[data-addweek]');await dlg(ed);await dlgSet(ed,{text:'FW 週報內容'});await dlgAct(ed,'ok');await settled(ed);
   const wid=await ed.evaluate(()=>(state.weeks.find(w=>w.text==='FW 週報內容')||{}).id);
   const wk=wid&&await read(`weeks/${DEPT}__${wid}`);ok(wk&&wk.createdAt&&wk.updatedBy===edUid,'新增週報：weeks 文件');
   ok((await read(`deptSettings/${DEPT}`)).rev===1,'新增週報：編輯者不寫部門設定（週報基準）');

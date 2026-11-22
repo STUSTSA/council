@@ -114,7 +114,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(q3&&q3.role==='admin'&&q3.rank==='minister','部長申請：role＝admin、rank＝minister');
 
   /* 2. 部長在成員頁審核 */
-  const members=async p=>{await openSet(p);await p.click('#setOv [data-set="members"]');await p.waitForTimeout(1200)};
+  const members=async p=>{await hub(p);await p.click('#setOv [data-hub="members"]');await p.waitForTimeout(1200)};
   await members(P.adm);
   let txt=await paneText(P.adm);
   ok(txt.includes('待審的申請（3）')&&txt.includes('g1 同學・部員')&&txt.includes('g2 同學・次長'),`部長：成員頁看到待審申請（${txt.replace(/\n/g,' / ')}）`);

@@ -1,6 +1,6 @@
 /* 核心｜會議結論的待合併提案（2026-11-21；規則與資料：docs/architecture/permissions.md 第 5.1k 節，資料讀寫在 proposals-fs.js）
    兩端：
-   - 秘書處：會議紀錄編輯（meeting.js 的 #mnOv）每個部門有「送到部門等待合併」＝把那個部門的卡片結論與臨時項目送成提案（mpSend）。
+   - 秘書處：行政會議文件（meeting.js 的 #agDoc）每個部門段落有「送到部門等待合併」＝把那個部門的卡片結論與臨時項目送成提案（mpSend）。
      只能送給已搬到新資料庫的部門；同一個結論重送＝更新還沒處理的、部門已處理的不再動。秘書處不會動到對方的卡片。
    - 部門：即時回報頁最上面的「會議結論」卡（#mpPanel）：還沒處理的提案一則一列；「合併」＝照一般儲存把結論加成那張卡片的最後一行
      （臨時項目＝建成新卡片），成功後才把提案標成已合併；「略過」＝標成略過。只有該部門的編輯者以上看得到（規則同樣擋）。
@@ -57,10 +57,10 @@ document.addEventListener("click",e=>{
   const id=b.closest("[data-mpid]").dataset.mpid;
   if(b.dataset.mp==="merge")mpMerge(id);else mpSkip(id);
 });
-/* ---- 秘書處端：把會議紀錄裡某個部門的結論送出（it＝MN.a.items 的一項）→ 送出的項數，失敗或沒東西回 0 ---- */
+/* ---- 秘書處端：把會議紀錄裡某個部門的結論送出（it＝AG.doc.items 的一項）→ 送出的項數，失敗或沒東西回 0 ---- */
 async function mpSend(it){
   if(!fsMode()||deptSourceOf(it.dept)!=="firestore"){toast(`${it.deptName}還在舊資料，沒辦法送到待合併`);return 0}
-  const data=mnData(it.dept),date=MN.a.date,rid=s=>`${date}__${it.dept}__${String(s).replace(/[^A-Za-z0-9_-]/g,"_").slice(0,60)}`,rows=[];
+  const data=mnData(it.dept),date=AG.doc.date,rid=s=>`${date}__${it.dept}__${String(s).replace(/[^A-Za-z0-9_-]/g,"_").slice(0,60)}`,rows=[];
   Object.entries(it.notes||{}).forEach(([evId,v])=>{const note=String(v).trim(),e=data&&data.events.find(x=>x.id===evId);
     if(note&&e)rows.push({id:rid(evId),deptId:it.dept,cardId:StoreMap.nid(it.dept,evId),kind:"note",title:String(e.name).slice(0,100),note:note.slice(0,1000),meetingDate:date})});
   (it.extra||[]).forEach(x=>{const title=String(x.title||"").trim(),note=String(x.note||"").trim()||title;

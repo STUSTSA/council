@@ -38,9 +38,14 @@ const serverNow = () => Date.now() + (skew || 0);
 /* ---------- 登入（invitations-roles-audit.md 第 9.1 節） ---------- */
 function init(cfg) { if (!db) ({ db, auth } = fb(cfg)); serverSkew(); return api; }
 /* 登入狀態改變時先補建 users／profiles（剛按登入的那一次另外更新 lastLoginAt），完成後 ensured() 才 resolve */
-let fresh = false, ensuring = Promise.resolve();
+let fresh = false, ensuring = Promise.resolve(), authAt = 0, authUid = null;
+/* 剛登入的前 30 秒：Firestore 可能還拿著登入前的憑證，讀寫會被規則誤拒（permission-denied）；掃 QR 加入時靠這個判斷要不要再試 */
+const justSignedIn = () => Date.now() - authAt < 30000;
+const nap = ms => new Promise(r => setTimeout(r, ms));
 function onUser(cb) {
   return onAuthStateChanged(auth, u => {
+    if (u && u.uid !== authUid) authAt = Date.now();
+    authUid = u ? u.uid : null;
     if (u) { const f = fresh; fresh = false; ensuring = ensureUser(f).catch(() => new Promise(r => setTimeout(r, 3000)).then(() => ensureUser(f)).catch(() => {})); }   /* 失敗隔 3 秒重試一次 */
     cb(u ? { uid: u.uid, email: u.email || "", name: u.displayName || "", photo: u.photoURL || "" } : null);
   });
@@ -175,8 +180,16 @@ async function invitePreview(token) {
   await serverSkew();
   await ensuring;
   let s;
-  try { s = await getDoc(ref("invitations", await sha256hex(token))); }
-  catch (e) { if (e.code === "permission-denied" || e.code === "not-found") return null; throw fail(codeOf(e)); }
+  const iref = ref("invitations", await sha256hex(token));
+  for (let i = 0; ; i++) {
+    try { s = await getDoc(iref); break; }
+    catch (e) {
+      /* 剛登入時憑證還沒換過來也會被拒：和「已失效」長得一樣，所以剛登入的前幾秒多試幾次，才下結論 */
+      if (e.code === "permission-denied" && justSignedIn() && i < 3) { await nap(500 * (i + 1)); continue; }
+      if (e.code === "permission-denied" || e.code === "not-found") return null;
+      throw fail(codeOf(e));
+    }
+  }
   if (!s.exists()) return null;
   const v = plainInv(s.data());
   if (!(v.status === "active" && v.expiresAt > serverNow())) return null;
@@ -190,6 +203,12 @@ async function invitePreview(token) {
 function inviteWatch(h, cb) { return onSnapshot(ref("invitations", h), s => cb(s.exists() ? plainInv(s.data()) : null), () => {}); }
 /* 核銷：交易內重讀邀請與自己的角色；同一批寫邀請（used＋權杖）、roles、兩筆稽核，有舊身分再加認領＋稽核 */
 async function inviteRedeem(token) {
+  for (let i = 0; ; i++) {
+    try { return await redeemOnce(token); }
+    catch (e) { if (e.code === "invalid" && justSignedIn() && i < 2) { await nap(700 * (i + 1)); continue; } throw e; }   /* 剛登入、憑證還沒換過來時被誤拒：再試 */
+  }
+}
+async function redeemOnce(token) {
   if (!tokenOk(token)) throw fail("invalid");
   const h = await sha256hex(token), me = uid(), email = auth.currentUser && auth.currentUser.email;
   let result = null;

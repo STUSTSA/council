@@ -45,13 +45,13 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await p.click('#notiBtn');await p.waitForTimeout(900);
     const r=await p.evaluate(()=>{const l=$('#tabbar .tb-lens').getBoundingClientRect();return {open:notiOpen,cur:$('#notiPage').classList.contains('cur'),others:[...document.querySelectorAll('.layout>.sgroup.cur')].length,
       same:document.querySelector('.dhead')===window.__h,ov:!!document.querySelector('#notiOv,.set-ov.noti-ov'),search:$('#dSearch').hidden,fab:$('#addEvent').hidden,hist:history.state&&history.state.bl,
-      pressed:$('#notiBtn').getAttribute('aria-pressed'),tab:$('#tabbar .tab.on').dataset.tab,lens:[Math.round(l.top),Math.round(l.left)],order:[...$('#notiPage').children].map(x=>x.className.split(' ')[0]).join(',')}});
+      pressed:$('#notiBtn').getAttribute('aria-pressed'),tab:$('#tabbar .tab.on').dataset.tab,lens:[Math.round(l.top),Math.round(l.left)],order:[...$('#notiPage').querySelectorAll('.noti-days,.nt-tally,.cal')].map(x=>x.className.split(' ')[0]).join(','),cols:[...$('#notiPage').children].map(x=>x.className).join(',')}});
     ok(r.open&&r.cur&&r.others===1&&!r.ov,`通知鈕進到部門內的一頁（#notiPage 是唯一顯示的一區、沒有全畫面疊層）`);
     ok(r.same,'標題列是同一個節點');
     ok(r.tab==='progress'&&JSON.stringify(r.lens)===JSON.stringify(lens0),`鏡片留在原分頁、不動（${JSON.stringify(lens0)} → ${JSON.stringify(r.lens)}）`);
     ok(r.search&&r.fab,'這一頁沒有搜尋列、沒有新增圓鈕');
     ok(r.hist==='noti'&&r.pressed==='true','推一筆瀏覽紀錄、通知鈕 aria-pressed');
-    ok(r.order==='noti-days,nt-tally,cal',`由上到下：今日／明日 → 清點區 → 行事曆（${r.order}）`);
+    ok(r.order==='noti-days,nt-tally,cal'&&r.cols==='noti-l,noti-r',`今日／明日 → 清點區（.noti-l）、行事曆（.noti-r）；手機由上到下、桌面左右兩欄（${r.order}／${r.cols}）`);
     await p.click('#notiBtn');await p.waitForTimeout(800);
     ok(await p.evaluate(()=>!notiOpen&&curSec==='progress'&&$('.sgroup[data-sec=progress]').classList.contains('cur')&&!history.state),'再按通知鈕：回到原分頁（進度）');
     await p.click('#notiBtn');await p.waitForTimeout(700);await p.keyboard.press('Escape');await p.waitForTimeout(700);
