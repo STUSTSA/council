@@ -27,3 +27,5 @@ docs/預覽/03-即時回報.html
 *_備份_*.json
 *全部資料*.json
 看板備份/
+tools/android/.gradle/
+tools/android/**/build/

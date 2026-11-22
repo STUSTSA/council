@@ -38,14 +38,14 @@ if(!touch){   /* 電腦：跟電腦版主頁一樣的一排方塊（.wks-rail／
   ok(p.errs.length===0,tag+'：沒有 console 錯誤 '+p.errs.join('|'));
   await p.close();continue}
  const ds=await p.$$eval('#doneList .wks-h',x=>x.map(e=>e.dataset.wk));
- ok(weeks.every(k=>ds.includes(k))&&!(await p.$('#doneList .wks-c.on')),tag+'：總覽是每週一張疊卡、全部收起，有完成紀錄的週都在（另外會多列有每週報告的週與當週）');
+ ok(weeks.every(k=>ds.includes(k))&&!(await p.$('#doneList .wks-c.on')),tag+'：總覽是每週一張疊卡（沒有展開的），有完成紀錄的週都在（另外會多列有每週報告的週與當週）');
  ok(JSON.stringify(ds)===JSON.stringify([...ds].sort().reverse())&&ds[0]===weeks[0],tag+'：最新的一週在最上面');
  ok(weeks.every(k=>new Date(k+'T00:00:00').getDay()===1),tag+'：每一週都從週一開始');
  const t0=await p.$eval('#doneList .wks-h',e=>e.textContent);ok(t0.includes('第 8 週')&&t0.includes('10/26 – 11/01')&&t0.includes('WEEK 8'),tag+'：第一張只寫第幾週與小字日期：'+t0.slice(0,40));
  ok(!(await homeUp(p)),tag+'：總覽時左上角還是首頁鍵');
  await p.screenshot({path:`${dir}/dwk_${tag}_folders.png`});
  await p.click('#doneList .wks-h');await p.waitForTimeout(1200);
- ok(await p.$$eval('#doneList .wks-c.on .cp.done',x=>x.length)===exp[weeks[0]],tag+'：點一張展開，列出那一週的所有卡片');
+ ok(await p.$$eval('#doneList .wks-c.on .cp.done',x=>x.length)===exp[weeks[0]],tag+'：點一張進獨立檢視，列出那一週的所有卡片');
  ok(await homeUp(p)&&await p.evaluate(()=>Back.depth())===1,tag+'：左上角變成上一頁、Back 疊一層');
  ok(!(await p.$('#donePanel .pv-back,#donePanel [data-lcback],#donePanel .wk-back')),tag+'：那一頁裡沒有另外的返回鈕');
  await p.screenshot({path:`${dir}/dwk_${tag}_week.png`});
@@ -61,19 +61,22 @@ if(!touch){   /* 電腦：跟電腦版主頁一樣的一排方塊（.wks-rail／
   ok(await p.evaluate(()=>doneWeek===null),tag+'：系統返回鍵在那一週時回到總覽');
  }
  if(tag==='mob'){
-  /* 就地展開（手機疊卡）：點標題後那一張長高（過渡中高度介於收起與展開之間），結束後別張都是收起的；再點同一張收起；點別週換那張展開；Esc 收起 */
+  /* 手機獨立檢視：點一張週卡＝整頁只畫那一週（標題、每週報告、該週卡片），上一頁／返回鍵／再點標題才回整疊卡片，並回到原本的捲動位置 */
   await p.evaluate(()=>setSection('done',{instant:true}));await p.waitForTimeout(500);
-  const hh=()=>p.$eval('#doneList .wks-c',e=>e.getBoundingClientRect().height);const h0=await hh();
-  await p.click('#doneList .wks-h');await p.waitForTimeout(150);const hm=await hh();await p.waitForTimeout(900);const h1=await hh();
-  ok(hm>h0&&hm<h1,tag+'：展開有過渡（高度 '+Math.round(h0)+' → '+Math.round(hm)+' → '+Math.round(h1)+'）');
-  ok(await p.$$eval('#doneList .wks-c.on',x=>x.length)===1&&await p.evaluate(()=>doneWeek!==null),tag+'：只有一張展開');
-  ok(await p.$$eval('#doneList .wks-c:not(.on) .wks-b',x=>x.every(e=>e.hasAttribute('inert'))),tag+'：沒展開的內容被擋住（inert）');
-  await p.click('#doneList .wks-c:nth-child(2) .wks-h');await p.waitForTimeout(1100);
-  ok(await p.evaluate(()=>doneWeek)===weeks[1]&&await p.$$eval('#doneList .wks-c.on',x=>x.length)===1,tag+'：點別週＝換那張展開');
-  await p.click('#doneList .wks-c.on .wks-h');await p.waitForTimeout(1100);
-  ok(await p.evaluate(()=>doneWeek===null&&Back.depth()===0),tag+'：再點同一張＝收起');
-  await p.click('#doneList .wks-h');await p.waitForTimeout(1100);await p.keyboard.press('Escape');await p.waitForTimeout(1100);
-  ok(await p.evaluate(()=>doneWeek===null&&Back.depth()===0)&&!(await p.$('#doneList .wks-c.on')),tag+'：Esc 收起');
+  await p.setViewportSize({width:390,height:480});await p.waitForTimeout(400);
+  const sy=await p.evaluate(()=>{const sc=document.querySelector('#donePanel').closest('.page');sc.scrollTop=90;return sc.scrollTop});
+  await p.click('#doneList .wks-c:nth-child(3) .wks-h');await p.waitForTimeout(900);
+  ok(await p.$$eval('#doneList .wks-c',x=>x.length)===1&&await p.evaluate(()=>doneWeek)===weeks[2],tag+'：點第三張＝只剩那一週的獨立檢視');
+  ok(await p.evaluate(()=>!!document.querySelector('#doneList .wks-c.on .wk-rep')&&document.querySelectorAll('#doneList .wks-c.on .cp.done').length)===exp[weeks[2]],tag+'：獨立檢視：最上方每週報告、下面是該週所有卡片');
+  ok(await homeUp(p)&&await p.evaluate(()=>Back.depth())===1&&await p.evaluate(()=>document.querySelector('#donePanel').closest('.page').scrollTop)===0,tag+'：左上角變上一頁、從頂端開始看');
+  await p.click('.dhead .dh-home');await p.waitForTimeout(1100);
+  ok(await p.$$eval('#doneList .wks-c',x=>x.length)===weeks.length+0||await p.$$eval('#doneList .wks-c',x=>x.length)>=weeks.length,tag+'：上一頁回到整疊卡片');
+  ok(await p.evaluate(()=>document.querySelector('#donePanel').closest('.page').scrollTop)===sy,tag+'：回到原本的捲動位置（'+sy+'）');
+  await p.setViewportSize({width:390,height:780});
+  await p.click('#doneList .wks-h');await p.waitForTimeout(900);await p.click('#doneList .wks-c.on .wks-h');await p.waitForTimeout(900);
+  ok(await p.evaluate(()=>doneWeek===null&&Back.depth()===0),tag+'：再點標題＝回整疊卡片');
+  await p.click('#doneList .wks-h');await p.waitForTimeout(900);await p.keyboard.press('Escape');await p.waitForTimeout(900);
+  ok(await p.evaluate(()=>doneWeek===null&&Back.depth()===0)&&!(await p.$('#doneList .wks-c.on')),tag+'：Esc 回整疊卡片');
   /* 切換分頁：離開那一週 */
   await p.click('#doneList .wks-h');await p.waitForTimeout(1200);await p.evaluate(()=>setSection('live',{instant:true}));await p.waitForTimeout(500);
   ok(await p.evaluate(()=>doneWeek===null&&Back.depth()===0)&&!(await homeUp(p)),tag+'：換到別的分頁就離開那一週');
