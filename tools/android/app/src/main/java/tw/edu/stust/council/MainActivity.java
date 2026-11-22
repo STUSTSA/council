@@ -5,6 +5,14 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.SparseArray;
+import android.view.PixelCopy;
+import android.webkit.WebBackForwardList;
+import android.webkit.WebHistoryItem;
+import android.widget.ImageView;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -45,6 +53,11 @@ public class MainActivity extends Activity {
     private String insetCss = "";
     private WebView web;
     private BackHelper back;
+    private ImageView snapView;
+    private final SparseArray<Snap> snaps = new SparseArray<>();
+    private final Runnable captureTask = this::capture;
+
+    private static class Snap { String url; Bitmap bmp; }
     private static final String PREFS = "login";   /* App 私有的 SharedPreferences：撐得過程序被系統殺掉，別的 App 讀不到 */
 
     @Override
@@ -82,6 +95,10 @@ public class MainActivity extends Activity {
             pushInsets();
             return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : ins.consumeSystemWindowInsets();
         });
+        snapView = new ImageView(this);
+        snapView.setScaleType(ImageView.ScaleType.FIT_XY);
+        snapView.setVisibility(View.GONE);
+        root.addView(snapView, new FrameLayout.LayoutParams(-1, -1));
         web = new WebView(this);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
@@ -106,14 +123,16 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public void onPageStarted(WebView v, String url, Bitmap icon) { pushInsets(); }
+            public void onPageStarted(WebView v, String url, Bitmap icon) { v.removeCallbacks(captureTask); pushInsets(); }
 
             @Override
-            public void onPageCommitVisible(WebView v, String url) { pushInsets(); }
+            public void onPageCommitVisible(WebView v, String url) { pushInsets(); if (back != null) back.commit(); }
 
             @Override
             public void onPageFinished(WebView v, String url) {
                 pushInsets();
+                v.removeCallbacks(captureTask);
+                v.postDelayed(captureTask, 800);   /* 等頁面開場動畫跑完再截圖，當作之後「上一個畫面」 */
                 v.evaluateJavascript(
                         "(function(){if(window.__tcObs)return;window.__tcObs=1;"
                         + "function s(){var m=document.querySelector('meta[name=\"theme-color\"]');if(m&&window.CouncilApp)CouncilApp.themeColor(m.content)}"
@@ -125,7 +144,11 @@ public class MainActivity extends Activity {
             public void doUpdateVisitedHistory(WebView v, String url, boolean reload) { syncBack(); }
         });
 
-        if (Build.VERSION.SDK_INT >= 33) back = new BackHelper(this, web, () -> { if (web.canGoBack()) web.goBack(); });
+        if (Build.VERSION.SDK_INT >= 33) back = new BackHelper(this, web, snapView, new BackHelper.Host() {
+            @Override public Bitmap prevShot() { return prevSnap(false); }
+            @Override public boolean prevSameDocument() { return prevSnap(true) != null; }
+            @Override public void goBack() { if (web.canGoBack()) web.goBack(); }
+        });
         if (state != null) web.restoreState(state); else web.loadUrl(HOME);
         handleIntent(getIntent());
     }
@@ -146,6 +169,41 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (web != null && web.canGoBack()) web.goBack(); else super.onBackPressed();
+    }
+
+    /** 截下目前畫面（半解析度）：之後返回手勢時當作「上一個畫面」放在後面 */
+    private void capture() {
+        if (Build.VERSION.SDK_INT < 26 || web == null || web.getWidth() == 0 || web.getHeight() == 0) return;
+        WebBackForwardList l = web.copyBackForwardList();
+        WebHistoryItem it = l.getCurrentItem();
+        if (it == null) return;
+        final int idx = l.getCurrentIndex();
+        final String url = it.getUrl();
+        final Bitmap b = Bitmap.createBitmap(web.getWidth() / 2, web.getHeight() / 2, Bitmap.Config.ARGB_8888);
+        int[] loc = new int[2];
+        web.getLocationInWindow(loc);
+        try {
+            PixelCopy.request(getWindow(), new Rect(loc[0], loc[1], loc[0] + web.getWidth(), loc[1] + web.getHeight()), b, r -> {
+                if (r != PixelCopy.SUCCESS) return;
+                Snap s = new Snap();
+                s.url = url;
+                s.bmp = b;
+                snaps.put(idx, s);
+                while (snaps.size() > 6) snaps.removeAt(0);
+            }, new Handler(Looper.getMainLooper()));
+        } catch (Exception ignored) { }
+    }
+
+    /** 上一筆紀錄的截圖；sameDoc＝true 時只回答「上一筆是不是同一份文件」（有截圖才算） */
+    private Bitmap prevSnap(boolean sameDoc) {
+        WebBackForwardList l = web.copyBackForwardList();
+        int cur = l.getCurrentIndex();
+        if (cur <= 0) return null;
+        WebHistoryItem prev = l.getItemAtIndex(cur - 1), now = l.getCurrentItem();
+        Snap s = snaps.get(cur - 1);
+        if (prev == null || s == null || !s.url.equals(prev.getUrl())) return null;
+        if (sameDoc && (now == null || !s.url.equals(now.getUrl()))) return null;
+        return s.bmp;
     }
 
     /** 網頁裡可以返回上一頁時才接手返回鍵；在最上層時交給系統，才會有「返回桌面」的預測動畫 */
