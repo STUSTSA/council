@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>登入學生會看板</title>
 <!-- 安卓 App 專用的登入頁（App 內嵌畫面不能用 Google 登入，所以由 Chrome 開這一頁）。
-     流程：按「用 Google 登入」→ 登入完成 → 按「回到看板」→ App 收到憑證並完成登入。這一頁登入完會立刻把 Chrome 裡的 Firebase 登入登出，不留狀態。 -->
+     流程：按「用 Google 登入」→ 登入完成 → 按「回到看板」→ App 收到憑證並完成登入。Chrome 裡原本沒登入的話，這一頁登入完會立刻登出，不留狀態；原本就登入著則不動。 -->
 <style>
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px/1.6 system-ui,"Noto Sans TC",sans-serif;background:#f5f0e1;color:#222}
   main{max-width:22rem;padding:2rem 1.5rem;text-align:center}
@@ -36,11 +36,13 @@ $("go").onclick = async () => {
   try {
     if (!NONCE) throw new Error("no-nonce");
     const { auth } = fb(BOARD_BASE.firebase);
+    await auth.authStateReady();
+    const had = !!auth.currentUser;   /* 原本就登入著（在 Chrome 用看板）就不要幫使用者登出 */
     const p = new GoogleAuthProvider();
     p.setCustomParameters({ prompt: "select_account" });
     const r = await signInWithPopup(auth, p);
     const c = GoogleAuthProvider.credentialFromResult(r);
-    await signOut(auth);
+    if (!had) await signOut(auth);
     if (!c || !c.idToken) throw new Error("no-credential");
     /* 用 intent 網址並指定套件名：只有我們的 App 收得到，別的 App 搶不到憑證 */
     $("back").href = "intent://auth#Intent;scheme=councilapp;package=tw.edu.stust.council;S.idToken=" + encodeURIComponent(c.idToken)
