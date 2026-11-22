@@ -4,7 +4,7 @@
    - QR 權杖只在產生它的畫面記憶體裡；資料庫只存 SHA-256。權杖不寫進 localStorage、不印到 console。
    畫面（account.js）只呼叫 window.BoardAccount，錯誤一律回傳代碼（不是 Firebase 原始訊息）。 */
 import { fb } from "./fb-app.js";
-import { onAuthStateChanged, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut as fbSignOut }
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signInWithCredential, GoogleAuthProvider, signOut as fbSignOut }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { doc, getDoc, getDocs, setDoc, collection, query, where, orderBy, limit, startAfter, onSnapshot, runTransaction, writeBatch,
          serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
@@ -51,7 +51,14 @@ function onUser(cb) {
   });
 }
 const ensured = () => ensuring;
+/* 安卓 App（android/，WebView 外殼）：Google 不讓內嵌畫面登入，改由 App 開 Chrome 跑 app-login.html，
+   登入完成後 App 把 Google 憑證交回來（window.__councilAppSignIn），這裡用它登入 Firebase。憑證只在這個呼叫裡用，不存、不印。 */
+window.__councilAppSignIn = async idToken => {
+  try { if (auth) await signInWithCredential(auth, GoogleAuthProvider.credential(idToken, null)); }
+  catch (_) { fresh = false; }
+};
 async function signIn() {
+  if (window.CouncilApp && typeof window.CouncilApp.login === "function") { fresh = true; window.CouncilApp.login(); return "redirect"; }
   const p = new GoogleAuthProvider();
   p.setCustomParameters({ prompt: "select_account" });
   fresh = true;
