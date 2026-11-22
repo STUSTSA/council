@@ -24,7 +24,7 @@
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
   $id("hmMe").innerHTML=suLogoH("hm-su");
-  $id("hmSet").innerHTML=ico("sliders","solo");
+  $id("hmSet").innerHTML=ico("palette","solo");
   const clock=$id("hmClock");let clockT=0;
   function tick(){const d=new Date();clock.textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`;clearTimeout(clockT);if(!document.hidden)clockT=setTimeout(tick,60050-d.getSeconds()*1000-d.getMilliseconds())}
   document.addEventListener("visibilitychange",tick);tick();
