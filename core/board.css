@@ -4,8 +4,11 @@
 /* ===== 基礎：色彩變數、元素預設 ===== */
 /* 動畫規則的時間與曲線（anim.js 的 MO 同一組數字；新的 transition 也用這些） */
 /* 圓角（DESIGN-next 第三節）：大色塊與卡片 18、內層項目 14、小方塊 12；膠囊與圓鈕全圓（999px／50%） */
+/* 安全區（瀏海、狀態列、手勢條）：全站一律用 --sa-top／right／bottom／left，不直接寫 env(safe-area-inset-*)。
+   一般瀏覽器與安裝版用 env()；安卓 App（tools/android，WebView 滿版）的 WebView 不一定提供 env()，由 App 把系統列高度用 style 寫進 <html> 蓋過這裡的預設值。 */
+:root{--sa-top:env(safe-area-inset-top,0px);--sa-right:env(safe-area-inset-right,0px);--sa-bottom:env(safe-area-inset-bottom,0px);--sa-left:env(safe-area-inset-left,0px)}
 :root{--r-lg:18px;--r-md:14px;--r-sm:12px}
-:root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-layout:560ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-in:cubic-bezier(.4,0,1,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
+:root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
 /* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--ok-ink、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
    下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）。
    寫死的顏色只剩三種例外：部門（學生會）標誌的藍黃、工作報告的白紙、陰影用的半透明黑，每一處旁邊都註明「例外」（測試 tools/tests/ui8color.js） */
@@ -46,7 +49,6 @@ input{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid tran
 textarea{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;resize:vertical;line-height:1.7;border-radius:var(--r-sm);-webkit-user-select:text;user-select:text}
 select{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;border-radius:var(--r-sm)}
 .empty{color:var(--muted);font-size:13.5px;margin:6px 0}
-.hint{font-size:12px;color:var(--muted)}
 dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 .num{font-family:"Jost","Noto Sans TC",sans-serif;font-weight:400;letter-spacing:.02em}
 /* ===== 區塊標題（DESIGN-next 第四節；ui-09 全站統一） =====
@@ -122,10 +124,10 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .pager{display:flex;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
 .page{flex:none;height:100%;overflow-x:hidden;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}   /* 不橫向捲動：手機換分頁時左右滑進滑出的內容超出畫面也不會撐出橫捲 */
 .page-main{width:100vw}
-.wrap{--wrap-pt:calc(20px + env(safe-area-inset-top));max-width:1500px;margin:0 auto;padding:var(--wrap-pt) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
+.wrap{--wrap-pt:calc(20px + var(--sa-top));max-width:1500px;margin:0 auto;padding:var(--wrap-pt) max(16px,var(--sa-right)) calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom)) calc(var(--rail-in) + max(16px,var(--sa-left)))}
 .pager::-webkit-scrollbar{display:none}
 @media (max-width:640px){
-  .wrap{--wrap-pt:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
+  .wrap{--wrap-pt:calc(14px + var(--sa-top));padding-right:max(14px,var(--sa-right));padding-left:max(14px,var(--sa-left))}
 }
 @supports selector(::-webkit-scrollbar){
   .pager{scrollbar-width:auto}
@@ -148,7 +150,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
    搜尋列分兩塊是為了桌面即時回報分欄：搜尋列只佔左欄寬，右邊詳情卡往上延伸到搜尋列那一行（見「左右兩欄」），那一塊不能有底色。
    --dhd-h＝標題列固定時佔的高度、--dtop-h＝標題列加搜尋列（shell.js 量）：黏在下面的卡片（.lc-pane）、捲動定位（scroll-padding）、卡片高度都用 */
 :is(.dtop,.dsrow){--dtop-x:12px}
-.dtop{--dgap:18px;position:sticky;top:calc(8px + env(safe-area-inset-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) var(--dgap);background:var(--bg)}
+.dtop{--dgap:18px;position:sticky;top:calc(8px + var(--sa-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) var(--dgap);background:var(--bg)}
 .dsrow{position:sticky;top:var(--dhd-h,64px);z-index:31;margin:0 calc(-1 * var(--dtop-x));padding:0 var(--dtop-x);background:var(--bg)}
 .dsrow::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
 .page-main{scroll-padding-top:var(--dtop-h,0px)}
@@ -265,8 +267,6 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    紅燈的擴散（ping）只動 transform／opacity，播放時瀏覽器本來就會交給顯示卡 */
 .live-dot{position:relative;flex:none;width:9px;height:9px;border-radius:50%;background:var(--red)}
 .live-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--red);animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite}
-.ok-dot{position:relative;flex:none;width:9px;height:9px;border-radius:50%;transition:transform .35s cubic-bezier(.3,1.6,.5,1);background:var(--ok-dot)!important;transform:translateZ(0)}
-.ok-dot::after{content:"";position:absolute;inset:0;border-radius:50%;animation:ping 2.4s cubic-bezier(0,0,.2,1) infinite;background:var(--ok-dot)}
 @keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}
 /* 燈號擴散只動 transform／opacity（交給合成執行緒），展開收合時也不暫停（暫停再繼續看起來像卡住）；重畫後的相位由 anim.js 的 Anim.syncPings 接回去 */
 
@@ -349,8 +349,8 @@ input.lc-title:focus{outline:none}
 /* 全螢幕（手機與中等寬度）：蓋住整頁與工具列，內容自己捲動、底部工具列固定；左上返回鍵 */
 .lc-host{position:fixed;inset:0;z-index:46}
 .lc-host[hidden]{display:none}
-.lc.full{--pad:clamp(18px,5vw,56px);position:absolute;inset:0;min-height:0;padding:calc(14px + env(safe-area-inset-top)) var(--pad) 0;border-radius:0;box-shadow:none}
-.lc.full.ro{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+.lc.full{--pad:clamp(18px,5vw,56px);position:absolute;inset:0;min-height:0;padding:calc(14px + var(--sa-top)) var(--pad) 0;border-radius:0;box-shadow:none}
+.lc.full.ro{padding-bottom:calc(16px + var(--sa-bottom))}
 /* 寬螢幕編輯中：整頁不捲（卡片內容自己捲） */
 body.lc-lock #pageMain{overflow:hidden}
 @container lc (max-width:560px){
@@ -414,7 +414,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
 /* --- 底部工具列（編輯權限才有，常駐）：左邊母議題膠囊（點開自製選單 .lc-pop），右邊文字、人、時間、地點、核取、超連結；
    人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
 .lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
-.lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+.lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + var(--sa-bottom))}
 .lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:1.9px 17px 1.1px 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
 .lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
@@ -567,7 +567,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .evf-ed .fld,.evf-ed fieldset.multi{margin:0}
 .evf-hint{font-size:11.5px}
 /* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
-.evd-btns,.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
 /* 時間標記、超連結一組（每一筆各自一列，最後一顆「+ 時間」「+ 超連結」）；「+ 階段」也是 .evd-add */
 .evd-add{justify-self:start}
 .evf-group{display:grid;padding-top:10px;border-bottom:1px solid var(--hair)}
@@ -876,7 +876,6 @@ a.doc-pill:active{scale:.96}
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
 .log-d{flex:none;width:84px;font-size:14px}   /* 日期欄固定寬：每一列的膠囊與標題左緣才會對齊（以前最小寬 74px，數字寬度不同就差 1～2px） */
 .log li>.sub{text-spacing-trim:trim-start}   /* 「（即時回報）」換到下一行時，全形括號左半邊的空白不留，跟上一行的日期左緣對齊 */
-.log-p{margin-left:auto;font-size:12px}
 /* 進度卡片（甘特圖＋議題詳情合成一張）：預設 #pvGantt，點議題列換成 #pvDetail（切換動畫在 views.js 的 progShow）。
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
 #progPanel{--cpx:18px;overflow:hidden}
@@ -1072,7 +1071,6 @@ a.link:active{transform:scale(.96)}
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}
 @keyframes tick{0%{transform:scale(0) rotate(-45deg)}100%{transform:none}}
-@keyframes doneFlash{0%{opacity:0;transform:translateX(-14px)}40%{opacity:1;transform:none;background:color-mix(in srgb,var(--done) 22%,transparent)}100%{}}
 
 /* ===== 每週報告（原「每週概述」；views.js 的 repHTML）=====
    2026-11-21 起畫在完成紀錄的週頁最上方（.wk-rep），不再是設定裡的一頁。每份報告是一張可展開的卡片（.week，details）；沒有報告的週顯示 .wk-rn 一行字；
@@ -1089,7 +1087,6 @@ a.link:active{transform:scale(.96)}
 .week summary::before{color:var(--muted);transition:transform .15s;content:"";display:inline-block;flex:none;width:7px;height:9px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);margin:0 2px 0 1px}
 .week[open] summary::before{transform:rotate(90deg)}
 .week summary .num{font-size:18px;transition:letter-spacing .25s var(--ease)}
-.badge{font-size:11.5px;border-radius:999px;padding:2.1px 8px .9px;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
 .week-tools{display:flex;gap:6px;justify-content:flex-end;padding:0 12px;flex-wrap:wrap;animation:none}
 .week-text{white-space:pre-wrap;line-height:1.85;padding:6px 14px 14px;font-size:14.5px;word-break:break-word;animation:none;-webkit-user-select:text;user-select:text}
 .gen-btn{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);display:inline-flex;align-items:center;gap:6px}
@@ -1286,7 +1283,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
    材質是平面色塊 .glass（--blk），浮在內容上面：一圈 1px --hair 細線＋陰影（--stack-sh）；鏡片是主要動作的實心膠囊（--pri），鏡片底下那一格（.lit，nav.js 每格判斷）的圖示用 --pri-ink。
    按鈕機制照 Convx（見 nav.js 開頭），手機與桌面同一套。JS 每一格寫入：--ts 分頁內容放大（--hp／--hx／--hy 是以前按下白光用的，現在沒有用到）；
    整條列的放大與偏移、鏡片與設定鍵的形變用 inline 的 scale／transform（這兩個屬性在這段不設 transition，避免跟彈簧打架） */
-.tabbar{--tb-ink:var(--ink);--tb-muted:var(--muted);position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));z-index:45;display:flex;align-items:center;gap:10px;transform:translateX(-50%);transition:opacity .35s}
+.tabbar{--tb-ink:var(--ink);--tb-muted:var(--muted);position:fixed;left:50%;bottom:calc(14px + var(--sa-bottom));z-index:45;display:flex;align-items:center;gap:10px;transform:translateX(-50%);transition:opacity .35s}
 .tb-main{display:flex;padding:6px;border-radius:999px;touch-action:none}
 #tabbar :is(.tb-main,.tb-gear){box-shadow:0 0 0 1px var(--hair),0 14px 30px -10px var(--stack-sh)}   /* 浮在內容上面：細線＋陰影（柔光主題也一樣，不疊 --blk-sh） */
 .tb-tabs{position:relative;z-index:1;display:flex;gap:2px}
@@ -1336,7 +1333,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
    文字標籤只留給讀屏；鏡片 50×44，互動跟手機一樣（按下放大、按住鏡片可上下拖，見 nav.js）。
    內容讓出的寬度是基礎段的 --rail-in */
 @media (min-width:900px){
-  .tabbar{left:calc(14px + env(safe-area-inset-left));top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;gap:10px}
+  .tabbar{left:calc(14px + var(--sa-left));top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;gap:10px}
   .tb-main{flex-direction:column}
   .tb-tabs{flex-direction:column;gap:0}
   .tabbar .tab{width:50px;height:48px;padding:0;border-radius:999px;color:var(--tb-muted)}
@@ -1348,27 +1345,27 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 /* ===== 新增即時回報的浮動圓鈕（nav.js 的 fabSync；DESIGN-next 第六節「部門內」） =====
    右下角 60 的圓鈕：主要動作色（--pri／--pri-ink）、加號、浮在內容上面所以帶柔和陰影；手機在工具列上方。
    z-index 在設定、通知疊層（37、38）下面：疊層打開時被蓋住；出現、消失的動畫是 anim.js 的 Anim.toggle（pop） */
-.fab{position:fixed;right:calc(max(16px,env(safe-area-inset-right)) + clamp(0px,3vw,40px));bottom:calc(32px + env(safe-area-inset-bottom));z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
+.fab{position:fixed;right:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px));bottom:calc(32px + var(--sa-bottom));z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
 .fab[hidden]{display:none}
 @media print{.fab{display:none}}
 .fab .ico{width:24px;height:24px;stroke-width:2}
 .fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 /* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
 @media (max-width:899px){
-  .fab{right:calc(max(12px,(100vw - 480px) / 2) + 1px);bottom:calc(106px + env(safe-area-inset-bottom))}
+  .fab{right:calc(max(12px,(100vw - 480px) / 2) + 1px);bottom:calc(106px + var(--sa-bottom))}
 }
 
 /* ===== 主頁（home.html，core/js/home.js；DESIGN-next 第六節「主頁」） =====
    只有：左上橫式學生會標誌（.hm-me）、時間（.hm-clock）、設定鈕（.hm-round）、部門色塊、下排（.hm-dock）。整頁不捲動，色塊列自己橫捲。
    桌面：一排橫向色塊（.hm-rail），焦點那張放大 1.13、其他半透明，整列共用一個焦點框（.hm-ring，只用 transform 滑過去）。
    色塊＝平面 --blk（柔光主題帶 --blk-sh）；英文小標、部門名、標誌（.hm-lg，board.css「部門標誌」段）、進行中的張數（.hm-n，大數字 Jost 300） */
-.hm{--hm-pl:max(clamp(16px,4vw,56px),env(safe-area-inset-left));--hm-pr:max(clamp(16px,4vw,56px),env(safe-area-inset-right));   /* 左右內距（下排要用來算回整個畫面寬） */
+.hm{--hm-pl:max(clamp(16px,4vw,56px),var(--sa-left));--hm-pr:max(clamp(16px,4vw,56px),var(--sa-right));   /* 左右內距（下排要用來算回整個畫面寬） */
   --hm-t:clamp(160px,min(30vh,24vw),340px);   /* 桌面色塊的邊長：跟著視窗高度走（大螢幕變大），窄而高的視窗改看寬度 */
   --hm-dot:calc(var(--hm-t)*.28);--hm-gap:calc(var(--hm-dot)*.42);   /* 下排圓鈕的直徑（色塊邊長的 0.28）與間距（「下排」那一塊）；手機 44／10 */
   --hm-fill:var(--blk);   /* 下排編輯中輸入框、返回鍵的底：桌面沒有膠囊，用色塊的底才看得出來；手機在膠囊（--blk）上，用 --bg */
   /* 桌面的垂直配置照 Switch 主畫面：上排、色塊列、下排三段，中間的留白用 fr 分（色塊列上面 18、色塊與下排之間 11、下排下面 11）：
      色塊列中心落在畫面高度 45% 左右（略高於中線），下排在色塊與畫面底緣中間；視窗矮到放不下時留白縮到 12px（最後一段到 0） */
-  position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(12px,18fr) auto minmax(12px,11fr) auto minmax(0,11fr);padding:calc(26px + env(safe-area-inset-top)) var(--hm-pr) calc(28px + env(safe-area-inset-bottom)) var(--hm-pl);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  position:fixed;inset:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(12px,18fr) auto minmax(12px,11fr) auto minmax(0,11fr);padding:calc(26px + var(--sa-top)) var(--hm-pr) calc(28px + var(--sa-bottom)) var(--hm-pl);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .hm-top{grid-row:1;flex:none;display:flex;align-items:center;gap:14px}
 .hm-sp{flex:1}
 .hm-me{display:flex;align-items:center;height:52px}   /* 只有標誌本身，不加底（ui-08）；深色、各主題的顏色在 core/splash.css「學生會標誌」段 */
@@ -1464,20 +1461,20 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
 @media (hover:none){.hm-tip{display:none}}
 /* 下排（手機 640px 以下）：固定在畫面底部、膠囊底板（陰影朝上）；輸入框 16px（iPhone：16px 以下聚焦時會整頁放大），寬度讓返回鍵到「加入」在 412 寬放得下 */
 @media (max-width:640px){
-  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom) + var(--kb,0px));z-index:40;margin:0;transition:bottom var(--mo-base) var(--mo-out)}   /* --kb＝螢幕鍵盤高度（util.js 的 kbTrack）：鍵盤跳出時整條浮到鍵盤正上方 */
+  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + var(--sa-bottom) + var(--kb,0px));z-index:40;margin:0;transition:bottom var(--mo-base) var(--mo-out)}   /* --kb＝螢幕鍵盤高度（util.js 的 kbTrack）：鍵盤跳出時整條浮到鍵盤正上方 */
   .hm-dk-bg{display:block}
   .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
   .hm-lkf input{width:88px;font-size:16px}
   .hm-lkf .hm-lku{width:140px}
 }
 /* 疊層（全會行事曆、外觀）：主頁上蓋一整層，內容最寬 760、自己捲動；右上關閉鈕 */
-.hm-ly{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:calc(18px + env(safe-area-inset-top)) max(clamp(16px,4vw,56px),env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(clamp(16px,4vw,56px),env(safe-area-inset-left))}
+.hm-ly{position:fixed;inset:0;z-index:60;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);padding:calc(18px + var(--sa-top)) max(clamp(16px,4vw,56px),var(--sa-right)) calc(28px + var(--sa-bottom)) max(clamp(16px,4vw,56px),var(--sa-left))}
 .hm-ly[hidden]{display:none}
 .hm-ly-in{display:grid;gap:14px;max-width:760px;margin:0 auto}
 .hm-ly-bar{display:flex;justify-content:flex-end}
 .hm-ly .look{padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 @media (max-width:640px){
-  .hm{--hm-pl:max(16px,env(safe-area-inset-left));--hm-pr:max(16px,env(safe-area-inset-right));--hm-dot:44px;--hm-gap:10px;--hm-fill:var(--bg);display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top)) var(--hm-pr) 0 var(--hm-pl)}
+  .hm{--hm-pl:max(16px,var(--sa-left));--hm-pr:max(16px,var(--sa-right));--hm-dot:44px;--hm-gap:10px;--hm-fill:var(--bg);display:flex;flex-direction:column;padding:calc(16px + var(--sa-top)) var(--hm-pr) 0 var(--hm-pl)}
   .hm-top{gap:10px}
   .hm-me{height:48px}
   .hm-su{height:28px}
@@ -1562,7 +1559,7 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
    柔光主題的陰影（ui-10 C）：三個捲動容器（清單 .set-scroll、右側面板 .set-pane、手機子頁 .set-sub-body）左右各多留 --set-sx 的內距、再用同樣的負邊距抵掉，
    色塊的位置、寬度不變，陰影畫在內距裡、不被 overflow 切成直線；--set-sx＝陰影外擴距離（theme.css 的 --sh-pad，只有柔光有值）但不超過設定層自己的左右留白（捲動容器不會伸出螢幕）。
    清單最上面一列的上緣也留 --sh-pad（.set-inner）。其他主題 --sh-pad＝0，三個容器跟原本一樣。標題列圓鈕的陰影不被設定層蓋掉：見「部門標題列」段 body.set-open .dhead */
-.set-ov{--set-sx:min(var(--sh-pad),clamp(14px,3vw,40px));position:fixed;inset:var(--set-top,0px) 0 0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:0 max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),env(safe-area-inset-left)))}
+.set-ov{--set-sx:min(var(--sh-pad),clamp(14px,3vw,40px));position:fixed;inset:var(--set-top,0px) 0 0;z-index:38;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:0 max(clamp(14px,3vw,40px),var(--sa-right)) 0 calc(var(--rail-in) + max(clamp(14px,3vw,40px),var(--sa-left)))}
 .set-ov[hidden]{display:none}
 body.set-open #pageMain{overflow:hidden}
 /* 清單（.set-scroll）與右側面板（.set-pane）：平常清單佔滿、內容置中；
@@ -1570,15 +1567,15 @@ body.set-open #pageMain{overflow:hidden}
 .set-body{flex:1;min-height:0;display:flex;gap:clamp(20px,3vw,48px)}
 .set-scroll{flex:1 1 100%;min-width:0;margin:0 calc(-1*var(--set-sx));padding:0 var(--set-sx);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
 .set-body.split .set-scroll{flex:0 0 calc(min(440px,40%) + 2*var(--set-sx))}   /* 寬度含左右陰影內距（border-box）：清單內容一樣是 min(440px,40%) */
-.set-pane{flex:1 1 0;min-width:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:14px calc(4px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
+.set-pane{flex:1 1 0;min-width:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:14px calc(4px + var(--set-sx)) calc(32px + var(--bar-in) + var(--sa-bottom))}
 .set-pane[hidden]{display:none}
 /* 手機版的下一層（nav.js 的 subRun）：設定清單點了有下一層的項目，進到這個全畫面子頁，表單畫在 .set-sub-body 裡（樣式跟桌面右側面板同一套）；
    標題列左上的圓鈕在這時是「上一頁」（views.js 的 homeSync）、回到設定清單。進出用換頁動畫（pagefx.js） */
 .set-sub{z-index:39}
-.set-sub-body{flex:1;min-height:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;padding:10px calc(2px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
+.set-sub-body{flex:1;min-height:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;padding:10px calc(2px + var(--set-sx)) calc(32px + var(--bar-in) + var(--sa-bottom))}
 /* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
-.set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
+.set-hub{display:grid;gap:10px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
 /* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。一步一塊、留縫，前面等寬步驟號 */
 .dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;display:grid;gap:10px}
@@ -1591,7 +1588,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-gate-ico{display:grid;place-items:center;width:168px;height:168px;padding:0;border-radius:50%;border:0;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);margin-bottom:8px}
 .set-gate-ico svg{overflow:visible}
 .set-gate-ico:hover{transform:none}
-.set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:20px}   /* 沒有小標題，塊與塊之間只靠間距分開；上緣至少留柔光陰影的外擴距離 */
+.set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + var(--sa-bottom));display:grid;gap:10px}   /* 列與列、塊與塊的間距一律 10px（跟 .set-list 同一個值；2026-11-22 使用者：每個之間間距一樣）；上緣至少留柔光陰影的外擴距離 */
 /* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
 .set-list{display:grid;gap:10px}
 .set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
@@ -1617,6 +1614,9 @@ body.set-open #pageMain{overflow:hidden}
 /* 帳號頁最上面：名稱、信箱、角色膠囊（一塊平面色塊；設定清單的「帳號」列只寫「帳號」） */
 .acct-me{display:grid;gap:10px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-me .acct-chips{margin-top:0}
+.acct-name{display:inline-block;justify-self:start;max-width:100%;padding:0 6px;margin-left:-6px}   /* 名字可點（.md-e 的滑過底色）；左邊用負邊距抵掉內距，字跟下面的信箱對齊 */
+.acct-name .ico{width:14px;height:14px;margin-left:8px;color:var(--muted);vertical-align:-1px}
+.acct-name .md-in{font-size:17px;line-height:1.5;letter-spacing:.06em}
 /* 人員、匯入的部門清單（.set-row.acct-row）：名稱下面的信箱與角色是名單資料，不是說明。文字區用自己的 .acct-rt（不共用設定列的 .sr-t，不回頭蓋它） */
 .acct-rt{flex:1;min-width:0;display:grid;gap:2px;font-weight:500;letter-spacing:.06em}
 .acct-rt>b{font-weight:500}
@@ -1671,7 +1671,6 @@ body.set-open #pageMain{overflow:hidden}
 .look{display:grid;gap:16px}
 /* 設定頁的面板裡（帳號、外觀）：整組外觀是一塊平面色塊（DESIGN-next 第三節，模擬頁帳號頁的外觀框）；主題按鈕底色是各自主題的 --bg，跟色塊分得開 */
 .set-hub>.look{padding:18px 20px 14px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
-.set-hub>.set-list+.look{margin-top:12px}
 .look-t{font-size:16px;font-weight:700;letter-spacing:.08em}
 .look-mode{justify-self:start}
 .look-pals{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
@@ -1757,7 +1756,7 @@ body.set-open #pageMain{overflow:hidden}
 .td-ov{position:fixed;inset:0;z-index:39;color:var(--pri-ink)}
 .td-ov[hidden]{display:none}
 .td-bg{position:absolute;inset:0;background:var(--pri)}
-.td-scroll{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;padding:calc(18px + env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) calc(40px + var(--bar-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(18px,env(safe-area-inset-left)))}   /* 讓出底部工具列／左側細欄 */
+.td-scroll{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;padding:calc(18px + var(--sa-top)) max(18px,var(--sa-right)) calc(40px + var(--bar-in) + var(--sa-bottom)) calc(var(--rail-in) + max(18px,var(--sa-left)))}   /* 讓出底部工具列／左側細欄 */
 .td-in{max-width:720px;margin:0 auto;display:grid;gap:28px}   /* 展開／收合的位移、縮放、透明度由 notify.js 的 todayMorph 依彈簧曲線做 */
 .td-top{display:flex;align-items:flex-end;gap:14px;padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
 .td-num{font-family:"Jost",sans-serif;font-weight:300;font-size:88px;line-height:.78;letter-spacing:-.03em}
@@ -2030,7 +2029,7 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* ===== 編輯紀錄頁 ===== */
-.log-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left));gap:10px}
+.log-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:calc(14px + var(--sa-top)) max(clamp(14px,3vw,40px),var(--sa-right)) 0 max(clamp(14px,3vw,40px),var(--sa-left));gap:10px}
 .log-ov[hidden]{display:none}
 /* 放在設定頁右側面板裡：不再蓋滿整個畫面，捲動交給面板 */
 .log-ov.in-pane{position:static;inset:auto;z-index:auto;padding:0;background:none;min-height:100%}
@@ -2062,8 +2061,8 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 }
 
 /* ===== 工作報告 ===== */
-.rpt-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + env(safe-area-inset-top)) max(clamp(14px,3vw,40px),env(safe-area-inset-right)) 0 max(clamp(14px,3vw,40px),env(safe-area-inset-left))}
-.rpt-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + env(safe-area-inset-bottom))}
+.rpt-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + var(--sa-top)) max(clamp(14px,3vw,40px),var(--sa-right)) 0 max(clamp(14px,3vw,40px),var(--sa-left))}
+.rpt-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + var(--sa-bottom))}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
 /* 例外：工作報告的白紙（紙上的顏色只在這一條定義，下面的紙張元件一律引用這些變數） */
@@ -2272,14 +2271,14 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-pt button.on{background:var(--ink);border-color:var(--ink);color:var(--blk)}
 @keyframes rptPtIn{from{opacity:0;transform:translateX(4px)}}
 @media (max-width:640px){   /* 手機：紙張整張縮小了，段落小工具放在畫面底部、圖塊工具列上面（report.js 的 rptParaTool） */
-  .rpt-ov>.rpt-pt:not([hidden]){position:fixed;left:12px;right:12px;top:auto;bottom:calc(64px + env(safe-area-inset-bottom));z-index:3;display:flex;justify-content:center;gap:6px}
+  .rpt-ov>.rpt-pt:not([hidden]){position:fixed;left:12px;right:12px;top:auto;bottom:calc(64px + var(--sa-bottom));z-index:3;display:flex;justify-content:center;gap:6px}
   .rpt-pt button{width:auto;padding:5px 14px;font-size:12px}
 }
 @media (prefers-reduced-motion:reduce){.rpt-pt{animation:none}}
 @media (max-width:640px){   /* 紙張的版面跟桌面完全一樣（整張縮小），這裡只調工具 */
   .rpt-ct,.rpt-bt{opacity:1;pointer-events:auto}   /* 觸控沒有滑過去：工具一直顯示（圖塊工具列只在點進去的圖塊） */
   .rpt-paper .rpt-bt{display:none}
-  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22)/* 例外：陰影黑 */;animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
+  .rpt-bt.is-dock{position:fixed;left:12px;right:12px;bottom:calc(12px + var(--sa-bottom));z-index:3;justify-content:center;padding:6px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.22)/* 例外：陰影黑 */;animation:rise .28s var(--mo-out)}   /* 點進去的圖塊，工具列搬到畫面底部（report.js 的 rptDock；不插進版面、不蓋住上一段） */
 }
 /* 列印：只印報告，A4；空白的自訂區塊不印。換頁一律照程式算的斷點（.rpt-brk），頁碼由程式畫在內文底下（.rpt-foot，iPhone 不支援 @page 頁碼） */
 @media print{
@@ -2391,8 +2390,6 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 /* ===== 共用動畫關鍵影格 ===== */
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 @keyframes pop{0%{transform:scale(.9)}100%{transform:none}}
-@keyframes dotIn{from{transform:scale(0);opacity:0}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
 
 
 /* ===== 行政會議資料（meeting.js 的 renderAgenda；2026-11-21 第三版：卡片就是文件，就地編輯） =====
