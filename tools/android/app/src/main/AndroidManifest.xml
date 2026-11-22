@@ -9,16 +9,11 @@
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="false">
 
-        <!-- 走 Chrome 的 Trusted Web Activity；沒有 assetlinks 驗證時會退回 Custom Tab（上方有網址列） -->
+        <!-- 只負責打開 Chrome 自訂分頁（Google 登入可用）；上方會有網址列 -->
         <activity
-            android:name="androidx.browser.trusted.LauncherActivity"
-            android:exported="true">
-            <meta-data
-                android:name="android.support.customtabs.trusted.DEFAULT_URL"
-                android:value="https://stustsa.github.io/council/home.html" />
-            <meta-data
-                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                android:resource="@android:color/black" />
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

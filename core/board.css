@@ -1699,7 +1699,7 @@ body.set-open #pageMain{overflow:hidden}
   .sg-noti{--noti-gap:clamp(20px,2vw,32px);grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--noti-gap)}
   .noti-r{grid-column:2/4}
   .noti-r .cal{container-type:normal;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto 1fr;gap:0 var(--noti-gap);align-items:start}
-  .noti-r .cal-top{grid-column:1;grid-row:1/span 2;gap:14px;padding:18px 20px}
+  .noti-r .cal-top{grid-column:1;grid-row:1/span 2;grid-template-columns:minmax(0,1fr);gap:14px;padding:18px 20px}
   .noti-r .cal>:not(.cal-top):not(.cal-ghost){grid-column:2;min-width:0}
   .noti-r .cal-list{grid-template-columns:minmax(0,1fr);margin-bottom:14px}
   .noti-r .cal-top .pc-head{margin-bottom:8px}
@@ -1860,9 +1860,16 @@ body.set-open #pageMain{overflow:hidden}
 /* 會長預約（會長室模式，booking.js）：開放時段與我的預約是普通的一列，右邊按鈕；月曆下面一小塊寫狀態與提醒（顏色全用變數，深色、手機不另寫） */
 .cal-ev.bk .ce-pl{flex:1 1 auto}
 .ce-act{margin-left:auto;display:flex;gap:8px;flex:none}
-.cal-bk{display:grid;justify-items:start;gap:10px;margin-top:12px}
+/* 「預約會長時間」卡（bkNoteHTML，在 .cal-top 裡、模式切換下面）：圓角色塊，左邊標題＋狀態、右邊按鈕（窄就換到下一行、按鈕撐滿）；顏色全用變數，深色不另寫 */
+.cal-bk{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--blk2)}
+.cal-bk .bk-t{flex:1 1 220px}
+.cal-bk .bk-t b{font-size:15px}
 .cal-bk .sub{margin:0;font-size:12.5px;line-height:1.6}
-.cal-bk a{color:var(--ink);text-decoration:underline}
+.cal-bk .bk-tip{font-size:11.5px;opacity:.8}
+.cal-bk .bk-b{flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){.cal-bk .bk-b{flex-basis:100%}.cal-bk .bk-b button{flex:1 1 auto}}
+/* 桌面三欄（1280px 以上，行事曆在中欄）：卡片縮成一行（標題＋狀態一行省略、按鈕靠右），規則提醒與「到會長室處理」字樣收起、第二顆鈕（待審膠囊）不放（放不下就會換行變高），月曆 1366×768 不用捲 */
+@media (min-width:1280px){.noti-r .cal-bk{flex-wrap:nowrap;padding:10px 14px;gap:10px}.noti-r .cal-bk .bk-t{min-width:0}.noti-r .cal-bk .bk-t .sub:not(.bk-tip){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.noti-r .cal-bk .bk-tip,.noti-r .cal-bk .bk-go{display:none}.noti-r .cal-bk .bk-b{flex:none;flex-wrap:nowrap}.noti-r .cal-bk .bk-b button+button{display:none}}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
 /* 桌面寬版（行事曆容器 1000px 以上）：左邊一欄放標題、搜尋、模式切換與找重疊（400px），右邊放海報月曆；月曆本身的縮小在「海報月曆」段 */
 @container cal (min-width:1000px){

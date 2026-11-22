@@ -27,6 +27,16 @@ if(!touch){   /* 電腦：跟電腦版主頁一樣的一排方塊（.wks-rail／
   ok(await p.evaluate(()=>doneWeek)===weeks[2]&&await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[2]&&await p.$$eval('#doneList .cp.done',x=>x.length)===exp[weeks[2]],tag+'：點第三個方塊，焦點與下面內容換成那一週');
   await p.keyboard.press('ArrowLeft');await p.waitForTimeout(700);
   ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[1],tag+'：左方向鍵移到前一週');
+  const rb=await p.$eval('#doneRail',e=>{const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}});
+  await p.mouse.move(rb.x,rb.y);await p.mouse.wheel(0,120);await p.waitForTimeout(700);
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[2],tag+'：滑鼠在方塊列上往下滾，換到較舊的一週');
+  await p.mouse.wheel(0,-120);await p.waitForTimeout(700);
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[1],tag+'：往上滾回較新的一週');
+  await p.mouse.wheel(0,120);await p.mouse.wheel(0,120);await p.mouse.wheel(0,120);await p.waitForTimeout(700);
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[2],tag+'：連滾三下被節流，只換一週');
+  await p.mouse.wheel(0,-120);await p.waitForTimeout(700);
+  await p.mouse.move(rb.x,700);const y0=await p.evaluate(()=>document.querySelector('#donePanel').closest('.page').scrollTop);await p.mouse.wheel(0,200);await p.waitForTimeout(500);
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[1],tag+'：滑鼠不在方塊列上，滾輪不換週');
   await p.click('#doneList .cp.done');await p.waitForTimeout(900);
   ok(await p.evaluate(()=>!!dnOpen&&$('#doneMD').classList.contains('split')),tag+'：點膠囊開卡片，分兩欄、方塊還在上面');
   await p.screenshot({path:`${dir}/dwk_${tag}_card.png`});

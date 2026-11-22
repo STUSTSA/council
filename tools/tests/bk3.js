@@ -105,6 +105,9 @@ const XSS='<img src=x onerror="window.__xss=1">';
   ok(await s1.evaluate(()=>!$('#bkPanel')||$('#bkPanel').hidden||!$('#bkPanel [data-bk]')),'同學：各部門看板沒有預約卡的按鈕，預約在行事曆');
   ok(await s1.evaluate(()=>/還有 8 格/.test($('#notiPage .cal-list').textContent)&&!!$('#notiPage .cal-ev.bk [data-bk=req]')&&!$('#notiPage [data-bk=wadd]')&&!$('#notiPage [data-bk=ok]')&&!!$('#notiPage .pc-d.has')),'同學：行事曆會長室模式看到可預約時段（還有 8 格）、月曆有標記，沒有管理按鈕');
   ok(await s1.evaluate(()=>/下一個可預約時段/.test($('#notiPage .cal-bk').textContent)&&/最多 3 筆待審/.test($('#notiPage .cal-bk').textContent)),'月曆下面一小塊：下一個可預約時段與規則提醒');
+  ok(await s1.evaluate(()=>!!$('#notiPage .cal-top .cal-bk [data-bk=book].primary')&&!$('#notiPage .cal-bk [data-bk=goext]')),'同學：卡片上有實心「預約會長時間」，沒有管理員的處理鈕');
+  await calOpen(mg);
+  ok(await mg.evaluate(()=>{const c=$('#notiPage .cal-bk');return !!c&&/待審 \d+ 筆/.test(c.textContent)&&!!c.querySelector('[data-bk=goext]')&&!c.querySelector('[data-bk=book]')===(!acct.roles||!Object.keys(acct.roles.depts||{}).length)}),'會長室管理員：同一張卡有「待審 N 筆」；有部門角色才有預約鈕');
   await s1.evaluate(()=>{NOTI.mode='mine';calPaint(NOTI)});await s1.waitForTimeout(800);   /* 舊清單的淡出分身要等它走完 */
   ok(await s1.evaluate(()=>!document.querySelector('#notiPage [data-bk]')&&!document.querySelector('#notiPage .cal-bk')),'切到「本部門」模式：預約的東西不出現');
   await s1.evaluate(()=>{NOTI.mode='pres';calPaint(NOTI)});
