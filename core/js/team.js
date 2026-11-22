@@ -225,7 +225,6 @@ function staffHTML(ids){
   const names=staffNames(ids);
   return names.length?`<div class="staff-row"><span class="staff-h">專員</span>${names.map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")}</div>`:"";
 }
-const staffField=v=>state.members.length?[{name:"staff",label:"專員（可複選）",type:"multi",value:v||[],options:staffOpts()}]:[];
 
 /* ---------- 編輯紀錄：存檔時比對前後，寫成結構化的 commit 訊息 ---------- */
 let baseline=null;
