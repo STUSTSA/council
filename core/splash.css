@@ -14,10 +14,10 @@
 .sp-fly{position:fixed;z-index:91;transform-origin:0 0;pointer-events:none}
 .sp-fly svg{display:block;width:100%;height:100%;overflow:visible}
 /* ===== 學生會標誌（splash.js 的 suLogoH：主頁左上；開場也用同一組 class） =====
-   淺色：黃、藍兩個小人與藍字照原檔顏色（標誌的藍黃不跟主題變），深藍字＝文字色；深色：左邊小人只留線稿、右邊小人與字都是文字色 */
-.su-y{fill:var(--mk-a)}   /* 學生會標誌的顏色跟主題（theme.css「標誌色」）；檔案裡的黃藍只是預設 */
+   淺色：黃、藍兩個小人與字跟主題（--mk-a／b／t）；深色：一律單色，左邊小人只留線稿、右邊小人與字都是文字色 */
+.su-y{fill:var(--mk-a)}   /* 淺色：學生會標誌的顏色跟主題（theme.css「標誌色」）；深色一律單色（下面兩條，DievE 11/22）；檔案裡的黃藍只是預設 */
 .su-b{fill:var(--mk-b)}
 .su-t{fill:var(--mk-t)}
 .su-k{fill:var(--ink)}
-:root[data-theme="dark"] .su-t{fill:var(--ink)}
-:root[data-theme="dark"] .su-y{fill:none;stroke:var(--mk-a);stroke-width:1.2px;vector-effect:non-scaling-stroke}   /* 線稿的粗細照畫面上的像素算：開場的大標誌與主頁左上的小標誌（高 28–32px）一樣看得清楚 */
+:root[data-theme="dark"] :is(.su-b,.su-t){fill:var(--ink)}
+:root[data-theme="dark"] .su-y{fill:none;stroke:var(--ink);stroke-width:1.2px;vector-effect:non-scaling-stroke}   /* 線稿的粗細照畫面上的像素算：開場的大標誌與主頁左上的小標誌（高 28–32px）一樣看得清楚 */
