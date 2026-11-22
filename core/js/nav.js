@@ -198,7 +198,7 @@ const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" s
 const devRow=()=>devForget()?setRow("device","device","這台裝置"):setRow("device","download","安裝");
 const devSec=()=>devShow()?setSec(devRow()):"";
 /* 「外觀」：所有情況都是設定清單最後一列，點進去是合併頁（SET_HUBS.look；主題、深淺色、音效） */
-const lookSec=()=>setSec(setRow("look","palette","外觀"));
+const lookSec=()=>setSec(setRow("look","theme","外觀"));
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有鎖頭（每週報告在完成紀錄的週頁裡，本來就公開看） */
 function settingsInner(){
