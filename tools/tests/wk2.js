@@ -9,9 +9,9 @@ for(const [w,h,touch,tag] of [[390,780,true,'mob'],[1366,800,false,'desk']]){
  const p=await mk(w,h,'light',touch);await p.context().clock.setFixedTime(NOW);await p.reload();await p.waitForTimeout(1800);
  await p.waitForFunction(()=>!document.getElementById('splash'),null,{timeout:8000}).catch(()=>{});
  await p.evaluate(()=>setSection('done',{instant:true}));await p.waitForTimeout(600);
- const weeks=await p.$$eval('#doneList .wks-h,#doneRail .hm-tile',x=>x.map(e=>e.dataset.wk));
+ const weeks=await p.$$eval('#wksWal .hm-wc,#doneRail .hm-tile',x=>x.map(e=>e.dataset.week||e.dataset.wk));
  ok(weeks.includes('2026-09-21'),tag+'：沒有完成紀錄、但有每週報告的週（9/21）也列得出來：'+weeks.join(','));
- if(touch){await p.click('#doneList .wks-h');await p.waitForTimeout(1200)}   /* 手機要點開本週；電腦的焦點預設就在最新一週 */
+ if(touch){await p.click('#wksWal .hm-wc.on',{position:{x:60,y:18}});await p.waitForTimeout(1200)}   /* 手機要點開本週；電腦的焦點預設就在最新一週 */
  ok(await p.evaluate(()=>(doneWeek||doneWeeks(doneItems())[0][0])==='2026-10-26')&&!!(await p.$('#doneList .wk-rep .week')),tag+'：進到本週：最上方有每週報告卡');
  const top=await p.evaluate(()=>{const r=document.querySelector('#doneList .wk-rep').getBoundingClientRect(),c=document.querySelector('#doneList .cps').getBoundingClientRect();return r.top<c.top});
  ok(top,tag+'：每週報告在完成紀錄卡片上面');
