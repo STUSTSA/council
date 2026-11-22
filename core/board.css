@@ -1042,8 +1042,8 @@ a.link:active{transform:scale(.96)}
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
 /* 完成紀錄的週：手機＝疊卡（跟主頁手機的部門卡片堆 .hm-wc 同一套外觀），電腦＝一排方塊（跟電腦版主頁的 .hm-tile／.hm-ring 是同一組樣式，見「主頁」段）。views.js 的 renderDone 依 640px 分兩種畫，裡面的內容（每週報告＋膠囊）是同一份。
-   手機：一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝進到那一週的獨立檢視（整頁只畫這一張：標題、每週報告、該週完成紀錄），
-   左上「上一頁」、返回鍵、再點標題都回到整疊卡片（回原本捲動位置，views.js 的 doneWeekShow；進出用往上淡入）。
+   手機：整疊週卡＝主頁手機部門卡片堆（.hm-wal／.hm-wc，動作引擎 core/js/wallet.js 兩邊共用）：焦點卡整張露出、前面的縮小疊在上方、後面的只露一條；拖、甩、點露出的一條叫到焦點，點焦點卡＝進到那一週的獨立檢視（整頁只畫那一週：標題、每週報告、該週完成紀錄，.wks-c）；
+   左上「上一頁」、返回鍵、再點標題都回整疊卡片，焦點還在那一週（views.js 的 doneWeekShow；進出用往上淡入）。
    電腦：.wks-rail 是橫向可捲的一排方塊（焦點那塊放大 1.13、其他半透明、焦點框 #wksRing 滑過去），焦點那一週的內容畫在方塊下面的 #doneList；方塊裡「張數」用主頁的大數字 .hm-n */
 .wks-rail{--hm-t:clamp(130px,12vw,170px);position:relative;display:flex;gap:calc(var(--hm-t)*.16);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 -20px;padding:34px 28px 36px}
 .wks-rail[hidden]{display:none}
@@ -1058,7 +1058,6 @@ a.link:active{transform:scale(.96)}
 .wks-t .hm-n{left:20px;bottom:16px}
 .wks{padding:4px 0 8px}
 .wks-c{position:relative;border-radius:var(--r-lg)}
-.wks-c+.wks-c{margin-top:-14px}   /* 後面那張壓住前面那張的下緣 14px */
 .wks-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;padding:16px 22px 18px;border:0;border-radius:var(--r-lg);background:none;color:var(--ink);font:inherit;text-align:left}
 .wks-h:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .wks-r{font-size:12px;color:var(--muted)}
@@ -1389,12 +1388,15 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-tile.on .hm-lg{transform:scale(1.1) translate(-2%,-2%)}
 .hm-n{position:absolute;left:20px;bottom:16px;font-size:clamp(28px,3vw,38px);font-weight:300;line-height:1}
 .hm-ring{position:absolute;left:0;top:0;z-index:2;border:3px solid var(--acc2);border-radius:26px;pointer-events:none;transition:transform 380ms cubic-bezier(.3,1.45,.45,1)}
-/* 手機（640px 以下）：錢包式卡片堆（.hm-wal；位置、縮放、淡出都由 home.js 的 walDraw 寫 transform／opacity）。
+/* 手機（640px 以下）：錢包式卡片堆（.hm-wal；位置、縮放、淡出都由 wallet.js 的 Wallet 引擎寫 transform／opacity；主頁部門與完成紀錄的週共用）。
    卡片疊在一起，用一層柔和的陰影分出前後（陰影只給浮在內容上面的東西：手機卡片堆、主頁下排；--wal-sh 在 core/theme.css） */
 .hm-wal{position:relative;flex:1;min-height:0;margin-top:22px;touch-action:none}
 .hm-wc,.wks-c{background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink)}   /* 卡片堆的共用外觀（主頁手機部門卡片、完成紀錄週疊卡）：底色、往上的陰影；圓角各自 --r-lg */
 .hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wks-wal{flex:none;height:calc(100dvh - 290px);min-height:380px;margin-top:6px;overflow:hidden}   /* 完成紀錄的週卡堆（沿用 .hm-wal／.hm-wc，高度固定一屏，不跟頁面一起捲）；overflow 裁掉往下排出畫面的卡 */
+button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;border:0;font:inherit;text-align:left}   /* 週卡是 button（主頁部門卡是 a）：button 的內容預設垂直置中，改成從左上開始 */
+.hm-wc .wks-r{display:block}
 .hm-wc .hm-nm{font-size:20px}
 .hm-wc .hm-lg{left:auto;right:20px;top:16px;bottom:auto;width:118px;height:118px}
 .hm-wc .hm-n{left:22px;top:92px;bottom:auto;font-size:34px}

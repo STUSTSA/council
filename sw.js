@@ -15,7 +15,7 @@ const SHELL=["./","index.html","home.html",
   "core/theme.css","core/board.css","core/splash.css",
   ...["theme","app","pagefx"].map(f=>`core/js/${f}.js`),"dept/config.js",
   ...["config","store-map","store","account","splash","shell","util","morph","anim","icons","state","cloud","render","views","dialog","save","weekly",
-      "report","follow","notify","activity","meeting","booking","attendance","proposals","back","motion","auth","team","provision","labels","nav","search","events","sfx","live","pwa","boot",
+      "report","follow","notify","activity","meeting","booking","attendance","proposals","back","motion","auth","team","provision","labels","nav","search","events","sfx","wallet","live","pwa","boot",
       "home"].map(f=>`core/js/${f}.js`),
   ...["president","secretariat","rights","marketing","finance","events","affairs","pr","works"].map(d=>`dept/icons/dept-${d}.svg`)];
 self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(new Request(u,{cache:"no-cache"})).catch(()=>{})))).catch(()=>{}))});
