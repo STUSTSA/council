@@ -112,6 +112,11 @@ const PageFx=(()=>{
   const svg=u=>fetch(u).then(r=>r.ok?r.text():"").then(t=>{const s=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
     if(!s||s.nodeName!=="svg")return null;const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");return n}).catch(()=>null);
   let cover=null;const arriveFns=[];
+  /* 到達時要等的事（boot.js 登記：第一次資料讀回來並畫完第一屏、字型就位）。底板蓋著、一直等到全部好了（最多 GATE_MAX）才開始收，
+     不再只看畫面格數：資料慢的時候格數很穩、底板卻收掉，就會看到還沒有資料的空畫面。超過上限也照樣平順收起，不卡住 */
+  const gates=[],GATE_MAX=6000;
+  const gate=p=>{gates.push(Promise.resolve(p).catch(()=>{}))};
+  const ready=()=>Promise.race([Promise.all(gates),wait(GATE_MAX)]);
   {const h=document.documentElement,k=h.dataset.pfx,d=h.dataset.pfxD;
     if(k&&d&&h.classList.contains("pfx-arrive")&&!RM()){const c=cover=document.createElement("div");c.className="pfx-cover";c.dataset.k=k;c.setAttribute("aria-hidden","true");h.append(c);
       svg(`dept/icons/dept-${d}.svg`).then(s=>{if(s)c.append(s)})}   /* 主頁剛讀過同一個檔，從快取拿，通常趕得上第一格 */
@@ -123,16 +128,16 @@ const PageFx=(()=>{
        翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 5 格都在 22ms 內畫完才開始，最多等 1.6 秒；
        等的這段時間整頁還是透明（底色），看不到半成品 */
     const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=5||now-t0>1600)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
-    const start=()=>calm(()=>{
+    const start=()=>ready().then(()=>calm(()=>{
       const my=++tok,c=cover,flip=c&&c.dataset.k==="flip";cover=null;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
       /* 主頁過場的底板：桌面＝淡出並略放大，區塊照常浮上來；手機＝標誌淡出，區塊不規則浮現 */
       if(c){const a=flip?c.animate([{opacity:1},{opacity:0}],{duration:320,easing:EASE_OUT,fill:"forwards"}):c.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(1.04)"}],{duration:360,delay:60,easing:EASE_OUT,fill:"forwards"});
         a.finished.catch(()=>{}).then(()=>c.remove())}
       arriveFns.splice(0).forEach(f=>f());
       run(document.body,"in",my,FADE_IN,false,0,true,flip).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
-    });
+    }));
     let go=false;const once=()=>{if(!go){go=true;start()}};
-    if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 最多等 0.9 秒（字型、圖片很慢時不要一直空白） */
+    if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 載入本身最多等 0.9 秒；資料的等待由 gate（上面）負責 */
   }
   const inSite=a=>{try{const u=new URL(a.href,location.href);return u.origin===location.origin&&(/\.html?$/.test(u.pathname)||u.pathname.endsWith("/"))&&!a.target&&!a.hasAttribute("download")}catch(_){return false}};
   document.addEventListener("click",e=>{
@@ -145,5 +150,5 @@ const PageFx=(()=>{
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",arrive);else arrive();
   /* 跨頁到達開始浮上來的那一刻呼叫 f（沒有要浮上來就馬上呼叫）：主頁從部門回來時，收回色塊的動畫跟著這一刻開始 */
   function onArrive(f){if(document.documentElement.classList.contains("pfx-arrive"))arriveFns.push(f);else f()}
-  return {swap,settle,leave,hold,reset,onArrive,svg};
+  return {swap,settle,leave,hold,reset,onArrive,svg,gate};
 })();

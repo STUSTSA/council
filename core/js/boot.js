@@ -38,6 +38,8 @@ const dataReady=!(SEEDED&&location.protocol!=="file:")?Promise.resolve()
 /* 這台裝置記住了身分：開頁就直接登入，卡片上的「編輯」一進來就看得到（2026-11-06 使用者：要進設定再回來才出現）。
    有雲端時等雲端資料讀完才比對（本機舊資料的密碼指紋可能過期，比對失敗會清掉記住的身分） */
 const remBoot=async()=>{if(!loggedIn()&&remRead()&&await remLogin())render()};
+/* 從主頁進來的過場（pagefx.js 的 arrive）：等資料讀完、第一屏畫完、字型就位才收底板；資料慢就一直蓋著（上限在 pagefx.js），不露出空畫面 */
+PageFx.gate(Promise.all([dataReady.then(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))),document.fonts?document.fonts.ready:null]));
 dataReady.then(()=>{
 setBaseline();
 render();
