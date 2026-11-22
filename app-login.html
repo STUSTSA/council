@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>登入學生會看板</title>
+<!-- 安卓 App 專用的登入頁（App 內嵌畫面不能用 Google 登入，所以由 Chrome 開這一頁）。
+     流程：按「用 Google 登入」→ 登入完成 → 按「回到看板」→ App 收到憑證並完成登入。這一頁登入完會立刻把 Chrome 裡的 Firebase 登入登出，不留狀態。 -->
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px/1.6 system-ui,"Noto Sans TC",sans-serif;background:#f5f0e1;color:#222}
+  main{max-width:22rem;padding:2rem 1.5rem;text-align:center}
+  button,a.btn{display:block;width:100%;box-sizing:border-box;margin:1rem 0 0;padding:.9rem 1rem;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;text-decoration:none;cursor:pointer;transition:opacity .15s}
+  button:active,a.btn:active{opacity:.7}
+  [hidden]{display:none}
+  @media (prefers-color-scheme:dark){body{background:#1c1b18;color:#eee}button,a.btn{background:#eee;color:#111}}
+</style>
+</head>
+<body>
+<main>
+  <p id="msg">請用學生會的 Google 帳號登入。</p>
+  <button id="go" type="button">用 Google 登入</button>
+  <a id="back" class="btn" hidden>回到看板</a>
+</main>
+<script src="dept/config.js"></script>
+<script type="module">
+import { fb } from "./core/js/fb-app.js";
+import { signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+const $ = id => document.getElementById(id);
+/* nonce 由 App 產生、放在網址 # 後面（不會送到伺服器）；沒有或格式不對就不登入，別的網站不能拿這一頁來取得使用者的登入憑證 */
+const n = new URLSearchParams(location.hash.slice(1)).get("n");
+const NONCE = n && /^[A-Za-z0-9_-]{16,64}$/.test(n) ? n : "";
+if (!NONCE) { $("msg").textContent = "請從學生會看板 App 內按「Google 登入」開啟這一頁。"; $("go").hidden = true; }
+$("go").onclick = async () => {
+  $("go").disabled = true;
+  try {
+    if (!NONCE) throw new Error("no-nonce");
+    const { auth } = fb(BOARD_BASE.firebase);
+    const p = new GoogleAuthProvider();
+    p.setCustomParameters({ prompt: "select_account" });
+    const r = await signInWithPopup(auth, p);
+    const c = GoogleAuthProvider.credentialFromResult(r);
+    await signOut(auth);
+    if (!c || !c.idToken) throw new Error("no-credential");
+    /* 用 intent 網址並指定套件名：只有我們的 App 收得到，別的 App 搶不到憑證 */
+    $("back").href = "intent://auth#Intent;scheme=councilapp;package=tw.edu.stust.council;S.idToken=" + encodeURIComponent(c.idToken)
+      + ";S.nonce=" + encodeURIComponent(NONCE) + ";end";
+    $("msg").textContent = "登入完成，請點下面的按鈕回到看板。";
+    $("go").hidden = true;
+    $("back").hidden = false;
+  } catch (e) {
+    $("msg").textContent = "登入沒有完成，請再試一次。";
+    $("go").disabled = false;
+  }
+};
+</script>
+</body>
+</html>
