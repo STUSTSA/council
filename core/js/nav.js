@@ -437,10 +437,10 @@ function elastic(sc,inner){
   const back=()=>{if(!off)return;const from=off;set(0);if(reduceMotion())return;anim&&anim.cancel();anim=inner.animate([{transform:`translate3d(0,${from}px,0)`},{transform:"translate3d(0,0,0)"}],{duration:620,easing:"cubic-bezier(.16,1.35,.4,1)"})};
   const atTop=()=>sc.scrollTop<=0,atBot=()=>sc.scrollTop+sc.clientHeight>=sc.scrollHeight-1;
   sc.addEventListener("wheel",e=>{
-    if(e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+    if(e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||e.target.closest("[data-own-gesture]"))return;   /* 自己用滾輪／拖曳的區塊（完成紀錄的週方塊列、週卡堆）：頁面不跟著回彈，不然每滾一格整頁抖一下 */
     if((e.deltaY<0&&atTop())||(e.deltaY>0&&atBot())){anim&&anim.cancel();acc=Math.max(-260,Math.min(260,acc-e.deltaY*.45));set(rub(acc));clearTimeout(tm);tm=setTimeout(()=>{acc=0;back()},120)}
   },{passive:true});
-  sc.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
+  sc.addEventListener("touchstart",e=>{if(e.touches.length!==1||e.target.closest("[data-own-gesture]")){y0=null;return}y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
   sc.addEventListener("touchmove",e=>{
     if(y0===null)return;
     if(document.documentElement.classList.contains("ev-drag-on")){if(off)set(0);return}   /* 膠囊拖到角落（live.js）時手指的上下移動是拖曳，不是拉頁面：不回彈，不然整頁會被拉走、頁面多出一個疊層把完成／刪除角落蓋住 */

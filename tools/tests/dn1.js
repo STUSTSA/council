@@ -13,7 +13,7 @@ const r=await p.evaluate(()=>{const x=doneItems().find(y=>y.id===window.__id);re
 ok(r.pd==='2026-11-21','pd 認得帶時間的日期：'+r.pd);
 ok(r.wk==='2026-11-16','剛完成的卡片歸在 11/16 – 11/22 那一週：'+r.wk);
 ok(r.weekly,'生成週報的完成事項有它');
-const t=await p.$$eval('#doneRail .hm-tile,#doneList .wks-c',x=>x.map(e=>e.textContent));
+const t=await p.$$eval('#doneRail .hm-tile,#wksWal .hm-wc',x=>x.map(e=>e.textContent));
 ok(t[0].includes('11/16 – 11/22'),'總覽第一張是本週那一格（手機疊卡、電腦方塊）：'+t[0].slice(0,50));
 ok(p.errs.length===0,'沒有 console 錯誤 '+p.errs.join('|'));
 await b.close();console.log(bad?'FAILED '+bad:'ALL OK');process.exit(bad?1:0)})();

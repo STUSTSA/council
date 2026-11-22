@@ -32,8 +32,8 @@ for(const [w,h,touch] of [[412,880,true],[1300,860,false]]){
   if(await p.$('#pvGantt [data-issue], #pvGantt [data-gi]')){await tap('#pvGantt [data-issue], #pvGantt [data-gi]');await unwind('進度議題詳情')}
   /* 完成紀錄：某一週、某一週裡的卡片 */
   await tap('#tabbar [data-tab=done]');
-  if(await p.$('#doneList .wks-h')){await tap('#doneList .wks-h');await unwind('完成紀錄某一週');
-    await tap('#doneList .wks-h');if(await p.$('#doneList [data-cp]')){await tap('#doneList [data-cp]');await unwind('完成紀錄某一週的卡片')}else await unwind('完成紀錄某一週')}
+  if(await p.$('#wksWal')){await tap('#wksWal .hm-wc.on');await unwind('完成紀錄某一週');
+    await tap('#wksWal .hm-wc.on');if(await p.$('#doneList [data-cp]')){await tap('#doneList [data-cp]');await unwind('完成紀錄某一週的卡片')}else await unwind('完成紀錄某一週')}
   /* 即時回報卡片（手機＝全螢幕，Back 疊有 card；桌面分欄不登記）：開著卡片時資料把它收掉 */
   await tap('#tabbar [data-tab=live]');
   await tap('#events [data-cp]');await unwind('即時回報卡片');
@@ -42,7 +42,7 @@ for(const [w,h,touch] of [[412,880,true],[1300,860,false]]){
   await unwind('即時回報卡片被結案收掉');
   /* 完成紀錄的卡片被刪掉 */
   await tap('#tabbar [data-tab=done]');
-  if(await p.$('#doneList .wks-h')){await tap('#doneList .wks-h');
+  if(await p.$('#wksWal')){await tap('#wksWal .hm-wc.on');
     if(await p.$('#doneList [data-cp]')){await tap('#doneList [data-cp]');
       await p.evaluate(()=>{const id=dnOpen;state.events=state.events.filter(x=>x.id!==id);state.issues=state.issues.filter(x=>x.id!==id);render()});await p.waitForTimeout(700);
       await unwind('完成紀錄卡片被資料收掉')}else await unwind('完成紀錄某一週')}
