@@ -74,4 +74,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete apk-test --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" || true
-          gh release create apk-test out/* --prerelease --title "模擬器截圖（驗證用）" --notes "暫時的，會刪除。" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
+          find out -type f -empty -delete; ls -la out; gh release create apk-test out/* --prerelease --title "模擬器截圖（驗證用）" --notes "暫時的，會刪除。" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
