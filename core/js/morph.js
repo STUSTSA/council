@@ -85,9 +85,3 @@ function morphTo(el,html,scr){
   morphKids(el,t.content);
   if(scr!==undefined)el._mFirst=el.firstChild;
 }
-/* el 本身換成 html（一個根節點）：根節點同標籤就原位更新，不同才整個換掉 */
-function morphOuter(el,html){
-  if(!el)return;
-  const t=document.createElement("template");t.innerHTML=html.trim();const n=t.content.firstElementChild;
-  if(n&&t.content.childElementCount===1&&n.tagName===el.tagName)morphNode(el,n);else{[...t.content.children].forEach(morphMark);el.replaceWith(t.content)}
-}

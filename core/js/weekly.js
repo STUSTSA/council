@@ -75,13 +75,6 @@ function weekDotSync(){
 }
 /* 網頁一直開著跨過週五也要冒出來：每 10 分鐘、回到這個分頁時再檢查一次 */
 setInterval(weekDotSync,6e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)weekDotSync()});
-/* 「本週」＝上一份週報之後到今天（生成週報、動畫模式共用） */
-function weekRange(){
-  const end=today();
-  const lastWeek=[...state.weeks].map(w=>w.date).filter(d=>d<end).sort().pop();
-  const start=state.reportBase?.date&&state.reportBase.date<end?state.reportBase.date:(lastWeek||addDays(end,-7));
-  return {start,end};
-}
 /* 生成週報（2026-11-05 改；2026-11-21 改成議程式版面）：只列兩區、只寫標題，不寫說明與議題進度
    （一）報告事項：還沒完成、標了「報告」（ev.report）的即時回報標題（照畫面順序）；一筆都沒標就寫一行說明
    （二）完成事項：完成紀錄裡這一整週（今天往前 7 天）完成、或完成後在這七天內編輯過（touchedAt）的項目標題（議題結案、即時回報結案、完成一段都算；議題沒有編輯時間，只看結案日），由新到舊 */
