@@ -2377,6 +2377,15 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .md-ex .md-note{grid-column:1/-1}
 .md-ext{font-size:14.5px;font-weight:500;padding:4px 8px;margin:0 -8px}
 .md-add{margin-top:8px}
+.md-send{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px}
 .md-in{width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.7;color:var(--ink)}
 .md-paste{border-top:1px solid var(--hair);padding-top:12px;margin-top:6px}
 .ag-st{margin:12px 0 0;font-size:12.5px}
+
+/* 會議結論（部門即時回報頁最上面的待合併卡，proposals.js）：一則一列，上面小字「日期 行政會議　卡片名」，下面結論，右下「合併到卡片」「略過」 */
+.mp-panel[hidden]{display:none}
+.mp-row{padding:12px 0;border-top:1px solid var(--hair)}
+.mp-row:first-child{border-top:0;padding-top:0}
+.mp-meta{margin:0 0 4px;font-size:12px;color:var(--muted);letter-spacing:.04em}
+.mp-note{margin:0 0 10px;font-size:14px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
+.mp-act{display:flex;justify-content:flex-end;gap:8px}
