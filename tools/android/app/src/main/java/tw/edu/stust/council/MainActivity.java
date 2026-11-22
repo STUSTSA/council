@@ -82,11 +82,10 @@ public class MainActivity extends Activity {
             pushInsets();
             return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : ins.consumeSystemWindowInsets();
         });
-        setBarColor(defaultColor());
-
         web = new WebView(this);
         root.addView(web, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
+        setBarColor(defaultColor());   /* 要在 setContentView 之後：DecorView 建好了才能設系統列圖示明暗 */
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
