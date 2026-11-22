@@ -7,7 +7,7 @@
       下排底到視窗底不超過視窗高度的 25%（下半不全空）；上排底到色塊頂有留白
    2. 焦點那張放大的比例跟修改前一樣（1.13）
    3. 下排沒有共用底：下排的容器（.hm-dock、.hm-dk、.hm-dk-in、底板）不是不畫就是透明、沒有陰影；兩顆圓鈕中間的縫的顏色＝頁面底色
-   4. 圓鈕直徑在色塊邊長的 1/4～1/3，三種圓鈕（行事曆、連結、「+」）一樣大；圖示跟著圓鈕等比例放大（行事曆圖示＝直徑×20/44、網站圖示＝直徑×26/44、
+   4. 圓鈕直徑在色塊邊長的 1/4～1/3，三種圓鈕（行事曆、連結、「+」）一樣大；圖示跟著圓鈕等比例放大（行事曆圖示＝直徑×20/44、網站圖示＝直徑×26/44（電腦版 641px 以上 20/44）、
       首字母字級＝直徑×16/44），不變形、在圓鈕正中間（1px 內）
    5. 整排（第一顆到最後一顆）的中心＝視窗水平中心（0.5px 內）；各元素中心在同一條水平線（1px 內）
    6. 行事曆圓鈕是主要動作色（--pri）
@@ -81,9 +81,9 @@ const f1=v=>v==null?'—':(Math.round(v*10)/10).toString(),f3=v=>v==null?'—':(
     ok(near(gp,bg),`${T} 兩顆圓鈕中間的縫是頁面底色（縫 ${gp}、頁面 ${bg}）`);
     const ds=[r.pub.w,r.pub.h,r.add,...r.lk.map(l=>l.w),...r.lk.map(l=>l.h)];
     ok(ds.every(d=>Math.abs(d-r.pub.w)<.5)&&r.pub.w>=r.T/4-.01&&r.pub.w<=r.T/3+.01,`${T} 圓鈕一樣大、直徑在色塊邊長 1/4～1/3（${f1(r.pub.w)} ÷ ${f1(r.T)} = ${f3(r.pub.w/r.T)}）`);
-    const k=r.pub.w/44,fv=r.lk.find(l=>l.fav),lt=r.lk.filter(l=>!l.fav);
+    const k=r.pub.w/44,fk=r.W>=641?20:26,fv=r.lk.find(l=>l.fav),lt=r.lk.filter(l=>!l.fav);
     ok(Math.abs(r.pub.iw-20*k)<=.5&&Math.abs(r.pub.ih-r.pub.iw)<.5&&Math.abs(r.pub.idx)<=1&&Math.abs(r.pub.idy)<=1,`${T} 行事曆圖示跟著放大（${f1(r.pub.iw)}×${f1(r.pub.ih)}，應 ${f1(20*k)}）、在正中間`);
-    ok(fv&&Math.abs(fv.iw-26*k)<=.5&&Math.abs(fv.ih-fv.iw)<.5&&Math.abs(fv.idx)<=1&&Math.abs(fv.idy)<=1,`${T} 網站圖示跟著放大（${fv&&f1(fv.iw)}×${fv&&f1(fv.ih)}，應 ${f1(26*k)}）、不變形、在正中間`);
+    ok(fv&&Math.abs(fv.iw-fk*k)<=.5&&Math.abs(fv.ih-fv.iw)<.5&&Math.abs(fv.idx)<=1&&Math.abs(fv.idy)<=1,`${T} 網站圖示跟著放大（${fv&&f1(fv.iw)}×${fv&&f1(fv.ih)}，應 ${f1(fk*k)}）、不變形、在正中間`);
     ok(lt.length===2&&lt.every(l=>Math.abs(l.fs-16*k)<=.5),`${T} 首字母字級跟著放大（${lt.map(l=>f1(l.fs)).join('、')}，應 ${f1(16*k)}）`);
     ok(Math.abs(r.mid-r.W/2)<=.5,`${T} 整排中心＝視窗中心（差 ${f3(r.mid-r.W/2)}px）`);
     const sp=Math.max(...r.line)-Math.min(...r.line);ok(sp<=1,`${T} 下排各元素中心在同一條水平線（差 ${f3(sp)}px）`);

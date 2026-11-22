@@ -1446,6 +1446,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-lk{position:relative;display:flex}
 .hm-lkl{display:block;width:var(--hm-dot);height:var(--hm-dot);font-family:"Jost","Noto Sans TC",sans-serif;font-size:calc(var(--hm-dot)*16/44);font-weight:700;line-height:var(--hm-dot);text-align:center;text-box:trim-both cap alphabetic;align-content:center}   /* 首字母：字形置中——行框裁到大寫字高到基線（text-box）再上下置中，墨跡才在正中間；不支援 text-box 的瀏覽器照圓鈕大小的行高置中（字框置中，大寫字會偏上一點） */
 .hm-lki{position:absolute;width:calc(var(--hm-dot)*26/44);height:calc(var(--hm-dot)*26/44);border-radius:calc(var(--hm-dot)*6/44);object-fit:contain;opacity:0;-webkit-user-drag:none}   /* 網站圖示：44px 圓鈕時 26px（跟著直徑等比例）、不裁成圓、不變形；載到前透明且不佔位（首字母先顯示） */
+@media (min-width:641px){.hm-lki{width:calc(var(--hm-dot)*20/44);height:calc(var(--hm-dot)*20/44);border-radius:calc(var(--hm-dot)*5/44)}}   /* 電腦版圓鈕變大，網站圖示改 20/44（跟旁邊線條圖示同一份視覺份量，原本 26/44 偏大）；手機不變 */
 .hm-lk.fav .hm-lkl{display:none}   /* 載到網站圖示（home.js 的 lkIco 加 .fav；不用 .ico，那是全站 SVG 圖示的 class，會把連結框改成 1.15em 大小） */
 .hm-lk.fav .hm-lki{position:static;opacity:1}
 .hm-dk.ed .hm-lkc{pointer-events:none}   /* 編輯中點連結不打開 */

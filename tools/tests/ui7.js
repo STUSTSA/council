@@ -37,7 +37,7 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
       su:!!document.querySelector('#hmMe svg.hm-su .su-emb'),clock:document.getElementById('hmClock').textContent,set:document.getElementById('hmSet').getAttribute('aria-label'),
       bad:document.querySelectorAll('#tabbar,.tb-main,#notiBtn,.noti-n,.lseg').length,title:document.querySelectorAll('[title]').length}));
     ok(r.tiles===9&&r.on==='權益部'&&r.en==='STUDENT RIGHTS',`九張色塊、焦點預設權益部（${r.tiles} ${r.on} ${r.en}）`);
-    ok(r.su&&/^\d\d:\d\d$/.test(r.clock)&&r.set==='設定'&&r.bad===0,`只有左上標誌、時間 ${r.clock}、設定鈕；沒有工具列、通知、部門／專案切換`);
+    ok(r.su&&/^\d\d:\d\d$/.test(r.clock)&&r.set==='外觀主題'&&r.bad===0,`只有左上標誌、時間 ${r.clock}、外觀主題鈕；沒有工具列、通知、部門／專案切換`);
     ok(r.title===0,'主頁沒有 title 屬性');
     const ring=()=>p.evaluate(()=>{const g=document.getElementById('hmRing'),t=document.querySelector('.hm-tile.on'),m=new DOMMatrix(getComputedStyle(g).transform);
       return {tf:g.style.transform,cx:m.m41+g.offsetWidth/2,tx:t.offsetLeft+t.offsetWidth/2,w:g.offsetWidth,i:+t.dataset.i,trans:getComputedStyle(g).transitionProperty}});
@@ -238,11 +238,11 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
     ok(got,'第一次打開主頁就收進離線備份：'+(m.length?'缺 '+m.join():want.join()));
     await ctx.close()}
 
-  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v83（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
+  /* 9 sw.js（ui-07）：快取版本寫死 board-cache-v84（ui-14；沒換版號時這裡會失敗，提醒換版），並跟 sw.js 一致；NO_CACHE 也排除各部門的 data-*.json；安裝清單含新介面新增的檔。
      實際跑：只打開看板（沒開過主頁）時，主頁要用的 home.js、部門標誌已在離線備份裡，資料檔不在 */
   {const fs=require('fs'),path=require('path'),vm=require('vm');
     const sw=vm.runInNewContext(SW_SRC+';({CACHE,NO_CACHE,SHELL})',{self:{addEventListener(){}},caches:{},fetch(){},location:{origin:''}});
-    ok(sw.CACHE==='board-cache-v83'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v65（今日／明日卡片改成一項＋件數要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
+    ok(sw.CACHE==='board-cache-v84'&&sw.CACHE===SW_CACHE,'sw.js 快取版本是 board-cache-v65（今日／明日卡片改成一項＋件數要換新版號，換了這裡跟著改），跟 sw.js 一致：'+sw.CACHE);
     const nc=['/data.json','/council/data.json','/data-finance.json','/council/data-president.json','/archive/2026-1.json'],yc=['/index.html','/core/js/store-map.js','/tools/tests/data_test.json','/dept/icons/dept-works.svg'];
     ok(nc.every(u=>sw.NO_CACHE.test(u))&&!yc.some(u=>sw.NO_CACHE.test(u)),'NO_CACHE 排除 data.json、data-部門.json、archive/，不排除其他檔');
     const DEPTS=['president','secretariat','rights','marketing','finance','events','affairs','pr','works'];
