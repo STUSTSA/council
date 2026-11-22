@@ -235,8 +235,9 @@ function calHTML(c){
     ${c===NOTI?"":`<label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>`}
     <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
+    ${!c.find&&!c.pub&&c.mode==="pres"?bkNoteHTML():""}
     <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
-    ${f?calFindHTML(c,f):calListHTML(c,r)}${!f&&!c.pub&&c.mode==="pres"?bkNoteHTML():""}</section>`;
+    ${f?calFindHTML(c,f):calListHTML(c,r)}</section>`;
 }
 /* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
 const calHost=c=>c===NOTI?$("#notiPage"):c.host;
