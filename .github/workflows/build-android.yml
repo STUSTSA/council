@@ -40,5 +40,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp tools/android/app/build/outputs/apk/release/app-release.apk council.apk
-          gh release delete apk-latest --cleanup-tag --yes || true
-          gh release create apk-latest council.apk --title "安卓 APK（最新）" --notes "自用安卓外殼，每次建置會覆蓋。" --target "$GITHUB_SHA"
+          # 先把已存在但被建成草稿的 apk-latest 轉成正式發佈（草稿用 tag 找不到）
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq '[.[]|select(.tag_name=="apk-latest")][0].id // empty')
+          [ -n "$id" ] && gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$id" -F draft=false >/dev/null
+          # 不再刪掉重建（會偶爾變成草稿、手機下載連結就 404）：release 已存在就只換檔案，並確保是正式發佈狀態
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "安卓 APK（最新）" --notes "自用安卓外殼" --target "$GITHUB_SHA"
+          gh release upload apk-latest council.apk --clobber
+          gh release edit apk-latest --draft=false --notes "自用安卓外殼；每次建置會換檔。建置自 $GITHUB_SHA"
