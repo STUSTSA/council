@@ -119,6 +119,16 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
   {const p=await open('rights',{ua:IOS_CHROME,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
     ok(!(await p.$('[data-set="device"]')),'F4 iPhone 的 Chrome（不是 Safari）：不顯示步驟');await p.ctx.close();}
 
+  /* 帳號頁個人卡：名稱就地編輯（沒有「名稱」那一列；點名字變輸入框，Enter 存、Esc 取消） */
+  {const p=await open('rights');const uid=await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
+    await p.click('[data-set="acct"]');await p.waitForTimeout(900);
+    ok(!(await p.$('[data-hub="name"]'))&&!!(await p.$('.acct-me [data-acct-name]')),'帳號頁：個人卡有可點的名字，沒有「名稱」那一列');
+    await p.click('[data-acct-name]');await p.waitForTimeout(300);await p.keyboard.press('Control+A');await p.keyboard.type('改過的名字');await p.keyboard.press('Escape');await p.waitForTimeout(500);
+    ok(await p.evaluate(()=>document.querySelector('[data-acct-name]').textContent.includes('權益編輯一')),'名稱就地編輯：Esc 取消、名字沒變');
+    await p.click('[data-acct-name]');await p.waitForTimeout(300);await p.keyboard.press('Control+A');await p.keyboard.type('改過的名字');await p.keyboard.press('Enter');await p.waitForTimeout(1500);
+    ok(await p.evaluate(()=>document.querySelector('[data-acct-name]').textContent.includes('改過的名字'))&&(await read(`profiles/${uid}`)).displayName==='改過的名字','名稱就地編輯：Enter 存下、畫面與 profiles 一起更新');
+    ok(p.errs.length===0,`名稱就地編輯：沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);await p.ctx.close();}
+
   await b.close();srv.close();await t.cleanup();
   console.log(fails?`失敗 ${fails} 項（通過 ${passes}）`:`全部通過（${passes} 項）`);process.exit(fails?1:0);
 })().catch(e=>{console.error(e);process.exit(1)});
