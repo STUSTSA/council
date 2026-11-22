@@ -286,9 +286,10 @@ function agPrev(date){
   const a=[...(state.agendas||[])].filter(x=>x.date<date&&x.items.some(i=>String(i.decision||"").trim())).sort((x,y)=>y.date.localeCompare(x.date))[0];
   return a?{date:a.date,items:a.items.filter(i=>String(i.decision||"").trim()).map(i=>({deptName:i.deptName,decision:String(i.decision).trim()}))}:null;
 }
-function agText(date,items,prev,title){
+const agWhen=a=>[a.time,a.place].map(v=>String(v||"").trim()).filter(Boolean).join("　");   /* 時間、地點（都可留白） */
+function agText(date,items,prev,title,when){
   const trk=prev&&prev.items&&prev.items.length?[`上次決議追蹤（${fmt(prev.date)}）\n`+prev.items.map(i=>`    ${i.deptName}：${i.decision}`).join("\n")]:[];
-  return [`${title||"行政會議議程"}　${fmt(date)}`,...trk,...items.filter(x=>String(x.text||"").trim()).map(x=>String(x.text).trim())].join("\n\n");
+  return [`${title||"行政會議議程"}　${fmt(date)}${when?"　"+when:""}`,...trk,...items.filter(x=>String(x.text||"").trim()).map(x=>String(x.text).trim())].join("\n\n");
 }
 const mnData=id=>id===CFG.deptId?state:(MT.depts.get(id)&&MT.depts.get(id).data)||null;
 const agCut=(v,n)=>String(v||"").slice(0,n);
@@ -298,7 +299,7 @@ const agItemOf=dept=>AG.doc.items.find(i=>i.dept===dept);
 const agKeep=i=>String(i.text||"").trim()||String(i.decision||"").trim()||Object.values(i.notes||{}).some(v=>String(v).trim())||(i.extra||[]).some(x=>x.title||x.note);
 /* 複製的文字：議程＋會議紀錄（結論、臨時項目、決議） */
 function agDocText(a){
-  const L=[agText(a.date,a.items,agPrev(a.date),a.title)],mn=[];
+  const L=[agText(a.date,a.items,agPrev(a.date),a.title,agWhen(a))],mn=[];
   a.items.forEach(it=>{
     const rows=[],data=mnData(it.dept);
     Object.entries(it.notes||{}).filter(([,v])=>String(v).trim()).forEach(([id,v])=>{const e=data&&data.events.find(x=>x.id===id);rows.push(`    ${e?e.name:"（已刪除的卡片）"}：${String(v).trim()}`)});
@@ -321,7 +322,7 @@ function agSecHTML(it,x){
 }
 function agDocHTML(){
   const d=AG.doc,its=agItems(),prev=agPrev(d.date),proj=agProjects(),chips=its.filter(x=>!agItemOf(x.dept)),fresh=chips.filter(x=>x.fresh&&x.w);
-  return `<h3 class="md-title md-e" data-ed="title" tabindex="0">${esc(d.title||"行政會議")}</h3><p class="md-date md-e" data-ed="date" tabindex="0">${esc(fmt(d.date))}</p>`
+  return `<h3 class="md-title md-e" data-ed="title" tabindex="0">${esc(d.title||"行政會議")}</h3><p class="md-meta"><span class="md-date md-e" data-ed="date" tabindex="0">${esc(fmt(d.date))}</span><span class="md-date md-e" data-ed="time" tabindex="0">${d.time?esc(d.time):agPh("加上時間")}</span><span class="md-date md-e" data-ed="place" tabindex="0">${d.place?esc(d.place):agPh("加上地點")}</span></p>`
     +(prev&&prev.items.length?`<section class="md-sec"><h4 class="md-h">上次決議追蹤<span class="md-chip">${esc(fmt(prev.date))}</span></h4>${prev.items.map(i=>`<p class="md-trk"><b>${esc(i.deptName)}</b>${esc(i.decision)}</p>`).join("")}</section>`:"")
     +its.filter(x=>agItemOf(x.dept)).map(x=>agSecHTML(agItemOf(x.dept),x)).join("")
     +(proj.length?`<section class="md-sec"><h4 class="md-h">活動專案</h4>${proj.map(x=>`<p class="md-trk"><b>${esc(x.name)}</b>${esc(x.text||"")}</p>`).join("")}</section>`:"")
@@ -350,6 +351,8 @@ function agPaste(dept){
 const AGF={
   title:{get:()=>AG.doc.title||"",set:v=>{AG.doc.title=agCut(v,30)||"行政會議"},one:true,max:30},
   date:{get:()=>AG.doc.date,set:v=>{if(/^\d{4}-\d{2}-\d{2}$/.test(v)&&v!==AG.doc.date){const had=(state.agendas||[]).find(a=>a.date===v);if(had)AG.doc=JSON.parse(JSON.stringify(had));else{AG.doc.date=v;delete AG.doc.id;delete AG.doc.at;delete AG.doc.by;delete AG.doc.prev}}},type:"date",one:true},
+  time:{get:()=>AG.doc.time||"",set:v=>{AG.doc.time=agCut(v,20).trim()},one:true,max:20},
+  place:{get:()=>AG.doc.place||"",set:v=>{AG.doc.place=agCut(v,40).trim()},one:true,max:40},
   text:{get:o=>agItemOf(o.d).text||"",set:(v,o)=>{agItemOf(o.d).text=agCut(v,6000)},max:6000},
   note:{get:o=>(agItemOf(o.d).notes||{})[o.ev]||"",set:(v,o)=>{const it=agItemOf(o.d);it.notes={...(it.notes||{}),[o.ev]:agCut(v,1000)}},max:1000},
   xt:{get:o=>agItemOf(o.d).extra[+o.j].title||"",set:(v,o)=>{agItemOf(o.d).extra[+o.j].title=agCut(v,100)},one:true,max:100},

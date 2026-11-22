@@ -31,6 +31,11 @@ let ag=remote().agendas;const nw=ag.find(a=>a.date===T);const it=nw&&nw.items.fi
 A(ag.length===2&&it&&it.notes.e1.startsWith('結論：照原案')&&it.extra.length===1&&it.extra[0].title.startsWith('臨時動議')&&it.extra[0].note==='下週討論'&&it.decision.startsWith('本週決議'),'儲存：結論、臨時項目、決議都在那份議程：'+JSON.stringify(it));
 A(nw.prev&&nw.prev.date==='2026-11-13'&&nw.prev.items.length===1,'儲存時存下上次決議快照');
 A(ag.find(a=>a.id==='agold').items[0].decision.startsWith('貼文延到下週'),'舊的議程沒被動到');
+/* 時間、地點：點一下就地改，存進議程，複製文字的第一行也有 */
+await p.click('#agDoc [data-ed=time]');await p.fill('#agDoc [data-ed=time] input','12:10');await p.keyboard.press('Enter');await p.waitForTimeout(300);
+await p.click('#agDoc [data-ed=place]');await p.fill('#agDoc [data-ed=place] input','L 棟 1 樓');await p.keyboard.press('Enter');await p.waitForTimeout(3500);
+A(remote().agendas.find(a=>a.date===T).time==='12:10'&&remote().agendas.find(a=>a.date===T).place==='L 棟 1 樓','時間、地點：就地編輯後自動存');
+A(await p.evaluate(()=>/12:10　L 棟 1 樓/.test(agDocText(AG.doc).split('\n')[0])),'複製文字第一行含時間、地點');
 const tx=await p.evaluate(()=>agDocText(AG.doc));
 A(/上次決議追蹤/.test(tx)&&/會議紀錄/.test(tx)&&/社群排程.*：結論：照原案/.test(tx)&&/下週討論/.test(tx)&&/決議：本週決議/.test(tx),'複製文字含議程、結論、臨時項目與決議');
 await p.click('#agDoc [data-md-xdel=marketing]');await p.waitForTimeout(3500);

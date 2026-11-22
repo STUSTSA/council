@@ -2346,7 +2346,8 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-past{margin-bottom:14px}
 .md-doc{display:grid;gap:4px;max-width:760px}
 .md-title{margin:0;font-size:20px;font-weight:600;letter-spacing:.02em}
-.md-date{margin:0 0 10px;font-size:13px;color:var(--muted)}
+.md-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 0 10px}
+.md-date{font-size:13px;color:var(--muted);padding:2px 8px;margin:0 -8px}
 .md-sec{border-top:1px solid var(--hair);padding:12px 0 6px}
 .md-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;font-size:15px;font-weight:600}
 .md-chip{font-size:11.5px;font-weight:400;padding:2px 9px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--hair);color:var(--muted);letter-spacing:.04em}
