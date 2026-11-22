@@ -306,7 +306,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    第一排：（全螢幕時）返回鍵、燈號、名稱、編輯次數的小膠囊；第二排：上一張／下一張（實心三角的外框膠囊）、報告；第三排：狀態、負責人、時間；
    內容、儲存回饋、底部工具列（編輯權限才有）。寬螢幕在右邊（.lc-pane，黏在上面、內容自己捲動）；其他全螢幕（.lc.full，在 #lcFull）。
    卡片裡的排法看卡片自己的寬度（@container lc） */
-.lc-pane{position:sticky;top:calc(var(--dtop-h,150px) + 12px);min-width:0}   /* 黏在固定頂部區（.dtop）下面 */
+.lc-pane{--pane-d:calc(28px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom));position:sticky;top:calc(var(--dtop-h,150px) + 12px);margin-bottom:calc(44px - var(--pane-d));min-width:0}   /* 黏在固定頂部區（.dtop）下面。--pane-d＝內容底部的留白（.wrap 的底內距加面板的 8px）；下邊距讓黏住的範圍多出這段，捲到底時卡片才不會被往上推、上緣鑽進固定頂部區（44＝卡片底部離視窗底的距離） */
 .lc{--pad:24px;position:relative;display:flex;flex-direction:column;min-height:340px;padding:22px var(--pad) 0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);container:lc/inline-size}
 .lc.ro{min-height:0;padding-bottom:16px}
 .lc-pane .lc{max-height:calc(100dvh - var(--dtop-h,150px) - 24px)}
@@ -535,7 +535,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
 /* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
 .wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
-#liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px))}
+#liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
 #liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
 #liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
 /* --- 議題卡片裡的小膠囊 --- */
