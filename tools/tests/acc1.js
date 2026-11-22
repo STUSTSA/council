@@ -142,13 +142,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   await boss.click('.acct-qr [data-revoke]');ok((await dlg(boss))==='撤銷這張 QR','撤銷：先確認');await dlgAct(boss,'delete');
   ok(await until(async()=>(await read(`invitations/${sha(tok2)}`)).status==='revoked')&&!(await boss.$('.acct-qr')),'撤銷：邀請改成 revoked、QR 收起');
   ok((await paneText(boss)).includes('已撤銷'),'邀請清單：列出已撤銷的邀請');
-  /* 再產生一張給 u1 掃（活動部編輯者＋舊身分） */
+  /* 再產生一張給 u1 掃（活動部編輯者） */
   /* 綁定信箱存成小寫（Google 回傳的信箱是小寫，規則用 == 比對） */
   await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'pr',role:'editor',email:'Someone@Example.TEST'});await dlgAct(boss,'ok');
   await boss.waitForSelector('.acct-qr svg');const tokB=(await boss.evaluate(()=>window.__qrText)).split('#join=')[1];
   ok((await read(`invitations/${sha(tokB)}`)).boundEmail==='someone@example.test','綁定信箱：存成小寫');
   await boss.click('.acct-qr [data-revoke]');await dlg(boss);await dlgAct(boss,'delete');await until(async()=>!(await boss.$('.acct-qr')));
-  await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'events',role:'editor',legacy:'events__m1'});await dlgAct(boss,'ok');
+  await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'events',role:'editor'});await dlgAct(boss,'ok');
   await boss.waitForSelector('.acct-qr svg');const tok3=(await boss.evaluate(()=>window.__qrText)).split('#join=')[1];
 
   /* ---------- 4. 掃 QR ---------- */
@@ -161,10 +161,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await toastHas(u1,'已加入活動部（編輯者）'),'加入：提示已加入');
   await u1.waitForURL(/\?d=events$/,{timeout:8000}).catch(()=>{});
   ok(u1.url().endsWith('/index.html?d=events'),'加入：換到那個部門的看板');
-  const r1=await read(`roles/${u1Uid}`),i3=await read(`invitations/${sha(tok3)}`),lg=await read('legacyIdentities/events__m1');
+  const r1=await read(`roles/${u1Uid}`),i3=await read(`invitations/${sha(tok3)}`);
   ok(r1&&r1.depts.events==='editor'&&!r1.super&&r1.lastVia==='invite'&&r1.lastRef===sha(tok3)&&r1.rev===1,'加入：roles 只多了邀請上的部門與角色');
-  ok(i3.status==='used'&&i3.usedBy===u1Uid&&sha(i3.token)===sha(tok3)&&lg.claimedBy===u1Uid,'加入：邀請改成 used、舊身分由本人認領');
-  ok(!!(await read(`auditLogs/invitations_${sha(tok3)}_2`))&&!!(await read(`auditLogs/roles_${u1Uid}_1`))&&!!(await read('auditLogs/legacyIdentities_events__m1_2')),'加入：邀請、角色、舊身分各有一筆稽核');
+  ok(i3.status==='used'&&i3.usedBy===u1Uid&&sha(i3.token)===sha(tok3),'加入：邀請改成 used');
+  ok(!!(await read(`auditLogs/invitations_${sha(tok3)}_2`))&&!!(await read(`auditLogs/roles_${u1Uid}_1`)),'加入：邀請、角色各有一筆稽核');
   ok(!(await u1.evaluate(()=>sessionStorage.getItem('workboard:join'))),'加入：權杖從這個分頁清掉');
   ok(!u1.errs.length,`掃 QR：沒有頁面錯誤 ${u1.errs.join(' | ')}`);
   ok(await until(async()=>(await boss.textContent('.acct-qr-t').catch(()=>'')).includes('已使用'))&&!(await boss.$('.acct-qr [data-revoke]')),'會長室：面板上那張 QR 被用掉後顯示「已使用」、不能再撤銷');

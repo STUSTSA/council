@@ -1,9 +1,9 @@
-/* 05 部門成員名單、部長管理、全部帳號、舊身分清除（core/js/account.js 的 membersPanel、peoplePanel、legacyPanel；規則 backend/firestore.rules 05）：
+/* 05 部門成員名單、部長管理、全部帳號、舊身分名字顯示（core/js/account.js 的 membersPanel、peoplePanel；規則 backend/firestore.rules 05）：
    用 Auth 模擬器＋Firestore 模擬器，從畫面操作走完整流程。
    1. 部門成員：編輯者、管理員、總管理員看得到名單（名字、角色、沒有信箱）；沒有角色的人沒有這一列；編輯者只能看
    2. 部長：新增編輯者（QR、本部門、編輯者）→ 對方掃了加入後名單跟著變；撤銷編輯者（roles、稽核、名單同一批）；不能撤管理員與自己
-   3. 攻擊（直接呼叫資料層）：部長刪舊身分、編輯者撤人、部長撤別的部門的人：規則擋下
-   4. 總管理員：人員頁多一區「尚無權限的帳號」→ 點進去指派；舊身分頁逐筆、整個部門、全部刪除，刪除前確認；刪掉後負責人顯示「（已移除）」
+   3. 攻擊（直接呼叫資料層）：編輯者撤人、部長撤別的部門的人：規則擋下
+   4. 總管理員：人員頁多一區「尚無權限的帳號」→ 點進去指派；系統管理已沒有舊身分頁，資料與負責人名字顯示保留
    執行（會自己開模擬器與網站）：cd backend && npm run test:web */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');const crypto=require('crypto');
 const {createRequire}=require('module');
@@ -138,7 +138,6 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
   /* ---------- 3. 攻擊：直接呼叫資料層，規則要擋 ---------- */
   const call=(p,fn,...a)=>p.evaluate(async([fn,a])=>{try{await window.BoardAccount[fn](...a);return 'ok'}catch(e){return e.code||String(e)}},[fn,a]);
-  ok(await call(P.adm,'legacyDelete',['fruit__m1'])==='permission-denied'&&!!(await read('legacyIdentities/fruit__m1')),'部長刪舊身分：被擋，資料還在');
   ok(await call(P.nb,'deptRemove',U.edB,'fruit')==='permission-denied'&&((await read(`roles/${U.edB}`)).depts||{}).fruit==='editor','編輯者撤別人：被擋');
   ok(await call(P.adm,'deptRemove',U.adm,'fruit')!=='ok'&&((await read(`roles/${U.adm}`)).depts||{}).fruit==='admin','部長撤自己：被擋');
   const evA=await open(`${BASE}/index.html?d=fruit`);await signIn(evA,'evA');const evAUid=await uidOf(evA);
@@ -148,7 +147,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await call(P.adm,'inviteCreate',{deptId:'fruit',role:'admin'})==='permission-denied'&&await call(P.adm,'inviteCreate',{deptId:'events',role:'editor'})==='permission-denied','部長發管理員邀請、發別的部門的邀請：被擋');
   ok(await call(P.adm,'rolesList')==='permission-denied'&&await call(P.adm,'usersList')==='permission-denied','部長讀全部 roles、全部 users（信箱）：被擋');
 
-  /* ---------- 4. 總管理員：全部帳號、舊身分 ---------- */
+  /* ---------- 4. 總管理員：全部帳號、舊身分（已無管理頁） ---------- */
   await openSet(P.boss);
   await P.boss.click('#setOv [data-set="council"]');await P.boss.waitForTimeout(800);await P.boss.click('[data-hub="people"]');await P.boss.waitForTimeout(1200);
   txt=await paneText(P.boss);
@@ -160,32 +159,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>!!(await read(`deptMembers/fruit__${U.x1}`))),'指派後名單也補上');
   await P.boss.click('.dh-home');await P.boss.waitForTimeout(600);
   ok(!(await paneText(P.boss)).includes('尚無權限的帳號')||!(await paneText(P.boss)).split('尚無權限的帳號')[1].includes('x1@example.test'),'指派後：x1 不再在「尚無權限的帳號」');
-  /* 舊身分 */
+  /* 舊身分：管理頁與入口已移除（資料與卡片負責人的名字顯示保留） */
   P.boss=await open(`${BASE}/index.html?d=fruit`);await signIn(P.boss,'boss');await P.boss.waitForTimeout(1500);await openSet(P.boss);await P.boss.click('#setOv [data-set="council"]');await P.boss.waitForTimeout(800);
-  await P.boss.click('[data-hub="legacy"]');await P.boss.waitForTimeout(1000);
-  txt=await paneText(P.boss);
-  ok(txt.includes('舊專員小明')&&txt.includes('舊專員小華')&&txt.includes('舊專員阿德')&&txt.includes('舊專員小美')&&txt.includes('全部刪除（4）'),'舊身分頁：列出全部（依部門分組）與「全部刪除（4）」');
-  ok(txt.includes('已有人認領')&&txt.includes('沒有人認領'),'舊身分頁：標出有沒有人認領');
-  await P.boss.click('[data-del="fruit__m1"]');
-  ok((await dlg(P.boss))==='刪除舊身分「舊專員小明」','逐筆刪除：先確認（標題寫出名字）');
-  const note=await P.boss.evaluate(()=>{const n=document.querySelector('#dlgForm .dlg-note');return n?n.innerText:''});
-  ok(note.includes('無法復原')&&note.includes('（已移除）')&&note.includes('匯出全部資料'),'刪除確認：說明無法復原、負責人改顯示（已移除）、先備份');
-  await dlgAct(P.boss,'cancel');await P.boss.waitForTimeout(500);
-  ok(!!(await read('legacyIdentities/fruit__m1')),'逐筆刪除：按取消不刪');
-  await P.boss.click('[data-del="fruit__m1"]');await dlg(P.boss);await dlgAct(P.boss,'delete');
-  ok(await until(async()=>!(await read('legacyIdentities/fruit__m1'))&&!!(await read('legacyIdentities/fruit__m2'))),'逐筆刪除：只刪那一筆');
-  await P.boss.waitForTimeout(800);
-  await P.boss.click('[data-deldept="fruit"]');
-  const t2=await dlg(P.boss),n2=await P.boss.evaluate(()=>document.querySelector('#dlgForm .dlg-note').innerText);
-  ok(t2.includes('1 個舊身分')&&n2.includes('其中 1 位已有人認領'),'整個部門刪除：確認寫出筆數與已認領的人數');
-  await dlgAct(P.boss,'delete');
-  ok(await until(async()=>!(await read('legacyIdentities/fruit__m2'))&&!!(await read('legacyIdentities/events__m1'))),'整個部門刪除：只刪那個部門');
-  await P.boss.waitForTimeout(800);
-  await P.boss.click('[data-delall]');await dlg(P.boss);await dlgAct(P.boss,'delete');
-  ok(await until(async()=>!(await read('legacyIdentities/events__m1'))&&!(await read('legacyIdentities/rights__m1'))),'全部刪除：全部清掉');
-  ok(await until(async()=>(await paneText(P.boss)).includes('沒有舊身分')),'全部刪除後：畫面顯示「沒有舊身分」');
+  ok(!(await P.boss.$('[data-hub="legacy"]'))&&!(await paneText(P.boss)).includes('舊身分'),'系統管理：沒有「舊身分」入口');
+  ok(!!(await read('legacyIdentities/fruit__m1'))&&!!(await read('legacyIdentities/events__m1')),'舊身分資料原封不動');
   const gone=await open(`${BASE}/index.html?d=fruit`);await signIn(gone,'boss');await gone.waitForTimeout(1500);
-  ok(await gone.evaluate(()=>JSON.stringify(staffNames(["legacy:fruit__m1","legacy:fruit__m2","legacy:fruit__zz"])))==='["（已移除）"]','刪除後：卡片負責人顯示「（已移除）」（只顯示一次），不是代號');
+  const sn=await gone.evaluate(()=>JSON.stringify([state.members.map(m=>m.id),staffNames(["m1","legacy:fruit__zz"])]));ok(sn.includes('舊專員小明')&&sn.includes('（已移除）'),'卡片負責人：舊身分仍顯示原本的名字；不存在的顯示「（已移除）」');
 
   for(const p of [...Object.values(P),evA,gone])await p.ctx.close().catch(()=>{});
   await b.close();await t.cleanup();srv.close();

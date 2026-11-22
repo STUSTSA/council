@@ -106,7 +106,7 @@ function acctGateHTML(){
 function acctSettingsInner(){
   if(!FB_ON)return lookSec();
   if(!acct.ready)return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
-  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
+  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、標籤；備份（只有匯出）放在系統管理裡、只有總管理員看得到；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
@@ -115,7 +115,8 @@ function acctSettingsInner(){
   return apply+(fsWriter()?setSec(setRow("report","doc","工作報告")+setRow("log","history","編輯紀錄")):"")
     +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
-    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
+    +devSec()   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
+    +lookSec();   /* 外觀：獨立一列放最後（2026-11-22 起不再接在帳號頁下面） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -164,7 +165,7 @@ function acctPanel(title,draw){
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","changed":"這筆申請剛被改過，請再看一次","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
-/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
+/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出（外觀在設定清單自己一列，nav.js 的 SET_HUBS.look） ---------- */
 async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
@@ -182,7 +183,7 @@ async function acctHub(){
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${rankT(q)}（等待審核）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${rankT(q)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
-    {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
+    {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head});
 }
 async function acctRename(){
   const A=await acctLoad(),cur=acct.names[acct.user.uid]||acct.user.name||"";
@@ -190,21 +191,16 @@ async function acctRename(){
   if(!v||v.v===cur)return;
   if(await acctTry(()=>A.setName(v.v),"已更新名稱"))acct.names[acct.user.uid]=v.v;
 }
-async function acctLegacyOpts(A,dept){
-  let l=[];try{l=await A.legacyList()}catch(_){}
-  return [["","不指定"],...l.filter(x=>!x.claimedBy&&(!dept||x.deptId===dept)).map(x=>[x.id,`${deptNameOf(x.deptId)}・${x.name}`])];
-}
 /* pending＝自己還在待審的申請：同一個部門已經有一筆就不能再送（04，規則也是每人每個部門一份） */
 async function acctRequest(pending=[]){
-  const A=await acctLoad(),legacy=await acctLegacyOpts(A);
+  const A=await acctLoad();
   const v=await ask("申請編輯權限",[
     {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
     {name:"rank",label:"位階",type:"select",value:"member",options:RANK_OPT},
-    ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[]),
     {name:"note",label:"備註",ph:""}],
-    {validate:o=>acctDepts()[o.dept]===(o.rank==="minister"?"admin":"editor")?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
+    {validate:o=>acctDepts()[o.dept]===(o.rank==="minister"?"admin":"editor")?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):""});
   if(!v)return false;
-  return acctTry(()=>A.requestCreate({deptId:v.dept,rank:v.rank,note:v.note,legacyRef:v.legacy||""}),"已送出申請");
+  return acctTry(()=>A.requestCreate({deptId:v.dept,rank:v.rank,note:v.note}),"已送出申請");
 }
 
 /* ---------- 系統管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
@@ -215,7 +211,6 @@ async function councilHub(){
   await acctLoad();
   return hubRun("系統管理",()=>[
     {k:"people",ic:"people",t:"人員",flow:()=>peoplePanel()},
-    {k:"legacy",ic:"history",t:"舊身分",flow:()=>legacyPanel()},
     {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
     {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
@@ -348,44 +343,6 @@ function membersPanel(){
       }finally{busy=false}
     });
     await load();await draw();
-  });
-}
-
-/* ---------- 舊身分（05，總管理員）：匯入帶過來的名字對照表（歷史卡片「負責人」顯示名字的來源，沒有任何權限）----------
-   逐筆或整個部門或全部刪除（規則：只有總管理員能刪）。刪掉的名字不能復原；卡片本身與其他內容不變，指定給舊身分的負責人改顯示「（已移除）」（team.js 的 staffName）。
-   舊身分已被人認領（claimedBy）也一樣能刪：認領只是記一個對照，那個人的帳號與權限在 roles，不受影響 */
-function legacyPanel(){
-  return acctPanel("舊身分",async p=>{
-    const A=await acctLoad();
-    let list=[],busy=false;
-    const load=async()=>{list=await A.legacyList();acct.names=await A.profiles().catch(()=>acct.names)};
-    const order=d=>{const i=BOARD_DEPTS.findIndex(x=>x.id===d);return i<0?99:i};
-    const draw=()=>{if(!p.alive)return;
-      const by={};list.forEach(x=>(by[x.deptId]=by[x.deptId]||[]).push(x));
-      const depts=Object.keys(by).sort((a,b)=>order(a)-order(b));
-      p.html=p.head()+(list.length?`<div class="acct-acts"><button type="button" class="add-row" data-delall>全部刪除（${list.length}）</button></div>`:"")
-        +(depts.map(d=>`<div class="acct-acts"><b class="acct-sub">${esc(deptNameOf(d))}（${by[d].length}）</b><button type="button" class="icon danger" data-deldept="${esc(d)}">刪除這個部門</button></div>
-          <div class="set-list">${by[d].sort((a,b)=>String(a.name).localeCompare(String(b.name),"zh-Hant")).map(x=>`<div class="acct-line"><span><b>${esc(x.name)}</b><small>${x.claimedBy?`已有人認領・${esc(nameOf(x.claimedBy))}`:"沒有人認領"}</small></span><button type="button" class="icon danger" data-del="${esc(x.id)}">刪除</button></div>`).join("")}</div>`).join("")
-        ||`<p class="set-p acct-empty">沒有舊身分</p>`);
-    };
-    const NOTE="刪除後無法復原。卡片上原本指定給這些人的負責人改顯示「（已移除）」，卡片的其他內容不變；有登入帳號的人不受影響。要留一份名單，先用「匯出全部資料」備份。";
-    const run=async(ids,title,danger)=>{
-      const taken=list.filter(x=>ids.includes(x.id)&&x.claimedBy).length;
-      const v=await ask(title,[],{danger,note:`${NOTE}${taken?`\n其中 ${taken} 位已有人認領（對方的帳號與權限不變）。`:""}`});if(v!=="delete")return;
-      await acctTry(()=>A.legacyDelete(ids),`已刪除 ${ids.length} 筆`);
-    };
-    p.box.addEventListener("click",async e=>{
-      const b=e.target.closest("button");if(!b||busy)return;busy=true;
-      try{
-        if(b.dataset.del){const x=list.find(y=>y.id===b.dataset.del);if(!x)return;await run([x.id],`刪除舊身分「${x.name}」`,"刪除")}
-        else if(b.dataset.deldept){const d=b.dataset.deldept,ids=list.filter(x=>x.deptId===d).map(x=>x.id);if(!ids.length)return;await run(ids,`刪除${deptNameOf(d)}的 ${ids.length} 個舊身分`,"全部刪除")}
-        else if(b.hasAttribute("data-delall")){if(!list.length)return;await run(list.map(x=>x.id),`刪除全部 ${list.length} 個舊身分`,"全部刪除")}
-        else return;
-        if(!p.alive)return;
-        await load();draw();
-      }finally{busy=false}
-    });
-    await load();draw();
   });
 }
 
@@ -528,15 +485,13 @@ function invitePanel(){
       const b=e.target.closest("button");if(!b||busy)return;busy=true;
       try{
         if(b.hasAttribute("data-new")){
-          const legacy=await acctLegacyOpts(A);
           const v=await ask("產生 QR",[
             {name:"dept",label:"部門",type:"select",value:CFG.deptId,options:acctDeptOpts()},
             {name:"role",label:"角色",type:"select",value:"editor",options:ROLE_OPT},
-            {name:"email",label:"綁定信箱（選填）",type:"email",value:""},
-            ...(legacy.length>1?[{name:"legacy",label:"舊身分",type:"select",value:"",options:legacy}]:[])],
-            {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":o.legacy&&!o.legacy.startsWith(o.dept+"__")?"舊身分跟部門不同":""});
+            {name:"email",label:"綁定信箱（選填）",type:"email",value:""}],
+            {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":""});
           if(!v)return;   /* 取消（含離開面板）：沒有變動，不重讀 */
-          try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email,legacyRef:v.legacy||""});watch()}catch(err){toast(acctErr(err))}
+          try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email});watch()}catch(err){toast(acctErr(err))}
         }else if(b.hasAttribute("data-regen")&&cur){
           try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}
         }else if(b.dataset.revoke){

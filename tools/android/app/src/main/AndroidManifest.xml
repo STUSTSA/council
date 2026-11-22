@@ -9,14 +9,23 @@
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="false">
 
-        <!-- 只負責打開 Chrome 自訂分頁（Google 登入可用）；上方會有網址列 -->
+        <!-- 單一畫面（WebView）。singleTask：從 Chrome 登入完成回來時用同一個 App 接手。
+             第二個 intent-filter 只收登入交接（app-login.html 指定本 App 套件名送來，且要帶 App 先產生的 nonce） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode|density"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="councilapp" android:host="auth" />
             </intent-filter>
         </activity>
     </application>
