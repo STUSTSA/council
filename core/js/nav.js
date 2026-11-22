@@ -198,7 +198,7 @@ const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" s
 const devRow=()=>devForget()?setRow("device","device","這台裝置"):setRow("device","download","安裝");
 const devSec=()=>devShow()?setSec(devRow()):"";
 /* 「外觀」：所有情況都是設定清單最後一列，點進去是合併頁（SET_HUBS.look；主題、深淺色、音效） */
-const lookSec=()=>setSec(setRow("look","palette","外觀"));
+const lookSec=()=>setSec(setRow("look","theme","外觀"));
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有鎖頭（每週報告在完成紀錄的週頁裡，本來就公開看） */
 function settingsInner(){
@@ -439,10 +439,10 @@ function elastic(sc,inner){
   const back=()=>{if(!off)return;const from=off;set(0);if(reduceMotion())return;anim&&anim.cancel();anim=inner.animate([{transform:`translate3d(0,${from}px,0)`},{transform:"translate3d(0,0,0)"}],{duration:620,easing:"cubic-bezier(.16,1.35,.4,1)"})};
   const atTop=()=>sc.scrollTop<=0,atBot=()=>sc.scrollTop+sc.clientHeight>=sc.scrollHeight-1;
   sc.addEventListener("wheel",e=>{
-    if(e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+    if(e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||e.target.closest("[data-own-gesture]"))return;   /* 自己用滾輪／拖曳的區塊（完成紀錄的週方塊列、週卡堆）：頁面不跟著回彈，不然每滾一格整頁抖一下 */
     if((e.deltaY<0&&atTop())||(e.deltaY>0&&atBot())){anim&&anim.cancel();acc=Math.max(-260,Math.min(260,acc-e.deltaY*.45));set(rub(acc));clearTimeout(tm);tm=setTimeout(()=>{acc=0;back()},120)}
   },{passive:true});
-  sc.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
+  sc.addEventListener("touchstart",e=>{if(e.touches.length!==1||e.target.closest("[data-own-gesture]")){y0=null;return}y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
   sc.addEventListener("touchmove",e=>{
     if(y0===null)return;
     if(document.documentElement.classList.contains("ev-drag-on")){if(off)set(0);return}   /* 膠囊拖到角落（live.js）時手指的上下移動是拖曳，不是拉頁面：不回彈，不然整頁會被拉走、頁面多出一個疊層把完成／刪除角落蓋住 */
