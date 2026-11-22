@@ -3,9 +3,6 @@ name: android-screenshot
 # 開發驗證用：在模擬器（Android 13／14／15）裝上最新 APK、開首頁、截圖，上傳成 Actions 產出檔與 apk-test Release。手動執行。
 on:
   workflow_dispatch:
-  push:
-    branches: ["claude/android-**"]
-    paths: [".github/workflows/android-screenshot.yml", "tools/android/**", "core/board.css"]
 
 permissions:
   contents: write
