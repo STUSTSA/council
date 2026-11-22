@@ -27,7 +27,8 @@ const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
 const hm=ms=>{if(!ms)return "";const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`};
 const mmss=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`};
 /* 內建瀏覽器（LINE、臉書、IG、微信、Android WebView 與用 Google 搜尋／Lens 開的頁面）：Google 不讓這類環境登入，要先換到瀏覽器 */
-const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)|\bGSA\//i.test(navigator.userAgent);
+/* 我們自己的安卓 App（tools/android，window.CouncilApp）不算：它的登入由 App 轉去 Chrome 完成（fb-account.js 的 signIn） */
+const inAppBrowser=()=>!window.CouncilApp&&/\bLine\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)|\bGSA\//i.test(navigator.userAgent);
 
 /* ---------- 登入狀態 ----------
    acct.user＝{uid,email,name}｜null；acct.roles＝自己的 roles 文件（即時監聽，角色被改或撤掉時畫面立刻跟著變）。 */

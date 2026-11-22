@@ -125,7 +125,7 @@ public class MainActivity extends Activity {
             public void doUpdateVisitedHistory(WebView v, String url, boolean reload) { syncBack(); }
         });
 
-        if (Build.VERSION.SDK_INT >= 33) back = new BackHelper(this, () -> { if (web.canGoBack()) web.goBack(); });
+        if (Build.VERSION.SDK_INT >= 33) back = new BackHelper(this, web, () -> { if (web.canGoBack()) web.goBack(); });
         if (state != null) web.restoreState(state); else web.loadUrl(HOME);
         handleIntent(getIntent());
     }
