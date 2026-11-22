@@ -42,10 +42,10 @@ function acctMyDept(r){try{if(r&&r.depts&&r.depts[CFG.deptId]&&CFG.deptId!=="pre
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
 const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
-let acctCanW="";
+let acctCanW="",acctNameEd=false;   /* acctNameEd：帳號頁的名稱正在就地編輯，不重畫（游標才不會跳） */
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
-  if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
+  if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow&&!acctNameEd)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
   const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
     if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
 }
@@ -128,6 +128,11 @@ document.addEventListener("click",async e=>{
   if(!e.target.closest)return;
   if(e.target.closest("#setOv [data-fb-login]")){await acctSignIn();return}
   if(e.target.closest("#setOv [data-fb-copy]")){acctCopyUrl();return}
+  const nm=e.target.closest("#setOv [data-acct-name]");if(nm)acctNameEdit(nm);
+});
+document.addEventListener("keydown",e=>{
+  const nm=e.target.closest&&e.target.closest("#setOv [data-acct-name]");
+  if(nm&&e.target===nm&&(e.key==="Enter"||e.key===" ")){e.preventDefault();acctNameEdit(nm)}
 });
 
 /* ---------- 面板（畫在設定頁右側面板／手機子頁，跟合併頁同一個位置）----------
@@ -165,18 +170,17 @@ function acctPanel(title,draw){
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","changed":"這筆申請剛被改過，請再看一次","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
-/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出（外觀在設定清單自己一列，nav.js 的 SET_HUBS.look） ---------- */
+/* ---------- 帳號（自己）：最上面一張個人卡（名稱可就地改、信箱、角色）；申請編輯權限、我的申請、登出（外觀在設定清單自己一列，nav.js 的 SET_HUBS.look） ---------- */
 async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
   const head=()=>{const u=acct.user;if(!u)return "";
-    return `<div class="acct-me"><div class="acct-person"><b>${esc(acct.names[u.uid]||u.name||u.email||"")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>${waitNote()}`};
+    return `<div class="acct-me"><div class="acct-person"><b class="md-e acct-name" role="button" tabindex="0" data-acct-name aria-label="名稱，點一下修改">${esc(acct.names[u.uid]||u.name||u.email||"")}${ico("edit","solo")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>${waitNote()}`};
   /* 06 等待頁：還沒有任何編輯權限的人，帳號頁最上面說明目前的狀態（有待審的申請＝等部長或總管理員審核；沒有＝請申請） */
   const waitNote=()=>{if(acctSuper()||Object.keys(acctDepts()).length)return "";const q=pend()[0];
     return `<p class="set-p acct-empty">${q?`申請已送出，等待${esc(deptNameOf(q.deptId))}${q.role==="admin"?"總管理員":"部長"}審核。審核完成後重新整理就能編輯。`:"還沒有編輯權限。選擇部門與位階送出申請，部長審核後就能編輯。"}</p>`};
   return hubRun("帳號",()=>[
-    {k:"name",ic:"edit",t:"名稱",flow:acctRename},
     ...(fsWriter()?[{k:"members",ic:"people",t:"部門成員",flow:()=>membersPanel()}]:[]),   /* 05：這個部門有編輯權限的人看得到名單；部長多了邀請、撤銷與審核申請 */
     {k:"req",ic:"doc",t:"申請加入部門",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
@@ -185,11 +189,23 @@ async function acctHub(){
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
     {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head});
 }
-async function acctRename(){
-  const A=await acctLoad(),cur=acct.names[acct.user.uid]||acct.user.name||"";
-  const v=await ask("名稱",[{name:"v",label:"名稱",value:cur}],{validate:o=>!o.v?"名稱不能空白":[...o.v].length>40?"最多 40 字":""});
-  if(!v||v.v===cur)return;
-  if(await acctTry(()=>A.setName(v.v),"已更新名稱"))acct.names[acct.user.uid]=v.v;
+/* 名稱：點帳號頁個人卡上的名字就地變輸入框（跟會議資料文件 meeting.js 的 agEditStart 同一種做法）：Enter／點別處＝存，Esc＝取消；存的地方與權限不變（A.setName） */
+async function acctNameEdit(el){
+  if(acctNameEd||el.querySelector("input")||!acct.user)return;
+  const A=await acctLoad(),uid=acct.user.uid,cur=acct.names[uid]||acct.user.name||"";
+  acctNameEd=true;
+  const w=document.createElement("input");w.className="md-in";w.value=cur;w.maxLength=40;w.spellcheck=false;w.setAttribute("aria-label","名稱");
+  el.replaceChildren(w);el.classList.add("is-ed");w.focus();w.select();
+  let done=false;
+  const end=async save=>{
+    if(done)return;done=true;const v=w.value.trim();acctNameEd=false;
+    if(save&&v!==cur){
+      if(!v)toast("名稱不能空白");
+      else if([...v].length>40)toast("最多 40 字");
+      else if(await acctTry(()=>A.setName(v),"已更新名稱"))acct.names[uid]=v}
+    if(typeof hubNow!=="undefined"&&hubNow)hubNow.draw()};
+  w.addEventListener("blur",()=>end(true));
+  w.addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();end(false)}else if(e.key==="Enter"){e.preventDefault();end(true)}});
 }
 /* pending＝自己還在待審的申請：同一個部門已經有一筆就不能再送（04，規則也是每人每個部門一份） */
 async function acctRequest(pending=[]){
