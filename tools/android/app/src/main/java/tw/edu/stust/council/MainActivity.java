@@ -44,8 +44,7 @@ public class MainActivity extends Activity {
     private FrameLayout root;
     private WebView web;
     private BackHelper back;
-    private String nonce;
-    private long nonceAt;
+    private static final String PREFS = "login";   /* App 私有的 SharedPreferences：撐得過程序被系統殺掉，別的 App 讀不到 */
 
     @Override
     protected void onCreate(Bundle state) {
@@ -178,22 +177,26 @@ public class MainActivity extends Activity {
     private void startLogin() {
         byte[] b = new byte[24];
         new SecureRandom().nextBytes(b);
-        nonce = android.util.Base64.encodeToString(b, android.util.Base64.URL_SAFE | android.util.Base64.NO_WRAP | android.util.Base64.NO_PADDING);
-        nonceAt = System.currentTimeMillis();
+        String nonce = android.util.Base64.encodeToString(b, android.util.Base64.URL_SAFE | android.util.Base64.NO_WRAP | android.util.Base64.NO_PADDING);
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("nonce", nonce).putLong("at", System.currentTimeMillis()).commit();
         openExternal(Uri.parse(LOGIN + "#n=" + nonce));
     }
 
     /** 收 app-login.html 交回來的憑證：nonce 一次性、10 分鐘內、格式正確才轉給網頁 */
     private void handleIntent(Intent in) {
-        if (in == null) return;
+        /* 只處理登入交接的 intent（VIEW＋councilapp://auth）；別的 intent（桌面圖示等）不碰目前的 nonce */
+        if (in == null || !Intent.ACTION_VIEW.equals(in.getAction())) return;
+        Uri d = in.getData();
+        if (d == null || !"councilapp".equals(d.getScheme()) || !"auth".equals(d.getHost())) return;
         String id = in.getStringExtra("idToken"), n = in.getStringExtra("nonce");
         in.removeExtra("idToken");
         in.removeExtra("nonce");
-        if (id == null || n == null) return;
-        String want = nonce;
-        nonce = null;   /* 不管對不對，用過就作廢 */
-        if (want == null || !want.equals(n) || !NONCE.matcher(n).matches()
-                || System.currentTimeMillis() - nonceAt > NONCE_MS || !TOKEN.matcher(id).matches() || !onOurSite()) return;
+        android.content.SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String want = sp.getString("nonce", null);
+        long at = sp.getLong("at", 0);
+        sp.edit().clear().commit();   /* 不管對不對，用過就作廢 */
+        if (id == null || n == null || want == null || !want.equals(n) || !NONCE.matcher(n).matches()
+                || System.currentTimeMillis() - at > NONCE_MS || !TOKEN.matcher(id).matches() || !onOurSite()) return;
         web.evaluateJavascript("(function t(k){if(window.__councilAppSignIn)window.__councilAppSignIn('" + id
                 + "');else if(k>0)setTimeout(function(){t(k-1)},500)})(20)", null);
     }
