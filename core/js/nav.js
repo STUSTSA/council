@@ -194,7 +194,9 @@ const setRow=(k,ic,t,off,attr="set")=>`<button type="button" class="set-row" dat
 const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div></section>`;
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 /* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
-const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
+/* 列名：Firestore 模式裡面只有安裝（含 iPhone 加入主畫面的步驟），直接叫「安裝」（下載圖示）；GitHub 模式還有「忘記這台裝置」，仍叫「這台裝置」 */
+const devRow=()=>devForget()?setRow("device","device","這台裝置"):setRow("device","download","安裝");
+const devSec=()=>devShow()?setSec(devRow()):"";
 /* 「外觀」：firestore 模式登入後在「帳號」合併頁裡；其他情況（舊的看板登入、沒登入、唯讀）是設定清單最後一列 */
 const lookSec=()=>setSec(setRow("look","sliders","外觀"));
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
@@ -211,7 +213,7 @@ function settingsInner(){
       setRow("labels","tag","標籤")+
       (termOwn()?setRow("term","calendar","學年與開學日"):""))+
     setSec(setRow("backup","download","備份")+
-      setRow("device","device","這台裝置"))+
+      devRow())+
     (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
 }
 /* 設定是部門內的一頁（DESIGN-next 第六節「部門內」、第十二節；ui-09）：部門標題列（同一個節點，data-fx-keep）留在畫面上，設定清單、桌面右側面板、手機子頁都從標題列下緣開始蓋。
@@ -377,7 +379,7 @@ const SET_HUBS={
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
-  device:()=>hubRun("這台裝置",()=>{const n=remName();
+  device:()=>hubRun(devForget()?"這台裝置":"安裝",()=>{const n=remName();
     return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",off:!n,act:()=>forgetDevice()}])]},
     {head:()=>devForget()?hubSt([["記住的身分",remName()||"沒有記住身分"]]):"",   /* GitHub 模式：這台裝置記住了誰（忘記之後即時改） */
