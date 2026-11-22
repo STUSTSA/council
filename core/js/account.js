@@ -23,7 +23,8 @@ const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
 const hm=ms=>{if(!ms)return "";const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`};
 const mmss=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`};
-const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
+/* 內建瀏覽器（LINE、臉書、IG、微信、Android WebView 與用 Google 搜尋／Lens 開的頁面）：Google 不讓這類環境登入，要先換到瀏覽器 */
+const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)|\bGSA\//i.test(navigator.userAgent);
 
 /* ---------- 登入狀態 ----------
    acct.user＝{uid,email,name}｜null；acct.roles＝自己的 roles 文件（即時監聽，角色被改或撤掉時畫面立刻跟著變）。 */
@@ -81,7 +82,7 @@ async function acctSignIn(){
   const A=await acctLoad();acct.err="";acctChanged();
   const c=await A.signIn();
   if(c&&c!=="redirect"&&!/popup-closed-by-user|cancelled-popup-request/.test(c)){acct.err=SIGNIN_ERR[c]||`登入失敗（${c}）`;acctChanged()}
-  return !c;
+  return c==="redirect"?"redirect":!c;   /* true＝登入了；"redirect"＝轉去 Google 登入頁；false＝取消或失敗 */
 }
 async function acctSignOut(){
   const A=await acctLoad();await A.signOut();
@@ -517,16 +518,25 @@ async function joinFlow(){
   const token=joinToken();if(!token||joinBusy||!FB_ON)return;joinBusy=true;
   try{
     const A=await acctLoad();
-    if(!acct.user){
-      /* 取消登入不清掉權杖：同一個分頁之後從設定頁登入，還會接著加入 */
+    /* 還沒登入：一直問到登入成功或按取消。彈出視窗被關掉、登入失敗不能讓人卡在空畫面（以前只能重新掃 QR）；取消不清掉權杖，同一個分頁之後從設定頁登入還會接著加入 */
+    while(!acct.user){
       if(inAppBrowser()){const v=await ask("用瀏覽器開啟",[],{});if(v)acctCopyUrl();return}
-      const v=await ask("用 Google 登入",[],{});
-      if(!acct.user){if(!v)return;if(!await acctSignIn()){if(acct.err)toast(acct.err);return}}
-      for(let i=0;i<50&&!acct.user;i++)await new Promise(r=>setTimeout(r,100));   /* 等登入狀態傳到 acct（onUser） */
-      if(!acct.user)return;
+      const v=await ask("用 Google 登入",[],{note:acct.err});
+      if(acct.user)break;
+      if(!v)return;
+      const r=await acctSignIn();
+      if(r==="redirect")return;   /* 轉到 Google 登入頁：回來後會重新接著加入 */
+      if(r)break;
+      /* 取消或失敗：回到上面再問一次（失敗的原因寫在視窗裡） */
     }
+    for(let i=0;i<50&&!acct.user;i++)await new Promise(r=>setTimeout(r,100));   /* 等登入狀態傳到 acct（onUser） */
+    if(!acct.user)return;
     let inv;
-    try{inv=await A.invitePreview(token)}catch(_){toast("沒有連上網路，稍後再試");return}   /* 暫時的錯誤：權杖留著，重新整理或重新登入會再試 */
+    /* 暫時的錯誤（沒網路）：權杖留著，問要不要再試 */
+    for(;;){
+      try{inv=await A.invitePreview(token);break}
+      catch(_){if(!await ask("沒有連上網路，再試一次？",[],{}))return}
+    }
     if(!inv){joinClear();await ask("這張邀請已失效",[],{});return}
     if(inv.legacyTaken){joinClear();await ask("這張邀請綁定的舊身分已經被認領",[],{});return}
     const has=acctDepts()[inv.deptId];
@@ -536,13 +546,19 @@ async function joinFlow(){
     const v=await ask(`加入${deptNameOf(inv.deptId)}・${roleT(inv.role,inv.deptId)}`,[],{note:`剩 ${mmss(inv.expiresAt-A.serverNow())}`});
     clearInterval(tick);
     if(!v){joinClear();return}
-    try{
-      const r=await A.inviteRedeem(token);joinClear();
-      toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
-      if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
-    }catch(e){
-      joinClear();
-      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${roleT(e.role,e.deptId)}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
+    for(;;){
+      try{
+        const r=await A.inviteRedeem(token);joinClear();
+        toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
+        if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
+        return;
+      }catch(e){
+        if(!["already","bound","legacy","invalid"].includes(e.code)){   /* 網路這類暫時的錯誤：邀請還沒用掉，權杖留著，問要不要再試 */
+          if(await ask(`${acctErr(e)}，再試一次？`,[],{}))continue;return}
+        joinClear();
+        await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${roleT(e.role,e.deptId)}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":"這張邀請已失效",[],{});
+        return;
+      }
     }
   }finally{joinBusy=false}
 }
