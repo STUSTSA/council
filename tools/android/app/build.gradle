@@ -1,0 +1,21 @@
+plugins { id "com.android.application" }
+
+android {
+    namespace "tw.edu.stust.council"
+    compileSdk 34
+    defaultConfig {
+        applicationId "tw.edu.stust.council"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        // 自用：release 沿用每次建置產生的 debug 簽章，不放任何金鑰進 repo
+        release { signingConfig signingConfigs.debug }
+    }
+}
+
+dependencies {
+    implementation "androidx.browser:browser:1.8.0"
+}
