@@ -92,7 +92,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
   /* ---------- 1. 未登入 ---------- */
   const anon=await open(`${BASE}/index.html?d=fruit`);
-  ok((await board(anon)).length===0&&await toastHas(anon,'要登入才能看'),'未登入：讀不到看板、提示要登入');
+  ok((await board(anon)).includes('測試卡片甲')&&!anon.toasts.some(x=>x.includes('要登入才能看')),'未登入：讀得到看板內容、不提示要登入（06 對外公開）');
   await openSet(anon);
   let s=await setText(anon);
   ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有「用 Google 登入」');
@@ -100,7 +100,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const line=await open(`${BASE}/index.html?d=fruit`,{ua:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Line/14.0.0'});
   await openSet(line);s=await setText(line);
   ok(s.includes('用瀏覽器開啟')&&s.includes('複製網址')&&!s.includes('用 Google 登入'),'LINE 內建瀏覽器：顯示「用瀏覽器開啟」與「複製網址」、不嘗試登入');
-  ok(await toastHas(line,'請用瀏覽器開啟'),'LINE 內建瀏覽器：看板上提示要用瀏覽器開啟');
+  ok((await board(line)).includes('測試卡片甲'),'LINE 內建瀏覽器：看板內容照常看得到（06；登入才需要用瀏覽器開啟）');
   await line.click('[data-fb-copy]');await line.waitForTimeout(300);
   ok((await line.evaluate(()=>navigator.clipboard.readText()))===`${BASE}/index.html?d=fruit`,'LINE 內建瀏覽器：複製的網址保留 ?d=');
   await line.ctx.close();
@@ -208,19 +208,19 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const u2=await open(`${BASE}/index.html?d=fruit`);await signIn(u2,'u2');const u2Uid=await uidOf(u2);
   await openSet(u2);await u2.click('[data-set="acct"]');await u2.waitForTimeout(800);
   await u2.click('[data-hub="req"]');ok((await dlg(u2))==='申請編輯權限','申請：表單');
-  await dlgSet(u2,{dept:'pr',role:'editor',note:'公關部新幹部'});await dlgAct(u2,'ok');
+  await dlgSet(u2,{dept:'pr',rank:'member',note:'公關部新幹部'});await dlgAct(u2,'ok');
   ok(await toastHas(u2,'已送出申請'),'申請：送出');
-  ok(await until(async()=>(await paneText(u2)).includes('公關部・編輯者')),'申請：帳號頁列出待審的申請');
+  ok(await until(async()=>(await paneText(u2)).includes('公關部・部員')),'申請：帳號頁列出待審的申請');
   const u1b=await open(`${BASE}/index.html?d=fruit`);await signIn(u1b,'u1');await uidOf(u1b);await openSet(u1b);
   ok(await until(async()=>(await meText(u1b)).includes('活動部・編輯者')),'u1：帳號頁顯示活動部・編輯者');
   /* 總管理員：核准 */
   await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);   /* 收起 */
   await hub(boss,'requests');
-  ok(await until(async()=>(await paneText(boss)).includes('公關部編輯者')&&(await paneText(boss)).includes('公關部新幹部')),'核准：待審清單顯示申請人、部門、角色、備註');
+  ok(await until(async()=>(await paneText(boss)).includes('公關部部員')&&(await paneText(boss)).includes('公關部新幹部')),'核准：待審清單顯示申請人、部門、角色、備註');
   ok(await boss.evaluate(()=>{const b=document.querySelector('.acct-req b');return !!b&&b.textContent.startsWith('u2@example.test')}),'04 核准：清單粗體那一行以信箱開頭');
   await boss.click('[data-ok]');
   {const title=await dlg(boss),note=await boss.evaluate(()=>{const n=document.querySelector('#dlgForm .dlg-note');return n?n.innerText:''});
-    ok(title==='核准 u2@example.test 的申請'&&note.includes('帳號：u2@example.test')&&note.includes('公關部・編輯者'),'04 核准：先確認，寫出信箱、部門與角色');
+    ok(title==='核准 u2@example.test 的申請'&&note.includes('帳號：u2@example.test')&&note.includes('公關部・部員'),'04 核准：先確認，寫出信箱、部門與角色');
     await dlgAct(boss,'cancel');await boss.waitForTimeout(500);
     ok(!(await read(`roles/${u2Uid}`)),'04 核准：按取消不寫入');
     await boss.click('[data-ok]');await dlg(boss);await dlgAct(boss,'delete');}
@@ -259,11 +259,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   /* ---------- 5b. 04：權限申請每人每個部門一份；核准的是畫面上那一版 ---------- */
   {const sent=()=>u2.toasts.filter(x=>x.includes('已送出申請')).length,n0=sent();
     await meText(u2);await u2.click('[data-hub="req"]');await dlg(u2);
-    await dlgSet(u2,{dept:'works',role:'editor',note:'第二個部門'});await dlgAct(u2,'ok');
+    await dlgSet(u2,{dept:'works',rank:'member',note:'第二個部門'});await dlgAct(u2,'ok');
     ok(await until(()=>sent()>n0),'04 申請：送出另一個部門');
     ok(await until(async()=>{const r=await read(`roleRequests/${u2Uid}_works`);return r&&r.status==='pending'&&r.rev===1}),'04 申請：文件 ID 是「UID＋底線＋部門」');
     await u2.click('[data-hub="req"]');await dlg(u2);
-    await dlgSet(u2,{dept:'works',role:'admin',note:''});await dlgAct(u2,'ok');
+    await dlgSet(u2,{dept:'works',rank:'minister',note:''});await dlgAct(u2,'ok');
     ok(await until(()=>u2.evaluate(()=>{const e=document.querySelector('#dlgForm .dlg-err');return !!e&&!e.hidden&&e.textContent.includes('這個部門已經有一筆待審的申請')})),'04 申請：同一個部門待審中再送，視窗裡提示、不送出');
     await dlgAct(u2,'cancel');
     {let docs=[];await admin(async d=>{docs=(await d.collection('roleRequests').where('uid','==',u2Uid).get()).docs.map(x=>x.id+':'+x.data().rev)});
@@ -271,8 +271,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     /* 總管理員的清單讀出來之後，申請被改過（等同撤回後換一個角色再申請）：核准不生效、清單更新成新的內容 */
     await boss.click('#setOv [data-set="council"]');await boss.waitForTimeout(600);
     await hub(boss,'requests');
-    ok(await until(async()=>(await paneText(boss)).includes('工務部編輯者')),'04 核准：待審清單顯示工務部編輯者');
-    await admin(d=>d.doc(`roleRequests/${u2Uid}_works`).update({role:'admin',rev:3}));
+    ok(await until(async()=>(await paneText(boss)).includes('工務部部員')),'04 核准：待審清單顯示工務部部員');
+    await admin(d=>d.doc(`roleRequests/${u2Uid}_works`).update({role:'admin',rank:'minister',rev:3}));
     await boss.click('[data-ok]');await dlg(boss);await dlgAct(boss,'delete');
     ok(await toastHas(boss,'這筆申請剛被改過'),'04 核准：清單讀出來之後被改過的申請，提示再看一次');
     const r2=await read(`roles/${u2Uid}`),q2=await read(`roleRequests/${u2Uid}_works`);

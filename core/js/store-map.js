@@ -302,7 +302,7 @@
       const blocks = fromFsBlocks(dept, c.blocks);
       return clean({ id: oid(dept, c.id), name: c.title, desc: descOf(blocks), blocks,
         issueId: c.issueId ? oid(dept, c.issueId) : null, staff: arr(c.staff).map(x => fromStaff(dept, x)),
-        labels: arr(c.labels).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report,
+        labels: arr(c.labels).map(x => oid(dept, x)), links: linksIn(c.links), report: !!c.report, reportAt: c.report && c.reportAt ? c.reportAt : undefined,
         /* 原本輸入的時間文字（startRaw／endRaw）合格式才用，否則照時間戳記排出來；endRaw 空字串＝沒有結束時間 */
         times: ev.map(e => ({ id: oid(dept, e.id), label: e.label, start: isWhen(e.startRaw) ? e.startRaw : fmtTaipei(e.start.__ts, e.allDay),
           end: e.endRaw === "" || isWhen(e.endRaw) ? e.endRaw : fmtTaipei(e.end.__ts, e.allDay), place: e.place || "", toIssue: !!e.toIssue })),
@@ -321,6 +321,7 @@
   function desired(dept, s, raw, uid) {
     const by = k => new Map(((raw && raw[k]) || []).map(d => [d.id, d]));
     const R = { cards: by("cards"), issues: by("issues"), weeks: by("weeks"), labels: by("labels"), events: by("events") };
+    const rOn = e => typeof reportOn === "function" ? reportOn(e) : !!e.report;   /* 網頁：過期的報告標記寫回 false（util.js reportOn）；命令列沒有這個函式，照原值 */
     const keep = (r, keys) => { const o = {}; if (r) keys.forEach(k => { if (k in r) o[k] = copy(r[k]); }); return o; };
     const mem = new Set((s.members || []).map(m => m.id));
     const staff = a => (a || []).map(x => mem.has(x) ? legacyStaff(dept, x) : x);
@@ -354,7 +355,7 @@
       const times = e.times || [];
       const c = { deptId: dept, title: String(e.name || ""), blocks, timeIds: times.map(t => nid(dept, t.id)),
         issueId: e.issueId ? nid(dept, e.issueId) : null, staff: staff(e.staff), labels: ids(e.labels), links: copy(e.links || []),
-        report: !!e.report, state: st, order: cord[k], round: e.round, roundAt: e.roundAt, touched: copy(e.touched), touchedAt: e.touchedAt,
+        report: rOn(e), reportAt: rOn(e) && e.reportAt ? e.reportAt : undefined, state: st, order: cord[k], round: e.round, roundAt: e.roundAt, touched: copy(e.touched), touchedAt: e.touchedAt,
         fromEv: e.fromEv ? nid(dept, e.fromEv) : undefined,
         ...keep(r, ["createdAt", "createdBy", "importBatch", "legacyDesc", "purgeLog", "deletedAt", "deletedBy"]) };
       /* 結案時間只能是伺服器時間（規則 stateMove）：狀態沒變就沿用原本的值，剛結案＝伺服器時間，移回＝null */

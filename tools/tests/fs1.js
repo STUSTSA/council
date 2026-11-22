@@ -62,7 +62,7 @@ let fails=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fails+
     if(g.snap.data!==f.snap.data){fs.writeFileSync(__dirname+'/fs1_g.json',g.snap.data);fs.writeFileSync(__dirname+'/fs1_f.json',f.snap.data)}
     ok(g.snap.evDom===f.snap.evDom&&g.snap.title===f.snap.title,`${dept}：畫面上的即時回報數量與標題相同（${g.snap.evDom}）`);
     ok(!f.errs.length&&!g.errs.length,`${dept}：沒有頁面錯誤 ${[...g.errs,...f.errs].join(' | ')}`);
-    ok(f.toasts.some(x=>x.includes('新資料庫')),`${dept}：firestore 模式提示「已搬到新資料庫」`);
+    ok(!f.toasts.some(x=>x.includes('要登入才能看')),`${dept}：firestore 模式不再提示「要登入才能看」（06 對外公開）`);
     await g.ctx.close();await f.ctx.close();
   }
   /* 凍結：唯讀、任何寫入都擋 */
@@ -73,9 +73,9 @@ let fails=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fails+
   ok(z.toasts.some(x=>x.includes('搬到新資料庫，暫停編輯')),'frozen：提示暫停編輯');
   ok(await z.evaluate(()=>deptSourceOf('rights')==='github'&&deptSourceOf('secretariat')==='frozen'),'frozen：只影響設定的那個部門');
   await z.ctx.close();
-  /* 未登入：讀不到、提示要登入（上面的 firestore 模式都是用沒有任何角色的一般登入帳號 vw 讀的） */
+  /* 未登入：看板內容照常讀得到、不提示要登入（06 對外公開；上面的 firestore 模式都是用沒有任何角色的一般登入帳號 vw 讀的） */
   const n=await open('events','firestore',null);
-  ok(n.snap.data.includes('"ev":[]')&&n.toasts.some(x=>x.includes('要登入才能看')),'未登入：讀不到內容、提示要登入');
+  ok(!n.snap.data.includes('"ev":[]')&&!n.toasts.some(x=>x.includes('要登入才能看')),'未登入：讀得到看板內容、不提示要登入（06）');
   await n.ctx.close();
   await b.close();await t.cleanup();srv.close();
   console.log(fails?`失敗 ${fails} 項`:'全部通過');process.exit(fails?1:0);

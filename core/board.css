@@ -1604,6 +1604,7 @@ body.set-open #pageMain{overflow:hidden}
 .acct-rt>small{color:var(--muted);font-size:12.5px;font-weight:400;letter-spacing:0}
 .acct-person b{font-size:17px;font-weight:500;letter-spacing:.06em}
 .acct-person small,.acct-line small{color:var(--muted);font-size:12.5px}
+.acct-sub{margin:6px 4px 0;font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--muted)}   /* 人員頁「尚無權限的帳號」、舊身分頁各部門的小標（05） */
 /* 面板裡的一列（不是按鈕）：左邊文字、右邊小按鈕；一列一塊、留縫（.set-list） */
 .acct-line{display:flex;align-items:center;gap:10px;min-height:62px;padding:12px 20px;min-width:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-line>span{flex:1;min-width:0;display:grid;gap:2px}
@@ -2393,6 +2394,15 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .md-ex .md-note{grid-column:1/-1}
 .md-ext{font-size:14.5px;font-weight:500;padding:4px 8px;margin:0 -8px}
 .md-add{margin-top:8px}
+.md-send{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px}
 .md-in{width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.7;color:var(--ink)}
 .md-paste{border-top:1px solid var(--hair);padding-top:12px;margin-top:6px}
 .ag-st{margin:12px 0 0;font-size:12.5px}
+
+/* 會議結論（部門即時回報頁最上面的待合併卡，proposals.js）：一則一列，上面小字「日期 行政會議　卡片名」，下面結論，右下「合併到卡片」「略過」 */
+.mp-panel[hidden]{display:none}
+.mp-row{padding:12px 0;border-top:1px solid var(--hair)}
+.mp-row:first-child{border-top:0;padding-top:0}
+.mp-meta{margin:0 0 4px;font-size:12px;color:var(--muted);letter-spacing:.04em}
+.mp-note{margin:0 0 10px;font-size:14px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
+.mp-act{display:flex;justify-content:flex-end;gap:8px}
