@@ -83,9 +83,9 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     await p.ctx.close();}
   {const p=await open('marketing',['rights','secretariat']);
     const a=await fw(p,'rights'),m=await fw(p,'events');
-    ok(!a.ev&&/登入/.test(a.err),`未登入：已切換的權益部讀不到（「${a.err}」）`);
+    ok(!!a.ev&&!a.err,`未登入：已切換的權益部也讀得到（06 對外公開）（「${a.err||''}」）`);
     ok(!m.err&&m.events===(rt.events||[]).length,'未登入：還在 GitHub 的部門照常讀資料檔');
-    ok(await p.evaluate(()=>termCfg().yearLabel)!=='FS 學年','未登入：讀不到秘書處（已切換），學年設定退回自己資料裡的值');
+    ok(await p.evaluate(()=>termCfg().yearLabel)==='FS 學年','未登入：讀得到秘書處（已切換）的學年設定（06）');
     ok(p.errs.length===0,`未登入：沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);
     await p.ctx.close();}
 

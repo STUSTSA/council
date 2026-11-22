@@ -27,7 +27,7 @@ const lvVer=ev=>{if(!fsMode()||!storeFsBase)return 0;const c=(storeFsBase.src.ca
 function tmLate(t){if(!t||!t.start)return false;const d=new Date(),now=`${today()}T${pad(d.getHours())}:${pad(d.getMinutes())}`,sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
   return (ed||sd)<today()||(!ed&&sd===today()&&t.start.length>10&&t.start<now)}
 /* 會議要報告：ev.report 為真的排在上面（細線隔開），上一張／下一張照畫面順序 */
-const liveOrder=()=>{const a=state.events.filter(ev=>!ev.doneAt);return[...a.filter(e=>e.report),...a.filter(e=>!e.report)]};
+const liveOrder=()=>{const a=state.events.filter(ev=>!ev.doneAt);return[...a.filter(reportOn),...a.filter(e=>!reportOn(e))]};
 
 /* ===== 畫面 ===== */
 /* 一顆膠囊（高 54）：燈號、名稱、右邊紅字「報告」。o.sel＝寬螢幕右邊打開的那張（細框）；o.away＝全螢幕卡片從這顆長出去（位置留著、看不到） */
@@ -116,7 +116,7 @@ function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id
 function lcLiveHTML(ev,o){
   const done=o.k==="done",ro=done||!canEdit()&&!cardEd("e",ev.id),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
   const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(done?evName(ev):ev.name)}</b>`;   /* 完成紀錄：跟膠囊一樣帶段次（evName） */
-  const rep=done?"":ro?(ev.report?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${!!ev.report}">報告</button>`;
+  const rep=done?"":ro?(reportOn(ev)?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${reportOn(ev)}">報告</button>`;
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
   const body=o.body!=null?o.body:view==="staff"?lcStaffHTML(ev):view==="time"?lcTimeHTML(ev):view==="place"?lcPlaceHTML(ev):lcLinesHTML(ev,ed,ro);
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
@@ -132,7 +132,7 @@ function lvRise(split){
 addEventListener("resize",()=>{const md=$("#liveMD");if(md&&md.classList.contains("split"))lvRise(true)});
 /* 整區：膠囊清單（報告在上、細線、其他）＋寬螢幕右邊的卡片；全螢幕的卡片在 #lcFull（lcFullSync） */
 function renderEvents(){
-  const live=liveOrder(),ids=live.map(e=>e.id),rep=live.filter(e=>e.report),rest=live.filter(e=>!e.report);
+  const live=liveOrder(),ids=live.map(e=>e.id),rep=live.filter(reportOn),rest=live.filter(e=>!reportOn(e));
   if(lvOpen&&!ids.includes(lvOpen)){lvOpen=null;lcGone()}
   if(!editing){kp=null;lvPane=null;lvPop=false;lvSeg=null;if(kpSt&&kpSt.st!=="saving"&&kpSt.id!==lvOpen)kpSt=null}   /* 收合（或換成別張）＝儲存回饋與「復原」消失 */
   const wide=lvWide(),split=wide&&!!lvOpen,pane=$("#evDetail");
@@ -508,9 +508,10 @@ const kpDirty=()=>{if(!kp||!editing||cardEdit!=="e:"+kp.id)return false;const ev
 /* 會議要報告：只是標記，不算「更新」（不改燈號）。編輯中＝跟其他修改一起存；檢視中＝直接存 */
 async function lvReport(ev,btn){
   if(!reduceMotion()&&btn)btn.animate([{transform:"scale(.86)"},{transform:"scale(1.08)",offset:.6},{transform:"none"}],{duration:280,easing:MO.out});
-  if(editing&&kp&&kp.id===ev.id){ev.report=!ev.report;render();return}
+  const on=reportOn(ev),flip=()=>{ev.report=!on;if(ev.report)ev.reportAt=nowTaipei();else delete ev.reportAt};
+  if(editing&&kp&&kp.id===ev.id){flip();render();return}
   if(editing)return;
-  await settingSave(()=>{ev.report=!ev.report},ev.report?"已取消報告標記":"已標記會議要報告");
+  await settingSave(flip,on?"已取消報告標記":"已標記會議要報告");
 }
 
 /* ===== 點擊 =====

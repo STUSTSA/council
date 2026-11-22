@@ -39,7 +39,7 @@ const mtWho=()=>(fsMode()&&typeof acct!=="undefined"&&acct.user&&acct.user.name)
    2026-11-06 使用者：秘書處看起來依然很臃腫，不要直接粗暴地條列——每一筆收成跟即時回報同一種膠囊（<details class="ev">，motion.js 的展開收合動畫），
    收合只看燈號、名稱、狀態，點了才展開說明、時間、連結；哪幾筆開著記在 MTS.open，重畫後照舊 */
 const MTS={sel:"",open:new Set()};
-const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&e.report):[];
+const mtEvs=m=>m&&m.data?m.data.events.filter(e=>!e.doneAt&&reportOn(e)):[];
 /* 一張報告事項卡（要在 withState(那個部門的資料) 裡呼叫）：ed＝逐欄編輯；tail＝卡片展開後最後面多放的 HTML（會議紀錄的結論欄）；open＝一開始是否展開 */
 function mtEvHTML(e,ed,open,tail){
   const st=evStatus(e),par=parentOf(e);
@@ -312,7 +312,7 @@ function agDocText(a){
 /* ---- 畫面 ---- */
 const agPh=t=>`<span class="md-ph">${t}</span>`;
 function agSecHTML(it,x){
-  const data=mnData(it.dept),evs=data?data.events.filter(e=>!e.doneAt&&e.report):[],notes=it.notes||{},extra=it.extra||[];
+  const data=mnData(it.dept),evs=data?data.events.filter(e=>!e.doneAt&&reportOn(e)):[],notes=it.notes||{},extra=it.extra||[];
   return `<section class="md-sec" data-md="${esc(it.dept)}"><h4 class="md-h">${esc(it.deptName)}${x&&x.w?`<span class="md-chip">${esc(fmt(it.weekDate||x.w.date).slice(5))} 週報</span>`:""}<button type="button" class="icon md-x" data-md-drop="${esc(it.dept)}" aria-label="移除${esc(it.deptName)}">移除</button></h4>
     <div class="md-text md-e" data-ed="text" data-d="${esc(it.dept)}" tabindex="0">${String(it.text||"").trim()?esc(it.text):agPh("沒有週報內容，點一下輸入")}</div>
     ${evs.length?`<div class="events mt-list">${withState(data,()=>evs.map(e=>mtEvHTML(e,false,AG.open.has(e.id),`<div class="md-lab">這項的結論</div><div class="md-note md-e" data-ed="note" data-d="${esc(it.dept)}" data-ev="${esc(e.id)}" tabindex="0">${String(notes[e.id]||"").trim()?esc(notes[e.id]):agPh("點一下寫結論")}</div>`)).join(""))}</div>`:""}

@@ -60,7 +60,7 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     await p.waitForTimeout(1500);await p.ctx.close();}
   ok(JSON.stringify(await roster('rights'))===JSON.stringify([ppl.ra,ppl.rb,ppl.rc].sort()),'F3 名單：有權益部角色的三個人登入後各自補上（沒有角色的、活動部的不在）');
   ok(JSON.stringify(await roster('events'))===JSON.stringify([ppl.ea]),'F3 名單：活動部的人在活動部名單');
-  {const e=await read(`deptMembers/rights__${ppl.rb}`);ok(e&&Object.keys(e).sort().join()==='at,deptId,uid','F3 名單：只有部門、uid、時間（沒有信箱、角色等級、名字）');}
+  {const e=await read(`deptMembers/rights__${ppl.rb}`);ok(e&&Object.keys(e).sort().join()==='at,deptId,role,uid','F3 名單：只有部門、uid、角色、時間（沒有信箱、名字；05 起多一個 role）');}
   /* 權益部編輯者開始編輯：專員選項＝同部門全部有角色的人（名字），不含活動部、沒有角色的人 */
   {const p=await open('rights');await signIn(p,'rb','權益編輯一');await p.waitForFunction(()=>fsWriter(),null,{timeout:10000});
     const o=await p.evaluate(async()=>{staffPpl.key='';await staffPplLoad();return staffOptsFor({staff:[]}).map(x=>x[1])});

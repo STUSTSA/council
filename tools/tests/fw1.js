@@ -100,7 +100,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
 
   /* ---------- 1. 未登入、一般登入者：唯讀 ---------- */
   {const p=await open();const u=await ui(p);
-    ok(u.locked&&!u.authed&&u.editBtns===0&&u.cards===0,`未登入：唯讀、讀不到內容、沒有編輯鈕（${JSON.stringify(u)}）`);
+    ok(u.locked&&!u.authed&&u.editBtns===0&&u.cards>0,`未登入：唯讀、讀得到內容（06 對外公開）、沒有編輯鈕（${JSON.stringify(u)}）`);
     ok(await p.evaluate(()=>persist('x'))===false,'未登入：儲存不寫入');
     await p.ctx.close();}
   const gen=await open();await signIn(gen,'gen');
@@ -371,7 +371,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     const seedLocal={fn:s=>{try{if(!sessionStorage.getItem('seeded')){localStorage.setItem('workboard:board-main',s);localStorage.setItem('workboard:ghtoken','stale-token');sessionStorage.setItem('seeded','1')}}catch(_){}},arg:JSON.stringify(stale)};
     const anon=await open(DEPT,[DEPT],seedLocal);
     const a=await anon.evaluate(()=>({cards:state.events.length,local:state.events.some(e=>e.id==='eLOCAL1'||e.name.startsWith('LOCAL')),title:state.title,base:!!storeFsBase,sync:!!state.sync}));
-    ok(!a.local&&a.title!=='LOCAL 舊暫存看板'&&!a.base&&!a.sync,`本機暫存（未登入、讀取被拒）：畫面不拿本機暫存頂上（${JSON.stringify(a)}）`);
+    ok(!a.local&&a.title!=='LOCAL 舊暫存看板'&&!a.sync,`本機暫存（未登入）：畫面只有 Firestore 的內容、不拿本機暫存頂上（${JSON.stringify(a)}）`);   /* 06：未登入也讀得到 Firestore，所以 base 會是真的 */
     ok(await anon.evaluate(()=>persist('x'))===false,'本機暫存（未登入）：儲存不寫入');
     const e3=await open(DEPT,[DEPT],seedLocal);const e3Uid=await signIn(e3,'e3');await setRole(e3Uid,{[DEPT]:'editor'});
     await until(async()=>!(await ui(e3)).locked);
