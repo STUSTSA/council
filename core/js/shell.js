@@ -116,6 +116,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="sgroup" data-sec="done">
           <aside class="panel" id="donePanel" aria-labelledby="doneH">
             <div class="panel-head"><h2 class="sec-h" id="doneH" data-en="DONE">完成紀錄<span class="count" id="doneCount">0</span></h2></div>
+            <div class="wks-rail" id="doneRail" hidden></div>
             <div class="md" id="doneMD"><div class="ev-list" id="doneList" data-flip></div><div class="lc-pane" id="doneDetail" hidden></div></div>
           </aside>
         </div>

@@ -70,9 +70,9 @@ body.log-open{overflow:hidden}
 /* 被指到放大、按下縮回。自己有指到／按壓樣子的按鈕在這裡用 :not(:where()) 排除（權重不變，不用在各元件再蓋回去）：
    今日／明日卡片（notify.js 的 ndPress 做按壓、指到只換底色）、海報月曆的日期（指到＝淡圓、按下 .pc-d:active）、月份選單的月份（指到只換底色）、完成紀錄的週疊卡標題（整張卡片的標題條，放大會蓋到別張） */
 @media (hover:hover){
-  button:not(:where(.nd-card,.pc-d,.wks-h,.cal-pop button)):hover{transform:scale(1.05)}
+  button:not(:where(.nd-card,.pc-d,.wks-h,.wks-t,.cal-pop button)):hover{transform:scale(1.05)}
 }
-button:not(:where(.nd-card,.wks-h)):active{transform:scale(.96)}
+button:not(:where(.nd-card,.wks-h,.wks-t)):active{transform:scale(.96)}
 button.ghost{border-color:var(--muted)}
 @media (max-width:640px){
   h1{font-size:24px;letter-spacing:.04em}
@@ -1043,9 +1043,16 @@ a.link:active{transform:scale(.96)}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
-/* 週疊卡（views.js 的 renderDone；跟主頁手機的部門卡片堆 .hm-wc 同一套外觀：底色、圓角、往上的柔和陰影、英文小標 .hm-en＋名稱 .hm-nm，見上面「主頁」段）：
-   一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝這一張就地展開（高度用 grid 0fr→1fr 長出來），裡面是那一週的膠囊（.cps），
-   再點一次收起、點別週換那張。沒展開的內容用 inert 擋住。整排寬度由卡片填滿，電腦上展開的膠囊清單自己排多欄。#doneList.snap＝直接換、不跑過渡（views.js doneWeekShow） */
+/* 完成紀錄的週：手機＝疊卡（跟主頁手機的部門卡片堆 .hm-wc 同一套外觀），電腦＝一排方塊（跟電腦版主頁的 .hm-tile／.hm-ring 是同一組樣式，見「主頁」段）。views.js 的 renderDone 依 640px 分兩種畫，裡面的內容（每週報告＋膠囊）是同一份。
+   手機：一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝這一張就地展開（高度用 grid 0fr→1fr 長出來），裡面是那一週的內容，
+   再點一次收起、點別週換那張。沒展開的內容用 inert 擋住。#doneList.snap＝直接換、不跑過渡（views.js doneWeekShow）。
+   電腦：.wks-rail 是橫向可捲的一排方塊（焦點那塊放大 1.13、其他半透明、焦點框 #wksRing 滑過去），焦點那一週的內容畫在方塊下面的 #doneList；方塊裡「張數」用主頁的大數字 .hm-n */
+.wks-rail{--hm-t:clamp(130px,12vw,170px);position:relative;display:flex;gap:calc(var(--hm-t)*.16);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 -20px;padding:34px 28px 36px}
+.wks-rail[hidden]{display:none}
+.wks-rail::-webkit-scrollbar{display:none}
+.wks-rail .wks-t{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;border:0;min-height:0;text-align:left;white-space:normal;font:inherit}   /* button 的內容預設垂直置中：改成從左上開始，跟主頁的 a 方塊一樣 */
+.wks-rail .hm-tile:not(.on){opacity:.82}
+.wks-t .hm-n{left:20px;bottom:16px}
 .wks{padding:4px 0 8px}
 .wks-c{position:relative;border-radius:var(--r-lg)}
 .wks-c+.wks-c{margin-top:-14px}   /* 後面那張壓住前面那張的下緣 14px */

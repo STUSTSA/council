@@ -14,6 +14,29 @@ const dir=process.env.SHOTS||'.';
 for(const [w,h,sc,touch,tag] of [[1366,800,'light',false,'desk'],[390,780,'light',true,'mob'],[390,780,'dark',true,'mobdark'],[1366,800,'dark',false,'deskdark']]){
  const p=await open(w,h,sc,touch);const exp=await expected(p);const weeks=Object.keys(exp).sort().reverse();
  ok(weeks.length>=3,tag+'：測試資料至少跨三週：'+weeks.join(','));
+if(!touch){   /* 電腦：跟電腦版主頁一樣的一排方塊（.wks-rail／.hm-tile／.hm-ring），焦點週的內容畫在下面；不登記 Back */
+  const ds=await p.$$eval('#doneRail .hm-tile',x=>x.map(e=>e.dataset.wk));
+  ok(weeks.every(k=>ds.includes(k))&&JSON.stringify(ds)===JSON.stringify([...ds].sort().reverse())&&ds[0]===weeks[0],tag+'：一排方塊、最新在最左，有完成紀錄的週都在（另外會多列有每週報告的週與當週）');
+  ok(await p.$eval('#doneList',e=>true)&&!(await p.$('#doneList .wks')),tag+'：電腦版沒有手機那種疊卡');
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[0]&&!!(await p.$('#wksRing')),tag+'：焦點在最新一週，有焦點框');
+  const t0=await p.$eval('#doneRail .hm-tile',e=>e.textContent);ok(t0.includes('第 8 週')&&t0.includes('10/26 – 11/01')&&t0.includes('WEEK 8'),tag+'：方塊寫第幾週與日期：'+t0.slice(0,40));
+  ok(await p.$$eval('#doneList .cp.done',x=>x.length)===exp[weeks[0]]&&!!(await p.$('#doneList .wk-rep')),tag+'：下面是焦點週：每週報告＋該週所有卡片');
+  ok(!(await homeUp(p))&&await p.evaluate(()=>Back.depth())===0,tag+'：只換焦點，左上角還是首頁鍵、沒登記 Back');
+  await p.screenshot({path:`${dir}/dwk_${tag}_rail.png`});
+  await p.click('#doneRail .hm-tile:nth-child(3)');await p.waitForTimeout(900);
+  ok(await p.evaluate(()=>doneWeek)===weeks[2]&&await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[2]&&await p.$$eval('#doneList .cp.done',x=>x.length)===exp[weeks[2]],tag+'：點第三個方塊，焦點與下面內容換成那一週');
+  await p.keyboard.press('ArrowLeft');await p.waitForTimeout(700);
+  ok(await p.$eval('#doneRail .hm-tile.on',e=>e.dataset.wk)===weeks[1],tag+'：左方向鍵移到前一週');
+  await p.click('#doneList .cp.done');await p.waitForTimeout(900);
+  ok(await p.evaluate(()=>!!dnOpen&&$('#doneMD').classList.contains('split')),tag+'：點膠囊開卡片，分兩欄、方塊還在上面');
+  await p.screenshot({path:`${dir}/dwk_${tag}_card.png`});
+  await p.keyboard.press('Escape');await p.waitForTimeout(800);
+  await p.evaluate(()=>setSection('live',{instant:true}));await p.waitForTimeout(400);await p.evaluate(()=>setSection('done',{instant:true}));await p.waitForTimeout(500);
+  await p.fill('#boardQ','法規彙編');await p.waitForTimeout(500);
+  await p.click('#boardRes .dr-item.done');await p.waitForTimeout(1400);
+  ok(await p.evaluate(()=>doneWeek!==null&&dnOpen!==null),tag+'：搜尋完成紀錄：焦點移到那一週並開卡片');
+  ok(p.errs.length===0,tag+'：沒有 console 錯誤 '+p.errs.join('|'));
+  await p.close();continue}
  const ds=await p.$$eval('#doneList .wks-h',x=>x.map(e=>e.dataset.wk));
  ok(weeks.every(k=>ds.includes(k))&&!(await p.$('#doneList .wks-c.on')),tag+'：總覽是每週一張疊卡、全部收起，有完成紀錄的週都在（另外會多列有每週報告的週與當週）');
  ok(JSON.stringify(ds)===JSON.stringify([...ds].sort().reverse())&&ds[0]===weeks[0],tag+'：最新的一週在最上面');
@@ -36,12 +59,9 @@ for(const [w,h,sc,touch,tag] of [[1366,800,'light',false,'desk'],[390,780,'light
   ok(!(await homeUp(p)),tag+'：回到首頁鍵');
   await p.click('#doneList .wks-h');await p.waitForTimeout(1200);await p.goBack();await p.waitForTimeout(1200);
   ok(await p.evaluate(()=>doneWeek===null),tag+'：系統返回鍵在那一週時回到總覽');
- }else{
-  await p.click('.dhead .dh-home');await p.waitForTimeout(1200);
-  ok(await p.evaluate(()=>doneWeek===null&&!dnOpen)&&!!(await p.$('#doneList .wks-h')),tag+'：桌面：左上角上一頁關掉卡片並回到總覽');
  }
- if(tag==='desk'){
-  /* 就地展開：點標題後那一張長高（過渡中高度介於收起與展開之間），結束後別張都是收起的；再點同一張收起；點別週換那張展開；Esc 收起 */
+ if(tag==='mob'){
+  /* 就地展開（手機疊卡）：點標題後那一張長高（過渡中高度介於收起與展開之間），結束後別張都是收起的；再點同一張收起；點別週換那張展開；Esc 收起 */
   await p.evaluate(()=>setSection('done',{instant:true}));await p.waitForTimeout(500);
   const hh=()=>p.$eval('#doneList .wks-c',e=>e.getBoundingClientRect().height);const h0=await hh();
   await p.click('#doneList .wks-h');await p.waitForTimeout(150);const hm=await hh();await p.waitForTimeout(900);const h1=await hh();

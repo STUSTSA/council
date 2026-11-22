@@ -421,9 +421,25 @@ const wkLabel=s=>wkNo(s)?`第 ${wkNo(s)} 週`:`${fmt(s).slice(5)} 當週`,wkEn=s
 /* 列出的週：有完成紀錄的週、有每週報告的週，再加上這一週（沒有完成紀錄也要進得去每週報告） */
 function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});[...state.weeks.map(x=>x.date).filter(Boolean),today()].forEach(d=>{const w=wkStart(d);if(!m.has(w))m.set(w,[])});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
 /* 進去／離開那一週（只改狀態與 Back 登記，不畫） */
+/* 手機（640px 以下，跟主頁同一條線）＝整寬疊卡；電腦＝跟電腦版主頁一樣的一排方塊（.wks-rail，用主頁的 .hm-tile、焦點框 .hm-ring）：焦點那一週的內容畫在下面。
+   手機展開一週比主頁更深（登記 Back）；電腦只是換焦點，不登記 Back（doneWeek＝焦點週，null 時焦點在最新的一週） */
+const WKPHONE=matchMedia("(max-width:640px)");
+WKPHONE.addEventListener("change",()=>renderDone());
 function wkSet(w){
   if(w===doneWeek)return;const was=doneWeek;doneWeek=w;
+  if(!WKPHONE.matches)return;
   if(w&&!was)Back.opened("doneweek",()=>doneWeekShow(null));else if(!w&&was)Back.closed("doneweek");
+}
+/* 點某一週：手機＝展開／收起；電腦＝焦點移到那一週 */
+let wkRingAnim=false,wkScroll=false;
+function wkPick(w){if(WKPHONE.matches)doneWeekShow(w===doneWeek?null:w);else{wkScroll=true;doneWeekShow(w)}}
+/* 電腦版的焦點框：大小固定（量焦點方塊），換焦點時只用 transform 滑過去（同主頁 home.js 的 ringTo） */
+function wkRing(anim){
+  const r=$("#wksRing"),t=document.querySelector("#doneRail .hm-tile.on");if(!r||!t)return;
+  const w=t.offsetWidth,h=t.offsetHeight,W=Math.round(w*1.13+14),H=Math.round(h*1.13+14),tf=`translate(${(t.offsetLeft+w/2-W/2).toFixed(1)}px,${(t.offsetTop+h/2-H/2).toFixed(1)}px)`;
+  r.style.width=W+"px";r.style.height=H+"px";if(r.style.transform===tf)return;
+  if(!anim||reduceMotion()){r.style.transition="none";r.style.transform=tf;void r.offsetWidth;r.style.transition="";return}
+  r.style.transform=tf;
 }
 function doneWeekShow(w,{instant}={}){
   if(w===doneWeek)return;
@@ -432,7 +448,7 @@ function doneWeekShow(w,{instant}={}){
   if(snap)list.classList.add("snap");   /* 直接換，不跑展開／收合的過渡 */
   wkSet(w);renderDone();
   if(snap){void list.offsetWidth;list.classList.remove("snap")}
-  else if(w)setTimeout(()=>{const c=list.querySelector(".wks-c.on");if(c&&doneWeek===w)c.scrollIntoView({block:"nearest",behavior:"smooth"})},MO.slow+30);   /* 展開後，整張卡片要看得到 */
+  else if(w&&WKPHONE.matches)setTimeout(()=>{const c=list.querySelector(".wks-c.on");if(c&&doneWeek===w)c.scrollIntoView({block:"nearest",behavior:"smooth"})},MO.slow+30);   /* 展開後，整張卡片要看得到 */
 }
 /* 完成紀錄的週內頁：Esc＝回週格子總覽（開著卡片時 Esc 先由 live.js 收卡片）；輸入中、對話框、設定、通知開著時不處理 */
 document.addEventListener("keydown",e=>{
@@ -440,6 +456,14 @@ document.addEventListener("keydown",e=>{
   const a=document.activeElement;if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
   if(!$("#donePanel")||$("#donePanel").offsetParent===null)return;
   e.preventDefault();doneWeekShow(null);
+});
+/* 電腦版：左右方向鍵移動焦點週（同主頁）；輸入中、對話框、設定、通知開著、卡片開著時不處理 */
+document.addEventListener("keydown",e=>{
+  if(WKPHONE.matches||(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")||e.isComposing||e.altKey||e.ctrlKey||e.metaKey||dnOpen||setOpen||notiOpen||$("#dlg").open||document.querySelector(".csel.open"))return;
+  const a=document.activeElement;if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
+  const r=$("#doneRail");if(!r||r.offsetParent===null)return;
+  const ts=[...r.querySelectorAll(".hm-tile")],i=ts.findIndex(t=>t.classList.contains("on")),n=ts[i+(e.key==="ArrowRight"?1:-1)];
+  if(n){e.preventDefault();wkPick(n.dataset.wk)}
 });
 /* 要開某一筆（搜尋、其他地方跳過來）：先進到它那一週 */
 function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkStart(x.d));renderDone()}}
@@ -454,9 +478,22 @@ function renderDone(){
   $("#doneMD").classList.toggle("split",split);
   $("#doneCount").textContent=items.length;
   const cp=x=>`<button type="button" class="cp done${dnew(x.id)}${split&&x.id===dnOpen?" sel":""}${!wide&&x.id===dnOpen?" away":""}" data-cp="${esc(x.id)}" data-done="${esc(x.id)}" ${x.k==="e"?`data-ev="${esc(x.id)}"`:`data-issue="${esc(x.id)}"`} data-st="done"${split&&x.id===dnOpen?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(x.title)}</b><span class="cp-d num">${esc(fmt(x.d).slice(5))}</span></button>`;
-  /* 一週一張：標題（data-wk 只放在標題鈕上，點膠囊不會被當成點週）＋那一週的膠囊；沒展開的週內容用 inert 擋住（不能聚焦、不被讀） */
-  const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button><div class="wks-b"${on?"":" inert"}><div class="wks-bi">${repHTML(w)}${a.length?`<div class="cps">${a.map(cp).join("")}</div>`:""}</div></div></section>`};
-  morphTo($("#doneList"),`<div class="wks">${doneWeeks(items).map(week).join("")}</div>`);   /* 原位更新（morph.js）：展開／收起只是換 class，過渡由 CSS 跑 */
+  /* 一週一張：標題（data-wk 只放在標題鈕上，點膠囊不會被當成點週）＋那一週的內容（每週報告在最上面）；內容的 HTML 手機與電腦共用（wkBody） */
+  const wkBody=(w,a)=>`${repHTML(w)}${a.length?`<div class="cps">${a.map(cp).join("")}</div>`:""}`;
+  const wks=doneWeeks(items),phone=WKPHONE.matches,rail=$("#doneRail"),foc=doneWeek||wks[0][0];
+  rail.hidden=phone;
+  if(!rail._ro){rail._ro=new ResizeObserver(()=>wkRing(false));rail._ro.observe(rail)}   /* 分頁切過來、視窗改變時重量焦點框 */
+  if(phone){
+    rail.textContent="";
+    const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button><div class="wks-b"${on?"":" inert"}><div class="wks-bi">${wkBody(w,a)}</div></div></section>`};
+    morphTo($("#doneList"),`<div class="wks">${wks.map(week).join("")}</div>`);   /* 原位更新（morph.js）：展開／收起只是換 class，過渡由 CSS 跑 */
+  }else{
+    const tile=([w,a])=>{const on=w===foc;return `<button type="button" class="hm-tile wks-t${on?" on":""}" data-wk="${esc(w)}" aria-pressed="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><span class="hm-n num">${a.length}</span></button>`};
+    morphTo(rail,`${wks.map(tile).join("")}<i class="hm-ring" id="wksRing" aria-hidden="true"></i>`);
+    morphTo($("#doneList"),wkBody(foc,(wks.find(([w])=>w===foc)||[0,[]])[1]));
+    wkRing(wkRingAnim);wkRingAnim=true;
+    const t=rail.querySelector(".hm-tile.on");if(t&&wkScroll){wkScroll=false;t.scrollIntoView({inline:"center",block:"nearest",behavior:reduceMotion()?"auto":"smooth"})}
+  }
   if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   prevDone=ids;lcFullSync();Anim.syncPings();fabSync();   /* 打開的那一筆不見了（移回、刪除）時圓鈕要回來：renderEvents 先跑，這裡再對一次 */
 }
