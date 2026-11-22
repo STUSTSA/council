@@ -441,14 +441,15 @@ function wkRing(anim){
   if(!anim||reduceMotion()){r.style.transition="none";r.style.transform=tf;void r.offsetWidth;r.style.transition="";return}
   r.style.transform=tf;
 }
+let wkListY=0;   /* 手機：進獨立檢視前整疊卡片的捲動位置，返回時回到這裡 */
 function doneWeekShow(w,{instant}={}){
   if(w===doneWeek)return;
-  if(!w&&dnOpen){if(!lvWide())Back.closed("card");lcSet("done",null)}   /* 收起這一週時卡片一起收起來 */
-  const list=$("#doneList"),snap=instant||reduceMotion();
-  if(snap)list.classList.add("snap");   /* 直接換，不跑展開／收合的過渡 */
+  if(!w&&dnOpen){if(!lvWide())Back.closed("card");lcSet("done",null)}   /* 離開這一週時卡片一起收起來 */
+  const list=$("#doneList"),sc=document.querySelector("#donePanel").closest(".page"),phone=WKPHONE.matches,was=doneWeek;
+  if(phone&&sc&&w&&!was)wkListY=sc.scrollTop;
   wkSet(w);renderDone();
-  if(snap){void list.offsetWidth;list.classList.remove("snap")}
-  else if(w&&WKPHONE.matches)setTimeout(()=>{const c=list.querySelector(".wks-c.on");if(c&&doneWeek===w)c.scrollIntoView({block:"nearest",behavior:"smooth"})},MO.slow+30);   /* 展開後，整張卡片要看得到 */
+  if(phone&&sc){sc.scrollTop=w?0:wkListY}   /* 進去從頂端看；回到整疊卡片時回原位 */
+  if(!instant&&phone)pvIn(list);   /* 手機：整疊卡片 ↔ 獨立檢視用往上淡入（同進度的甘特圖與詳情切換） */
 }
 /* 完成紀錄的週內頁：Esc＝回週格子總覽（開著卡片時 Esc 先由 live.js 收卡片）；輸入中、對話框、設定、通知開著時不處理 */
 document.addEventListener("keydown",e=>{
@@ -485,8 +486,8 @@ function renderDone(){
   if(!rail._ro){rail._ro=new ResizeObserver(()=>wkRing(false));rail._ro.observe(rail)}   /* 分頁切過來、視窗改變時重量焦點框 */
   if(phone){
     rail.textContent="";
-    const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button><div class="wks-b"${on?"":" inert"}><div class="wks-bi">${wkBody(w,a)}</div></div></section>`};
-    morphTo($("#doneList"),`<div class="wks">${wks.map(week).join("")}</div>`);   /* 原位更新（morph.js）：展開／收起只是換 class，過渡由 CSS 跑 */
+    const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button>${on?`<div class="wks-bi">${wkBody(w,a)}</div>`:""}</section>`};
+    morphTo($("#doneList"),`<div class="wks">${wks.filter(([w])=>!doneWeek||w===doneWeek).map(week).join("")}</div>`);   /* 原位更新（morph.js）：沒選週＝整疊；選了一週＝只畫那一張（獨立檢視） */
   }else{
     const tile=([w,a])=>{const on=w===foc;return `<button type="button" class="hm-tile wks-t${on?" on":""}" data-wk="${esc(w)}" aria-pressed="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><span class="hm-n num">${a.length}</span></button>`};
     morphTo(rail,`${wks.map(tile).join("")}<i class="hm-ring" id="wksRing" aria-hidden="true"></i>`);
