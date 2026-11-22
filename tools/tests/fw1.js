@@ -119,7 +119,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   ok(await until(async()=>{const u=await ui(ed);return !u.locked&&u.authed&&u.editBtns>0}),'編輯者：角色一給就可以編輯（不用重新整理）');
   {const g=await ed.evaluate(()=>({del:document.querySelectorAll('[data-delissue],[data-deldone],[data-delweek]').length,gantt:document.querySelector('#ganttEdBtn').hidden}));
     ok(g.del===0&&g.gantt,`編輯者：沒有刪除議題、週報（部門管理員以上才能刪，02D D-d）、甘特圖時間軸（管理員）（${JSON.stringify(g)}）`);}
-  await openSet(ed);{const s=await setText(ed);ok(s.includes('標籤')&&s.includes('報告')&&s.includes('備份')&&!s.includes('看板名稱')&&!s.includes('人員')&&!s.includes('學年'),'編輯者：設定頁有報告、標籤、備份，沒有看板名稱、人員、學年');}
+  await openSet(ed);{const s=await setText(ed);ok(s.includes('標籤')&&s.includes('報告')&&!s.includes('備份')&&!s.includes('看板名稱')&&!s.includes('人員')&&!s.includes('學年'),'編輯者：設定頁有報告、標籤，沒有備份（#176 搬進系統管理）、看板名稱、人員、學年');}
   await closeSet(ed);
   /* a. 新增卡片（ui-05：浮動圓鈕開一張空白卡片 → 名稱、第一行 → 返回鍵存檔） */
   await newCard(ed,'FW 新卡片','第一行');

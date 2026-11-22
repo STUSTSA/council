@@ -1576,7 +1576,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-sub-body{flex:1;min-height:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;padding:10px calc(2px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
 /* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
-.set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
+.set-hub{display:grid;gap:10px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
 /* 「這台裝置」：iPhone／iPad Safari 加入主畫面的步驟（03 F4，唯一的操作說明例外）。一步一塊、留縫，前面等寬步驟號 */
 .dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;display:grid;gap:10px}
@@ -1589,7 +1589,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-gate-ico{display:grid;place-items:center;width:168px;height:168px;padding:0;border-radius:50%;border:0;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);margin-bottom:8px}
 .set-gate-ico svg{overflow:visible}
 .set-gate-ico:hover{transform:none}
-.set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:20px}   /* 沒有小標題，塊與塊之間只靠間距分開；上緣至少留柔光陰影的外擴距離 */
+.set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + env(safe-area-inset-bottom));display:grid;gap:10px}   /* 列與列、塊與塊的間距一律 10px（跟 .set-list 同一個值；2026-11-22 使用者：每個之間間距一樣）；上緣至少留柔光陰影的外擴距離 */
 /* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
 .set-list{display:grid;gap:10px}
 .set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
@@ -1615,6 +1615,9 @@ body.set-open #pageMain{overflow:hidden}
 /* 帳號頁最上面：名稱、信箱、角色膠囊（一塊平面色塊；設定清單的「帳號」列只寫「帳號」） */
 .acct-me{display:grid;gap:10px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-me .acct-chips{margin-top:0}
+.acct-name{display:inline-block;justify-self:start;max-width:100%;padding:0 6px;margin-left:-6px}   /* 名字可點（.md-e 的滑過底色）；左邊用負邊距抵掉內距，字跟下面的信箱對齊 */
+.acct-name .ico{width:14px;height:14px;margin-left:8px;color:var(--muted);vertical-align:-1px}
+.acct-name .md-in{font-size:17px;line-height:1.5;letter-spacing:.06em}
 /* 人員、匯入的部門清單（.set-row.acct-row）：名稱下面的信箱與角色是名單資料，不是說明。文字區用自己的 .acct-rt（不共用設定列的 .sr-t，不回頭蓋它） */
 .acct-rt{flex:1;min-width:0;display:grid;gap:2px;font-weight:500;letter-spacing:.06em}
 .acct-rt>b{font-weight:500}
@@ -1669,7 +1672,6 @@ body.set-open #pageMain{overflow:hidden}
 .look{display:grid;gap:16px}
 /* 設定頁的面板裡（帳號、外觀）：整組外觀是一塊平面色塊（DESIGN-next 第三節，模擬頁帳號頁的外觀框）；主題按鈕底色是各自主題的 --bg，跟色塊分得開 */
 .set-hub>.look{padding:18px 20px 14px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
-.set-hub>.set-list+.look{margin-top:12px}
 .look-t{font-size:16px;font-weight:700;letter-spacing:.08em}
 .look-mode{justify-self:start}
 .look-pals{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
