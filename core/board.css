@@ -2344,7 +2344,7 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
    標題列：「複製文字」「儲存」；上面一排會議膠囊（今天＋最近 6 場，沿用 .wk-d）；文件本身（#agDoc）：像正式文件，標題、日期、一個部門一段，字用內文大小；
    要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回；最下面一排「加入部門報告」膠囊。 */
 .ag-past{margin-bottom:14px}
-.md-doc{display:grid;gap:4px;max-width:760px}
+.md-doc{display:grid;gap:4px}
 .md-title{margin:0;font-size:20px;font-weight:600;letter-spacing:.02em}
 .md-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 0 10px}
 .md-date{font-size:13px;color:var(--muted);padding:2px 8px;margin:0 -8px}
