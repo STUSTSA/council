@@ -64,7 +64,7 @@ const UI=(()=>{
 /* ---------- 設定頁：外觀（主題、深淺色、音效；設定存取在上面的 UI）。ui-07 從 nav.js 搬來：主頁 home.html 的設定鈕也打開同一份 ----------
    淺色／深色的分段切換（anim.js 的 LiquidSeg；平面色塊 .glass 直接寫在 HTML 裡，不靠 LiquidSeg 執行時加：合併頁重畫走原位更新，執行時加的 class 會被拿掉）、一格一格的主題按鈕（三顆圓＝色塊、主要動作、選中，加名稱；選到的加粗框）、最下面「音效」開關（先只存設定）。
    每顆主題按鈕帶自己的 data-pal，按鈕裡的顏色變數就是那一組主題的顏色（深淺跟著目前的 data-theme，見 core/theme.css）。
-   畫在合併頁（hubRun）下面：firestore 模式登入後在「帳號」（account.js 的 acctHub），其他情況在設定清單的「外觀」（nav.js 的 SET_HUBS.look）；主頁是設定鈕打開的一層（home.js）。
+   畫在設定清單的「外觀」合併頁（hubRun；nav.js 的 SET_HUBS.look）；主頁是設定鈕打開的一層（home.js）。
    這幾個函式在開頁前就定義好，用到 LiquidSeg（anim.js）的 lookMount 等畫面出來才呼叫 */
 function lookHTML(head){
   const u=UI.get();

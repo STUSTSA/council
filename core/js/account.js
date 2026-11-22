@@ -106,7 +106,7 @@ function acctGateHTML(){
 function acctSettingsInner(){
   if(!FB_ON)return lookSec();
   if(!acct.ready)return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
-  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
+  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")
       +setRow("backup","download","備份")):"";
@@ -116,7 +116,8 @@ function acctSettingsInner(){
   return apply+(fsWriter()?setSec(setRow("report","doc","工作報告")+setRow("log","history","編輯紀錄")):"")
     +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
-    +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
+    +devSec()   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
+    +lookSec();   /* 外觀：獨立一列放最後（2026-11-22 起不再接在帳號頁下面） */
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -165,7 +166,7 @@ function acctPanel(title,draw){
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","changed":"這筆申請剛被改過，請再看一次","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
 async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
-/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出；下面接「外觀」（nav.js 的 lookHTML） ---------- */
+/* ---------- 帳號（自己）：最上面名稱、信箱、角色；名稱、申請編輯權限、我的申請、登出（外觀在設定清單自己一列，nav.js 的 SET_HUBS.look） ---------- */
 async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
@@ -183,7 +184,7 @@ async function acctHub(){
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${rankT(q)}（等待審核）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${rankT(q)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
-    {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head,foot:()=>lookHTML(true),mount:lookMount});
+    {k:"out",ic:"close",t:"登出",act:acctSignOut}],{head});
 }
 async function acctRename(){
   const A=await acctLoad(),cur=acct.names[acct.user.uid]||acct.user.name||"";
