@@ -466,6 +466,15 @@ document.addEventListener("keydown",e=>{
   const ts=[...r.querySelectorAll(".hm-tile")],i=ts.findIndex(t=>t.classList.contains("on")),n=ts[i+(e.key==="ArrowRight"?1:-1)];
   if(n){e.preventDefault();wkPick(n.dataset.wk)}
 });
+/* 電腦版：滑鼠停在方塊列的高度範圍內時，滾輪也換週（同主頁：往下滾＝往右、較舊的週；觸控板橫滑取較大的那軸；每 170ms 最多換一週）；不在這一列時照常捲頁面 */
+let wkWheelAt=0;
+document.addEventListener("wheel",e=>{
+  if(WKPHONE.matches||e.ctrlKey||dnOpen||!e.target.closest||!e.target.closest("#doneRail"))return;
+  const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(!d)return;e.preventDefault();
+  const now=performance.now();if(now-wkWheelAt<170)return;wkWheelAt=now;
+  const ts=[...$("#doneRail").querySelectorAll(".hm-tile")],i=ts.findIndex(t=>t.classList.contains("on")),n=ts[i+(d>0?1:-1)];
+  if(n)wkPick(n.dataset.wk);
+},{passive:false});
 /* 要開某一筆（搜尋、其他地方跳過來）：先進到它那一週 */
 function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkStart(x.d));renderDone()}}
 function renderDone(){
