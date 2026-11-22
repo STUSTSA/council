@@ -10,5 +10,4 @@ App 自己的畫面（WebView）滿版顯示 https://stustsa.github.io/council/h
 - Google 登入：Google 不讓內嵌畫面登入。網頁偵測到 `window.CouncilApp` 時（`core/js/fb-account.js` 的 `signIn`）呼叫 `CouncilApp.login()` →
   App 產生一次性 nonce、開 Chrome 的 `app-login.html#n=nonce` → 登入後按「回到看板」→ 以指定本 App 套件名的 intent 帶回 Google ID 憑證與 nonce →
   App 驗 nonce（一次性、10 分鐘內）與憑證格式，才呼叫網頁的 `__councilAppSignIn` 用 `signInWithCredential` 登入。Chrome 那頁若原本沒登入，登入後立刻登出；原本就登入著則不動。nonce 存在 App 私有的 SharedPreferences（撐得過程序重啟），只有 VIEW＋councilapp://auth 的 intent 才會讀取並作廢。
-- 開發驗證：Actions → android-screenshot（手動）會在模擬器 Android 13／14／15 裝上 APK、截圖並上傳到暫時的 apk-test Release；驗完請刪掉那個 Release。
 - 限制：App 內「下載」只支援一般網址（匯出全部資料這類 blob 下載未處理）；沒測過鏡頭／QR 掃描。
