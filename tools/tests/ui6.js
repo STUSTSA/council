@@ -3,7 +3,7 @@
    1. 通知鈕進到部門內的一頁：標題列同一個節點、鏡片不動、沒有搜尋列與新增圓鈕；返回四種：再按通知鈕、Esc、系統返回鍵、工具列分頁（到那個分頁）
    2. 今日／明日卡片：今日＝--pri 底；今日層開關（Esc）、只有「本來就要做」；點明日＝行事曆選到那一天
    3. 清點區：已過期／本週到期兩段；已過期是卡片堆（右滑完成、左滑改期、小按鈕、方向鍵）；完成與復原（含沒有核取行的舊時間標記）；改期打開那張卡片的時間頁
-   4. 海報月曆：週一開頭、選到的日期 40px --acc 圓、今天 --acc2 粗體、跨天細線與分層 9px；點日期清單換內容（舊的分身淡出）；月份選單 Esc 關、選月份
+   4. 海報月曆：週一開頭、選到的日期 --acc 圓（1280 以上三欄 36px，其餘 40px）、今天 --acc2 粗體、跨天細線與分層 9px；點日期清單換內容（舊的分身淡出）；月份選單 Esc 關、選月份
    5. 五類模式：會長室、「其他」勾了才讀那個部門（攔截請求計數，讀過不重讀）；活動、會議在 github 部門是空的、不讀；只有測試部門是 firestore 也不讀；有 firestore 部門時讀 scope（用替身模組）
    6. 跳脫：事件名稱含 <img onerror>；公共版參數（calMount）；唯讀時沒有通知鈕、開著時變唯讀就回原分頁
    7. 關掉動態（reduced-motion）：進出、今日層、換日期都沒有程式動畫
@@ -134,10 +134,14 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
       col=cells.indexOf(d1),exp=(pd(NOTI.month+'-01').getDay()+6)%7,sel=$('.pc-d.sel'),bs=getComputedStyle(sel,'::before'),td=$('.pc-d.is-today .pc-n'),ts=getComputedStyle(td);
       const css=v=>{const i=document.createElement('i');i.style.color=getComputedStyle(document.documentElement).getPropertyValue(v);document.body.append(i);const c=getComputedStyle(i).color;i.remove();return c};
       const wkr=$(`.pc-d[data-calday="${addDays(today(),1)}"]`).parentElement,sp=[...wkr.querySelectorAll('.pc-e.span')].map(e=>({ln:+e.style.getPropertyValue('--ln'),top:e.getBoundingClientRect().top}));
-      return {wk,col,exp,w:sel.getBoundingClientRect().width,selBg:bs.backgroundColor,acc:css('--acc'),op:bs.opacity,tdc:ts.color,acc2:css('--acc2'),fw:ts.fontWeight,sp,mon:$('.pc-mon').textContent,yr:$('.pc-yr').textContent,foot:$('.pc-foot').textContent,grid:getComputedStyle($('.pc-d')).borderTopWidth}});
+      return {wk,col,exp,w:sel.getBoundingClientRect().width,selBg:bs.backgroundColor,acc:css('--acc'),op:bs.opacity,tdc:ts.color,acc2:css('--acc2'),fw:ts.fontWeight,sp,mon:$('.pc-mon').textContent,yr:$('.pc-yr').textContent,foot:$('.pc-foot').textContent,grid:getComputedStyle($('.pc-d')).borderTopWidth,vw:innerWidth}});
     ok(r.wk==='MON,TUE,WED,THU,FRI,SAT,SUN'&&r.col===r.exp,`週一開頭、上面一排 MON–SUN（1 號在第 ${r.col+1} 格）`);
     ok(/^\d+[A-Z]{3}$/.test(r.mon)&&/^\d{4}$/.test(r.yr)&&/學生會$/.test(r.foot),`超大月份數字加英文縮寫（${r.mon}）、右上兩行年份、底下「部門・學生會」（${r.foot}）`);
-    ok(r.w===40&&r.selBg===r.acc&&r.op==='1',`選到的日期＝--acc 實心圓 40px（${r.w}、${r.selBg}）`);
+    const wantW=r.vw>=1280?36:40;   /* 1280 以上通知頁三欄、月曆縮小（日期圓 36）；1000～1279 兩欄與手機是 40 */
+    ok(r.w===wantW&&r.selBg===r.acc&&r.op==='1',`選到的日期＝--acc 實心圓 ${wantW}px（視窗 ${r.vw}；${r.w}、${r.selBg}）`);
+    {const vw0=p.viewportSize();for(const w of [1100,412]){await p.setViewportSize({width:w,height:vw0.height});await p.waitForTimeout(600);
+      ok(await p.evaluate(()=>$('.pc-d.sel').getBoundingClientRect().width)===40,`${w} 寬（兩欄／手機）：選到的日期圓 40px`)}
+      await p.setViewportSize(vw0);await p.waitForTimeout(600)}
     ok(r.tdc===r.acc2&&+r.fw>=700,`今天＝--acc2 粗體（${r.tdc}、${r.fw}）`);
     const t0=Math.min(...r.sp.map(x=>x.top-x.ln*9)),t1=Math.max(...r.sp.map(x=>x.top-x.ln*9)),lns=[...new Set(r.sp.map(x=>x.ln))].sort();
     ok(r.sp.length>=2&&lns.length>=2&&Math.round(t1-t0)===0,`跨天＝細線，同一週撞在一起的往下排一層、每層 9px（這一週 ${r.sp.length} 條、層 ${lns}、位置＝層×9 誤差 ${Math.round(t1-t0)}）`);
