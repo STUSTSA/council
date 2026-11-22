@@ -62,7 +62,7 @@ function bkNoteHTML(){
   if(BK.err)return card(esc(BK.err),"");
   if(BK.cal===undefined)return card("讀取預約中…","");
   if(!BK.cal)return card(bkSuper()?"預約功能還沒啟用。你是總管理員：到會長室分頁按「啟用會長預約」。":"會長預約還沒開放，開放後這裡就能預約。",bkSuper()?btn("goext","到會長室啟用","primary"):"");
-  const pend=mg?btn("goext",`待審 ${BK.pend.length} 筆　到會長室處理`):"";
+  const pend=mg?btn("goext",`待審 ${BK.pend.length} 筆<span class="bk-go">　到會長室處理</span>`):"";
   if(!mg&&!bkCanReq())return card(acct.roles?"預約只開放給各部門的成員（部長、次長、部員）。請先申請加入你的部門，通過後這裡就能預約。":"讀取預約中…","");
   const w=bkFreeWins()[0];
   if(!w)return card(mg?"會長還沒開放時段。到會長室分頁按「+ 新增開放時段」，同學才約得到。":"會長還沒開放時段，開放後這裡就能預約。",mg?btn("goext","到會長室新增時段","primary")+pend:"");
