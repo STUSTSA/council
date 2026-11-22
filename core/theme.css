@@ -51,6 +51,36 @@
 /* 紫藤（wisteria） */
 [data-pal="wisteria"]{--bg:#eeeaf7;--blk:#fbfaff;--blk2:#dcd5ee;--ink:#261a40;--muted:#675f82;--hair:#dbd4ec;--acc:#6d4fcf;--acc-ink:#fff;--acc2:#f0bc23;--acc2-ink:#261a40;--pri:#261a40;--pri-ink:#fbfaff;--ok:#2f9d62;--late:#d8412f;--ok-ink:#261a40}
 [data-theme="dark"][data-pal="wisteria"],[data-theme="dark"] [data-pal="wisteria"]{--bg:#0d0a16;--blk:#171229;--blk2:#251e3d;--ink:#eeeafa;--muted:#a199bd;--hair:#2a2243;--acc:#a78bfa;--acc-ink:#130c26;--acc2:#f0bc23;--acc2-ink:#0d0a16;--pri:#eeeafa;--pri-ink:#171229;--ok:#58d48c;--late:#ff6a58;--ok-ink:#0d0a16}
+/* 標誌色（學生會標誌與部門標誌）：--mk-a＝標誌的主色（原本的黃）、--mk-b＝輔色（原本的藍）、--mk-t＝標誌上的字（原本的藍字）。
+   主色跟主題的 --acc、輔色跟主題的 --acc2；淺色底上對 --blk 不到 1.7:1（跟原本黃色在米黃底的對比同級）的，往 --ink 混到剛好 1.7:1；
+   兩色太像（對比不到 1.5:1，柔光淺色）或深色兩色一樣（米黃）、幾乎同亮度（粉彩）時，輔色改用 --ink，兩個小人才分得開。字：淺色＝兩色中較深的那個，要對底色 ≥4.5:1（不夠就往 --ink 混，混到不到七成就直接用 --ink）；深色一律 --ink。
+   --mk-c＝行銷部標誌的第三色（原本的橘）：主色混一點 --late。標誌檔裡的顏色只當預設，畫面上以這幾個變數為準（board.css「部門標誌」、splash.css「學生會標誌」）。 */
+:root:not([data-pal]),[data-pal="fin"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="fin"],[data-theme="dark"] [data-pal="fin"]{--mk-a:var(--acc);--mk-b:var(--ink);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="b3"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--acc);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="b3"],[data-theme="dark"] [data-pal="b3"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="ink"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="ink"],[data-theme="dark"] [data-pal="ink"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="sage"]{--mk-a:color-mix(in srgb,var(--acc) 80%,var(--ink));--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="sage"],[data-theme="dark"] [data-pal="sage"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="mist"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--acc);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="mist"],[data-theme="dark"] [data-pal="mist"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="fire"]{--mk-a:color-mix(in srgb,var(--acc) 85%,var(--ink));--mk-b:var(--acc2);--mk-t:color-mix(in srgb,var(--acc2) 75%,var(--ink));--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="fire"],[data-theme="dark"] [data-pal="fire"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="pastel"]{--mk-a:color-mix(in srgb,var(--acc) 80%,var(--ink));--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="pastel"],[data-theme="dark"] [data-pal="pastel"]{--mk-a:var(--acc);--mk-b:var(--ink);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="neu"]{--mk-a:color-mix(in srgb,var(--acc) 85%,var(--ink));--mk-b:var(--ink);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="neu"],[data-theme="dark"] [data-pal="neu"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="sun"]{--mk-a:color-mix(in srgb,var(--acc) 95%,var(--ink));--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="sun"],[data-theme="dark"] [data-pal="sun"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="sakura"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--acc2);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="sakura"],[data-theme="dark"] [data-pal="sakura"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="forest"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:color-mix(in srgb,var(--acc) 90%,var(--ink));--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="forest"],[data-theme="dark"] [data-pal="forest"]{--mk-a:var(--acc);--mk-b:var(--ink);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="ocean"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:color-mix(in srgb,var(--acc) 85%,var(--ink));--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="ocean"],[data-theme="dark"] [data-pal="ocean"]{--mk-a:var(--acc);--mk-b:var(--ink);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-pal="wisteria"]{--mk-a:var(--acc);--mk-b:color-mix(in srgb,var(--acc2) 95%,var(--ink));--mk-t:var(--acc);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
+[data-theme="dark"][data-pal="wisteria"],[data-theme="dark"] [data-pal="wisteria"]{--mk-a:var(--acc);--mk-b:var(--acc2);--mk-t:var(--ink);--mk-c:color-mix(in srgb,var(--mk-a) 72%,var(--late))}
 /* 沒有 JavaScript（theme.js 沒跑、沒有 data-pal／data-theme）時：米黃，深淺色跟系統 */
 @media (prefers-color-scheme:dark){
   :root:not([data-pal]):not([data-theme]){color-scheme:dark;--wal-sh:rgba(0,0,0,.62);--bg:#000;--blk:#151517;--blk2:#232327;--ink:#f1f1f4;--muted:#9a9aa6;--hair:#2c2c34;--acc:#f0bc23;--acc-ink:#111114;--acc2:#f0bc23;--acc2-ink:#111114;--pri:#f1f1f4;--pri-ink:#151517;--ok:#3ccf7f;--late:#ff5a4e;--ok-ink:#000}

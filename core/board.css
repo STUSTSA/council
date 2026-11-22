@@ -746,8 +746,8 @@ a.doc-pill:active{scale:.96}
 /* 小開關：44×26 膠囊，關＝次色塊（--blk2）、開＝綠底；圓鈕略帶回彈地滑過去，按下時圓鈕拉長一點（外觀的音效開關也用） */
 .sw{position:relative;flex:none;width:44px;height:26px;min-height:0;padding:0;border:1.5px solid transparent;border-radius:999px;background:var(--blk2);transition:background-color .25s,border-color .25s}
 .sw i{position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:999px;background:var(--ink);transition:transform .42s var(--mo-spring),width .2s var(--mo-out),background-color .25s}
-.sw.on{background:var(--ok);border-color:var(--ok)}
-.sw.on i{transform:translateX(18px);background:var(--blk)}
+.sw.on{background:var(--acc2);border-color:var(--acc2)}   /* 開啟＝主題輔色（焦點色），不鎖綠色；綠色只給「完成、正常」的狀態 */
+.sw.on i{transform:translateX(18px);background:var(--acc2-ink)}
 .sw:active i{width:22px}
 .sw.on:active i{transform:translateX(14px)}
 .sw:hover{transform:none;box-shadow:none}
@@ -1494,7 +1494,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-fbl{position:absolute;display:block;overflow:visible}
 
 /* ===== 部門標誌（dept/icons/dept-代號.svg；主頁色塊、卡片堆的 .hm-lg 裡；DESIGN-next 第五節「部門標誌」） =====
-   藍 #0a5baa、黃 #f0bc23（與行銷部的橘）寫在檔案裡，不跟主題變；深色模式時藍（.dg-b）改成白 #fff，黃、橘不變（DESIGN-next 第二節，DievE 11/16 定、11/19 確認）。
+   檔案裡的藍 #0a5baa、黃 #f0bc23、橘只是預設值；畫面上黃（.dg-y）＝主題主色 --mk-a、藍（.dg-b）＝輔色 --mk-b、橘（.dg-o）＝--mk-c，全部在 theme.css「標誌色」，換主題即時跟著變（DievE 11/22）。
    原本就是白色的零件（秘書處的 .dg-w）跟著所在底板的底色，才分得出來：
    色塊、卡片、桌面鋪滿的分身、看板開頁的色塊底板＝--blk；手機翻面的部門底板、看板開頁的翻面底板、部門標題列（.dh-logo）＝--bg（交接前後同色，深色時沒有白塊）。
    標誌出現的地方一律把檔案放進頁面（不用 <img>），這幾條才吃得到。
@@ -1504,7 +1504,9 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-lg .dg{display:block;width:100%;height:100%;overflow:visible}
 :is(.hm-lg,.hm-fxl,.pfx-cover[data-k="tile"]) .dg-w{fill:var(--blk)}
 :is(.hm-fb,.pfx-cover[data-k="flip"],.dh-logo) .dg-w{fill:var(--bg)}
-[data-theme="dark"] .dg-b{fill:#fff}
+.dg-y{fill:var(--mk-a)}
+.dg-b{fill:var(--mk-b)}
+.dg-o{fill:var(--mk-c)}
 .dg :is(path,rect,g){transform-box:fill-box;transform-origin:50% 100%}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-all{animation:dg-hop .6s both}
 :is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-ga{animation:dg-crown .8s .05s both}

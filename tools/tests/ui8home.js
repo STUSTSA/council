@@ -70,10 +70,10 @@ let fails=0,passes=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(v)pass
       const r=await p.evaluate(([pal,mode])=>{const h=document.documentElement;h.dataset.pal=pal;h.dataset.theme=mode;
         const bg=getComputedStyle(document.body).backgroundColor,g=s=>getComputedStyle(document.querySelector('#hmMe '+s));
         const y=g('.su-y');return {bg,k:g('.su-k').fill,t:g('.su-t').fill,b:g('.su-b').fill,yf:y.fill,ys:y.stroke,yw:parseFloat(y.strokeWidth),ve:y.vectorEffect}},[pal,mode]);
-      const c=Math.min(con(r.k,r.bg),con(r.t,r.bg),con(r.b,r.bg));
-      const yok=mode==='light'?r.yf==='rgb(240, 188, 35)':r.yf==='none'&&r.ys!=='none'&&con(r.ys,r.bg)>=3&&r.yw>=1&&r.ve==='non-scaling-stroke';
+      const c=Math.min(con(r.k,r.bg),con(r.t,r.bg),con(r.b,r.bg)*2);   /* 標誌色跟主題（--mk-a／b／t）：字與右小人 ≥3；淺色左小人（--mk-a）≥1.4 */
+      const yok=mode==='light'?r.yf!=='none'&&con(r.yf,r.bg)>=1.4:r.yf==='none'&&r.ys!=='none'&&con(r.ys,r.bg)>=3&&r.yw>=1&&r.ve==='non-scaling-stroke';
       if(c<3||!yok)bad.push(`${pal}/${mode} 對比 ${c.toFixed(2)} 左小人 ${r.yf}/${r.ys}/${r.yw}`)}
-    ok(!bad.length,'十三組主題 × 深淺色：字與右邊小人對比 ≥ 3；淺色左小人黃色實心、深色只留線稿且線寬 ≥ 1px（照畫面像素） '+bad.join('；'));
+    ok(!bad.length,'十三組主題 × 深淺色：字對比 ≥ 3、右邊小人（--mk-b）≥ 1.5；淺色左小人實心（主題主色）、深色只留線稿且線寬 ≥ 1px（照畫面像素） '+bad.join('；'));
     await p.ctx.close()}
 
   /* ---------- H. 下排個人常用連結 ---------- */
