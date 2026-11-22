@@ -1037,21 +1037,25 @@ a.link:active{transform:scale(.96)}
 /* ===== 完成紀錄 ===== */
 #donePanel{display:flex;flex-direction:column;--done:var(--ok)}   /* 2026-11-06 使用者：不要黑色反白的大外框，比照即時回報（外框、底色見「版面與區塊外框」段的 #livePanel,#donePanel），只有燈號是綠色 */
 /* 膠囊清單（跟即時回報同一套 .cp，見「即時回報」段）；區塊太長時清單自己捲 */
-#donePanel .scroll{overflow-y:auto;flex:1;margin:-24px -28px 0;padding:28px 28px 16px;scrollbar-gutter:stable}   /* 捲動區四周多留空間（膠囊滑過去放大不會被切），再用負邊距拉回原位，膠囊位置不變 */
 #donePanel .panel-head{position:relative;z-index:1}   /* 捲動區往上多留的那一段疊在標題列上：標題列放上面，按鈕才點得到 */
 #donePanel .empty{padding:0 0 16px}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
 /* 完成紀錄的週：手機＝疊卡（跟主頁手機的部門卡片堆 .hm-wc 同一套外觀），電腦＝一排方塊（跟電腦版主頁的 .hm-tile／.hm-ring 是同一組樣式，見「主頁」段）。views.js 的 renderDone 依 640px 分兩種畫，裡面的內容（每週報告＋膠囊）是同一份。
-   手機：一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝這一張就地展開（高度用 grid 0fr→1fr 長出來），裡面是那一週的內容，
-   再點一次收起、點別週換那張。沒展開的內容用 inert 擋住。#doneList.snap＝直接換、不跑過渡（views.js doneWeekShow）。
+   手機：一週一張整寬的卡片，後面的壓在前面的下緣上，每張只露標題那一條（WEEK N、第 N 週、日期範圍、張數）；點標題＝進到那一週的獨立檢視（整頁只畫這一張：標題、每週報告、該週完成紀錄），
+   左上「上一頁」、返回鍵、再點標題都回到整疊卡片（回原本捲動位置，views.js 的 doneWeekShow；進出用往上淡入）。
    電腦：.wks-rail 是橫向可捲的一排方塊（焦點那塊放大 1.13、其他半透明、焦點框 #wksRing 滑過去），焦點那一週的內容畫在方塊下面的 #doneList；方塊裡「張數」用主頁的大數字 .hm-n */
 .wks-rail{--hm-t:clamp(130px,12vw,170px);position:relative;display:flex;gap:calc(var(--hm-t)*.16);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;margin:0 -20px;padding:34px 28px 36px}
 .wks-rail[hidden]{display:none}
 .wks-rail::-webkit-scrollbar{display:none}
 .wks-rail .wks-t{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;border:0;min-height:0;text-align:left;white-space:normal;font:inherit}   /* button 的內容預設垂直置中：改成從左上開始，跟主頁的 a 方塊一樣 */
 .wks-rail .hm-tile:not(.on){opacity:.82}
+/* 週方塊沒有圖示可辨識：被選到的那塊底色換成主題選中色（--acc／--acc-ink，淺深色與各主題都跟著走），切換時顏色漸變，節奏跟焦點框滑動同步 */
+.wks-rail .wks-t{transition:transform var(--mo-slow) cubic-bezier(.3,1.45,.45,1),opacity var(--mo-base) var(--mo-out),background-color 380ms var(--mo-out),color 380ms var(--mo-out)}
+.wks-rail .wks-t :is(.hm-en,.wks-r){transition:color 380ms var(--mo-out)}
+.wks-rail .wks-t.on{background:var(--acc);color:var(--acc-ink)}
+.wks-rail .wks-t.on :is(.hm-en,.wks-r){color:inherit;opacity:.75}
 .wks-t .hm-n{left:20px;bottom:16px}
 .wks{padding:4px 0 8px}
 .wks-c{position:relative;border-radius:var(--r-lg)}
@@ -1060,15 +1064,11 @@ a.link:active{transform:scale(.96)}
 .wks-h:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
 .wks-r{font-size:12px;color:var(--muted)}
 .wks-n{font-size:30px;font-weight:300;line-height:1;margin-top:6px}
-.wks-b{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--mo-slow) var(--mo-out)}
-.wks-c.on .wks-b{grid-template-rows:1fr}
-.wks-bi{min-height:0;overflow:hidden}
+.wks-c.on .wks-h{padding-bottom:10px}   /* 獨立檢視：標題下面直接接內容 */
 .wks-bi .cps{padding:2px 14px 32px}   /* 下面多留一段：下一張壓上來 14px，還要留呼吸 */
 .wks-bi .wk-rep{margin:0;padding:6px 14px 10px}   /* 展開的那一週：每週報告卡在最上面，跟下面的膠囊同樣內縮 */
 .wks-bi .wk-rep+.cps{padding-top:0}
 .wks-bi .wk-rep:last-child{padding-bottom:32px}
-#doneList.snap .wks-b{transition:none}
-@media (prefers-reduced-motion:reduce){.wks-b{transition:none}}
 @media (prefers-reduced-motion:reduce){
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}
