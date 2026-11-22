@@ -568,29 +568,37 @@ document.addEventListener("keydown",e=>{
    越靠近哪一角就往那角歪、染上那角的顏色（左上 --late、右上 --ok）。唯讀、編輯中不能拖。 */
 const lvZone=()=>{let z=$("#lzDel");if(!z){document.body.insertAdjacentHTML("beforeend",`<div class="lz del" id="lzDel" aria-hidden="true">${ico("close","solo")}</div><div class="lz ok" id="lzOk" aria-hidden="true">${ico("check","solo")}</div>`)}return [$("#lzDel"),$("#lzOk")]};
 (()=>{
-  let d=null,suppress=false;
+  let d=null,suppress=false,pend=null,raf=0;const zq={};
   const handle=t=>canEdit()&&!editing&&t.closest&&t.closest("#events .cp");
   function zoneAt(x,y){const W=innerWidth,H=innerHeight,R=Math.min(200,W*.38),far=Math.min(W,H)*.8,[zd,zo]=lvZone();let hot="";const k={};
-    [["del",Math.hypot(x,y),zd],["ok",Math.hypot(W-x,y),zo]].forEach(([n,dd,z])=>{const v=Math.max(0,Math.min(1,1-(dd-R)/(far-R)));k[n]=v;z.style.setProperty("--k",v.toFixed(3));z.classList.toggle("hot",dd<R);if(dd<R)hot=n});
+    [["del",Math.hypot(x,y),zd],["ok",Math.hypot(W-x,y),zo]].forEach(([n,dd,z])=>{const v=Math.max(0,Math.min(1,1-(dd-R)/(far-R)));k[n]=v;const q=v.toFixed(2);if(zq[n]!==q){zq[n]=q;z.style.setProperty("--k",q)}   /* 值沒變（兩位小數）不寫：每次寫 --k 都會讓角落重算樣式、重新啟動透明度的過渡 */
+      z.classList.toggle("hot",dd<R);if(dd<R)hot=n});
     return {hot,k}}
   function begin(el,x,y){
-    d={el,id:el.dataset.cp,x0:x,y0:y,on:true,hot:"",over:null,dx:0,dy:0,tilt:0};
+    d={el,id:el.dataset.cp,x0:x,y0:y,on:true,hot:"",over:null,dx:0,dy:0,tilt:0,mix:-1,hx:-99,hy:-99};zq.del=zq.ok="";
     el.classList.add("drag");document.documentElement.classList.add("ev-drag-on");lvZone().forEach(z=>z.classList.add("show"));
     if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}
-    move(x,y);
+    place(x,y);
   }
-  function move(x,y){
+  /* 指標事件一格可能來好幾次（高更新率的觸控）：只記最後一個位置，每個畫面格算一次（量測見 PR 說明） */
+  function move(x,y){pend=[x,y];if(!raf)raf=requestAnimationFrame(flush)}
+  function flush(){raf=0;const p=pend;pend=null;if(p)place(p[0],p[1])}
+  function place(x,y){
     if(!d||!d.on)return;const el=d.el,dx=x-d.x0,dy=y-d.y0,was=d.hot,z=zoneAt(x,y);d.hot=z.hot;d.dx=dx;d.dy=dy;
     const side=z.k.ok>=z.k.del?"ok":"del",k=Math.max(z.k.ok,z.k.del),tilt=(side==="ok"?1:-1)*(k*k*7+(d.hot?9:0)),mix=Math.round(k*k*30+(d.hot?26:0));d.tilt=tilt;
     el.style.transform=`translate(${dx}px,${dy}px) rotate(${tilt.toFixed(2)}deg) scale(${d.hot?1.08:1.04})`;
-    el.style.backgroundColor=mix>2?`color-mix(in srgb,var(--${side==="ok"?"ok":"late"}) ${mix}%,var(--blk))`:"";
+    const mx=mix>2?mix:0;if(mx!==d.mix){d.mix=mx;el.style.backgroundColor=mx?`color-mix(in srgb,var(--${side==="ok"?"ok":"late"}) ${mx}%,var(--blk))`:""}   /* 顏色沒變就不寫：每次寫都要重畫整顆膠囊（連同大陰影） */
     if(d.hot&&d.hot!==was)Sfx.play(d.hot==="ok"?"check":"no");
-    const me=state.events.find(e=>e.id===d.id),ov=d.hot?null:document.elementsFromPoint(x,y).map(n=>n.closest&&n.closest("#events .cp")).find(n=>n&&n!==el);
+    /* 底下是哪顆膠囊（換位置用）：elementsFromPoint 要先把版面算乾淨再命中測試，是每格最貴的一步。進了角落的範圍（k＞.6）不算換位置；移動不到 4px 也不重測 */
+    if(d.hot||k>.6){if(d.over){d.over.classList.remove("over");d.over=null}return}
+    if(Math.hypot(x-d.hx,y-d.hy)<4)return;d.hx=x;d.hy=y;
+    const me=state.events.find(e=>e.id===d.id),ov=document.elementsFromPoint(x,y).map(n=>n.closest&&n.closest("#events .cp")).find(n=>n&&n!==el);
     const oe=ov&&state.events.find(e=>e.id===ov.dataset.cp),ok=oe&&me&&!!oe.report===!!me.report?ov:null;
     if(d.over!==ok){d.over&&d.over.classList.remove("over");ok&&ok.classList.add("over");d.over=ok}
   }
   async function end(){
-    if(!d)return;const s=d;d=null;clearTimeout(s.timer);if(!s.on)return;
+    if(!d)return;if(raf){cancelAnimationFrame(raf);raf=0;flush()}   /* 放開前把還沒算的最後一個位置算完（熱區、傾斜要照最後的位置） */
+    const s=d;d=null;clearTimeout(s.timer);if(!s.on)return;
     suppress=true;setTimeout(()=>suppress=false,0);
     lvZone().forEach(z=>z.classList.remove("show","hot"));if(s.over)s.over.classList.remove("over");
     const el=s.el,ev=state.events.find(e=>e.id===s.id);
