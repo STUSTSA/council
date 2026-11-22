@@ -294,16 +294,6 @@ async function deptRemove(target, dept) {
     if (m.exists()) tx.delete(ref("deptMembers", rosterId(dept, target)));
   });
 }
-/* 05 總管理員刪除舊身分（legacyIdentities 只有總管理員能刪，規則沿用 04）：一批 10 份，回傳實際刪掉幾份 */
-async function legacyDelete(ids) {
-  let n = 0;
-  for (let i = 0; i < ids.length; i += 10) {
-    const b = writeBatch(db);
-    ids.slice(i, i + 10).forEach(id => b.delete(ref("legacyIdentities", id)));
-    await b.commit(); n += Math.min(10, ids.length - i);
-  }
-  return n;
-}
 /* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
    mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
 async function rolesList() { return (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, ...plainRole(s.data()), rev: s.data().rev })); }
@@ -401,7 +391,7 @@ async function auditChain(col, id) {
   return { rev, missing };
 }
 
-const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, legacyDelete, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
+const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
   rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };
