@@ -320,9 +320,9 @@ document.addEventListener("keydown",e=>{
 /* 這一頁的內容：今日／明日、清點區、行事曆 */
 function notiInner(){
   const list=notiMine(),t=today();
-  return `<div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
-    ${tallyHTML()}
-    ${calHTML(NOTI)}`;
+  return `<div class="noti-l"><div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
+    ${tallyHTML()}</div>
+    <div class="noti-r">${calHTML(NOTI)}</div>`;
 }
 /* ---------- 清點區（DESIGN.md「通知層」）：還沒勾的時間行集中在這裡，分兩段：已過期、本週到期 ----------
    收的是還沒結案的即時回報上、有開始時間而且核取框還沒勾的時間行；03 以前沒有連到任何一行的舊時間標記（沒有核取框）也收，當作還沒勾。

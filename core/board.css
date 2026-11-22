@@ -1667,9 +1667,16 @@ body.set-open #pageMain{overflow:hidden}
 .look-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:15px}
 
 /* ===== 通知頁（notify.js 的 #notiPage；DESIGN-next 第九節） =====
-   部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：由上到下今日／明日、清點區、行事曆，區塊之間 28px。
+   部門內的一頁（.layout 裡的一區，換的動畫跟換分頁同一套）：手機由上到下今日／明日、清點區、行事曆，區塊之間 28px；桌面 1000px 以上改左右兩欄（左：今日／明日＋清點，右：行事曆），見 DESIGN.md「通知層」。
    區塊標題：.sec-h（區塊標題段；用 h3）。列印不印這一頁 */
 .sg-noti{gap:28px;padding-bottom:12px}
+.noti-l{display:grid;gap:28px;min-width:0;align-content:start}
+.noti-r{min-width:0}
+/* 桌面（1000px 以上）左右兩欄：左＝今日／明日（並排）＋清點，右＝行事曆（含「這一天」清單）；進頁面不用捲就同時看到清點和行事曆。
+   左欄寬 clamp(320px,34%,420px)（跟即時回報分欄同一個比例概念），行事曆拿剩下的全部；兩欄一起往下捲（頁面本身捲）。手機與中等寬度維持單欄由上到下 */
+@media (min-width:1000px){
+  .sg-noti{grid-template-columns:clamp(320px,34%,420px) minmax(0,1fr);column-gap:clamp(20px,2.4vw,36px);align-items:start}
+}
 @media print{.sgroup.sg-noti{display:none}}
 /* ===== 今日／明日卡片（notify.js 的 dayCardHTML；通知頁最上面） =====
    左右兩張（手機也並排）；今日＝主要動作的實心（--pri）、明日＝平面色塊（--blk）。大日期 Jost 300；沒有事＝下方一條短細線。
