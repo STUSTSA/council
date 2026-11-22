@@ -1,10 +1,10 @@
 /* ui2：新介面第 2 步（主題、材質）。固定 8300 埠（run-tests.sh 換埠時會一起換）。
-   - 九組主題 × 淺深色：--bg、--pri、--acc（加上 --blk、--ink、--ok、--late）跟 docs/DESIGN-next.md 第二節的表一字不差
+   - 十三組主題 × 淺深色：--bg、--pri、--acc（加上 --blk、--ink、--ok、--late）跟 docs/DESIGN-next.md 第二節的表一字不差
    - localStorage「stustsa-ui」：讀寫、壞值與不認得的值用預設（米黃、跟系統、音效開）
    - 沒選過深淺色時跟系統（Playwright 的 colorScheme 換了就跟著換）；選過就不跟
    - 設定 → 外觀：點主題 data-pal 改變、存起來、重新整理仍保留；點深色／淺色；音效開關；每顆主題按鈕顯示自己那一組的顏色
    - 換主題時整頁淡過去（View Transitions）；關掉動態時不淡；淡的途中點別的主題，那一下照樣算數；淡的途中點工具列 SVG 圖示會換分頁、沒有錯誤；淡的途中拖曳不算點擊
-   - 搜尋欄聚焦框九組主題都看得到
+   - 搜尋欄聚焦框十三組主題都看得到
    - 頁面上沒有 backdrop-filter、沒有 title 屬性；總覽 home.html 讀同一個設定
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');const fs=require('fs'),path=require('path');
@@ -12,7 +12,7 @@ const URL0=process.env.URL||'http://127.0.0.1:8300/';
 let fails=0,passes=0;const ok=(c,m)=>{console.log((c?'OK ':'FAIL ')+m);if(c)passes++;else fails++};
 /* 規格表 */
 const md=fs.readFileSync(path.join(__dirname,'../../docs/DESIGN-next.md'),'utf8');
-const sec=md.split('### 九組主題的色碼')[1].split('## 三、')[0];
+const sec=md.split('### 十三組主題的色碼')[1].split('## 三、')[0];
 const SPEC={light:{},dark:{}},NAMES={};
 const rows=(blk,mode)=>blk.split('\n').forEach(l=>{const m=l.match(/^\|\s*(\S+)（`(\w+)`）\s*\|(.*)\|\s*$/);if(!m)return;const c=m[3].split('|').map(x=>x.trim());NAMES[m[2]]=m[1];
   SPEC[mode][m[2]]={bg:c[0],blk:c[1],ink:c[3],acc:c[6].split('／')[0],'acc-ink':c[6].split('／')[1],pri:c[8].split('／')[0],'pri-ink':c[8].split('／')[1]}});
@@ -24,7 +24,7 @@ const hex=h=>{h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join
 const sameColor=(a,b)=>hex(a)===hex(b);
 
 (async()=>{
-  ok(PALS.join()==='fin,b3,ink,sage,mist,fire,pastel,neu,sun','規格表讀到九組主題：'+PALS.join());
+  ok(PALS.join()==='fin,b3,ink,sage,mist,fire,pastel,neu,sun,sakura,forest,ocean,wisteria','規格表讀到十三組主題：'+PALS.join());
   const b=await chromium.launch();
   const mk=async(o={})=>{const ctx=await b.newContext({viewport:{width:o.w||1300,height:o.h||900},colorScheme:o.sc||'light',reducedMotion:o.rm||'no-preference',hasTouch:!!o.touch,isMobile:!!o.touch,serviceWorkers:'block'});
     await ctx.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
@@ -35,7 +35,7 @@ const sameColor=(a,b)=>hex(a)===hex(b);
     let ls=null;try{ls=localStorage.getItem('stustsa-ui')}catch(_){}
     return {pal:r.dataset.pal,theme:r.dataset.theme,bg:v('--bg'),pri:v('--pri'),acc:v('--acc'),blk:v('--blk'),ink:v('--ink'),ok:v('--ok'),late:v('--late'),sh:v('--blk-sh'),meta:document.querySelector('meta[name=theme-color]').content,ls,body:getComputedStyle(document.body).backgroundColor}});
 
-  /* 1. 九組主題 × 淺深色的變數值 */
+  /* 1. 十三組主題 × 淺深色的變數值 */
   {const p=await mk({init:null});
     for(const mode of ['light','dark'])for(const k of PALS){
       const v=await p.evaluate(([k,mode])=>{const r=document.documentElement;r.dataset.pal=k;r.dataset.theme=mode;const cs=getComputedStyle(r),g=n=>cs.getPropertyValue(n).trim();
@@ -81,13 +81,13 @@ const sameColor=(a,b)=>hex(a)===hex(b);
       return {modes:[...el.querySelectorAll('.look-mode [data-k]')].map(b=>b.textContent+(b.getAttribute('aria-selected')==='true'?'*':'')).join(),
         pals:[...el.querySelectorAll('[data-look-pal]')].map(b=>b.textContent+(b.getAttribute('aria-checked')==='true'?'*':'')).join(),
         snd:el.querySelector('[data-look-snd]')?.getAttribute('aria-checked'),txt:el.textContent.replace(/\s+/g,'')}},host);
-    ok(look&&look.modes===(o.sc==='dark'?'淺色,深色*':'淺色*,深色')&&look.pals==='米黃*,白藍,黑白黃,灰綠,霧藍,爐火,粉彩,柔光,暖陽'&&look.snd==='true',`${tag} 外觀：${JSON.stringify(look)}`);
-    ok(look&&look.txt==='淺色深色米黃白藍黑白黃灰綠霧藍爐火粉彩柔光暖陽音效','不放說明小字：外觀裡只有選項與名稱');
+    ok(look&&look.modes===(o.sc==='dark'?'淺色,深色*':'淺色*,深色')&&look.pals==='米黃*,白藍,黑白黃,灰綠,霧藍,爐火,粉彩,柔光,暖陽,櫻花,森林,海洋,紫藤'&&look.snd==='true',`${tag} 外觀：${JSON.stringify(look)}`);
+    ok(look&&look.txt==='淺色深色米黃白藍黑白黃灰綠霧藍爐火粉彩柔光暖陽櫻花森林海洋紫藤音效','不放說明小字：外觀裡只有選項與名稱');
     /* 每顆主題按鈕顯示自己那一組的顏色（三顆圓＝色塊、主要動作、選中；深淺跟著目前） */
     const sw=await p.evaluate(h=>[...document.querySelectorAll(h+' [data-look-pal]')].map(b=>{const i=b.querySelectorAll('.look-sw i'),c=e=>getComputedStyle(e).backgroundColor;return [b.dataset.lookPal,c(i[0]),c(i[1]),c(i[2]),getComputedStyle(b).backgroundColor]}),host);
     const rgb=h=>{h=hex(h);return `rgb(${parseInt(h.slice(0,2),16)}, ${parseInt(h.slice(2,4),16)}, ${parseInt(h.slice(4,6),16)})`};
     const bad=sw.filter(([k,a,c2,c3,bg])=>{const w=SPEC[o.sc][k];return a!==rgb(w.blk)||c2!==rgb(w.pri)||c3!==rgb(w.acc)||bg!==rgb(w.bg)});
-    ok(sw.length===9&&!bad.length,`${tag} 每顆主題按鈕是自己主題的顏色${bad.length?'：錯 '+JSON.stringify(bad):''}`);
+    ok(sw.length===13&&!bad.length,`${tag} 每顆主題按鈕是自己主題的顏色${bad.length?'：錯 '+JSON.stringify(bad):''}`);
     /* 點爐火：data-pal 改變、存起來 */
     await p.click(`${host} [data-look-pal="fire"]`);await p.waitForTimeout(500);let s=await st(p);
     ok(s.pal==='fire'&&JSON.parse(s.ls).pal==='fire'&&sameColor(s.bg,SPEC[o.sc].fire.bg),`${tag} 點爐火：${s.pal} ${s.ls} --bg ${s.bg}`);
@@ -136,7 +136,7 @@ const sameColor=(a,b)=>hex(a)===hex(b);
     ok(!p.errs.length,'home.html 沒有錯誤 '+p.errs);
     await p.context().close()}
 
-  /* 7. 搜尋欄聚焦框：九組主題（淺深色）都看得到（outline 或 box-shadow 不是 none；以前跟 --blk-sh 串在一起，--blk-sh 是 none 時整條失效） */
+  /* 7. 搜尋欄聚焦框：十三組主題（淺深色）都看得到（outline 或 box-shadow 不是 none；以前跟 --blk-sh 串在一起，--blk-sh 是 none 時整條失效） */
   {const p=await mk({init:null});
     for(const mode of ['light','dark'])for(const k of PALS){
       const v=await p.evaluate(([k,mode])=>{const r=document.documentElement;r.dataset.pal=k;r.dataset.theme=mode;const q=document.querySelector('#boardQ');q.focus();

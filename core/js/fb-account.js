@@ -38,9 +38,14 @@ const serverNow = () => Date.now() + (skew || 0);
 /* ---------- 登入（invitations-roles-audit.md 第 9.1 節） ---------- */
 function init(cfg) { if (!db) ({ db, auth } = fb(cfg)); serverSkew(); return api; }
 /* 登入狀態改變時先補建 users／profiles（剛按登入的那一次另外更新 lastLoginAt），完成後 ensured() 才 resolve */
-let fresh = false, ensuring = Promise.resolve();
+let fresh = false, ensuring = Promise.resolve(), authAt = 0, authUid = null;
+/* 剛登入的前 30 秒：Firestore 可能還拿著登入前的憑證，讀寫會被規則誤拒（permission-denied）；掃 QR 加入時靠這個判斷要不要再試 */
+const justSignedIn = () => Date.now() - authAt < 30000;
+const nap = ms => new Promise(r => setTimeout(r, ms));
 function onUser(cb) {
   return onAuthStateChanged(auth, u => {
+    if (u && u.uid !== authUid) authAt = Date.now();
+    authUid = u ? u.uid : null;
     if (u) { const f = fresh; fresh = false; ensuring = ensureUser(f).catch(() => new Promise(r => setTimeout(r, 3000)).then(() => ensureUser(f)).catch(() => {})); }   /* 失敗隔 3 秒重試一次 */
     cb(u ? { uid: u.uid, email: u.email || "", name: u.displayName || "", photo: u.photoURL || "" } : null);
   });
@@ -175,8 +180,16 @@ async function invitePreview(token) {
   await serverSkew();
   await ensuring;
   let s;
-  try { s = await getDoc(ref("invitations", await sha256hex(token))); }
-  catch (e) { if (e.code === "permission-denied" || e.code === "not-found") return null; throw fail(codeOf(e)); }
+  const iref = ref("invitations", await sha256hex(token));
+  for (let i = 0; ; i++) {
+    try { s = await getDoc(iref); break; }
+    catch (e) {
+      /* 剛登入時憑證還沒換過來也會被拒：和「已失效」長得一樣，所以剛登入的前幾秒多試幾次，才下結論 */
+      if (e.code === "permission-denied" && justSignedIn() && i < 3) { await nap(500 * (i + 1)); continue; }
+      if (e.code === "permission-denied" || e.code === "not-found") return null;
+      throw fail(codeOf(e));
+    }
+  }
   if (!s.exists()) return null;
   const v = plainInv(s.data());
   if (!(v.status === "active" && v.expiresAt > serverNow())) return null;
@@ -190,6 +203,12 @@ async function invitePreview(token) {
 function inviteWatch(h, cb) { return onSnapshot(ref("invitations", h), s => cb(s.exists() ? plainInv(s.data()) : null), () => {}); }
 /* 核銷：交易內重讀邀請與自己的角色；同一批寫邀請（used＋權杖）、roles、兩筆稽核，有舊身分再加認領＋稽核 */
 async function inviteRedeem(token) {
+  for (let i = 0; ; i++) {
+    try { return await redeemOnce(token); }
+    catch (e) { if (e.code === "invalid" && justSignedIn() && i < 2) { await nap(700 * (i + 1)); continue; } throw e; }   /* 剛登入、憑證還沒換過來時被誤拒：再試 */
+  }
+}
+async function redeemOnce(token) {
   if (!tokenOk(token)) throw fail("invalid");
   const h = await sha256hex(token), me = uid(), email = auth.currentUser && auth.currentUser.email;
   let result = null;
@@ -225,39 +244,65 @@ async function inviteRedeem(token) {
   return result;
 }
 
-/* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}，只有部門與 uid；名字從 profiles） ---------- */
+/* ---------- 03 F3 專員名單（deptMembers/{部門}__{uid}：部門、uid、角色 role（05）；名字從 profiles） ---------- */
 const rosterId = (d, u) => `${d}__${u}`;
 const ROLE_OK = ["admin", "editor"];
-/* 同部門的名單（編輯者、管理員、總管理員讀得到；別人 permission-denied） */
-async function roster(dept) { return (await getDocs(query(collection(db, "deptMembers"), where("deptId", "==", dept)))).docs.map(s => s.data().uid); }
-/* 本人：自己有角色的部門補上名單（第一次登入、QR 加入、核准之後都會補）。讀不到或沒寫成不影響其他功能 */
+/* 同部門的名單（編輯者、管理員、總管理員讀得到；別人 permission-denied）。role 是 05 才有的欄位（舊文件沒有，回傳空字串＝還沒對齊） */
+async function roster(dept) { return (await rosterFull(dept)).map(x => x.uid); }
+async function rosterFull(dept) { return (await getDocs(query(collection(db, "deptMembers"), where("deptId", "==", dept)))).docs.map(s => ({ uid: s.data().uid, role: ROLE_OK.includes(s.data().role) ? s.data().role : "" })); }
+/* 本人：自己有角色的部門補上名單、並讓名單上的 role 跟角色一致（第一次登入、QR 加入、核准、角色被改之後都會補）。讀不到或沒寫成不影響其他功能 */
 async function rosterSelf(roles) {
   const me = uid(); if (!me || !roles) return;
   for (const [d, r] of Object.entries(roles.depts || {})) {
     if (!ROLE_OK.includes(r)) continue;
-    try { if (!(await getDoc(ref("deptMembers", rosterId(d, me)))).exists()) await setDoc(ref("deptMembers", rosterId(d, me)), { deptId: d, uid: me, at: NOW() }); } catch (_) { /* 下次登入再試 */ }
+    try { const s = await getDoc(ref("deptMembers", rosterId(d, me))); if (!s.exists() || s.data().role !== r) await setDoc(ref("deptMembers", rosterId(d, me)), { deptId: d, uid: me, role: r, at: NOW() }); } catch (_) { /* 下次登入再試 */ }
   }
 }
-/* 總管理員：讓名單跟角色一致（改角色、核准、撤權之後，與打開「人員」時）。only＝只看這個 uid */
+/* 總管理員：讓名單跟角色一致（改角色、核准、撤權之後，與打開「人員」時）：補上缺的、角色不一致的改正（含補上 role）、清掉多的。only＝只看這個 uid */
 async function rosterSync(only) {
   const rs = only ? [await getDoc(ref("roles", only))].filter(s => s.exists()).map(s => ({ uid: s.id, depts: s.data().depts || {} }))
     : (await getDocs(collection(db, "roles"))).docs.map(s => ({ uid: s.id, depts: s.data().depts || {} }));
   const have = (await getDocs(only ? query(collection(db, "deptMembers"), where("uid", "==", only)) : collection(db, "deptMembers"))).docs.map(s => s.data());
-  const want = new Set(rs.flatMap(r => Object.entries(r.depts).filter(([, v]) => ROLE_OK.includes(v)).map(([d]) => rosterId(d, r.uid))));
-  const got = new Set(have.map(x => rosterId(x.deptId, x.uid)));
+  const want = new Map(rs.flatMap(r => Object.entries(r.depts).filter(([, v]) => ROLE_OK.includes(v)).map(([d, v]) => [rosterId(d, r.uid), v])));
+  const got = new Map(have.map(x => [rosterId(x.deptId, x.uid), x.role || ""]));
   if (only && !rs.length) want.clear();
-  const add = [...want].filter(k => !got.has(k)), del = [...got].filter(k => !want.has(k));
+  const add = [...want].filter(([k, v]) => got.get(k) !== v).map(([k]) => k), del = [...got.keys()].filter(k => !want.has(k));
   let failed = 0;
   for (let i = 0; i < add.length + del.length; i += 5) {   /* 每份寫入的規則讀取約 3～4 次，整批上限 20（不依賴快取）：一批 5 份 */
     const b = writeBatch(db);
     [...add.map(k => ["add", k]), ...del.map(k => ["del", k])].slice(i, i + 5).forEach(([op, k]) => {
       const [d, u] = k.split("__");
-      if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, at: NOW() }); else b.delete(ref("deptMembers", k));
+      if (op === "add") b.set(ref("deptMembers", k), { deptId: d, uid: u, role: want.get(k), at: NOW() }); else b.delete(ref("deptMembers", k));
     });
     try { await b.commit(); } catch (e) { failed++; }   /* 一批失敗（例如本人剛好同時補上）不擋後面的批，下次打開人員再對齊（03 審查） */
   }
   if (failed) throw Object.assign(new Error("roster"), { code: "partial", failed });
   return { add: add.length, del: del.length };
+}
+/* 05 部長（部門管理員）撤掉本部門的編輯者：roles（lastVia dept、lastRef 部門）＋稽核＋刪名單同一批。
+   規則只准撤編輯者、不能動自己與管理員、不能動別的部門；總管理員不走這條（人員頁的 roleWrite） */
+async function deptRemove(target, dept) {
+  await runTransaction(db, async tx => {
+    const s = await tx.get(ref("roles", target));
+    if (!s.exists()) throw fail("inactive");
+    const cur = s.data(), before = plainRole(cur);
+    if (before.depts[dept] !== "editor") throw fail("inactive");
+    const depts = { ...before.depts }; delete depts[dept];
+    const after = { super: before.super, depts }, rev = cur.rev + 1, m = await tx.get(ref("deptMembers", rosterId(dept, target)));
+    tx.set(ref("roles", target), { ...after, rev, lastVia: "dept", lastRef: dept, updatedAt: NOW(), updatedBy: uid() });
+    tx.set(auditRef("roles", target, rev), audit("roles", target, rev, "dept", before, after, dept));
+    if (m.exists()) tx.delete(ref("deptMembers", rosterId(dept, target)));
+  });
+}
+/* 05 總管理員刪除舊身分（legacyIdentities 只有總管理員能刪，規則沿用 04）：一批 10 份，回傳實際刪掉幾份 */
+async function legacyDelete(ids) {
+  let n = 0;
+  for (let i = 0; i < ids.length; i += 10) {
+    const b = writeBatch(db);
+    ids.slice(i, i + 10).forEach(id => b.delete(ref("legacyIdentities", id)));
+    await b.commit(); n += Math.min(10, ids.length - i);
+  }
+  return n;
 }
 /* ---------- 人員與角色（第 9.4 節；只有總管理員） ----------
    mutate(目前的 {super, depts}) 回傳新的；via＝manual（授予、改角色、總管理員）或 revoke（只拿掉） */
@@ -281,15 +326,18 @@ async function requestCreate(o) {
   const mine = (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", me)))).docs;
   if (mine.some(s => s.data().deptId === o.deptId && s.data().status === "pending")) throw fail("pending");
   const cur = mine.find(s => s.id === id), rev = cur ? cur.data().rev + 1 : 1, b = writeBatch(db);
-  b.set(r, { uid: me, deptId: o.deptId, role: o.role, note: String(o.note || "").slice(0, 200), ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}),
+  const rank = ["minister", "deputy", "member"].includes(o.rank) ? o.rank : null, role = rank ? (rank === "minister" ? "admin" : "editor") : o.role;
+  b.set(r, { uid: me, deptId: o.deptId, role, ...(rank ? { rank } : {}), note: String(o.note || "").slice(0, 200), ...(o.legacyRef ? { legacyRef: o.legacyRef } : {}),
     status: "pending", rev, createdAt: NOW(), updatedAt: NOW(), updatedBy: me });
   b.set(auditRef("roleRequests", id, rev), audit("roleRequests", id, rev, "request", cur ? { status: cur.data().status } : {}, { status: "pending" }));
   await b.commit();
   return id;
 }
-const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
+const plainReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, deptId: d.deptId, role: d.role, rank: d.rank || "", note: d.note || "", legacyRef: d.legacyRef || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
 async function requestsMine() { return (await getDocs(query(collection(db, "roleRequests"), where("uid", "==", uid())))).docs.map(plainReq).sort((a, b) => b.createdAt - a.createdAt); }
 async function requestsPending() { return (await getDocs(query(collection(db, "roleRequests"), where("status", "==", "pending"), orderBy("createdAt")))).docs.map(plainReq); }
+/* 06 部長看本部門的待審申請（規則：部長只能查自己部門；兩個相等條件不需要複合索引，時間在這裡排） */
+async function requestsDept(dept) { return (await getDocs(query(collection(db, "roleRequests"), where("deptId", "==", dept), where("status", "==", "pending")))).docs.map(plainReq).sort((a, b) => a.createdAt - b.createdAt); }
 /* seen＝畫面上那一筆的 rev。04 起同一份申請可以撤回後再申請（內容可能不一樣）：決定的一定是畫面上看到的那一版，
    交易裡讀到的 rev 不同＝清單讀出來之後被改過，不寫入、回 changed，畫面重讀清單 */
 async function requestDecide(id, to, seen) {   /* to＝cancelled（本人撤回）｜rejected（總管理員） */
@@ -353,9 +401,9 @@ async function auditChain(col, id) {
   return { rev, missing };
 }
 
-const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterSelf, rosterSync,
+const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, legacyDelete, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
-  rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestDecide, requestApprove,
+  rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
   auditList, auditChain, serverNow: () => serverNow() };
 window.BoardAccount = api;
 dispatchEvent(new Event("board-account-ready"));

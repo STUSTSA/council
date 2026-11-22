@@ -4,7 +4,7 @@
 
 | 等級 | 誰能讀 | 內容 |
 |---|---|---|
-| L0 公開 | 任何人，不用登入 | `departments`（部門名稱與外觀）、`org/config`、`events` 中 `visibility == 'public'` 的公開活動 |
+| L0 公開 | 任何人，不用登入 | `departments`（部門名稱與外觀）、`org/config`、**06 起：看板內容** `cards`（不含永久刪除中）、`issues`、`weeks`、`labels`、`events`、`deptSettings` |
 | L1 內部 | **任何已登入的 Google 帳號，不需審核**（02A 定案，取代 01A-R 的已授權檢視者，見第 2.1 節） | 看板內容：`deptSettings`、`cards`（`open`／`done`）、`cards/{id}/versions`（只限 `open`／`done` 的卡片）、`issues`、`weeks`、`labels`、`events`（全部非公開的）、`profiles`、`legacyIdentities`、`grants`、`calendars`、`openWindows`、`slots`（只有忙／閒） |
 | 本人 | 登入者自己 | `users/{自己}`、`roles/{自己}`、自己的 `roleRequests`、自己的 `bookings`、`bookingQuota` |
 | L2 部門 | 該部門管理員／編輯者 | 該部門**刪除中**的卡片（`state == 'purging'`）與它的版本，只給前端接續清除用（02A 修正：沒有「已刪除、可復原」的卡片了，見第 5.1 節） |
@@ -57,7 +57,7 @@ R＝讀、C＝新增、U＝修改、D＝硬刪；「部門」＝文件的 `deptI
 | `deptSettings` | | R | R | RU（部門） | RCUD | |
 | `users/{uid}` | | 本人 RCU | 本人 | 本人 | R | 信箱必須等於登入信箱 |
 | `profiles/{uid}` | | R；本人 CU | 同左 | 同左 | RU | |
-| `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 只有部門與 uid（專員名單），名字從 `profiles`；見第 5.1h 節 |
+| `deptMembers/{dept}__{uid}`（03 F3） | | 本人那一份 get、D | R（部門）；本人 C、D；過期的 D | 同左 | RCD | 部門、uid、role（05 起）（專員名單），名字從 `profiles`；見第 5.1h、5.1i 節 |
 | `roles/{uid}` | | 本人 R；核銷邀請時本人 CU | 同左 | 同左 | RCU（不能動自己的 `super`） | 見 [invitations-roles-audit.md](invitations-roles-audit.md) |
 | `roleRequests` | | 本人 RC、本人撤回、再申請（只能申請部門的 `admin`／`editor`；04：每人每個部門一份） | 同左 | 同左 | RU（核准要同批改 `roles`） | |
 | `invitations` | | 知道權杖者 get；核銷 U | 同左 | 同左（D3 開放則可對自己部門 C） | RCU | 不能 list |
@@ -320,6 +320,14 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 
 網頁測試：`tools/tests/dv1.js`（登入補名單、編輯者的專員選項、別部門與沒有角色的人讀不到、撤權後對齊、打開人員清掉過期的）。
 
+### 5.1i 05 部門成員名單、部長管理、舊身分清除（`backend/tests/rules-05-members.test.js`，N5-01～N5-40）
+- `deptMembers` 多一個可有可無的 `role`（admin／editor，要等於 roles 裡該部門的角色）；本人、總管理員、該部門管理員可建立與更新（更新只換 role、at）。名單的讀取範圍不變（同部門編輯者以上、總管理員）。
+- 部長（部門管理員）：可發自己部門「編輯者」的 QR 邀請（不能發管理員、不能綁舊身分、不能發別的部門）；可撤銷自己發的邀請、看得到自己發的邀請後來的狀態；可把本部門的編輯者從 roles 拿掉（`lastVia: dept`、`lastRef`＝部門，同一批寫稽核與刪名單）。不能動自己、其他管理員、總管理員、別的部門，不能新增角色或升管理員（升管理員仍只有總管理員）。
+- 部長讀 `roles/{uid}`（為了帶 rev 寫入）：只限對方在「我是管理員的部門」有角色、且對方不是總管理員；列出全部、讀 users（信箱）、稽核紀錄照舊只有總管理員。
+- 舊身分（legacyIdentities）刪除沿用 04：只有總管理員。刪除後卡片上指定給它的負責人顯示「（已移除）」。
+- 卡片多 `reportAt`（`backend/tests/rules-05-report.test.js`，N5-50～N5-55）：「報告」標記當下的台灣時間 `YYYY-MM-DD HH:mm`，只有 `report` 為 true 才能有、格式固定、修改只能往後；寫入權限不變。畫面只認本週三 00:00（台灣）之後的標記，舊標記沒有 reportAt 視為有效；過期的標記在有權限的人下次儲存時寫回 false。
+- 「會長」目前不是獨立角色（roles 只有 super 與各部門 admin／editor）；看全部帳號、指派一律是總管理員。
+
 ### 5.1i 04 欄位的型別、格式與長度（`backend/tests/rules-04.test.js`）
 
 01B～03 的規則只檢查「誰能寫」與少數欄位的形狀，其他欄位的型別、格式、長度沒有限制。04 補上（規則函式 `kept`、`dayStr`、`whenStr`、`monthStr`、`short`、`textList`、`dayList`）：
@@ -363,6 +371,21 @@ D1 時規則沒有改（02D 審查加了文件 ID 限制，第 5.1e 節）；網
 - **跟 GitHub 模式的差別**：GitHub 模式的會議編輯還能改母議題、專員、標籤、超連結、新增或刪掉時間標記（整份資料檔寫回，沒有欄位層級的權限）；firestore 模式照規則只開放名稱、說明、已有時間的內容。母議題的處理紀錄（`syncLink` 依時間標記更新的）秘書處寫不了議題，firestore 模式不寫，部門下次編輯那張卡片時同步。秘書處改的不算部門的「更新」（`touched`／`touchedAt` 不寫，燈號不因為會議上的修改變綠）。
 - **攻擊測試 MT-01～MT-12**：開關關著、授權過期、不是秘書處（活動部編輯者、會長室管理員、一般登入者、未登入、撤權後）、改 `deptId`／`staff`／`state`／`report`／`labels`／`links`／`issueId`／`order`／`touched`／`createdBy`、非報告卡片（含把它改成報告）、`timeIds`（加別部門或別張卡片的事件、加不存在的 ID、拿掉）、時間事件（新建、刪除、改 `deptId`／`cardId`／`visibility`／`blockId`）、版本（不建、內容不同、作者是別人、沿用舊號）、授權本身（秘書處、會長室管理員、一般登入者不能開；超過 7 天、沒稽核拒絕；總管理員開到今天結束、關閉可以）、會議紀錄、刪除中的卡片、部門編輯者照常編輯。
 - **網頁**（`store-write.js` 的 `saveMeeting`／`setMeetGrant`／`saveMinutes`）：`saveMeeting` 比對讀到時與現在的畫面資料，只寫上表的欄位，其他差異整次不寫（`meeting-field`）；每張卡片一個交易（先確認 `version`、`report` 沒變），時間事件確認 `rev`。寫回前再讀一次會長室的授權（跟 GitHub 模式一樣）。秘書處看板讀 `meetingMinutes`（只有秘書處與總管理員讀得到，其他人當成沒有）。
+
+
+### 5.1k 會議結論的待合併提案（2026-11-21，`backend/tests/rules-merge-proposals.test.js`，MP-01～MP-08）
+
+使用者（DievE 11/21）要求：秘書處在會議紀錄寫的結論，要送到該部門頁面「等待合併」，由部門自己合併。這取代 5.1j 開頭「不採用待併入流程」的決定（那次是照當時的做法；這次使用者明講要）。5.1j 的「會長室開放當天直接改部門卡片」不動。
+
+新集合 `mergeProposals/{id}`（文件 ID：英數、底線、連字號，≤ 120 字）：`deptId`、`cardId`（`kind: 'note'` 才有，是那個部門的卡片；`kind: 'new'` 為 null＝臨時項目，合併時才建新卡片）、`title`（≤ 100）、`note`（1～1000 字）、`meetingDate`、`status`（`pending`｜`merged`｜`dismissed`｜`withdrawn`）、`createdBy`／`createdAt`、`updatedAt`／`updatedBy`、`resolvedBy`／`resolvedAt`。
+
+| 誰 | 能做什麼 |
+|---|---|
+| 秘書處編輯者以上、總管理員 | 讀全部；新建（`status` 一定是 `pending`、`createdBy`＝自己、`createdAt`＝伺服器時間、卡片要存在而且屬於那個部門）；待合併時改 `title`／`note`；撤回（`withdrawn`） |
+| 部門編輯者（該提案的部門）、總管理員 | 讀自己部門的（查詢要帶 `deptId`）；把待合併的標成 `merged` 或 `dismissed`（只能改狀態與處理者／時間）。卡片本身用一般卡片規則另外寫，秘書處**不能**藉這個集合改別部門的卡片 |
+| 其他人 | 不能讀、不能寫；刪除只有總管理員；已處理（merged／dismissed／withdrawn）的不能再改 |
+
+不新增索引（只用 `deptId`＋單欄位篩選，前端排序在本機做）。測試涵蓋：誰能讀、誰能建、欄位與大小限制、卡片不屬於該部門、秘書處不能自己標成已合併、部門只能處理自己的、處理過就定了、刪除。
 
 ### 5.2 時間事件
 
@@ -416,3 +439,19 @@ match /events/{id} {
 | 依 IP 限流 | 不做；靠 App Check（D7）與 Spark 額度上限 | |
 
 結論：01A 範圍內沒有「非 Functions 不可」的需求。上表左欄的取捨要請你確認（決策 D8）。
+
+### 5.1j 06 對外公開讀取（`backend/tests/rules-06-public.test.js`，N6-01～N6-07）
+- 看板內容不用登入就讀得到：卡片（永久刪除中的除外，list 要帶 `state in [open, done]`）、議題、完成紀錄（卡片 done）、週報、標籤、部門設定、部門名稱與 org。**時間事件（行事曆）不公開**（DievE 2026-11-20 決定）：`events` 的 get、list 都要登入（任何登入的帳號，不要求部門角色，public 與 internal 一樣），未登入讀不到（測試 N6-08）；畫面顯示「登入後才看得到」。這些在切換前本來就是公開 repo 裡的資料檔。
+- 一律不公開：users（信箱）、roles、invitations、roleRequests、deptMembers、legacyIdentities、profiles（顯示名稱）、auditLogs、卡片版本歷史（編輯紀錄）、meetingMinutes 與秘書處其他資料、grants、預約相關（calendars、openWindows、slots、busyBlocks、bookings）。拿不準的不公開。
+- 寫入不變：未登入、沒有角色的登入者都不能寫。internal 的時間事件不能帶 title、summary（events 要登入才讀，這條仍保留，登入的人看到的 internal 事件一樣不夾帶文字）。
+- 畫面：沒登入時看板照常顯示，負責人（舊身分、帳號名稱）不顯示（名字在 profiles、舊身分，要登入）。
+
+### 5.1k 06 申請與審核流程（`backend/tests/rules-07-requests.test.js` R-01～R-11、`tools/tests/rq1.js`）
+
+DievE 決定：看板內容一律公開（第 5.1j 節之二）；登入的人選部門與位階（部長／次長／部員）送申請，等部長審核。
+
+- **申請文件**：多一個可有可無的 `rank`（`minister`／`deputy`／`member`）。`rank` 與 `role` 要一致：`minister` ↔ `admin`，其餘 ↔ `editor`；沒有 `rank` 的舊申請照舊能送。次長只是申請上的頭銜，核准後權限＝編輯者（roles 沒有位階欄位，頭銜不會留在帳號上）。
+- **誰能審**（`canDecide()`）：總管理員，或「該部門的部長、對象不是自己、申請的是 editor、沒有帶舊身分（`legacyRef`）」。**部長申請（admin）與帶舊身分的申請只有總管理員能核准或拒絕**；部長不能把人升成部長。部長讀得到、列得出自己部門的申請（`allow list` 要求查詢帶 `deptId`＝自己是部長的部門）。
+- **核准寫 roles**（`viaDeptRequest()`）：同一批把申請 `pending → approved`、`decidedBy＝自己`，並新增（或新建 roles 文件）那個部門的 `editor`；不能動 `super`、不能改別的部門、不能動已有該部門角色的人；`lastVia＝request`、`lastRef＝申請 ID`。
+- **部長讀申請人的 roles**（`adminSeesRequest()`，為了帶 `rev` 寫入）：申請 ID 固定是 `{uid}_{部門}`，只有「我是該部門部長、而且那一份申請還在待審」才讀得到；先用我自己的部門角色擋掉（便宜），才去查申請，因為規則每次評估最多 1000 個運算式（排在最後的部門試過會超過，R-04c 專門測）。
+- **攻擊測試**：沒登入不能送、不能替別人送、rank 與 role 不一致、別部門的部長審、部長核准部長申請、自己核准自己、一般編輯者審、核准夾帶 `super`／別的部門／沒同批寫 roles／只改 roles 不改申請、部長讀沒有待審申請的人的 roles、部長列出別部門或全部申請。

@@ -100,7 +100,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
 
   /* ---------- 1. 未登入、一般登入者：唯讀 ---------- */
   {const p=await open();const u=await ui(p);
-    ok(u.locked&&!u.authed&&u.editBtns===0&&u.cards===0,`未登入：唯讀、讀不到內容、沒有編輯鈕（${JSON.stringify(u)}）`);
+    ok(u.locked&&!u.authed&&u.editBtns===0&&u.cards>0,`未登入：唯讀、讀得到內容（06 對外公開）、沒有編輯鈕（${JSON.stringify(u)}）`);
     ok(await p.evaluate(()=>persist('x'))===false,'未登入：儲存不寫入');
     await p.ctx.close();}
   const gen=await open();await signIn(gen,'gen');
@@ -154,8 +154,8 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   const iid=await ed.evaluate(()=>(state.issues.find(i=>i.title==='FW 新議題')||{}).id);
   const is=iid&&await read(`issues/${DEPT}__${iid}`);ok(is&&is.rev===1&&is.updatedBy===edUid,'新增議題：issues 文件（rev 1）');
   /* g. 新增週報 */
-  await openSet(ed);await ed.click('[data-set="report"]');await ed.waitForTimeout(800);await ed.click('[data-hub="week"]');await ed.waitForTimeout(900);
-  await ed.click('#addWeek');await dlg(ed);await dlgSet(ed,{text:'FW 週報內容'});await dlgAct(ed,'ok');await settled(ed);await closeSet(ed);
+  await ed.evaluate(()=>{setSection('done',{instant:true});doneWeekShow(wkStart(today()),{instant:true})});await ed.waitForTimeout(700);   /* 每週報告在完成紀錄的週頁最上方 */
+  await ed.click('[data-addweek]');await dlg(ed);await dlgSet(ed,{text:'FW 週報內容'});await dlgAct(ed,'ok');await settled(ed);
   const wid=await ed.evaluate(()=>(state.weeks.find(w=>w.text==='FW 週報內容')||{}).id);
   const wk=wid&&await read(`weeks/${DEPT}__${wid}`);ok(wk&&wk.createdAt&&wk.updatedBy===edUid,'新增週報：weeks 文件');
   ok((await read(`deptSettings/${DEPT}`)).rev===1,'新增週報：編輯者不寫部門設定（週報基準）');
@@ -371,7 +371,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     const seedLocal={fn:s=>{try{if(!sessionStorage.getItem('seeded')){localStorage.setItem('workboard:board-main',s);localStorage.setItem('workboard:ghtoken','stale-token');sessionStorage.setItem('seeded','1')}}catch(_){}},arg:JSON.stringify(stale)};
     const anon=await open(DEPT,[DEPT],seedLocal);
     const a=await anon.evaluate(()=>({cards:state.events.length,local:state.events.some(e=>e.id==='eLOCAL1'||e.name.startsWith('LOCAL')),title:state.title,base:!!storeFsBase,sync:!!state.sync}));
-    ok(!a.local&&a.title!=='LOCAL 舊暫存看板'&&!a.base&&!a.sync,`本機暫存（未登入、讀取被拒）：畫面不拿本機暫存頂上（${JSON.stringify(a)}）`);
+    ok(!a.local&&a.title!=='LOCAL 舊暫存看板'&&!a.sync,`本機暫存（未登入）：畫面只有 Firestore 的內容、不拿本機暫存頂上（${JSON.stringify(a)}）`);   /* 06：未登入也讀得到 Firestore，所以 base 會是真的 */
     ok(await anon.evaluate(()=>persist('x'))===false,'本機暫存（未登入）：儲存不寫入');
     const e3=await open(DEPT,[DEPT],seedLocal);const e3Uid=await signIn(e3,'e3');await setRole(e3Uid,{[DEPT]:'editor'});
     await until(async()=>!(await ui(e3)).locked);

@@ -142,7 +142,7 @@ describe('邀請核銷 I-01～I-22、I-31～I-36', () => {
     const k = () => newToken().h;
     await assertFails(commit(db('u1'), inviteWrites('u1', k())));                                   // 非總管理員
     await seedRole(t, 'adm', { depts: { rights: 'admin' } });
-    await assertFails(commit(db('adm'), inviteWrites('adm', k())));                                 // D3：部門管理員也不行
+    await assertFails(commit(db('adm'), inviteWrites('adm', k(), { role: 'admin' })));              // D3：部門管理員不能發管理員邀請（05：只能發自己部門的編輯者邀請，見 rules-05-members N5-10～N5-12）
     for (const ms of [11 * MIN, 24 * 60 * MIN, 7 * 24 * 60 * MIN, 30 * 24 * 60 * MIN])
       await assertFails(commit(db('boss'), inviteWrites('boss', k(), { expiresAt: TS.fromMillis(Date.now() + ms) })));
     await assertFails(commit(db('boss'), inviteWrites('boss', k(), { role: 'super' })));

@@ -101,7 +101,7 @@ function render(){
   try{
     document.body.classList.toggle("edit",editing);
     document.body.classList.toggle("locked",boardLocked());
-    renderHeader();renderTabbar();renderSections();renderSecEdit();renderWeeks();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();renderBooking();renderAttendance();layoutAll();flowWatch();
+    renderHeader();renderTabbar();renderSections();renderSecEdit();renderGantt();renderEvents();renderCards();renderDone();renderActivity();renderFollows();renderDocs();renderMeet();renderGrant();renderBooking();renderAttendance();renderProposals();layoutAll();flowWatch();
   }finally{rendering=false}
   kpFitAll();kpFocusSet(kf);
   Anim.play(flip);Anim.syncPings();
@@ -134,7 +134,7 @@ function secSwap(prev,k,dir,instant){
   const tok=++secTok,lay=document.querySelector(".layout"),sc=$("#pageMain");
   const groups=[...lay.querySelectorAll(":scope>.sgroup")],out=groups.find(g=>g.dataset.sec===prev),inn=groups.find(g=>g.dataset.sec===k);
   /* 區塊頂端已經捲到畫面外時，捲回來讓新區塊從頭看 */
-  const toTop=()=>{const d=lay.getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d};
+  const toTop=()=>{const d=lay.getBoundingClientRect().top-sc.getBoundingClientRect().top-dtopH()-12;if(d<0)sc.scrollTop+=d};
   secFxStop(groups);
   const r0=out&&out.offsetParent?out.getBoundingClientRect():null;
   renderSections();layoutAll();toTop();

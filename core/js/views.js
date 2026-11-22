@@ -44,21 +44,26 @@ function renderHero(){
   Anim.toggle($("#dhRo"),deptRO(),{collapse:true});
   Anim.toggle(eye,deptCan());eye.setAttribute("aria-pressed",String(roView));eye.classList.toggle("on",roView);
   Anim.toggle(nb,!deptRO(),{collapse:true});   /* 鈴鐺從寬度收到 0，眼睛鈕跟著排版滑過去（Anim.toggle 的 collapse） */
+  notiAutoGo();   /* 網址帶 ?noti=pres 時等到可以開就打開（notify.js） */
   if(notiOpen&&deptRO())closeNoti(true);   /* 通知與行事曆那一頁開著時變成唯讀（唯讀檢視、權限被撤）：直接回原分頁（notify.js） */
   if(setOpen&&roView)closeSettings(true);   /* 設定開著時按眼睛鈕（ui-09 起設定是部門內的一頁，標題列按得到）：唯讀檢視沒有設定鍵，設定直接收起（面板裡改到一半的照離開處理） */
   hsBar();   /* 搜尋列（search.js）：只在即時回報、進度、完成紀錄三頁 */
   weekDotSync();
 }
 
-function renderWeeks(){
-  const ws=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date));
-  if(!openWeeks&&ws.length)openWeeks=new Set([ws[0].id]);
+/* ---------- 每週報告（原「每週概述」，2026-11-21 搬進完成紀錄）：進到某一週時，最上方固定一張「每週報告」卡，點開就是那一週的報告；
+   一週裡有幾份就列幾份（報告的日期落在那一週）。沒有報告的週也看得到這一張：寫「這週還沒有報告」，登入後可以新增，當週還可以生成（weekly.js 的 buildWeekly）。
+   卡片本身沿用 .week（details：複製、編輯、刪除、展開動畫都在原處），按鈕事件在 events.js */
+function repHTML(w){
+  const rs=state.weeks.filter(x=>x.date&&wkStart(x.date)===w).sort((a,b)=>b.date.localeCompare(a.date)),cur=w===wkStart(today());
   const lines=t=>String(t||"").split("\n").map(l=>`<span class="wl">${l.trim()?esc(l):"&nbsp;"}</span>`).join("");
-  $("#weekList").innerHTML=ws.map((w,k)=>`<details class="week ${w.id===newWeekId?"new":""}" data-week="${esc(w.id)}" ${openWeeks&&openWeeks.has(w.id)?"open":""}>
-      <summary><span class="num">${esc(fmt(w.date))}</span>${k===0?'<span class="badge">最新</span>':""}${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${esc(fmt(w.date))} 的週報">刪除</button>`:""}</summary>
+  const card=x=>`<details class="week ${x.id===newWeekId?"new":""}" data-week="${esc(x.id)}" ${openWeeks&&openWeeks.has(x.id)?"open":""}>
+      <summary><b class="wk-rt">每週報告</b><span class="num">${esc(fmt(x.date).slice(5))}</span>${fsDelOk()?`<button type="button" class="icon danger auth-only week-del" data-delweek aria-label="刪除 ${esc(fmt(x.date))} 的每週報告">刪除</button>`:""}</summary>
       <div class="week-tools"><button type="button" class="icon" data-copyweek>複製文字</button><button type="button" class="icon auth-only" data-editweek>${ico("edit")}編輯</button></div>
-      <div class="week-text">${lines(w.text)}</div></details>`).join("")
-    ||`<p class="empty">還沒有週報。${boardLocked()?"":"登入後按「+ 新增週報」貼上本週文字，或按「生成週報」。"}</p>`;
+      <div class="week-text">${lines(x.text)}</div></details>`;
+  const gen=cur?`<button type="button" class="gen-btn" data-genweek><svg class="spark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M10 3l1.9 5.1L17 10l-5.1 1.9L10 17l-1.9-5.1L3 10l5.1-1.9z"/><path fill="currentColor" d="M18.5 2l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>生成</button>`:"";
+  const add=`<button type="button" class="ghost auth-only" data-addweek="${esc(w)}">+ 新增</button>`;
+  return `<div class="wk-rep" aria-label="每週報告">${rs.map(card).join("")||`<p class="wk-rn"><b>每週報告</b><span>這週還沒有報告</span></p>`}${gen||add?`<div class="wk-rtools">${gen}${add}</div>`:""}</div>`;
 }
 
 /* 細刻度（會長室追蹤、工作報告的期間甘特圖用；看板的甘特圖從 ui-12 起改用滑桿式時程條 sliderHTML）：n 根細直線排滿整條；s～e＝議題期間（%），t＝今天（%；在範圍外就給 -1 或 101）。
@@ -298,7 +303,7 @@ function progShow(id,then){   /* then：換好畫面後要做的事（例如新�
   const tok=++pvTok,out=$(progOpen?"#pvDetail":"#pvGantt");
   [$("#pvGantt"),$("#pvDetail")].forEach(p=>p.getAnimations().forEach(a=>a.cancel()));
   const swap=()=>{if(tok!==pvTok)return;progOpen=id;homeSync();if(id)ganttSel=id;renderCards();if(!id)renderGantt();layoutAll();   /* 回到甘特圖：剛看過的議題是選中的那一列 */
-    const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
+    const sc=$("#pageMain"),d=$("#progPanel").getBoundingClientRect().top-sc.getBoundingClientRect().top-dtopH()-12;if(d<0)sc.scrollTop+=d;   /* 卡片頂端捲出畫面時捲回來 */
     pvIn($(id?"#pvDetail":"#pvGantt"));
     if(id)slAnim($("#cardDetail .sl"),0);   /* 時程條的把手從開始日滑到今天 */
     if(then)then()};
@@ -413,7 +418,8 @@ const wkStart=d=>addDays(d,-((pd(d).getDay()+6)%7));
 const wkRange=s=>`${fmt(s).slice(5)} – ${fmt(addDays(s,6)).slice(5)}`;
 function wkNo(s){const t=termCfg().termStart||CFG.term.start;if(!t)return 0;const n=Math.round((pd(s)-pd(wkStart(t)))/6048e5)+1;return n>=1&&n<=40?n:0}
 const wkLabel=s=>wkNo(s)?`第 ${wkNo(s)} 週`:`${fmt(s).slice(5)} 當週`,wkEn=s=>wkNo(s)?`WEEK ${wkNo(s)}`:"WEEK";
-function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
+/* 列出的週：有完成紀錄的週、有每週報告的週，再加上這一週（沒有完成紀錄也要進得去每週報告） */
+function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});[...state.weeks.map(x=>x.date).filter(Boolean),today()].forEach(d=>{const w=wkStart(d);if(!m.has(w))m.set(w,[])});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
 /* 進去／離開那一週（只改狀態與 Back 登記，不畫） */
 function wkSet(w){
   if(w===doneWeek)return;const was=doneWeek;doneWeek=w;
@@ -440,18 +446,17 @@ function doneWeekFor(id){const x=doneItems().find(y=>y.id===id);if(x){wkSet(wkSt
 function renderDone(){
   const items=doneItems(),ids=new Set(items.map(x=>x.id));
   const dnew=id=>prevDone&&!prevDone.has(id)?" new":"";
-  if(dnOpen&&!ids.has(dnOpen))dnOpen=null;
+  if(dnOpen&&!ids.has(dnOpen)){dnOpen=null;lcGone()}
   const open=dnOpen&&items.find(x=>x.id===dnOpen);
   if(open)wkSet(wkStart(open.d));   /* 卡片開著＝一定在它那一週 */
-  else if(doneWeek&&!items.some(x=>wkStart(x.d)===doneWeek))wkSet(null);   /* 那一週的紀錄都不見了（移回、刪除） */
+  else if(doneWeek&&!doneWeeks(items).some(([w])=>w===doneWeek))wkSet(null);   /* 那一週什麼都沒有了（紀錄移回、刪除，也沒有每週報告） */
   const wide=lvWide(),split=wide&&!!dnOpen,pane=$("#doneDetail");
   $("#doneMD").classList.toggle("split",split);
   $("#doneCount").textContent=items.length;
   const cp=x=>`<button type="button" class="cp done${dnew(x.id)}${split&&x.id===dnOpen?" sel":""}${!wide&&x.id===dnOpen?" away":""}" data-cp="${esc(x.id)}" data-done="${esc(x.id)}" ${x.k==="e"?`data-ev="${esc(x.id)}"`:`data-issue="${esc(x.id)}"`} data-st="done"${split&&x.id===dnOpen?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(x.title)}</b><span class="cp-d num">${esc(fmt(x.d).slice(5))}</span></button>`;
   /* 一週一張：標題（data-wk 只放在標題鈕上，點膠囊不會被當成點週）＋那一週的膠囊；沒展開的週內容用 inert 擋住（不能聚焦、不被讀） */
-  const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button><div class="wks-b"${on?"":" inert"}><div class="wks-bi"><div class="cps">${a.map(cp).join("")}</div></div></div></section>`};
-  morphTo($("#doneList"),!items.length?`<p class="empty">結案的${ISS}和完成的即時回報會收進這裡。</p>`
-    :`<div class="wks">${doneWeeks(items).map(week).join("")}</div>`);   /* 原位更新（morph.js）：展開／收起只是換 class，過渡由 CSS 跑 */
+  const week=([w,a])=>{const on=w===doneWeek;return `<section class="wks-c${on?" on":""}"><button type="button" class="wks-h" data-wk="${esc(w)}" aria-expanded="${on}" aria-label="${esc(wkLabel(w))}（${esc(wkRange(w))}），完成 ${a.length} 張"><span class="hm-tt"><i class="hm-en">${esc(wkEn(w))}</i><b class="hm-nm num">${esc(wkLabel(w))}</b><span class="wks-r num">${esc(wkRange(w))}</span></span><b class="wks-n num">${a.length}</b></button><div class="wks-b"${on?"":" inert"}><div class="wks-bi">${repHTML(w)}${a.length?`<div class="cps">${a.map(cp).join("")}</div>`:""}</div></div></section>`};
+  morphTo($("#doneList"),`<div class="wks">${doneWeeks(items).map(week).join("")}</div>`);   /* 原位更新（morph.js）：展開／收起只是換 class，過渡由 CSS 跑 */
   if(split){morphTo(pane,doneCardHTML(dnOpen,false));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   prevDone=ids;lcFullSync();Anim.syncPings();fabSync();   /* 打開的那一筆不見了（移回、刪除）時圓鈕要回來：renderEvents 先跑，這裡再對一次 */
 }

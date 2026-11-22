@@ -45,10 +45,10 @@ describe('遷移', () => {
     const card = 'cards/rights__' + src.files[0].state.events[0].id;
     await assertSucceeds(anon(t).collection('departments').get());
     await assertSucceeds(anon(t).doc('org/config').get());
-    await assertFails(anon(t).doc(card).get());
-    await assertFails(anon(t).collection('deptSettings').get());
-    await assertFails(anon(t).collection('events').get());
-    await assertSucceeds(anon(t).collection('events').where('visibility', '==', 'public').get());
+    await assertSucceeds(anon(t).doc(card).get());   // 06：看板內容對外公開
+    await assertSucceeds(anon(t).collection('deptSettings').get());
+    await assertFails(anon(t).collection('events').get());   // 06：行事曆（時間事件）不公開，要登入
+    await assertFails(anon(t).collection('events').where('visibility', '==', 'public').get());
     const v = google(t, 'nobody');                                                  // 沒有 roles 文件的一般登入者
     await assertSucceeds(v.doc(card).get());
     await assertSucceeds(v.collection('cards').where('deptId', '==', 'rights').where('state', 'in', ['open', 'done']).get());

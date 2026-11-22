@@ -1,20 +1,4 @@
-/* 核心｜左右分頁、即時回報↔議題連結、每週概述產生器 */
-/* ---------- 每週概述：設定裡的一頁（2026-11-06 使用者：改成跟其他設定同一種面板，返回先回「報告」合併頁、再返回才是設定清單） ----------
-   內容（#weekWrap：標題列、生成週報、週報清單）平常藏在畫面外；從設定「報告 → 每週概述」（或登入前清單上的「每週概述」）打開時，
-   weekPane 把它搬進設定的右側面板（桌面）／子頁（手機），關掉再搬回去。按鈕事件都掛在 document 上，搬動不影響。
-   開著的時候對話框（生成週報、新增、編輯週報）一律跳出來（nav.js 的 setPaneHost 在 weekPaneEnd 有值時不給面板），不會畫到清單下面。
-   返回：標題列左上的「上一頁」鍵（views.js 的 homeUp）、系統返回、Esc 都走 nav.js 的 paneDismiss，一次退一層 */
-let weekPaneEnd=null;
-function weekPane(){
-  return new Promise(res=>{
-    const host=setPaneHost(),w=$("#weekWrap");if(!host||!w){res();return}
-    host.append(w);w.hidden=false;renderWeeks();
-    w.classList.remove("enter");void w.offsetWidth;w.classList.add("enter");clearTimeout(w._t);w._t=setTimeout(()=>w.classList.remove("enter"),1400);   /* 標題列與週報逐一滑入 */
-    weekPaneEnd=()=>{weekPaneEnd=null;w.hidden=true;w.classList.remove("enter");document.body.append(w);res()};
-  });
-}
-{const l=$("#weekSecLink");if(l)l.hidden=!!CFG.meeting||CFG.deptId==="secretariat"}   /* 秘書處自己就不顯示「秘書處調閱」 */
-
+/* 核心｜即時回報↔議題連結、每週報告產生器（每週報告的畫面在完成紀錄的週頁最上方：views.js 的 repHTML） */
 /* ---------- 即時回報：母議題連結、分段、狀態、時間標記 ---------- */
 const parentOf=ev=>ev&&ev.issueId?state.issues.find(i=>i.id===ev.issueId):null;
 /* 顯示用名稱：分段完成的紀錄標「第 N 段」，分過段的卡片結案時標「第 N 段・結案」 */
@@ -78,7 +62,7 @@ function snapshotBase(date){
   const issues={};state.issues.forEach(i=>issues[i.id]={stage:i.tags[i.cur]||"",note:i.note||""});
   state.reportBase={date,issues};
 }
-/* 每週概述的紅點（設定鍵右上角、設定頁「每週概述」那一列）：每週五起亮，直到這一週（週一到週日）有一份週報產出為止；
+/* 每週報告的紅點（完成紀錄分頁鈕右上角，週頁裡有每週報告卡）：每週五起亮，直到這一週（週一到週日）有一份週報產出為止；
    沒產出就一直亮到產出（下週一到週四仍以上週為準），下個週五再開始新的一輪 */
 const WEEK_DUE_DAY=5;
 function weekDue(t=today()){
@@ -87,8 +71,7 @@ function weekDue(t=today()){
 }
 function weekDotSync(){
   const due=weekDue()&&!readOnly();
-  document.querySelectorAll("#setBtn,#setOv [data-set=week],#setOv [data-set=report],[data-hub=week]").forEach(el=>el.classList.toggle("due",due));
-  const g=$("#setBtn");if(g)g.setAttribute("aria-label",due?"設定（本週週報還沒產出）":"設定");   /* 紅點對讀屏器的說法（03 F1 拿掉 title 後改用名稱，不是提示框） */
+  const t=document.querySelector("#tabbar [data-tab=done]");if(t){t.classList.toggle("due",due);t.setAttribute("aria-label",due?"完成紀錄（本週每週報告還沒產出）":"完成紀錄")}   /* 紅點對讀屏器的說法（03 F1 拿掉 title 後改用名稱，不是提示框） */
 }
 /* 網頁一直開著跨過週五也要冒出來：每 10 分鐘、回到這個分頁時再檢查一次 */
 setInterval(weekDotSync,6e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)weekDotSync()});
@@ -106,7 +89,7 @@ function buildWeekly(){
   const end=today(),start=addDays(end,-7);   /* 一整週：start 之後到今天（含），共 7 天 */
   const inP=d=>!!d&&d.slice(0,10)>start&&d.slice(0,10)<=end;   /* 完成時間可能帶時間（2026-11-21 07:54）：只比日期，否則最後一天的不算 */
   const dept=CFG.dept.name;
-  const live=liveOrder(),rep=live.filter(e=>e.report);
+  const live=liveOrder(),rep=live.filter(reportOn);
   /* 完成事項：每張卡只列一次、只寫標題（分段完成的紀錄 fromEv 與最後結案的那張算同一張，不帶「第 N 段」「結案」） */
   const dm=new Map(),add=(k,d,t)=>{const o=dm.get(k);if(!o)dm.set(k,{d,t});else if(d>o.d)o.d=d};
   state.issues.filter(i=>inP(i.doneAt)).forEach(i=>add("i:"+i.id,i.doneAt,i.title));

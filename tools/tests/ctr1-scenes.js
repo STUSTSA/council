@@ -21,7 +21,7 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       if(await tap(p,'[data-calfind]')){await W(1500);await measure(p,'找重疊',tag);await tap(p,'[data-calfind]');await W(900)}
       if(await tap(p,'[data-calmon]')){await W(900);await measure(p,'月份清單',tag);await tap(p,'[data-calmon]');await W(600)}
       for(const k of await p.$$eval('.cal-seg [data-k]',e=>e.map(x=>x.dataset.k))){await p.evaluate(k=>{const x=document.querySelector(`.cal-seg [data-k="${k}"]`);x&&x.click()},k);await W(1100);await measure(p,'行事曆模式-'+k,tag)}
-      await p.fill('[data-calq]','會').catch(()=>{});await W(900);await measure(p,'行事曆搜尋',tag);await p.fill('[data-calq]','').catch(()=>{});await W(500);
+      await p.fill('#calBarQ','會').catch(()=>{});await W(900);await measure(p,'行事曆搜尋',tag);await p.fill('#calBarQ','').catch(()=>{});await W(500);
       if(await tap(p,'#notiPage .nd-card.today')){await W(1500);await measure(p,'今日層',tag);await p.keyboard.press('Escape');await W(1100)}
       await p.keyboard.press('Escape');await W(1100)}
     /* 設定 */
@@ -29,11 +29,6 @@ module.exports=async({mk,measure,login,tap,W,w,h,scheme,tag,U,ok})=>{
       const keys=await p.$$eval('#setOv [data-set]',els=>els.map(e=>e.dataset.set));
       for(const k of [...new Set(keys)]){await p.evaluate(k=>{const e=document.querySelector(`#setOv [data-set="${k}"]`);e&&e.click()},k);await W(1100);await measure(p,'設定-'+k,tag);
         if(phone){await tap(p,'.dh-home,#setOv .set-back');await W(800)}}
-      /* 報告：每週概述、生成週報、工作報告 */
-      await p.evaluate(()=>{if(!setOpen)return;const e=document.querySelector('#setOv [data-set="report"]');e&&e.click()});await W(1100);
-      const clickText=async t=>p.evaluate(t=>{const e=[...document.querySelectorAll('button')].find(b=>b.offsetParent&&b.textContent.includes(t));if(e){e.click();return true}return false},t);
-      if(await clickText('每週概述')){await W(1300);await measure(p,'每週概述',tag);
-        if(await clickText('生成週報')){await W(1200);await measure(p,'生成週報對話框',tag);await p.keyboard.press('Escape');await W(700)}}
       await p.evaluate(()=>{if(setOpen)closeSettings(true)});await W(700)}
     await p.evaluate(()=>{editBoardInfo('year')});await W(1100);await measure(p,'對話框',tag);await p.keyboard.press('Escape');await W(600);
     /* 點名、預約、會議的元件：這三個畫面要 Firestore 才出得來，這裡用同樣的標記塞進頁面，吃同一份 board.css（點名 attendance.js、預約 booking.js、會議 meeting.js 產生的標記） */

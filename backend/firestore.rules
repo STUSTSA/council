@@ -129,19 +129,25 @@ service cloud.firestore {
       allow update: if signedIn() && uid == me() && onlyChanged(['lastLoginAt']) && d().lastLoginAt == request.time;
       allow delete: if false;
     }
-    // 03 F3 專員名單：同部門有角色的人（編輯者、管理員）互相看得到「誰在這個部門」。只有 deptId、uid 與時間，沒有信箱、角色等級、其他部門；
+    // 03 F3 專員名單：同部門有角色的人（編輯者、管理員）互相看得到「誰在這個部門」。只有 deptId、uid、時間與角色（admin／editor），沒有信箱、其他部門；
     // 名字照舊從 profiles 讀。ID＝{部門}__{uid}。別部門的成員、沒有角色的登入者、未登入都讀不到。
-    // 寫：本人（自己真的有這個部門的角色時）或總管理員建立；刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
+    // role（05）：可有可無（舊文件沒有）；有的話一定要等於 roles 文件（同一批或之前已寫入）裡這個部門的角色，所以名單上的角色不可能騙人。
+    // 寫（建立、更新）：本人（自己真的有這個部門的角色時）、總管理員、或這個部門的管理員（部長；只能登記有這個部門角色的人）；
+    // 刪：總管理員、本人、或那個人已經沒有這個部門的角色（同部門的人可以清掉過期的）
     match /deptMembers/{id} {
       function rosterRole(u, dept) { return getAfter(doc('roles', u)).data.get('depts', {}).get(dept, null); }
       function mine() { return signedIn() && id.split('__').size() == 2 && id.split('__')[1] == me(); }   // 自己那一份（不論存不存在：登入時先查有沒有再補）
+      function rosterShape() {
+        return d().keys().hasOnly(['deptId', 'uid', 'role', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
+          && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
+          && (d().uid == me() || isSuper() || isAdmin(d().deptId))
+          && rosterRole(d().uid, d().deptId) in ['admin', 'editor']
+          && d().get('role', rosterRole(d().uid, d().deptId)) == rosterRole(d().uid, d().deptId);
+      }
       allow get: if mine() || isSuper() || isEditor(resource.data.deptId);
       allow list: if isSuper() || isEditor(resource.data.deptId);
-      allow create: if signedIn() && d().keys().hasOnly(['deptId', 'uid', 'at']) && d().keys().hasAll(['deptId', 'uid', 'at'])
-        && d().deptId in deptIds() && d().uid is string && id == d().deptId + '__' + d().uid && d().at == request.time
-        && (d().uid == me() || isSuper())
-        && rosterRole(d().uid, d().deptId) in ['admin', 'editor'];
-      allow update: if false;
+      allow create: if signedIn() && rosterShape();
+      allow update: if signedIn() && rosterShape() && unchanged(['deptId', 'uid']);   // 只換 role、at（角色改變後補上或對齊）
       allow delete: if signedIn() && (isSuper() || resource.data.uid == me()
         || (isEditor(resource.data.deptId) && !(rosterRole(resource.data.uid, resource.data.deptId) in ['admin', 'editor'])));
     }
@@ -158,7 +164,7 @@ service cloud.firestore {
 
     // ===================== 邀請（invitations-roles-audit.md 第 2、4 節） =====================
     match /invitations/{h} {
-      allow get:  if isSuper() || (signedIn() && resource.data.status == 'active');
+      allow get:  if isSuper() || (signedIn() && (resource.data.status == 'active' || resource.data.createdBy == me()));   // 05：發的人看得到自己那張後來的狀態
       allow list: if isSuper();
       allow delete: if false;
 
@@ -166,7 +172,9 @@ service cloud.firestore {
         return d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()
             && exists(doc('departments', d().deptId));
       }
-      allow create: if isSuper()                                                  // D3：只有會長室發邀請
+      // 05：部長（部門管理員）只能發自己部門的「編輯者」邀請（不能發管理員、不綁舊身分）；其餘仍只有總管理員
+      function deptAdminInvite() { return isAdmin(d().deptId) && d().role == 'editor' && !d().keys().hasAny(['legacyRef']); }
+      allow create: if (isSuper() || deptAdminInvite())                           // D3：總管理員；05：加上部長發本部門編輯者邀請
         && h.matches('^[0-9a-f]{64}$')
         && d().keys().hasOnly(['deptId', 'role', 'legacyRef', 'boundEmail', 'note', 'status', 'rev',
                                'createdBy', 'createdAt', 'expiresAt', 'updatedAt', 'updatedBy'])
@@ -192,7 +200,7 @@ service cloud.firestore {
               || getAfter(doc('legacyIdentities', resource.data.legacyRef)).data.claimedBy == me());
       }
       function revoke() {
-        return isSuper() && resource.data.status == 'active'
+        return (isSuper() || (isAdmin(resource.data.deptId) && resource.data.createdBy == me())) && resource.data.status == 'active'
           && onlyChanged(['status', 'revokedBy', 'revokedAt', 'rev', 'updatedAt', 'updatedBy']) && stamped()
           && d().status == 'revoked' && d().revokedBy == me() && d().revokedAt == request.time;
       }
@@ -253,19 +261,75 @@ service cloud.firestore {
           && (d().get('super', false) == false || oldSuper() == true);
       }
 
-      allow get:  if signedIn() && (uid == me() || isSuper());
+      // ---- 05 部長（部門管理員）撤掉本部門的編輯者：lastVia＝dept、lastRef＝部門 ID；只動那個部門、只能是編輯者（拿掉）、不能動自己、
+      //      不能動管理員與總管理員、不能碰 super；加人走 QR 邀請（部長只能發本部門編輯者邀請），所以這裡不新增、不改成別的角色 ----
+      function viaDeptAdmin() {
+        return stamped() && d().lastVia == 'dept' && isAdmin(d().lastRef) && uid != me()
+          && !oldSuper() && d().get('super', false) == false
+          && deptsDelta().affectedKeys() == [d().lastRef].toSet() && deptsDelta().removedKeys() == [d().lastRef].toSet()
+          && oldDepts().get(d().lastRef, null) == 'editor';
+      }
+      // 部長讀對方的角色（為了帶 rev 寫入）：只有對方在「我是管理員的部門」有角色時。逐一列出部門（沒有迴圈）；其他人仍只有本人與總管理員
+      function adminSees() {
+        return signedIn() && resource != null && !resource.data.get('super', false)
+          && (('rights' in resource.data.depts && isAdmin('rights'))
+            || ('president' in resource.data.depts && isAdmin('president'))
+            || ('secretariat' in resource.data.depts && isAdmin('secretariat'))
+            || ('marketing' in resource.data.depts && isAdmin('marketing'))
+            || ('finance' in resource.data.depts && isAdmin('finance'))
+            || ('events' in resource.data.depts && isAdmin('events'))
+            || ('affairs' in resource.data.depts && isAdmin('affairs'))
+            || ('pr' in resource.data.depts && isAdmin('pr'))
+            || ('works' in resource.data.depts && isAdmin('works'))
+            || ('fruit' in resource.data.depts && isAdmin('fruit')));
+      }
+      // 06 部長核准本部門的部員（編輯者）申請：同一批把申請從 pending 改成 approved、只新增那個部門的 editor（不改既有角色、不動 super）
+      function viaDeptRequest() {
+        let rb = get(doc('roleRequests', d().lastRef)).data;
+        let ra = getAfter(doc('roleRequests', d().lastRef)).data;
+        return stamped() && d().lastVia == 'request' && uid != me() && !oldSuper() && d().get('super', false) == false
+          && isAdmin(rb.deptId) && rb.status == 'pending' && ra.status == 'approved' && ra.decidedBy == me()
+          && rb.uid == uid && rb.role == 'editor' && !rb.keys().hasAny(['legacyRef'])
+          && onlyDeptSet(rb.deptId, 'editor') && oldDepts().get(rb.deptId, null) == null;
+      }
+      // 部長讀申請人的 roles（為了帶 rev 寫入）：該部門有這個人的待審申請（ID＝{uid}_{部門}）。逐一列出部門（沒有迴圈）
+      function adminSeesRequest() {
+        let md = hasRole() ? role().get('depts', {}) : {};   // 我是管理員的部門先擋掉（便宜），只有命中才去查申請（規則有運算次數上限）
+        return signedIn() && (
+              (md.get('rights', null) == 'admin' && exists(doc('roleRequests', uid + '_rights')) && get(doc('roleRequests', uid + '_rights')).data.status == 'pending')
+            || (md.get('president', null) == 'admin' && exists(doc('roleRequests', uid + '_president')) && get(doc('roleRequests', uid + '_president')).data.status == 'pending')
+            || (md.get('secretariat', null) == 'admin' && exists(doc('roleRequests', uid + '_secretariat')) && get(doc('roleRequests', uid + '_secretariat')).data.status == 'pending')
+            || (md.get('marketing', null) == 'admin' && exists(doc('roleRequests', uid + '_marketing')) && get(doc('roleRequests', uid + '_marketing')).data.status == 'pending')
+            || (md.get('finance', null) == 'admin' && exists(doc('roleRequests', uid + '_finance')) && get(doc('roleRequests', uid + '_finance')).data.status == 'pending')
+            || (md.get('events', null) == 'admin' && exists(doc('roleRequests', uid + '_events')) && get(doc('roleRequests', uid + '_events')).data.status == 'pending')
+            || (md.get('affairs', null) == 'admin' && exists(doc('roleRequests', uid + '_affairs')) && get(doc('roleRequests', uid + '_affairs')).data.status == 'pending')
+            || (md.get('pr', null) == 'admin' && exists(doc('roleRequests', uid + '_pr')) && get(doc('roleRequests', uid + '_pr')).data.status == 'pending')
+            || (md.get('works', null) == 'admin' && exists(doc('roleRequests', uid + '_works')) && get(doc('roleRequests', uid + '_works')).data.status == 'pending')
+            || (md.get('fruit', null) == 'admin' && exists(doc('roleRequests', uid + '_fruit')) && get(doc('roleRequests', uid + '_fruit')).data.status == 'pending'));
+      }
+      allow get:  if signedIn() && (uid == me() || isSuper() || adminSees() || adminSeesRequest());
       allow list: if isSuper();
       allow delete: if false;
       allow create: if d().rev == 1 && baseShape() && auditAfter('roles', uid, 1)
-        && ((viaInvite() && inviteGrant()) || superWrite());
+        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptRequest());
       allow update: if revNext() && baseShape() && auditAfter('roles', uid, d().rev)
-        && ((viaInvite() && inviteGrant()) || superWrite());
+        && ((viaInvite() && inviteGrant()) || superWrite() || viaDeptAdmin() || viaDeptRequest());
     }
 
     // ===================== 權限申請 =====================
     match /roleRequests/{id} {
-      allow get:  if signedIn() && (resource.data.uid == me() || isSuper());
-      allow list: if isSuper() || (signedIn() && resource.data.uid == me());
+      // 06：部長（部門管理員）看得到、也能審自己部門的「部員（編輯者）」申請；申請部長一律只有總管理員能核准（部長不能把人升成部長）
+      allow get:  if signedIn() && (resource.data.uid == me() || isSuper() || isAdmin(resource.data.deptId));
+      allow list: if isSuper() || (signedIn() && resource.data.uid == me()) || isAdmin(resource.data.deptId);
+      function canDecide() {
+        return isSuper() || (isAdmin(resource.data.deptId) && resource.data.uid != me() && resource.data.role == 'editor'
+                             && !resource.data.keys().hasAny(['legacyRef']));
+      }
+      // 位階 rank（06）：minister（部長＝管理員）、deputy（次長）、member（部員）；次長只是頭銜，權限同部員（editor）；沒有 rank＝舊申請
+      function rankOk() {
+        return !d().keys().hasAny(['rank'])
+          || (d().rank in ['minister', 'deputy', 'member'] && ((d().rank == 'minister') == (d().role == 'admin')));
+      }
       // 04：每人每個部門一份申請，ID＝{自己的 UID}_{部門}（取代 02B 的 SDK 亂數 ID；ID 的兩段都由規則決定，不接受自訂）。
       // 待審中不能再送一份；撤回、被拒絕、已核准之後要再申請＝把同一份改回 pending（reopen，rev +1＋稽核）。
       // 04 之前的申請（20 碼亂數 ID）照舊能撤回、拒絕、核准，但不能改回 pending。
@@ -277,7 +341,7 @@ service cloud.firestore {
       }
       function askOk() {                                                          // 新建與改回 pending 共用
         return d().uid == me() && d().status == 'pending'
-          && d().keys().hasOnly(['uid', 'deptId', 'role', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy'])
+          && d().keys().hasOnly(['uid', 'deptId', 'role', 'rank', 'note', 'legacyRef', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy']) && rankOk()
           && d().role in ['admin', 'editor'] && d().deptId is string && d().deptId in deptIds()   // 02A：不再申請檢視資格
           && id == me() + '_' + d().deptId
           && exists(doc('departments', d().deptId)) && legacyOk()
@@ -290,11 +354,11 @@ service cloud.firestore {
              && onlyChanged(['status', 'rev', 'updatedAt', 'updatedBy']))
        || (signedIn() && resource.data.uid == me() && resource.data.status in ['cancelled', 'rejected', 'approved']
              && unchanged(['uid', 'deptId']) && askOk())                          // reopen：上一輪的 decidedBy／decidedAt 不留（askOk 的 hasOnly）
-       || (isSuper() && resource.data.status == 'pending' && d().status == 'rejected'
+       || (canDecide() && resource.data.status == 'pending' && d().status == 'rejected'
              && d().decidedBy == me() && d().decidedAt == request.time
              && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy']))
        // 核准一定要同一批把角色寫進 roles，而且 roles 的來源指向這筆申請（防「已核准但沒角色」與重放）
-       || (isSuper() && resource.data.status == 'pending' && d().status == 'approved'
+       || (canDecide() && resource.data.status == 'pending' && d().status == 'approved'
              && d().decidedBy == me() && d().decidedAt == request.time
              && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy'])
              && getAfter(doc('roles', resource.data.uid)).data.lastVia == 'request'
@@ -411,7 +475,7 @@ service cloud.firestore {
           && (kept('follows') || (d().get('follows', []) is list && d().get('follows', []).size() <= 100))
           && (kept('docs') || (d().get('docs', []) is list && d().get('docs', []).size() <= 50));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開（看板內容，切換前本來就是公開的資料檔）
       allow create: if isSuper() && deptId in deptIds() && shape() && d().rev == 1 && stamped()
         && auditAfter('deptSettings', deptId, 1);
       allow update: if (isAdmin(deptId) || isSuper()) && shape() && revNext() && stamped()
@@ -429,7 +493,7 @@ service cloud.firestore {
     //   ③ 刪卡片：timeIds 必須是空的、第 1 版必須已經不在 ⇒ 版本與時間事件都沒有殘留。
     match /cards/{id} {
       function cardKeys() {
-        return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report',
+        return ['deptId', 'title', 'blocks', 'timeIds', 'issueId', 'staff', 'labels', 'links', 'report', 'reportAt',
                 'state', 'doneAt', 'deletedAt', 'deletedBy', 'order', 'round', 'roundAt', 'touched', 'touchedAt',
                 'fromEv', 'version', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'legacyDesc', 'importBatch', 'purgeLog'];
       }
@@ -439,7 +503,15 @@ service cloud.firestore {
           && d().deptId in deptIds() && d().title is string && d().title.size() <= 500
           && (d().blocks is map || d().blocks is list) && d().state in ['open', 'done', 'purging']   // list＝02D 遷移的舊格式（沒改內容時照留）
           && d().version is int && d().report is bool
+          && reportAtOk()
           && d().get('timeIds', []) is list;
+      }
+      // 05 報告標記每週三（台灣時間）自動失效：reportAt＝標記當下的台灣時間「YYYY-MM-DD HH:mm」，只有 report 為 true 時才能有；
+      // 改的時候只能往後（字串比較；格式固定所以等於時間先後），不能倒回去讓過期的標記復活。沒有 reportAt＝舊標記，網頁當作本週有效
+      function reportAtOk() {
+        return d().get('reportAt', null) == null
+          || (d().report == true && d().reportAt is string && d().reportAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$')
+              && (resource == null || resource.data.get('reportAt', '') <= d().reportAt));
       }
       function verDoc()   { return /databases/$(database)/documents/cards/$(id)/versions/$(string(d().version)); }
       function verGone(n) { return !existsAfter(/databases/$(database)/documents/cards/$(id)/versions/$(string(n))); }
@@ -504,8 +576,9 @@ service cloud.firestore {
           && stamped();
       }
 
-      allow get:  if internalReader() && (resource.data.state != 'purging' || deptWriter(resource.data.deptId));
-      allow list: if internalReader() && (resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId));
+      // 06 對外公開：不用登入也讀得到（永久刪除中的卡片仍只有該部門編輯者以上）；版本歷史（編輯紀錄）仍要登入
+      allow get:  if resource.data.state != 'purging' || deptWriter(resource.data.deptId);
+      allow list: if resource.data.state in ['open', 'done'] || deptWriter(resource.data.deptId);
       // 03：blocks 每一行的形狀（blocksOk）。修改時 blocks、timeIds 都沒變（只換順序）不再檢查；永久刪除中（purging）也不檢查
       // （清 timeIds 時，時間行還指著已刪的事件，也要能刪完）。超連結（linksOk）：新建一定檢查；修改時 links 有變才檢查（舊卡片沒改超連結照常能存）
       allow create: if safeId(id) && cardShape() && blocksOk(d().blocks, d().get('timeIds', [])) && linksOk(d().get('links', []))
@@ -606,7 +679,7 @@ service cloud.firestore {
           && (kept('links')   || (d().get('links', []) is list && d().get('links', []).size() <= 50))
           && (kept('markers') || (d().get('markers', []) is list && d().get('markers', []).size() <= 300));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
       allow delete: if delLogged('issues', id) || importRollback('issues');
@@ -620,7 +693,7 @@ service cloud.firestore {
           && (kept('text') || d().text.size() <= 50000)
           && (kept('auto') || d().get('auto', false) is bool);
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().createdAt == request.time && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'createdAt', 'importBatch']) && stamped();
       allow delete: if delLogged('weeks', id) || importRollback('weeks');
@@ -632,7 +705,7 @@ service cloud.firestore {
           && (kept('name') || d().name.size() <= 200)                             // 04
           && (kept('kind') || short(d().get('kind', ''), 20));
       }
-      allow get, list: if internalReader();
+      allow get, list: if true;   // 06 對外公開
       allow create: if safeId(id) && shape() && deptWriter(d().deptId) && stamped() && importTagOk();
       allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && stamped();
       allow delete: if delLogged('labels', id) || importRollback('labels');
@@ -671,7 +744,7 @@ service cloud.firestore {
                                || (d().scope == 'all-activity' && isEditor('events'))
                                || (d().scope == 'all-meeting'  && isEditor('secretariat'))
                                || isSuper(); }
-      function visOk()   { return d().visibility == 'internal'
+      function visOk()   { return (d().visibility == 'internal' && !d().keys().hasAny(['title', 'summary']))
                                || ((isEditor('events') || isSuper()) && publicShape()); }   // D4
       // 02A：屬於卡片的時間事件一定要列在批次後母卡片的 timeIds（永久刪除時靠它確認全部刪光）、
       // 跟卡片同部門、卡片不在刪除中
@@ -697,7 +770,8 @@ service cloud.firestore {
                 : exists(evCard()));
       }
 
-      allow get, list: if resource.data.visibility == 'public' || internalReader();
+      // 06：行事曆（時間事件）不對外公開（DievE 2026-11-20 決定）：要登入才讀；任何登入的帳號都讀得到（不要求部門角色），public 與 internal 都一樣
+      allow get, list: if signedIn();
       allow create: if safeId(id) && deptWriter(d().deptId) && eventShape() && scopeOk() && visOk() && cardOk()
         && d().rev == 1 && stamped();
       allow update: if eventShape() && unchanged(['deptId', 'cardId', 'importBatch']) && stamped() && revNext() && (
@@ -736,6 +810,31 @@ service cloud.firestore {
     }
     match /attendanceRecords/{id} {
       allow read, create, update: if isEditor('secretariat') || isSuper();
+      allow delete: if isSuper();
+    }
+
+    // 會議結論的待合併提案（2026-11-21）：秘書處在會議紀錄寫的結論，送到該部門「待合併」；部門編輯者自己按合併才動到卡片（照一般卡片規則），
+    // 秘書處不能藉這個集合改別部門的卡片。kind＝note（附在某張卡片）｜new（臨時項目，合併時才建新卡片）。
+    match /mergeProposals/{pid} {
+      function pk()        { return ['deptId', 'cardId', 'kind', 'title', 'note', 'meetingDate', 'status', 'createdBy', 'createdAt',
+                                     'updatedAt', 'updatedBy', 'resolvedBy', 'resolvedAt']; }
+      function secWriter() { return isEditor('secretariat') || isSuper(); }
+      function bodyOk()    { return short(d().title, 100) && short(d().note, 1000) && d().note.size() > 0 && dayStr(d().meetingDate); }
+      function cardOk()    { return d().kind == 'new' ? d().cardId == null
+                              : (safeId(d().cardId) && exists(doc('cards', d().cardId)) && get(doc('cards', d().cardId)).data.deptId == d().deptId); }
+      allow get, list: if secWriter() || (resource != null && isEditor(resource.data.deptId));
+      allow create: if secWriter() && safeId(pid) && d().keys().hasOnly(pk())
+        && d().deptId in deptIds() && d().kind in ['note', 'new'] && cardOk() && bodyOk()
+        && d().status == 'pending' && d().createdBy == me() && d().createdAt == request.time && stamped()
+        && !d().keys().hasAny(['resolvedBy', 'resolvedAt']);
+      // 秘書處：待合併的可以改標題與結論，或撤回；部門編輯者：待合併的標成已合併或略過（卡片本身照一般規則另外寫）
+      allow update: if resource.data.status == 'pending' && d().keys().hasOnly(pk()) && stamped()
+        && ( (secWriter() && d().status == 'pending' && onlyChanged(['title', 'note', 'updatedAt', 'updatedBy']) && bodyOk())
+          || (secWriter() && d().status == 'withdrawn' && onlyChanged(['status', 'resolvedBy', 'resolvedAt', 'updatedAt', 'updatedBy'])
+              && d().resolvedBy == me() && d().resolvedAt == request.time)
+          || ((isEditor(resource.data.deptId) || isSuper()) && d().status in ['merged', 'dismissed']
+              && onlyChanged(['status', 'resolvedBy', 'resolvedAt', 'updatedAt', 'updatedBy'])
+              && d().resolvedBy == me() && d().resolvedAt == request.time) );
       allow delete: if isSuper();
     }
 
