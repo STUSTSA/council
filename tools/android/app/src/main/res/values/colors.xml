@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 啟動時的底色（網頁載入前）；網頁載入後由 App 依 meta theme-color 換成當下主題色 -->
+    <color name="app_bg">#F5F0E1</color>
+</resources>

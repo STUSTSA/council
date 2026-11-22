@@ -38,10 +38,11 @@ public class MainActivity extends Activity {
     static final String LOGIN = PREFIX + "app-login.html";
     private static final Pattern TOKEN = Pattern.compile("^[A-Za-z0-9._-]{20,4096}$");
     private static final Pattern NONCE = Pattern.compile("^[A-Za-z0-9_-]{16,64}$");
-    private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+    private static final Pattern RGB = Pattern.compile("^rgba?\\(\\s*(\\d{1,3})\\s*[, ]\\s*(\\d{1,3})\\s*[, ]\\s*(\\d{1,3}).*\\)$");
     private static final long NONCE_MS = 10 * 60 * 1000L;
 
     private FrameLayout root;
+    private String insetCss = "";
     private WebView web;
     private BackHelper back;
     private static final String PREFS = "login";   /* App 私有的 SharedPreferences：撐得過程序被系統殺掉，別的 App 讀不到 */
@@ -62,17 +63,24 @@ public class MainActivity extends Activity {
 
         root = new FrameLayout(this);
         root.setOnApplyWindowInsetsListener((v, ins) -> {
-            int l, t, r, b;
+            int t, r, b, l, nav, kb;
             if (Build.VERSION.SDK_INT >= 30) {
-                android.graphics.Insets i = ins.getInsets(WindowInsets.Type.systemBars()
-                        | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
-                l = i.left; t = i.top; r = i.right; b = i.bottom;
-                v.setPadding(l, t, r, b);
-                return WindowInsets.CONSUMED;
+                android.graphics.Insets sys = ins.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                int ime = ins.getInsets(WindowInsets.Type.ime()).bottom;
+                t = sys.top; l = sys.left; r = sys.right; nav = sys.bottom;
+                kb = ime > nav ? ime : 0;
+            } else {
+                t = ins.getSystemWindowInsetTop(); l = ins.getSystemWindowInsetLeft(); r = ins.getSystemWindowInsetRight();
+                nav = ins.getStableInsetBottom();
+                kb = ins.getSystemWindowInsetBottom() > nav ? ins.getSystemWindowInsetBottom() : 0;
             }
-            v.setPadding(ins.getSystemWindowInsetLeft(), ins.getSystemWindowInsetTop(),
-                    ins.getSystemWindowInsetRight(), ins.getSystemWindowInsetBottom());
-            return ins.consumeSystemWindowInsets();
+            /* 內容滿版延伸到系統列底下；只有鍵盤出現時才把底部縮上去，避免擋住輸入框 */
+            v.setPadding(0, 0, 0, kb);
+            float d = getResources().getDisplayMetrics().density;
+            insetCss = "var e=document.documentElement.style;e.setProperty('--sa-top','" + (t / d) + "px');e.setProperty('--sa-left','" + (l / d)
+                    + "px');e.setProperty('--sa-right','" + (r / d) + "px');e.setProperty('--sa-bottom','" + (kb > 0 ? 0 : nav / d) + "px');";
+            pushInsets();
+            return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : ins.consumeSystemWindowInsets();
         });
         setBarColor(defaultColor());
 
@@ -99,7 +107,14 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageStarted(WebView v, String url, Bitmap icon) { pushInsets(); }
+
+            @Override
+            public void onPageCommitVisible(WebView v, String url) { pushInsets(); }
+
+            @Override
             public void onPageFinished(WebView v, String url) {
+                pushInsets();
                 v.evaluateJavascript(
                         "(function(){if(window.__tcObs)return;window.__tcObs=1;"
                         + "function s(){var m=document.querySelector('meta[name=\"theme-color\"]');if(m&&window.CouncilApp)CouncilApp.themeColor(m.content)}"
@@ -141,7 +156,7 @@ public class MainActivity extends Activity {
 
     private int defaultColor() {
         boolean night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        return night ? 0xFF1C1B18 : 0xFFF5F0E1;
+        return night ? 0xFF000000 : 0xFFF5F0E1;
     }
 
     private void setBarColor(int c) {
@@ -160,6 +175,11 @@ public class MainActivity extends Activity {
             int m = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | (Build.VERSION.SDK_INT >= 26 ? View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR : 0);
             d.setSystemUiVisibility(light ? (f | m) : (f & ~m));
         }
+    }
+
+    /** 把系統列高度寫成網頁的 CSS 變數（board.css 的 --sa-*），網頁的上下內距用它 */
+    private void pushInsets() {
+        if (web != null && !insetCss.isEmpty()) web.evaluateJavascript("(function(){" + insetCss + "})()", null);
     }
 
     private boolean onOurSite() {
@@ -207,9 +227,22 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void themeColor(String c) {
-            if (c == null || !COLOR.matcher(c).matches()) return;
-            final int col = Color.parseColor(c);
+            final int col = parseColor(c);
+            if (col == 0) return;
             runOnUiThread(() -> { if (onOurSite()) setBarColor(col); });
         }
+    }
+
+    /** meta theme-color 可能是 #rgb、#rrggbb 或 rgb(...)；看不懂就回 0（不更新） */
+    static int parseColor(String c) {
+        if (c == null) return 0;
+        c = c.trim();
+        try {
+            if (c.matches("^#[0-9a-fA-F]{3}$")) c = "#" + c.charAt(1) + c.charAt(1) + c.charAt(2) + c.charAt(2) + c.charAt(3) + c.charAt(3);
+            if (c.matches("^#[0-9a-fA-F]{6}$")) return Color.parseColor(c);
+            java.util.regex.Matcher m = RGB.matcher(c);
+            if (m.matches()) return Color.rgb(Math.min(255, Integer.parseInt(m.group(1))), Math.min(255, Integer.parseInt(m.group(2))), Math.min(255, Integer.parseInt(m.group(3))));
+        } catch (Exception ignored) { }
+        return 0;
     }
 }
