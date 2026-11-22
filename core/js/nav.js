@@ -442,7 +442,9 @@ function elastic(sc,inner){
   },{passive:true});
   sc.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
   sc.addEventListener("touchmove",e=>{
-    if(y0===null)return;const y=e.touches[0].clientY,dy=y-y0;
+    if(y0===null)return;
+    if(document.documentElement.classList.contains("ev-drag-on")){if(off)set(0);return}   /* 膠囊拖到角落（live.js）時手指的上下移動是拖曳，不是拉頁面：不回彈，不然整頁會被拉走、頁面多出一個疊層把完成／刪除角落蓋住 */
+    const y=e.touches[0].clientY,dy=y-y0;
     /* 先判斷方向：橫向的手勢（例如左右滑甘特圖）整段都不管，不然頁面剛好在頂端／底端時會把橫向捲動擋掉 */
     if(!axis){const dx=e.touches[0].clientX-x0;if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;axis=Math.abs(dx)>Math.abs(dy)?"x":"y"}
     if(axis==="x")return;
