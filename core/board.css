@@ -8,7 +8,7 @@
    一般瀏覽器與安裝版用 env()；安卓 App（tools/android，WebView 滿版）的 WebView 不一定提供 env()，由 App 把系統列高度用 style 寫進 <html> 蓋過這裡的預設值。 */
 :root{--sa-top:env(safe-area-inset-top,0px);--sa-right:env(safe-area-inset-right,0px);--sa-bottom:env(safe-area-inset-bottom,0px);--sa-left:env(safe-area-inset-left,0px)}
 :root{--r-lg:18px;--r-md:14px;--r-sm:12px}
-:root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-layout:560ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-in:cubic-bezier(.4,0,1,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
+:root{--mo-fast:160ms;--mo-base:280ms;--mo-slow:460ms;--mo-out:cubic-bezier(.2,.9,.25,1);--mo-spring:cubic-bezier(.3,1.3,.5,1)}
 /* 主題色彩（--bg、--blk、--blk2、--ink、--muted、--hair、--acc、--acc2、--pri、--ok、--late、--ok-ink、--blk-sh）在 core/theme.css，九組主題 × 淺深色，由 core/js/theme.js 設 <html data-pal／data-theme>。
    下面是舊名稱：一律在這裡引用主題變數（元件沿用舊名稱就會跟著主題變），不在別處另外寫顏色。紅色只給逾期、刪除、「報告」（--late）。
    寫死的顏色只剩三種例外：部門（學生會）標誌的藍黃、工作報告的白紙、陰影用的半透明黑，每一處旁邊都註明「例外」（測試 tools/tests/ui8color.js） */
@@ -49,7 +49,6 @@ input{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid tran
 textarea{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;resize:vertical;line-height:1.7;border-radius:var(--r-sm);-webkit-user-select:text;user-select:text}
 select{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;border-radius:var(--r-sm)}
 .empty{color:var(--muted);font-size:13.5px;margin:6px 0}
-.hint{font-size:12px;color:var(--muted)}
 dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 .num{font-family:"Jost","Noto Sans TC",sans-serif;font-weight:400;letter-spacing:.02em}
 /* ===== 區塊標題（DESIGN-next 第四節；ui-09 全站統一） =====
@@ -268,8 +267,6 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    紅燈的擴散（ping）只動 transform／opacity，播放時瀏覽器本來就會交給顯示卡 */
 .live-dot{position:relative;flex:none;width:9px;height:9px;border-radius:50%;background:var(--red)}
 .live-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--red);animation:ping 1.8s cubic-bezier(0,0,.2,1) infinite}
-.ok-dot{position:relative;flex:none;width:9px;height:9px;border-radius:50%;transition:transform .35s cubic-bezier(.3,1.6,.5,1);background:var(--ok-dot)!important;transform:translateZ(0)}
-.ok-dot::after{content:"";position:absolute;inset:0;border-radius:50%;animation:ping 2.4s cubic-bezier(0,0,.2,1) infinite;background:var(--ok-dot)}
 @keyframes ping{75%,100%{transform:scale(2.4);opacity:0}}
 /* 燈號擴散只動 transform／opacity（交給合成執行緒），展開收合時也不暫停（暫停再繼續看起來像卡住）；重畫後的相位由 anim.js 的 Anim.syncPings 接回去 */
 
@@ -570,7 +567,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .evf-ed .fld,.evf-ed fieldset.multi{margin:0}
 .evf-hint{font-size:11.5px}
 /* 按鈕列（欄位的取消／完成；右側詳情「完成這一段」框的取消／完成、整筆動作） */
-.evd-btns,.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.evf-btns{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
 /* 時間標記、超連結一組（每一筆各自一列，最後一顆「+ 時間」「+ 超連結」）；「+ 階段」也是 .evd-add */
 .evd-add{justify-self:start}
 .evf-group{display:grid;padding-top:10px;border-bottom:1px solid var(--hair)}
@@ -879,7 +876,6 @@ a.doc-pill:active{scale:.96}
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
 .log-d{flex:none;width:84px;font-size:14px}   /* 日期欄固定寬：每一列的膠囊與標題左緣才會對齊（以前最小寬 74px，數字寬度不同就差 1～2px） */
 .log li>.sub{text-spacing-trim:trim-start}   /* 「（即時回報）」換到下一行時，全形括號左半邊的空白不留，跟上一行的日期左緣對齊 */
-.log-p{margin-left:auto;font-size:12px}
 /* 進度卡片（甘特圖＋議題詳情合成一張）：預設 #pvGantt，點議題列換成 #pvDetail（切換動畫在 views.js 的 progShow）。
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
 #progPanel{--cpx:18px;overflow:hidden}
@@ -1076,7 +1072,6 @@ a.link:active{transform:scale(.96)}
 }
 @keyframes doneIn{0%{opacity:0;transform:translateX(-18px) scale(.96);box-shadow:inset 0 0 0 2px var(--done)}55%{opacity:1;transform:none;box-shadow:inset 0 0 0 2px var(--done)}100%{box-shadow:inset 0 0 0 0 var(--done)}}
 @keyframes tick{0%{transform:scale(0) rotate(-45deg)}100%{transform:none}}
-@keyframes doneFlash{0%{opacity:0;transform:translateX(-14px)}40%{opacity:1;transform:none;background:color-mix(in srgb,var(--done) 22%,transparent)}100%{}}
 
 /* ===== 每週報告（原「每週概述」；views.js 的 repHTML）=====
    2026-11-21 起畫在完成紀錄的週頁最上方（.wk-rep），不再是設定裡的一頁。每份報告是一張可展開的卡片（.week，details）；沒有報告的週顯示 .wk-rn 一行字；
@@ -1093,7 +1088,6 @@ a.link:active{transform:scale(.96)}
 .week summary::before{color:var(--muted);transition:transform .15s;content:"";display:inline-block;flex:none;width:7px;height:9px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);margin:0 2px 0 1px}
 .week[open] summary::before{transform:rotate(90deg)}
 .week summary .num{font-size:18px;transition:letter-spacing .25s var(--ease)}
-.badge{font-size:11.5px;border-radius:999px;padding:2.1px 8px .9px;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
 .week-tools{display:flex;gap:6px;justify-content:flex-end;padding:0 12px;flex-wrap:wrap;animation:none}
 .week-text{white-space:pre-wrap;line-height:1.85;padding:6px 14px 14px;font-size:14.5px;word-break:break-word;animation:none;-webkit-user-select:text;user-select:text}
 .gen-btn{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);display:inline-flex;align-items:center;gap:6px}
@@ -2394,8 +2388,6 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 /* ===== 共用動畫關鍵影格 ===== */
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 @keyframes pop{0%{transform:scale(.9)}100%{transform:none}}
-@keyframes dotIn{from{transform:scale(0);opacity:0}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
 
 
 /* ===== 行政會議資料（meeting.js 的 renderAgenda；2026-11-21 第三版：卡片就是文件，就地編輯） =====
