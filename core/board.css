@@ -179,7 +179,7 @@ body.set-open .dhead{position:relative;z-index:40}
 .dh-st{display:contents}
 .dh-sp{flex:1;min-width:0}
 /* 通知鈕的紅色數字（彈出動畫由 anim.js 的 pop） */
-.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:var(--lite);font-size:11.5px;line-height:20px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
+.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:var(--lite);font-size:11.5px;line-height:19.4px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
 .noti-n[hidden]{display:none}
 /* 離線中（pwa.js 的 offlinePill，放在 #saveInfo 前面）：部門名旁邊一顆小膠囊 */
 .offline-pill{flex:none;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 12px 0 10px;border-radius:999px;background:var(--blk);color:var(--red);font-size:12px;letter-spacing:.14em;line-height:1;animation:rise .4s var(--ease) both}
@@ -1686,10 +1686,27 @@ body.set-open #pageMain{overflow:hidden}
 .sg-noti{gap:28px;padding-bottom:12px}
 .noti-l{display:grid;gap:28px;min-width:0;align-content:start}
 .noti-r{min-width:0}
-/* 桌面（1000px 以上）左右兩欄：左＝今日／明日（並排）＋清點，右＝行事曆（含「這一天」清單）；進頁面不用捲就同時看到清點和行事曆。
-   左欄寬 clamp(320px,34%,420px)（跟即時回報分欄同一個比例概念），行事曆拿剩下的全部；兩欄一起往下捲（頁面本身捲）。手機與中等寬度維持單欄由上到下 */
+/* 桌面左右兩欄（1000～1279px）：左＝今日／明日（並排）＋清點，右＝行事曆含「這一天」；左欄寬 clamp(320px,34%,420px)，兩欄一起往下捲（頁面本身捲）。
+   桌面三欄（1280px 以上）三等份：左＝今日／明日（並排，兩張加起來就是一份寬）＋清點，中＝行事曆（標題、模式、海報月曆，縮小到一屏看得到整個月），右＝「這一天」清單與預約說明。
+   三欄：.noti-r 佔後兩欄、.cal 自己再分兩等份（.cal-top 佔中欄、清單佔右欄，欄距同 --noti-gap）；這時 .cal 的容器查詢關掉（container-type:normal），月曆縮小改用這裡的規則，不靠容器寬度。手機與 1000px 以下單欄由上到下 */
 @media (min-width:1000px){
   .sg-noti{grid-template-columns:clamp(320px,34%,420px) minmax(0,1fr);column-gap:clamp(20px,2.4vw,36px);align-items:start}
+}
+@media (min-width:1280px){
+  .sg-noti{--noti-gap:clamp(20px,2vw,32px);grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--noti-gap)}
+  .noti-r{grid-column:2/4}
+  .noti-r .cal{container-type:normal;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto 1fr;gap:0 var(--noti-gap);align-items:start}
+  .noti-r .cal-top{grid-column:1;grid-row:1/span 2;gap:14px;padding:18px 20px}
+  .noti-r .cal>:not(.cal-top):not(.cal-ghost){grid-column:2;min-width:0}
+  .noti-r .cal-list{grid-template-columns:minmax(0,1fr);margin-bottom:14px}
+  .noti-r .cal-top .pc-head{margin-bottom:8px}
+  .noti-r .cal-top .pc-mon{font-size:clamp(48px,14cqw,72px)}
+  .noti-r .cal-top .pc-yr{font-size:clamp(20px,5cqw,28px)}
+  .noti-r .cal-top .pc-d{width:36px;height:36px;margin-top:2px}
+  .noti-r .cal-top .pc-week{min-height:calc(42px + var(--lanes) * var(--pc-lane))}
+  .noti-r .cal-top .pc-e{top:calc(42px + var(--ln) * var(--pc-lane))}
+  .noti-l .nd-num{font-size:34px}
+  .noti-l .nd-card{padding:12px 14px 10px}
 }
 @media print{.sgroup.sg-noti{display:none}}
 /* ===== 今日／明日卡片（notify.js 的 dayCardHTML；通知頁最上面） =====
@@ -1789,7 +1806,7 @@ body.set-open #pageMain{overflow:hidden}
 .tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
 .tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
 .tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.tl-btn{height:40px;min-height:0;padding:2.9px 22px .6px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-btn{height:40px;min-height:0;padding:1.5px 22px .9px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
 .tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
@@ -1809,7 +1826,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
 .cal-h .sec-h{margin-right:auto}
 .cal-mp{position:relative;flex:none}
-.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:1px 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
 .cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
 .cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
 /* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
