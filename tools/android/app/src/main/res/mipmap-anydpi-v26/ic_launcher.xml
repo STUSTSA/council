@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 自適應圖示：系統依手機樣式裁成圓形或圓角方形。前景標誌縮在中間安全區內（約 43%），四周留白；
-     monochrome 是給 Android 13 以上「主題圖示」用的單色版本（黃藍兩隻中間留縫、眼睛挖空，才分得出形狀） -->
+     monochrome 是給 Android 13 以上「主題圖示」用的單色版本（黃藍兩隻中間留一條等寬的縫（沿著前面那隻的輪廓往外推出來的，不是手畫）、眼睛挖空，才分得出形狀） -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/icon_bg" />
     <foreground android:drawable="@drawable/ic_launcher_fg" />
