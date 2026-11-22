@@ -27,22 +27,23 @@ async function bkLoad(){
   if(BK.loading)return;BK.loading=true;BK.err="";
   try{
     const B=await bkMod();BK.cal=await B.calendar(CFG.firebase,BK_OWNER);
-    if(BK.cal&&bkMgr()){
-      const now=Date.now();
-      [BK.wins,BK.pend,BK.appr]=await Promise.all([B.windows(CFG.firebase,BK_OWNER,now),B.bookings(CFG.firebase,BK_OWNER,"pending",0),B.bookings(CFG.firebase,BK_OWNER,"approved",now)]);
-    }else if(BK.cal&&bkCanReq()){   /* 同學：開放時段、已被鎖的格、我的申請 */
-      const now=Date.now();BK.wins=await B.windows(CFG.firebase,BK_OWNER,now);BK.pend=[];BK.appr=[];
-      const last=BK.wins.reduce((m,w)=>Math.max(m,w.end),now);
-      [BK.taken,BK.mine]=await Promise.all([B.taken(CFG.firebase,BK_OWNER,Math.floor(now/B.GRID),Math.ceil(last/B.GRID)),B.mine(CFG.firebase,BK_OWNER)]);
-      BK.mine=BK.mine.filter(x=>["pending","approved"].includes(x.status)&&x.end>now).reverse();
+    if(BK.cal&&(bkMgr()||bkCanReq())){
+      const now=Date.now(),mg=bkMgr();
+      BK.wins=await B.windows(CFG.firebase,BK_OWNER,now);
+      [BK.pend,BK.appr]=mg?await Promise.all([B.bookings(CFG.firebase,BK_OWNER,"pending",0),B.bookings(CFG.firebase,BK_OWNER,"approved",now)]):[[],[]];
+      if(bkCanReq()){   /* 有部門角色的人（含管理員）才約得了：已被鎖的格、我的申請 */
+        const last=BK.wins.reduce((m,w)=>Math.max(m,w.end),now);
+        [BK.taken,BK.mine]=await Promise.all([B.taken(CFG.firebase,BK_OWNER,Math.floor(now/B.GRID),Math.ceil(last/B.GRID)),B.mine(CFG.firebase,BK_OWNER)]);
+        BK.mine=BK.mine.filter(x=>["pending","approved"].includes(x.status)&&x.end>now).reverse();
+      }else{BK.taken=new Set();BK.mine=[]}
     }else{BK.wins=[];BK.pend=[];BK.appr=[];BK.mine=[]}
   }catch(e){console.error("會長預約讀取失敗",e);BK.err=e&&e.code==="permission-denied"?"沒有權限讀取預約":"讀取失敗，請稍後再試"}
   BK.loading=false;renderBooking(true);
 }
-/* 行事曆「會長室」模式用（notify.js）：同學（有部門角色、不是管理者）的開放時段與我的預約，各是一件事 */
+/* 行事曆「會長室」模式用（notify.js）：有部門角色的人（含管理員）的開放時段與我的預約，各是一件事 */
 const bkFree=w=>{let n=0;for(let i=w.start/1800000;i<w.end/1800000;i++)if(!BK.taken.has(i)&&i*1800000>Date.now())n++;return n};
 function bkItems(){
-  if(!bkMe()||!BK.cal||bkMgr()||!bkCanReq())return [];
+  if(!bkMe()||!BK.cal||!bkCanReq())return [];
   const b=BK.busy?" disabled":"",f=ms=>StoreMap.fmtTaipei(ms,false),out=[];
   const mk=(key,s,e,o)=>{const a=f(s),z=f(e),d=a.slice(0,10);out.push({key,date:d,end:z.slice(0,10)>d?z.slice(0,10):"",time:a.slice(11),etime:z.slice(11),dept:"president",kind:"bk",...o})};
   BK.wins.filter(w=>w.end>Date.now()).forEach(w=>{const n=bkFree(w);
@@ -50,19 +51,23 @@ function bkItems(){
   BK.mine.forEach(x=>mk("bk:"+x.id,x.start,x.end,{title:"我的預約："+x.topic,place:x.status==="approved"?"已核准":"等會長確認",act:`<button type="button" class="icon" data-bk="cancel" data-id="${esc(x.id)}"${b}>取消</button>`}));
   return out;
 }
-/* 月曆下面的一小塊：狀態與提醒（不是新資料庫時整塊不出現） */
+/* 「預約會長時間」卡（行事曆「會長室」模式、月曆上方；任何登入者都看得到，管理員也是）：
+   寫現在的狀態與下一步——還沒啟用、還沒開時段、沒有部門角色、可以預約（實心「預約會長時間」）；管理員多一顆「待審 N 筆」（到會長室處理）。不是新資料庫時整塊不出現 */
+const bkFreeWins=()=>BK.wins.filter(x=>x.end>Date.now()&&bkFree(x)).sort((a,b)=>a.start-b.start);
 function bkNoteHTML(){
   if(!fsMode())return "";
-  const p=t=>`<div class="cal-bk"><p class="sub">${t}</p></div>`;
-  if(!bkMe())return p("要先登入才能預約會長。");
-  if(BK.err)return p(esc(BK.err));
-  if(BK.cal===undefined)return p("讀取預約中…");
-  if(!BK.cal)return p("會長預約還沒開放。");
-  if(bkMgr())return p(CFG.deptId==="president"?"你是會長室管理員：申請與開放時段在「會長室」分頁的「會長預約」處理。":`你是會長室管理員：待審申請 ${BK.pend.length} 筆，到<a href="index.html?d=president&amp;tab=ext">會長室</a>處理。`);
-  if(!bkCanReq())return p(acct.roles?"預約只開放給各部門的成員（部長、次長、部員）。請先申請加入你的部門，通過後這裡就能預約。":"讀取預約中…");
-  const w=BK.wins.filter(x=>x.end>Date.now()&&bkFree(x)).sort((a,b)=>a.start-b.start)[0];
-  return `<div class="cal-bk">${w?`<button type="button" class="icon" data-calgoday="${StoreMap.fmtTaipei(w.start,true)}">下一個可預約時段　${esc(bkFmt(w.start,w.end))}</button>`:`<p class="sub">目前沒有開放的時段。</p>`}
-    <p class="sub">送出後會先佔住時段，等會長確認；一次最多 3 筆待審，每次最長 2 小時。</p></div>`;
+  const mg=bkMgr(),btn=(k,t,cls)=>`<button type="button" class="${cls||"icon"}" data-bk="${k}"${BK.busy?" disabled":""}>${t}</button>`;
+  const card=(sub,btns,tip)=>`<div class="cal-bk"><div class="bk-t"><b>預約會長時間</b><span class="sub">${sub}</span>${tip?`<span class="sub bk-tip">${tip}</span>`:""}</div>${btns?`<div class="bk-b">${btns}</div>`:""}</div>`;
+  if(!bkMe())return card("要先登入才能預約會長。","");
+  if(BK.err)return card(esc(BK.err),"");
+  if(BK.cal===undefined)return card("讀取預約中…","");
+  if(!BK.cal)return card(bkSuper()?"預約功能還沒啟用。你是總管理員：到會長室分頁按「啟用會長預約」。":"會長預約還沒開放，開放後這裡就能預約。",bkSuper()?btn("goext","到會長室啟用","primary"):"");
+  const pend=mg?btn("goext",`待審 ${BK.pend.length} 筆　到會長室處理`):"";
+  if(!mg&&!bkCanReq())return card(acct.roles?"預約只開放給各部門的成員（部長、次長、部員）。請先申請加入你的部門，通過後這裡就能預約。":"讀取預約中…","");
+  const w=bkFreeWins()[0];
+  if(!w)return card(mg?"會長還沒開放時段。到會長室分頁按「+ 新增開放時段」，同學才約得到。":"會長還沒開放時段，開放後這裡就能預約。",mg?btn("goext","到會長室新增時段","primary")+pend:"");
+  if(!bkCanReq())return card("你的帳號還沒有部門身分，沒辦法用自己名義預約；同學可以預約。",pend);
+  return card(`下一個可預約時段　${esc(bkFmt(w.start,w.end))}`,btn("book","預約會長時間","primary")+pend,"送出後會先佔住時段，等會長確認；一次最多 3 筆待審，每次最長 2 小時。");
 }
 const bkRow=(t,sub,btns)=>`<div class="bk-row"><div class="bk-t"><b class="num">${esc(t)}</b>${sub?`<span class="sub">${esc(sub)}</span>`:""}</div><div class="bk-b">${btns}</div></div>`;
 function bkHTML(){
@@ -130,6 +135,13 @@ async function bkRequest(id){
   if(!v)return;
   await bkRun(async()=>{const B=await bkMod();await B.request(CFG.firebase,BK_OWNER,w.id,+v.s,+v.n,[...v.topic].slice(0,40).join(""),"")},"已送出，等會長確認");
 }
+/* 「預約會長時間」鈕：只有一個還有空的時段就直接進表單；多個先選時段 */
+async function bkBook(){
+  const ws=bkFreeWins();if(!ws.length)return;
+  if(ws.length===1)return bkRequest(ws[0].id);
+  const v=await ask("預約會長時間",[{name:"w",label:"選時段",type:"select",value:ws[0].id,options:ws.map(w=>[w.id,bkFmt(w.start,w.end)])}],{note:"接著選開始時間、時長與事由。"});
+  if(v)bkRequest(v.w);
+}
 async function bkEnable(){
   await bkRun(async()=>{
     const A=await storeModLoad("fb-account.js","board-account-ready","BoardAccount"),B=await bkMod();
@@ -143,6 +155,8 @@ document.addEventListener("click",async ev=>{
   if(k==="enable")return bkEnable();
   if(k==="wadd")return bkAddWindow();
   if(k==="req")return bkRequest(id);
+  if(k==="book")return bkBook();
+  if(k==="goext"){location.href="index.html?d=president&tab=ext";return}
   if(k==="cancel"){if(await ask("取消這筆預約？",[],{note:"時段會釋放給別人預約。",danger:"取消預約"})!=="delete")return;
     return bkRun(async()=>(await B()).cancel(CFG.firebase,id),"已取消")}
   if(k==="wdel"){if(await ask("刪除這個開放時段？",[],{danger:"刪除"})!=="delete")return;

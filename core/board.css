@@ -1843,9 +1843,14 @@ body.set-open #pageMain{overflow:hidden}
 /* 會長預約（會長室模式，booking.js）：開放時段與我的預約是普通的一列，右邊按鈕；月曆下面一小塊寫狀態與提醒（顏色全用變數，深色、手機不另寫） */
 .cal-ev.bk .ce-pl{flex:1 1 auto}
 .ce-act{margin-left:auto;display:flex;gap:8px;flex:none}
-.cal-bk{display:grid;justify-items:start;gap:10px;margin-top:12px}
+/* 「預約會長時間」卡（bkNoteHTML，在 .cal-top 裡、模式切換下面）：圓角色塊，左邊標題＋狀態、右邊按鈕（窄就換到下一行、按鈕撐滿）；顏色全用變數，深色不另寫 */
+.cal-bk{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--blk2)}
+.cal-bk .bk-t{flex:1 1 220px}
+.cal-bk .bk-t b{font-size:15px}
 .cal-bk .sub{margin:0;font-size:12.5px;line-height:1.6}
-.cal-bk a{color:var(--ink);text-decoration:underline}
+.cal-bk .bk-tip{font-size:11.5px;opacity:.8}
+.cal-bk .bk-b{flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){.cal-bk .bk-b{flex-basis:100%}.cal-bk .bk-b button{flex:1 1 auto}}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
 /* 桌面寬版（行事曆容器 1000px 以上）：左邊一欄放標題、搜尋、模式切換與找重疊（400px），右邊放海報月曆；月曆本身的縮小在「海報月曆」段 */
 @container cal (min-width:1000px){
