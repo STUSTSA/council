@@ -13,8 +13,8 @@ const WD="日一二三四五六";
 function notiItems(s,dept){
   const out=[];
   (s.events||[]).filter(e=>!e.doneAt).forEach(e=>(e.times||[]).forEach(t=>{if(!t.start)return;
-    const d=t.start.slice(0,10),en=(t.end||"").slice(0,10);
-    out.push({key:`${dept}:t:${t.id}`,date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
+    const d=t.start.slice(0,10),en=(t.end||"").slice(0,10),b=(e.blocks||[]).find(x=>x.timeId===t.id);
+    out.push({key:`${dept}:t:${t.id}`,evId:e.id,tid:t.id,done:!!(b&&b.check),date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
   return out.sort(byWhen);
 }
 const byWhen=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
@@ -46,16 +46,19 @@ function dayWhen(x,d){
   const k=Math.round((pd(d)-pd(x.date))/864e5)+1,n=Math.round((pd(x.end)-pd(x.date))/864e5)+1;
   return k===1&&x.time?x.time:`${k}／${n} 天`;
 }
-/* 一張卡片：大日期、今日／明日、星期；下面最多四列，每列＝標題（最多兩行、換行平均，不斷成孤字）＋一行小字（當天開始的時刻、多天的「到 M/D」，沒有就不寫），多的寫 +N；沒有事＝一條短細線。
-   不寫件數、地點、所屬即時回報、「第 k／N 天」（地點與所屬在今日層與行事曆看得到）。
+/* 一張卡片：大日期、今日／明日、星期；下面只放一項最該先看的事（標題最多兩行、換行平均；小字＝當天開始的時刻、多天的「到 M/D」，沒有就不寫），
+   右下角一個數字＝當天總件數；沒有事＝一條短細線（不寫數字）。挑的順序：當天開始、有時刻的最早一筆；沒有就挑最近到期（結束日或當天）的。
+   不寫地點、所屬即時回報、「第 k／N 天」（那些在今日層與行事曆看得到）。
    今日＝主要動作色（--pri）底；點今日＝放大成全螢幕的「今日」層（openToday），點明日＝行事曆選到那一天（notiOpenDay） */
 const daySub=x=>[x.place,x.ev].filter(Boolean).join("・");
 const dayNote=(x,d)=>[x.date===d&&x.time?x.time:"",x.end?`到 ${nmd(x.end)}`:""].filter(Boolean).join("・");
+const dayPick=(xs,d)=>{const tm=xs.filter(x=>x.date===d&&x.time).sort((a,b)=>a.time.localeCompare(b.time))[0];
+  return tm||xs.slice().sort((a,b)=>(a.end||a.date).localeCompare(b.end||b.date))[0]};
 function dayCardHTML(d,lab,cls,list){
-  const xs=list.filter(x=>covers(x,d)),MAX=4;
+  const xs=list.filter(x=>covers(x,d)),x=xs.length&&dayPick(xs,d),n=x&&dayNote(x,d);
   return `<button type="button" class="nd-card${cls?" "+cls:""}" data-nopen="${esc(d)}" aria-label="${esc(lab)} ${esc(fmt(d))}，${xs.length} 件">
     <span class="nd-head"><span class="nd-num num">${+d.slice(8)}</span><span class="nd-lab"><b>${lab}</b><small>週${WD[pd(d).getDay()]}</small></span></span>
-    ${xs.length?`<span class="nd-list">${xs.slice(0,MAX).map(x=>{const n=dayNote(x,d);return `<span class="nd-row"><b>${esc(x.title)}</b>${n?`<small class="num">${esc(n)}</small>`:""}</span>`}).join("")}${xs.length>MAX?`<span class="nd-more num">+${xs.length-MAX}</span>`:""}</span>`
+    ${x?`<span class="nd-row"><b>${esc(x.title)}</b>${n?`<small class="num">${esc(n)}</small>`:""}</span><span class="nd-count num" aria-hidden="true">${xs.length}</span>`
       :`<span class="nd-empty" aria-hidden="true"><i></i></span>`}
   </button>`;
 }
@@ -97,8 +100,12 @@ const calWhen=x=>x.end?`${nmd(x.date)}–${nmd(x.end)}`:x.time?x.time+(x.etime&&
 const calPill=(c,x)=>c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);
 const calKind=(c,x)=>x.kind==="meet"?" line":x.kind==="act"||c.mode==="mine"?" pri":c.mode==="pres"?" acc":"";
 function calListHTML(c,r){
-  const d=c.day,xs=r.xs.filter(x=>covers(x,d));
-  const body=xs.length?xs.map(x=>`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div><div class="ce-n">${esc(x.title)}</div>
+  const d=c.day,xs=r.xs.filter(x=>covers(x,d)),ed=!c.pub&&canEdit();
+  /* 勾選：只有本部門看板上的時間（x.tid；別的部門、活動、會議沒有）而且有編輯權的人看得到框；已勾的留在清單裡、標題淡化加刪除線。勾＝清點「完成」同一個函式 notiDone */
+  const ck=x=>ed&&x.tid&&x.dept===(CFG.deptId||"rights");
+  const bkEv=x=>`<div class="cal-ev bk"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div><div class="ce-n">${esc(x.title)}</div>
+      <div class="ce-b"><span class="ce-pl">${esc(x.place)}</span><span class="ce-act">${x.act}</span></div></div>`;   /* 預約的列：右邊是按鈕（預約、取消；booking.js 組好、值都 esc 過），不放所屬膠囊 */
+  const body=xs.length?xs.map(x=>x.kind==="bk"?bkEv(x):`<div class="cal-ev"><div class="ce-t"><b class="num">${nmd(d)}</b><span class="num">${esc(calWhen(x))}</span></div>${ck(x)?`<div class="ce-n ck${x.done?" done":""}"><label class="fld-check"><input type="checkbox" data-calck="${esc(x.evId)}" data-caltid="${esc(x.tid)}"${x.done?" checked":""} aria-label="完成"></label><span>${esc(x.title)}</span></div>`:`<div class="ce-n${x.done?" done":""}">${esc(x.title)}</div>`}
       <div class="ce-b">${x.place?`<span class="ce-pl">${ico("pin","solo")}${esc(x.place)}</span>`:""}<span class="ce-k${calKind(c,x)}">${esc(calPill(c,x))}</span></div></div>`).join("")
     :r.loading?`<p class="cal-none">讀取中…</p>`:r.err?`<p class="cal-none">${esc(r.err)}</p>`:`<p class="cal-none num">${nmd(d)}</p>`;
   return `<div class="cal-list" data-callist="${esc(calKey(c))}" aria-live="polite">${body}</div>`;
@@ -126,6 +133,7 @@ function calKeys(c){
 }
 function calItems(c){
   let xs=!c.pub&&(c.mode==="mine"||c.mode==="pres"&&CFG.deptId==="president")?notiMine():[],loading=false,err="";
+  if(!c.pub&&c.mode==="pres")xs=xs.concat(bkItems());   /* 會長預約（booking.js）：開放時段與我的預約也是這個模式裡的事，標在月曆上、點日期看得到 */
   calKeys(c).forEach(k=>{const v=CAL_DATA.get(k);if(!v||v.loading)loading=true;else{if(v.err)err=err||v.err;xs=xs.concat(v.items)}});
   return {xs:xs.sort(byWhen),loading,err};
 }
@@ -136,6 +144,7 @@ function scopeItems(docs,kind){
     return {key:`scope:${e.id}`,date:d,end:ed&&ed>d?ed:"",time:s.slice(11,16),etime:en.slice(11,16),title:e.label||e.title||"（未命名）",place:e.place||"",ev:"",dept:e.deptId||"",kind}}).filter(x=>x.date);
 }
 function calLoad(c){
+  if(!c.pub&&c.mode==="pres"&&!c.find)bkEnsure();   /* 切到會長室：讀預約的開放時段與我的預約（booking.js；沒登入、不是新資料庫時什麼都不做） */
   calKeys(c).forEach(k=>{if(CAL_DATA.has(k))return;CAL_DATA.set(k,{loading:true});
     let p;
     if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
@@ -223,11 +232,11 @@ function calHTML(c){
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
     <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
       ${c.pub?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
-    <label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
+    ${c===NOTI?"":`<label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>`}
     <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
     <div class="pc">${posterHTML(c,r.xs,f&&f.byDay)}</div></div>
-    ${f?calFindHTML(c,f):calListHTML(c,r)}</section>`;
+    ${f?calFindHTML(c,f):calListHTML(c,r)}${!f&&!c.pub&&c.mode==="pres"?bkNoteHTML():""}</section>`;
 }
 /* 重畫一個行事曆（原位更新）。清單換了內容（calKey 不同）：舊的留一個分身原地淡出、新的一列一列浮上來 */
 const calHost=c=>c===NOTI?$("#notiPage"):c.host;
@@ -256,6 +265,8 @@ function calUnmount(host){
   c.host=null;c.pop=false;delete host._cal;delete host.dataset.calhost;host.replaceChildren();
 }
 function calDay(c,d){if(c.day===d)return;c.day=d;calPaint(c)}
+/* 跳到某一天（月份跟著換；預約的「下一個可預約時段」用） */
+function calJump(c,d){c.month=d.slice(0,7);c.day=d;c.pop=false;calLoad(c);calPaint(c);calHost(c)?.querySelector(".cal-list")?.scrollIntoView({block:"nearest",behavior:reduceMotion()?"auto":"smooth"})}
 /* 換月份：選到的日期換成那個月的今天（不是這個月就 1 號）；月曆從翻頁方向滑進來 */
 function calMonth(c,m){
   if(m===c.month){calPop(c,false);return}
@@ -282,13 +293,21 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-calmon]")){calPop(c,!c.pop);return}
   const ms=t.closest("[data-calset]");if(ms){calMonth(c,ms.dataset.calset);return}
   const dd=t.closest("[data-calday]");if(dd){calDay(c,dd.dataset.calday);return}
+  const gd=t.closest("[data-calgoday]");if(gd){calJump(c,gd.dataset.calgoday);return}
   const oth=t.closest("[data-caloth]");if(oth){calOth(c,oth.dataset.caloth);return}
   const qx=t.closest("[data-calqx]");if(qx){c.q="";host.querySelector("[data-calq]").value="";calQ(c,host);host.querySelector("[data-calq]").focus({preventScroll:true});return}
   const go=t.closest("[data-calgo]");if(go){calGo(c,go.dataset.calgo);return}
   if(t.closest("[data-calfind]")){calFindToggle(c);return}
   const fp=t.closest("[data-calfp]");if(fp){calFindPick(c,fp.dataset.calfp);return}
 });
-function calQ(c,host){const r=host.querySelector("[data-calres]"),x=host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+function calQ(c,host){const r=host.querySelector("[data-calres]"),x=c===NOTI?$("#calBarX"):host.querySelector("[data-calqx]");if(r)r.innerHTML=calResHTML(c);if(x)x.hidden=!c.q}
+/* 通知頁的搜尋列在固定區（shell.js 的 #dSearchCal）、不在卡片裡：輸入、清除、Esc 都在這裡接到 NOTI */
+function calBarSync(){const i=$("#calBarQ"),x=$("#calBarX");if(i&&i.value!==NOTI.q)i.value=NOTI.q;if(x)x.hidden=!NOTI.q}
+(()=>{const i=$("#calBarQ");if(!i)return;
+  i.addEventListener("input",()=>{NOTI.q=i.value;const h=$("#notiPage");if(h)calQ(NOTI,h)});
+  i.addEventListener("keydown",e=>{if(e.key!=="Escape"||!NOTI.q)return;e.preventDefault();e.stopImmediatePropagation();NOTI.q="";i.value="";const h=$("#notiPage");if(h)calQ(NOTI,h)},true);
+  $("#calBarX").addEventListener("click",e=>{e.preventDefault();NOTI.q="";i.value="";const h=$("#notiPage");if(h)calQ(NOTI,h);i.focus({preventScroll:true})});
+})();
 document.addEventListener("input",e=>{const i=e.target.closest&&e.target.closest("[data-calq]");if(!i)return;const host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c)return;c.q=i.value;calQ(c,host)});
 document.addEventListener("keydown",e=>{if(e.key!=="Escape"||!e.target.closest||!e.target.closest("[data-calq]"))return;const i=e.target,host=i.closest("[data-calhost]"),c=host&&host._cal;if(!c||!c.q)return;e.preventDefault();e.stopImmediatePropagation();c.q="";i.value="";calQ(c,host)},true);
 /* 月份選單：Esc 關（焦點回月份鈕）、上下左右鍵移動 */
@@ -398,17 +417,24 @@ let tlUndo=null;   /* {evId, tid, bid（核取行）, made（這次補的）} */
 const tmOf=(evId,tid)=>{const ev=state.events.find(e=>e.id===evId);return {ev,t:ev&&(ev.times||[]).find(y=>y.id===tid)}};
 const tlUndoOn=()=>!!(tlUndo&&canEdit()&&tmOf(tlUndo.evId,tlUndo.tid).t);
 const tlUndoHTML=()=>tlUndoOn()?`<div class="lc-save tl-undo"><span class="kp-st" role="status" data-st="ok">已完成</span><button type="button" class="lc-undo" data-tlundo>復原</button></div>`:"";
-async function notiDone(evId,tid){
+async function notiDone(evId,tid,on=true,cal=false){   /* on＝false：取消勾（行事曆的勾選框用，保留那一行）；cal＝從行事曆勾的，不出現清點的「復原」 */
   if(!canEdit())return false;
   let u=null;
   const ok=await settingSave(()=>{const {ev,t}=tmOf(evId,tid);if(!t)return false;
     let b=(ev.blocks||[]).find(x=>x.timeId===tid),made=false;
+    if(!on){if(!b||!b.check)return false;b.check=false;evTouch(ev);kpSync(ev);return}
     if(b){if(b.check)return false;b.check=true}
     else{if(ev.blocks.length>=StoreMap.BLK_MAX){toast(`這張卡片已經有 ${StoreMap.BLK_MAX} 行，沒辦法再補核取行，請先到卡片裡處理`);return false}
       b={id:uid("b"),text:t.label||"",check:true,timeId:tid};ev.blocks.push(b);made=true}
-    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},"已完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
-  tlUndo=ok&&u?u:null;renderNoti();return ok;
+    u={evId,tid,bid:b.id,made};evTouch(ev);kpSync(ev)},on?"已完成":"已取消完成");   /* kpSync＝desc 跟 blocks 對齊並 syncLink；只改 blocks、desc 沒跟上時，firestore 儲存會照舊的 desc 重建、把剛勾的還原 */
+  if(!cal)tlUndo=ok&&u?u:null;
+  renderNoti();return ok;
 }
+document.addEventListener("change",async e=>{
+  const i=e.target.closest&&e.target.closest("[data-calck]");if(!i)return;
+  i.disabled=true;const ok=await notiDone(i.dataset.calck,i.dataset.caltid,i.checked,true);
+  if(ok===false)renderNoti();   /* 沒寫成：框回到實際狀態（存檔失敗的原因由存檔本身提示） */
+});
 async function notiUndo(){
   const u=tlUndo;if(!u||!canEdit())return false;tlUndo=null;
   const {ev}=tmOf(u.evId,u.tid),b=ev&&ev.blocks.find(x=>x.id===u.bid);
@@ -495,6 +521,9 @@ function closeToday(instant){
   tdCardShow(card,false);   /* 收合期間卡片藏著（底板收到卡片的位置與圓角時換回卡片，看起來就是同一張；剩下的縮過頭、彈回由卡片接著播） */
   todayMorph(ov,card,true).then(tail=>{done();tdCardLand(card,tail)}).catch(done);
 }
+/* 網址帶 ?noti=pres（首頁下排的「預約會長」）：進看板後等登入與權限就緒，自動打開通知頁、行事曆切到會長室；只做一次 */
+let notiAuto=false;try{notiAuto=new URLSearchParams(location.search).get("noti")==="pres"}catch(_){}
+function notiAutoGo(){if(!notiAuto||notiOpen||deptRO()||!loggedIn())return;notiAuto=false;NOTI.mode="pres";openNoti()}
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */

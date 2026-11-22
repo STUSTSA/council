@@ -23,7 +23,7 @@ const uid=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const pad=n=>String(n).padStart(2,"0");
 const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const ym=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-const pd=s=>{const [y,m,d]=String(s).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
+const pd=s=>{const [y,m,d]=String(s).slice(0,10).split("-").map(Number);return new Date(y,(m||1)-1,d||1)};
 const today=()=>ymd(new Date());
 const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const nowStr=()=>{const d=new Date();return `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
@@ -62,3 +62,25 @@ function swReg(extra){
   };
   if(document.readyState==="complete")go();else addEventListener("load",go,{once:true});
 }
+
+/* 螢幕鍵盤（手機瀏覽器、已安裝的 App）：Android Chrome 預設鍵盤只縮小「可見區」、不縮版面，固定在底部的東西（主頁下排的加入連結列）會被鍵盤蓋住。
+   這裡用 visualViewport 量出鍵盤高度寫成 --kb（px，沒鍵盤＝0），固定在底部的元素把它加進 bottom（board.css 的 .hm-dock），隨鍵盤平順浮上來、收起時落回；
+   輸入框得到焦點時若被鍵盤蓋住，捲到畫面中間（逐行編輯等在頁面中間的輸入也一樣）。縮放中（scale≠1）不算鍵盤。 */
+(function kbTrack(){
+  const vv=window.visualViewport;if(!vv)return;
+  const root=document.documentElement;let kb=0,t=0;
+  const editable=el=>el&&(el.isContentEditable||(el.matches&&el.matches("input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=range]),textarea")));
+  const reveal=()=>{const a=document.activeElement;if(!editable(a)||kb<80)return;
+    const r=a.getBoundingClientRect();if(r.bottom>vv.height-12||r.top<8)a.scrollIntoView({block:"center",behavior:"smooth"})};
+  const upd=()=>{
+    const h=Math.max(0,Math.round(root.clientHeight-vv.height-vv.offsetTop));
+    const n=Math.abs(vv.scale-1)>.01||h<80?0:h;   /* 小於 80px 多半是網址列伸縮，不算鍵盤 */
+    if(n===kb)return;kb=n;root.style.setProperty("--kb",n+"px");
+    clearTimeout(t);t=setTimeout(reveal,120);
+  };
+  vv.addEventListener("resize",upd);vv.addEventListener("scroll",upd);
+  addEventListener("focusin",()=>{clearTimeout(t);t=setTimeout(reveal,320)});   /* 鍵盤還在升起：等它到位再看有沒有被蓋住 */
+})();
+
+/* 固定頂部區（.dtop）佔的高度（shell.js 量好寫進 --dtop-h）：捲動到某個元素時，要讓出這段 */
+function dtopH(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0}

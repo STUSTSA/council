@@ -1,9 +1,11 @@
-/* 核心｜會長預約，會長室端（06，docs/architecture/booking.md；設定檔 follow:true 的會長室看板、firestore 模式）
-   「會長室」分頁的一張卡片 #bkPanel：
-   - 管理者（calendars/president 的 managers）與總管理員看得到：待審申請（核准／拒絕）、已核准的預約（可退回）、開放時段（新增、刪除）。
-   - 還沒啟用（calendars/president 不存在）：總管理員看到「啟用」，按下去建立，管理者名單＝目前會長室的管理員（roles 裡 president 是 admin 的人）。
-   - 同學（有部門角色的人，規則 D6）：行事曆已啟用時，這張卡顯示「可預約時段」（開放時段裡還沒被鎖的 30 分鐘格）與「我的預約」（待審、已核准，可取消）；
-     按「預約」跳出表單：開始時間、時長（30 分鐘～2 小時）、事由。沒有部門角色的人整張不顯示。管理者與總管理員看管理畫面，不顯示申請區。
+/* 核心｜會長預約（06，docs/architecture/booking.md；firestore 模式）
+   同學申請的畫面在各部門看板「通知」頁的行事曆（2026-11-21 使用者）：行事曆切到「會長室」模式就出現預約——
+   - 開放時段（還有空格的）與我的預約（待審、已核准）當作這個模式裡的事（bkItems，notify.js 的 calItems 併進去）：月曆上標點，點日期看清單，清單的列右邊有「預約」「取消」；
+     月曆下面一小塊（bkNoteHTML）寫狀態：沒登入、還沒開放、沒有部門角色、讀取中、最近的開放時段（點了跳到那一天）、規則提醒。
+   - 預約表單（開始時間、時長 30 分鐘～2 小時、事由）與送出、取消沿用原本的流程；看到哪些時段、誰約了哪一格由規則與 booking-fs.js 決定，這裡不顯示別人的事由。
+   會長室看板「會長室」分頁的 #bkPanel 只給管理者（calendars/president 的 managers）與總管理員：待審申請（核准／拒絕）、已核准的預約（可退回）、開放時段（新增、刪除）；
+   還沒啟用時總管理員在這裡按「啟用」（管理者名單＝目前會長室的管理員）。其他人在那張卡只看到一行指路。
+   首頁下排的「預約會長」鈕（home.js）進你的部門看板、直接打開行事曆的會長室模式（網址 ?noti=pres，notify.js 的 notiAutoGo）。
    資料讀寫在 booking-fs.js（ES module，用到才載入）；授權由 Security Rules 判斷，這裡只管顯示。畫面插入的文字一律 esc。 */
 const BK={key:"",cal:undefined,wins:[],pend:[],appr:[],taken:new Set(),mine:[],busy:false,loading:false,err:"",html:null};
 const BK_OWNER="president";
@@ -11,11 +13,10 @@ const BK_ERR={taken:"這段時間已經被預約了，請選別的時間",confli
 const bkMod=()=>storeModLoad("booking-fs.js","board-booking-ready","BoardBooking");
 const bkMe=()=>acct.user&&acct.user.uid||"";
 const bkSuper=()=>typeof acctSuper==="function"&&acctSuper();
-/* 看得到這張卡：總管理員，或名單裡的管理者（未啟用時只有總管理員） */
+/* 管理者：總管理員，或名單裡的管理者（未啟用時只有總管理員） */
 const bkManager=()=>!!BK.cal&&(BK.cal.managers||[]).includes(bkMe());
 const bkMgr=()=>bkSuper()||bkManager();
 const bkCanReq=()=>!!(acct.roles&&Object.keys(acct.roles.depts||{}).length);   /* 規則 hasDeptRole：有部門角色的人才能申請（D6） */
-const bkSee=()=>CFG.follow&&fsMode()&&!!bkMe()&&(bkMgr()||(!!BK.cal&&bkCanReq()));
 /* 台灣時間顯示：11/24（二）10:00–11:00 */
 const BK_WD="日一二三四五六";
 function bkFmt(s,e){const t=new Date(s+8*36e5),u=new Date(e+8*36e5),p=n=>String(n).padStart(2,"0");
@@ -38,24 +39,38 @@ async function bkLoad(){
   }catch(e){console.error("會長預約讀取失敗",e);BK.err=e&&e.code==="permission-denied"?"沒有權限讀取預約":"讀取失敗，請稍後再試"}
   BK.loading=false;renderBooking(true);
 }
-/* 同學看到的：開放時段（每個時段一列，後面是還能預約的格數）＋我的預約 */
+/* 行事曆「會長室」模式用（notify.js）：同學（有部門角色、不是管理者）的開放時段與我的預約，各是一件事 */
 const bkFree=w=>{let n=0;for(let i=w.start/1800000;i<w.end/1800000;i++)if(!BK.taken.has(i)&&i*1800000>Date.now())n++;return n};
-function bkReqHTML(){
-  const b=BK.busy?" disabled":"",ws=BK.wins.filter(w=>w.end>Date.now());
-  const mine=BK.mine.map(x=>bkRow(bkFmt(x.start,x.end),`${x.status==="approved"?"已核准":"等會長確認"}：${x.topic}`,`<button type="button" class="icon" data-bk="cancel" data-id="${esc(x.id)}"${b}>取消</button>`)).join("");
-  return `<h3 class="bk-h">可預約時段<span class="num">${ws.length}</span></h3>`
-    +(ws.length?ws.map(w=>{const f=bkFree(w);return bkRow(bkFmt(w.start,w.end),f?`還有 ${f} 格（每格 30 分鐘）`:"已經約滿",f?`<button type="button" class="primary" data-bk="req" data-id="${esc(w.id)}"${b}>預約</button>`:"")}).join("")
-      :`<p class="sub bk-none">目前沒有開放的時段</p>`)
-    +`<h3 class="bk-h">我的預約<span class="num">${BK.mine.length}</span></h3>`+(mine||`<p class="sub bk-none">沒有</p>`)
-    +`<p class="sub bk-st bk-note">送出後會先佔住時段，等會長確認；一次最多 3 筆待審，每次最長 2 小時。</p>`;
+function bkItems(){
+  if(!bkMe()||!BK.cal||bkMgr()||!bkCanReq())return [];
+  const b=BK.busy?" disabled":"",f=ms=>StoreMap.fmtTaipei(ms,false),out=[];
+  const mk=(key,s,e,o)=>{const a=f(s),z=f(e),d=a.slice(0,10);out.push({key,date:d,end:z.slice(0,10)>d?z.slice(0,10):"",time:a.slice(11),etime:z.slice(11),dept:"president",kind:"bk",...o})};
+  BK.wins.filter(w=>w.end>Date.now()).forEach(w=>{const n=bkFree(w);
+    mk("bk:"+w.id,w.start,w.end,{title:"可預約會長",place:n?`還有 ${n} 格（每格 30 分鐘）`:"已經約滿",act:n?`<button type="button" class="primary" data-bk="req" data-id="${esc(w.id)}"${b}>預約</button>`:""})});
+  BK.mine.forEach(x=>mk("bk:"+x.id,x.start,x.end,{title:"我的預約："+x.topic,place:x.status==="approved"?"已核准":"等會長確認",act:`<button type="button" class="icon" data-bk="cancel" data-id="${esc(x.id)}"${b}>取消</button>`}));
+  return out;
+}
+/* 月曆下面的一小塊：狀態與提醒（不是新資料庫時整塊不出現） */
+function bkNoteHTML(){
+  if(!fsMode())return "";
+  const p=t=>`<div class="cal-bk"><p class="sub">${t}</p></div>`;
+  if(!bkMe())return p("要先登入才能預約會長。");
+  if(BK.err)return p(esc(BK.err));
+  if(BK.cal===undefined)return p("讀取預約中…");
+  if(!BK.cal)return p("會長預約還沒開放。");
+  if(bkMgr())return p(CFG.deptId==="president"?"你是會長室管理員：申請與開放時段在「會長室」分頁的「會長預約」處理。":`你是會長室管理員：待審申請 ${BK.pend.length} 筆，到<a href="index.html?d=president&amp;tab=ext">會長室</a>處理。`);
+  if(!bkCanReq())return p(acct.roles?"預約只開放給各部門的成員（部長、次長、部員）。請先申請加入你的部門，通過後這裡就能預約。":"讀取預約中…");
+  const w=BK.wins.filter(x=>x.end>Date.now()&&bkFree(x)).sort((a,b)=>a.start-b.start)[0];
+  return `<div class="cal-bk">${w?`<button type="button" class="icon" data-calgoday="${StoreMap.fmtTaipei(w.start,true)}">下一個可預約時段　${esc(bkFmt(w.start,w.end))}</button>`:`<p class="sub">目前沒有開放的時段。</p>`}
+    <p class="sub">送出後會先佔住時段，等會長確認；一次最多 3 筆待審，每次最長 2 小時。</p></div>`;
 }
 const bkRow=(t,sub,btns)=>`<div class="bk-row"><div class="bk-t"><b class="num">${esc(t)}</b>${sub?`<span class="sub">${esc(sub)}</span>`:""}</div><div class="bk-b">${btns}</div></div>`;
 function bkHTML(){
   if(BK.err)return `<p class="sub bk-st">${esc(BK.err)}</p>`;
   if(BK.cal===undefined)return `<p class="sub bk-st">讀取中…</p>`;
   if(!BK.cal)return bkSuper()?`<p class="sub bk-st">還沒啟用。啟用後，會長室的管理員（${esc(CFG.dept.adminTitle||"管理員")}）可以開放時段、處理預約。</p><button type="button" class="primary" data-bk="enable"${BK.busy?" disabled":""}>啟用會長預約</button>`
-    :`<p class="sub bk-st">還沒啟用，請總管理員啟用。</p>`;
-  if(!bkMgr())return bkReqHTML();
+    :`<p class="sub bk-st">會長預約還沒開放。會長室啟用、開出時段後，到你的部門行事曆的「會長室」模式就能預約。</p>`;
+  if(!bkMgr())return `<p class="sub bk-st">要預約會長，到你的部門看板：右上角鈴鐺 → 行事曆 → 切到「會長室」。</p>`;
   const sec=(h,n,body,empty)=>`<h3 class="bk-h">${h}<span class="num">${n}</span></h3>${n?body:`<p class="sub bk-none">${empty}</p>`}`;
   const b=BK.busy?" disabled":"";
   return sec("待審申請",BK.pend.length,BK.pend.map(x=>bkRow(bkFmt(x.start,x.end),`${bkName(x.requester)}：${x.topic}`,
@@ -65,15 +80,20 @@ function bkHTML(){
     +sec("開放時段",BK.wins.length,BK.wins.map(x=>bkRow(bkFmt(x.start,x.end),"",`<button type="button" class="icon" data-bk="wdel" data-id="${esc(x.id)}"${b}>刪除</button>`)).join(""),"還沒有開放時段，同學約不到")
     +`<div class="bk-foot"><button type="button" class="icon" data-bk="wadd"${b}>+ 新增開放時段</button></div>`;
 }
-/* 畫面：沒變就不重畫（render() 很常被呼叫）。登入者或總管理員身分變了就重新讀（角色比登入晚到：總管理員要在角色讀到後才讀得了預約） */
+/* 畫面：沒變就不重畫（render() 很常被呼叫）。登入者或總管理員身分變了就重新讀（角色比登入晚到：總管理員要在角色讀到後才讀得了預約）。
+   讀的時機：會長室看板的 #bkPanel 在畫面上，或通知頁的行事曆在「會長室」模式（bkEnsure）。讀完／處理完（force）順便重畫行事曆 */
 const bkKey=()=>`${bkMe()}|${bkSuper()}|${bkCanReq()}`;
+const bkCal=()=>typeof notiOpen!=="undefined"&&notiOpen&&NOTI.mode==="pres"&&!NOTI.find;
+function bkEnsure(){if(fsMode()&&bkMe()&&BK.key!==bkKey()&&!BK.loading){BK.key=bkKey();BK.cal=undefined;bkLoad()}}
 function renderBooking(force){
-  const p=$("#bkPanel");if(!p)return;
-  if(!CFG.follow||!fsMode()||!bkMe()){p.hidden=true;return}
-  if(BK.key!==bkKey()&&!BK.loading){BK.key=bkKey();BK.cal=undefined;bkLoad();return}
-  p.hidden=!bkSee();
-  if(p.hidden)return;
-  const h=bkHTML();if(h!==BK.html||force){BK.html=h;$("#bkBody").innerHTML=h}
+  const box=$("#bkPanel"),p=box&&CFG.follow&&fsMode()?box:null;   /* 這張卡只在會長室看板（follow）、新資料庫模式出現 */
+  if(box&&!p)box.hidden=true;
+  if(!(p||bkCal()))return;
+  if(p)p.hidden=false;
+  const paint=h=>{if(p&&(h!==BK.html||force)){BK.html=h;$("#bkBody").innerHTML=h}if(force&&bkCal())calPaint(NOTI)};
+  if(!bkMe())return paint(`<p class="sub bk-st">要先登入才能預約。按工具列的設定鈕，用 Google 登入。</p>`);
+  if(BK.key!==bkKey()&&!BK.loading){bkEnsure();return}
+  paint(bkHTML());
 }
 async function bkRun(fn,okMsg){
   if(BK.busy)return;BK.busy=true;renderBooking(true);
@@ -118,7 +138,7 @@ async function bkEnable(){
   },"已啟用會長預約");
 }
 document.addEventListener("click",async ev=>{
-  const t=ev.target.closest("#bkPanel [data-bk]");if(!t||t.disabled)return;
+  const t=ev.target.closest("[data-bk]");if(!t||t.disabled)return;
   const k=t.dataset.bk,id=t.dataset.id,B=()=>bkMod();
   if(k==="enable")return bkEnable();
   if(k==="wadd")return bkAddWindow();

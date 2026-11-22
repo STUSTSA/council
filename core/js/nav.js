@@ -11,7 +11,7 @@ const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
    設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
 let setOpen=false;
-const TABS=()=>[["live","即時回報","live"],["progress","進度","progress"],["done","完成紀錄","done"],["ext",CFG.ext,CFG.extIcon||"flag"]].filter(([k])=>secTab(k));
+const TABS=()=>[["live","即時回報","live"],["progress",ISS==="專案"?"專案":"進度","progress"],["done","完成紀錄","done"],["ext",CFG.ext,CFG.extIcon||"flag"]].filter(([k])=>secTab(k));
 /* 設定打開時，三個分頁都不亮；點任一個就關掉並回到那一區 */
 const tbActive=()=>setOpen?"":curSec;
 const RAIL_MQ=matchMedia("(min-width:900px)");
@@ -94,15 +94,15 @@ function renderTabbar(){
   let tb=$("#tabbar");
   if(!tb){
     tb=document.createElement("nav");tb.id="tabbar";tb.className="tabbar";tb.setAttribute("aria-label","主要功能");
-    tb.innerHTML=`<div class="tb-main"><span class="tb-lens" aria-hidden="true"></span><div class="tb-tabs" role="tablist"></div></div><button type="button" class="tb-gear" id="setBtn" aria-label="設定" aria-expanded="false">${ico("sliders","solo")}<span class="tb-due" aria-hidden="true"></span></button>`;weekDotSync();
+    tb.innerHTML=`<div class="tb-main"><span class="tb-lens" aria-hidden="true"></span><div class="tb-tabs" role="tablist"></div></div><button type="button" class="tb-gear" id="setBtn" aria-label="設定" aria-expanded="false">${ico("sliders","solo")}</button>`;weekDotSync();
     document.body.append(tb);setupTabbar(tb);
   }
   const tabs=TABS(),box=tb.querySelector(".tb-tabs"),sig=tabs.map(t=>t[0]).join();
-  if(box._sig!==sig){box._sig=sig;box.innerHTML=tabs.map(([k,t,ic])=>`<button type="button" class="tab" role="tab" data-tab="${k}" aria-label="${t}"><span class="tab-ind">${ico(ic,"solo")}</span><span class="tab-l">${t}</span></button>`).join("");lens.shown=false}
+  if(box._sig!==sig){box._sig=sig;box.innerHTML=tabs.map(([k,t,ic])=>`<button type="button" class="tab" role="tab" data-tab="${k}" aria-label="${t}"><span class="tab-ind">${ico(ic,"solo")}</span><span class="tab-l">${t}</span>${k==="done"?'<span class="tb-due" aria-hidden="true"></span>':""}</button>`).join("");lens.shown=false}
   const act=tbActive();
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
-  Anim.toggle(g,!roView);   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
+  Anim.toggle(g,!roView,{collapse:true});   /* 唯讀檢視（render.js 的 roView）：設定鍵不出現（DESIGN-next 第十四節）。沒有權限的單位照舊有設定鍵：要用它登入 */
   requestAnimationFrame(()=>lensTo(act));
   fabSync();
 }
@@ -198,15 +198,15 @@ const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
 /* 「外觀」：firestore 模式登入後在「帳號」合併頁裡；其他情況（舊的看板登入、沒登入、唯讀）是設定清單最後一列 */
 const lookSec=()=>setSec(setRow("look","sliders","外觀"));
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
-   登入前只有「每週概述」（週報本來就公開看）＋鎖頭 */
+   登入前只有鎖頭（每週報告在完成紀錄的週頁裡，本來就公開看） */
 function settingsInner(){
   if(storeSource()==="firestore"||(storeSource()==="frozen"&&FB_ON))return acctSettingsInner();   /* 02B：新資料庫的部門用 Google 登入（account.js）；02D D-a：凍結中的部門也是（總管理員從這裡匯入） */
   /* 登入前：只有標題與按鈕，標題下不放說明句（ui-08） */
-  if(!loggedIn())return setSec(setRow("week","doc","每週概述"))+(boardLocked()
+  if(!loggedIn())return (boardLocked()
     ?`<div class="set-gate"><b>${storeLocked()?"暫停編輯":"這是唯讀版"}</b></div>`
     :`<div class="set-gate"><button type="button" class="set-gate-ico" data-set-login aria-label="登入">${GATE_LOCK}</button><b>登入後才能使用設定</b><button type="button" class="primary" data-set-login>登入</button></div>`)+devSec()+lookSec();
-  if(readOnly())return setSec(setRow("week","doc","每週概述")+setRow("log","history","編輯紀錄"))+devSec()+lookSec();
-  return setSec(setRow("report","doc","報告")+setRow("log","history","編輯紀錄"))+
+  if(readOnly())return setSec(setRow("log","history","編輯紀錄"))+devSec()+lookSec();
+  return setSec(setRow("report","doc","工作報告")+setRow("log","history","編輯紀錄"))+
     setSec(setRow("team","people","人員")+
       setRow("labels","tag","標籤")+
       (termOwn()?setRow("term","calendar","學年與開學日"):""))+
@@ -260,7 +260,7 @@ function closeSettings(instant){
 let paneKey="",paneSeq=0,paneJob=null;
 const PANE_MQ=matchMedia("(min-width:900px)");
 const setEls=()=>{const b=$("#setOv .set-body");return b&&{body:b,sc:b.querySelector(".set-scroll"),pane:b.querySelector(".set-pane")}};
-function setPaneHost(){if(weekPaneEnd)return null;   /* 每週概述開著：生成週報等對話框跳出來，不畫到清單下面（weekly.js） */
+function setPaneHost(){
   if(subOpen)return $("#setSub .set-sub-body");const e=setEls();return setOpen&&paneKey&&e&&!e.pane.hidden?e.pane:null}
 /* ---------- 設定頁：手機版的下一層（全畫面子頁 #setSub） ----------
    手機（900px 以下）點了有下一層的項目：用換頁動畫進到子頁，表單畫在裡面（dlgOpen 經 setPaneHost 找到它，跟桌面右側面板同一套）；
@@ -305,7 +305,6 @@ function paneDismiss(all){
   const lg=$("#logOv"),hubOn=hubNow&&!hubNow.inFlow;
   if(hubNow&&(all||hubOn))hubNow.end();
   if(hubOn)return paneJob||Promise.resolve();
-  if(weekPaneEnd){weekPaneEnd();return paneJob||Promise.resolve()}   /* 每週概述（weekly.js 的 weekPane）：關掉就回到「報告」合併頁（或設定清單） */
   if(acctPanelEnd){acctPanelEnd(all);return paneJob||Promise.resolve()}   /* 帳號、系統管理的面板（account.js）：一次收一層，all＝全部；面板裡開著的表單由 acctPanel 收掉時一起取消 */
   if(lg&&!lg.hidden&&lg.classList.contains("in-pane"))closeLog();
   else dlgPaneCancel();   /* 面板就是表單（名稱、看板名稱、身分與專員、標籤…）：當成取消（dialog.js） */
@@ -374,10 +373,6 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
 const hubSt=rows=>rows.length?`<div class="acct-me">${rows.map(([k,v])=>`<div class="acct-person"><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join("")}</div>`:"";
 const remName=()=>{const rem=remRead();return rem&&(state.members.find(m=>m.id===rem.id)||{}).name||""};
 const SET_HUBS={
-  /* 報告：每週概述（在同一個面板打開，返回回到這一頁；weekly.js 的 weekPane）與工作報告 */
-  report:()=>hubRun("報告",()=>[
-    {k:"week",ic:"doc",t:"每週概述",flow:()=>weekPane()},
-    {k:"report",ic:"doc",t:"工作報告",flow:()=>reportDialog()}]),
   backup:()=>hubRun("備份",()=>[
     {k:"export",ic:"download",t:"匯出備份",act:()=>exportBackup()},
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
@@ -405,7 +400,7 @@ const SET_HUBS={
 };
 /* 有下一層的項目（桌面版放右側面板、手機進子頁） */
 const SET_FLOWS={
-  week:()=>weekPane(),
+  report:()=>reportDialog(),
   log:()=>openLog(setPaneHost()),
   team:()=>teamSettings(),
   labels:()=>labelSettings(),
@@ -417,7 +412,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#setOv [data-set-login]")){if(await ensureLogin()){renderSettings();render()}return}   /* 登入後看板上的「編輯」鈕才出現（body.authed） */
   const r=e.target.closest("#setOv [data-set]");if(!r)return;
   const k=r.dataset.set;
-  if(r.getAttribute("aria-disabled")==="true"||(k!=="week"&&k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「每週概述」「外觀」不用登入；帳號、系統管理看 Google 登入（account.js） */
+  if(r.getAttribute("aria-disabled")==="true"||(k!=="device"&&k!=="look"&&!ACCT_FLOWS[k]&&!loggedIn())||!SET_FLOWS[k])return;   /* 登入前、唯讀時清單上的「外觀」不用登入；帳號、系統管理看 Google 登入（account.js） */
   if(!PANE_MQ.matches){await subRun(SET_FLOWS[k]);return}   /* 手機：進到下一層全畫面子頁 */
   if(k===paneKey){await paneClose();return}   /* 再點一次選到的項目＝收起 */
   await paneRun(k,SET_FLOWS[k]);
@@ -447,7 +442,9 @@ function elastic(sc,inner){
   },{passive:true});
   sc.addEventListener("touchstart",e=>{if(e.touches.length!==1)return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
   sc.addEventListener("touchmove",e=>{
-    if(y0===null)return;const y=e.touches[0].clientY,dy=y-y0;
+    if(y0===null)return;
+    if(document.documentElement.classList.contains("ev-drag-on")){if(off)set(0);return}   /* 膠囊拖到角落（live.js）時手指的上下移動是拖曳，不是拉頁面：不回彈，不然整頁會被拉走、頁面多出一個疊層把完成／刪除角落蓋住 */
+    const y=e.touches[0].clientY,dy=y-y0;
     /* 先判斷方向：橫向的手勢（例如左右滑甘特圖）整段都不管，不然頁面剛好在頂端／底端時會把橫向捲動擋掉 */
     if(!axis){const dx=e.touches[0].clientX-x0;if(Math.max(Math.abs(dx),Math.abs(dy))<6)return;axis=Math.abs(dx)>Math.abs(dy)?"x":"y"}
     if(axis==="x")return;

@@ -68,8 +68,9 @@ for(const [w,touch] of [[412,true],[1300,false]]){const {b,mk,login,st}=await c.
   await p.click(dbtn);await p.waitForTimeout(700);
   {const s=await S(p);ok(s.cardEdit===`e:${did}`&&await vis(p,'.sec-edit .evfs')>=1,`${w} 完成紀錄按「編輯」：進入逐欄編輯`);}
   await p.click('.sec-edit [data-edcancel]');await p.waitForTimeout(700);
-  /* 週報頁：登入就有新增、編輯 */
-  ok(await p.evaluate(()=>[...document.querySelectorAll('#addWeek,[data-editweek]')].filter(e=>getComputedStyle(e).display!=='none').length)>=2,`${w} 週報：登入就有新增、編輯`);
+  /* 每週報告（完成紀錄的週頁）：登入就有新增、編輯 */
+  await p.evaluate(()=>{setSection('done',{instant:true});doneWeekShow(wkStart(state.weeks[0].date),{instant:true})});await p.waitForTimeout(600);
+  ok(await p.evaluate(()=>[...document.querySelectorAll('[data-addweek],[data-editweek]')].filter(e=>getComputedStyle(e).display!=='none').length)>=2,`${w} 每週報告：登入就有新增、編輯`);
   ok(!p.errs.length,`${w} 沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);await b.close();
 }
 console.log(fails?`失敗 ${fails} 項（通過 ${passes}）`:`全部通過（${passes} 項）`);process.exit(fails?1:0);

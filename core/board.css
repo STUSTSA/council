@@ -36,10 +36,10 @@ html{height:100%;-webkit-tap-highlight-color:transparent}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
 h1{margin:0;font-size:clamp(26px,3.2vw,38px);font-weight:400;letter-spacing:.08em;line-height:1.2}
-button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:6px 16px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
+button{font:inherit;cursor:pointer;border:1px solid var(--hair);background:transparent;color:var(--ink);min-height:36px;border-radius:999px;padding:6.35px 16px 5.65px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;line-height:1.2}
 button.primary{background:var(--teal);border-color:var(--teal);color:var(--onteal)}   /* 按鈕：一般＝外框（次要動作，--hair）；primary＝主要動作的實心（--pri）；被指到放大、按下縮回，沒有光暈 */
 button.ghost{border-style:dashed;color:var(--muted)}
-button.icon{min-height:30px;font-size:13px;padding:3px 12px}
+button.icon{min-height:30px;font-size:13px;padding:3.4px 12px 2.6px}
 button.danger{color:var(--warn)}
 button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 input{font:inherit;color:var(--ink);background:var(--blk2);border:1px solid transparent;padding:6px 10px;width:100%;border-radius:var(--r-sm);-webkit-user-select:text;user-select:text}
@@ -52,7 +52,7 @@ dialog label{font-size:12.5px;color:var(--muted);display:grid;gap:4px}
 /* ===== 區塊標題（DESIGN-next 第四節；ui-09 全站統一） =====
    英文小標在上（Jost 10.5px、字距 .22em、次要色），下面是標題（700、加字距）；不畫細線、箭頭。英文寫在 data-en，用 ::before 畫（標題元素的文字不變）。
    用在：各區的標題（.panel-head 裡的 h2：即時回報、進度、完成紀錄、會長室與秘書處的面板）、通知頁（逾期、行事曆）、
-   設定的面板標題（合併頁、帳號面板、面板裡的表單、編輯紀錄、每週概述；dialog.js 的 panelHead）、工作報告預覽。
+   設定的面板標題（合併頁、帳號面板、面板裡的表單、編輯紀錄；dialog.js 的 panelHead）、工作報告預覽。
    標題後面的數字膠囊（完成紀錄的 .count）跟標題同一行 */
 .sec-h{display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;row-gap:3px;margin:0;padding:0;min-width:0;font-size:clamp(20px,2.2vw,24px);font-weight:700;letter-spacing:.08em;line-height:1.2;overflow-wrap:anywhere}
 .sec-h[data-en]::before{content:attr(data-en);flex:0 0 100%;font-family:"Jost",sans-serif;font-size:10.5px;font-weight:400;letter-spacing:.22em;line-height:1.5;color:var(--muted)}
@@ -92,7 +92,6 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .card-edbar{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--hair);width:100%;animation:fadeSlide .4s var(--ease) both}
 
 /* ===== 共用：多個元件一起設定的效果 ===== */
-.add-row,.dlg-actions button,.week-tools button{padding-top:5.5px;padding-bottom:6.5px}
 /* 進度色調（議題卡片、甘特圖）：--tone 給線條與色塊，--tone-ink 給文字（不叫 --acc：--acc 是主題的「選中」色） */
 [data-tone="hi"]{--tone:var(--prog-hi);--tone-ink:var(--prog-hi-ink)}
 [data-tone="lo"]{--tone:var(--prog-lo);--tone-ink:var(--prog-lo-ink)}
@@ -102,7 +101,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .anim-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1.5px solid var(--ink);padding-bottom:18px}   /* 按鈕跟分隔線至少留 18px（使用者不喜歡按鈕貼著線） */
 .anim-title{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}   /* 標題是 .sec-h（區塊標題段）；後面的頁數跟標題底對齊 */
 .anim-ctl{display:flex;gap:8px}
-/* 每週概述的膠囊滑過去放大一點（即時回報膠囊的同一組效果在「即時回報」段） */
+/* 每週報告的膠囊滑過去放大一點（即時回報膠囊的同一組效果在「即時回報」段） */
 @media (hover:hover){
   .week:hover{transform:scale(1.015);z-index:1;position:relative}
 }
@@ -119,14 +118,14 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
   ::-webkit-scrollbar{display:none}
 }
 
-/* ===== 頁面：主頁（每週概述 2026-11-06 起改在設定裡，pager 只剩主頁一頁） ===== */
+/* ===== 頁面：主頁（pager 只剩主頁一頁；每週報告在完成紀錄的週頁裡） ===== */
 .pager{display:flex;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:thin}
 .page{flex:none;height:100%;overflow-x:hidden;overflow-y:auto;scroll-snap-align:start;scrollbar-gutter:stable}   /* 不橫向捲動：手機換分頁時左右滑進滑出的內容超出畫面也不會撐出橫捲 */
 .page-main{width:100vw}
-.wrap{max-width:1500px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
+.wrap{--wrap-pt:calc(20px + env(safe-area-inset-top));max-width:1500px;margin:0 auto;padding:var(--wrap-pt) max(16px,env(safe-area-inset-right)) calc(20px + var(--bar-in) + var(--fab-in) + env(safe-area-inset-bottom)) calc(var(--rail-in) + max(16px,env(safe-area-inset-left)))}
 .pager::-webkit-scrollbar{display:none}
 @media (max-width:640px){
-  .wrap{padding-top:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
+  .wrap{--wrap-pt:calc(14px + env(safe-area-inset-top));padding-right:max(14px,env(safe-area-inset-right));padding-left:max(14px,env(safe-area-inset-left))}
 }
 @supports selector(::-webkit-scrollbar){
   .pager{scrollbar-width:auto}
@@ -141,8 +140,20 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 /* ===== 部門標題列（shell.js 的 .dhead；DESIGN-next 第六節「部門內」、第十四節） =====
    首頁鍵、部門標誌（dept/icons 的學生會標誌，藍黃不跟主題）、英文小標（Jost 10.5px、字距 .22em）與部門名（700 加字距）、
    （沒有權限）外框「唯讀」標籤、（可編輯的單位）眼睛鈕、通知鈕（紅色數字＝逾期）。圓鈕是平面色塊（--blk），被指到放大、按下縮回（一般按鈕的規則）。
-   標題列跟著頁面捲動；換分頁不重建。深色只靠變數 */
-.dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0 0 18px;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+   標題列（連同下面的搜尋列）固定在畫面最上面（.dtop，ui-15）：往下捲時內容從它下面滑過，下緣用一段底色漸層淡出，不畫線、不加陰影；
+   平常捲到最上面時位置跟以前一樣。換分頁不重建。深色只靠變數 */
+/* 固定在畫面最上面（ui-15）：標題列（.dtop）與搜尋列（.dsrow，shell.js）各自黏住，底色蓋住從下面滑過的內容；往上多出的 --wrap-pt 內距在黏住時捲到畫面外，
+   只留 8px＋瀏海／狀態列安全區，固定區不吃多餘的高度。標題列左右各多 12px 讓圓鈕的柔光陰影、聚焦框不被切掉；標題列與搜尋列的間距（--dgap）算在標題列的底內距裡。
+   下緣的淡出（.dsrow 的 ::after）接在搜尋列的下邊距上（.dsearch 下邊距會穿出 .dsrow），所以捲到最上面時看不到；搜尋列藏起來（別的分頁）時 .dsrow 是空的、高度 0，淡出就接在標題列下緣。
+   搜尋列分兩塊是為了桌面即時回報分欄：搜尋列只佔左欄寬，右邊詳情卡往上延伸到搜尋列那一行（見「左右兩欄」），那一塊不能有底色。
+   --dhd-h＝標題列固定時佔的高度、--dtop-h＝標題列加搜尋列（shell.js 量）：黏在下面的卡片（.lc-pane）、捲動定位（scroll-padding）、卡片高度都用 */
+:is(.dtop,.dsrow){--dtop-x:12px}
+.dtop{--dgap:18px;position:sticky;top:calc(8px + env(safe-area-inset-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) var(--dgap);background:var(--bg)}
+.dsrow{position:sticky;top:var(--dhd-h,64px);z-index:31;margin:0 calc(-1 * var(--dtop-x));padding:0 var(--dtop-x);background:var(--bg)}
+.dsrow::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
+.page-main{scroll-padding-top:var(--dtop-h,0px)}
+@media print{:is(.dtop,.dsrow){position:static}.dsrow::after{display:none}}
+.dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .dh-btn{position:relative;flex:none;display:grid;place-items:center;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-decoration:none;transition:transform .22s var(--ease),background-color .2s,color .2s}
 /* 被指到放大、按下縮回：首頁鍵是 <a>，一般按鈕（button）的規則套不到，這裡三顆統一寫（只有能 hover 的裝置才放大） */
 @media (hover:hover){.dh-btn:hover{transform:scale(1.05)}}
@@ -153,6 +164,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .dh-btn[hidden]{display:none}
 /* 設定開著時（設定層 z-index 38、手機子頁 39，從標題列下緣開始蓋）：標題列疊在設定層上面，柔光主題圓鈕往下畫的陰影、聚焦框不被設定層的底色蓋掉（ui-10 C）。
    標題列跟設定層不重疊，其他主題畫面不變；只在設定開著時抬高（今日層 .td-ov 也是 39、要蓋過標題列） */
+body.set-open :is(.dtop,.dsrow){position:static}   /* 設定開著時頁面鎖在最上面：固定區改回一般排版，才不會把標題列框成自己的層、蓋不過設定層 */
 body.set-open .dhead{position:relative;z-index:40}
 .dh-eye.on,.noti-btn[aria-pressed="true"]{background:var(--ink);color:var(--blk)}   /* 唯讀檢視中、在通知與行事曆那一頁：實心 */
 .dh-logo{flex:none;display:block;width:46px;height:46px;margin-left:2px;pointer-events:none}
@@ -162,7 +174,7 @@ body.set-open .dhead{position:relative;z-index:40}
 .dh-en[hidden]{display:none}
 .dh-name b{font-size:19px;font-weight:700;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 唯讀：外框標籤（次要，不是按鈕，不放大） */
-.dh-ro{flex:none;display:inline-flex;align-items:center;height:26px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 32%,transparent);font-size:12.5px;letter-spacing:.14em;line-height:1;white-space:nowrap}
+.dh-ro{flex:none;display:inline-block;padding:calc((26px - 1cap)/2 + .05em) calc(12px - .14em) calc((26px - 1cap)/2 - .05em) 12px;border-radius:999px;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ink) 32%,transparent);font-size:12.5px;letter-spacing:.14em;line-height:1;white-space:nowrap;text-box:trim-both cap alphabetic}   /* 字置中（對字型不敏感）：文字框裁到大寫高度，上下內距用 1cap 算，高度 26px；「唯讀」兩字的墨跡中心比大寫高度中心高約 .05em，往下補；letter-spacing 尾端多出的 .14em 從右內距扣回 */
 .dh-ro[hidden]{display:none}
 .dh-st{display:contents}
 .dh-sp{flex:1;min-width:0}
@@ -175,21 +187,26 @@ body.set-open .dhead{position:relative;z-index:40}
 .offline-pill .live-dot{width:7px;height:7px}
 @media print{.dh-btn{display:none}}
 @media (max-width:640px){
-  .dhead{gap:10px;margin-bottom:14px;padding-top:0}
+  .dhead{gap:10px;padding-top:0}
+  .dtop{--dgap:14px}
   .dh-logo{width:40px;height:40px;margin-left:0}
   .dh-name b{font-size:18px}
-  .dh-ro{padding:0 10px}
+  .dh-ro{padding-inline:10px calc(10px - .14em)}
 }
+@supports not (text-box:trim-both cap alphabetic){.dh-ro{display:inline-flex;align-items:center;height:26px;padding:2px calc(12px - .14em) 0 12px}@media (max-width:640px){.dh-ro{padding:2px calc(10px - .14em) 0 10px}}}   /* 後備（Firefox、舊 Safari 沒有 text-box）：照字型量出的內距 */
 
 /* ===== 部門搜尋列與結果（search.js；DESIGN-next 第六節「部門內」） =====
    標題列下面、高 50 的膠囊（平面色塊 --blk），只在即時回報、進度、完成紀錄三頁。聚焦框用 outline（不跟 --blk-sh 串在 box-shadow 裡）。
    有輸入時 body.searching：看板內容（.layout）藏起來，換成分區的結果清單（#boardRes）：區名（英文小標＋700）＋件數，每一筆是一顆膠囊 */
-.dsearch{display:flex;align-items:center;gap:10px;height:50px;margin:0 0 18px;padding:0 8px 0 18px;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--muted);cursor:text;-webkit-user-select:none;user-select:none}
+.dsearch{display:flex;align-items:center;gap:10px;height:50px;margin:0 0 18px;padding:0 8px 0 18px;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--muted);cursor:text;-webkit-user-select:none;user-select:none;outline:1.5px solid transparent;outline-offset:-1.5px;transition:outline-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .dsearch[hidden]{display:none}
-.dsearch:focus-within{outline:1.5px solid var(--ink);outline-offset:-1.5px}
-.ds-ico{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+/* 聚焦過渡（手機、桌面一樣）：外框從透明漸現成 ink、整條略放大 1.015（回彈）、放大鏡轉 90° 並變 ink 色、提示字淡開；失焦反向。時間、曲線用 --mo-*；減少動態由檔案開頭的全域規則關掉 */
+.dsearch:focus-within{outline-color:var(--ink);color:var(--ink);transform:scale(1.015)}
+.ds-ico{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;transition:transform var(--mo-base) var(--mo-spring)}
+.dsearch:focus-within .ds-ico{transform:rotate(90deg) scale(1.08)}
 .dsearch input{flex:1;min-width:0;height:100%;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font-size:15px;outline:none;-webkit-appearance:none;appearance:none}
-.dsearch input::placeholder{color:var(--muted);opacity:1}
+.dsearch input::placeholder{color:var(--muted);opacity:1;transition:opacity var(--mo-base) var(--mo-out)}
+.dsearch input:focus::placeholder{opacity:.5}
 .dsearch input:focus,.dsearch input:focus-visible{outline:none}
 .ds-x{flex:none;display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--bg);color:var(--ink)}
 .ds-x[hidden]{display:none}
@@ -226,7 +243,7 @@ body.searching .layout{display:none}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px 18px;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;border:0;box-shadow:var(--blk-sh)}   /* 區塊：平面色塊（沒有細框） */
 .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:nowrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .panel-head>.sec-h{flex:1}   /* 標題佔掉剩下的寬，右邊的按鈕靠右（以前是全站 h2 的 flex:1；ui-09 審查） */
-.count{font-size:12px;border-radius:999px;padding:1px 8px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.count{font-size:12px;border-radius:999px;padding:1.25px 8px .75px;margin-left:6px;border:0;background:var(--blk2);color:var(--ink);font-family:"Jost",sans-serif;letter-spacing:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 新增鈕（+ 新增議題、+ 新增文件、+ 追蹤項目；即時回報 2026-11-17 起是右下角的浮動圓鈕）：2026-11-06 使用者：平常檢視太明顯，不常用。
    低調的小字：沒有框、灰字 13px、靠左，滑過／按下才變文字色 */
 button.add-row{justify-self:start;align-self:start;justify-content:flex-start;align-items:center;gap:4px;width:auto;min-height:32px;margin-top:10px;padding:0 10px 0 4px!important;border-color:transparent;border-radius:999px;background:none;color:var(--muted);font-size:13px;letter-spacing:.04em;box-shadow:none}
@@ -270,7 +287,7 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    寬螢幕沒打開卡片時排成格；打開時左邊一欄膠囊、右邊卡片（.split）。全螢幕卡片從哪一顆長出去，那一顆留著位置但看不到（.away） */
 .ev-list .cps{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
 .cps .sepr{grid-column:1/-1;height:1px;margin:8px 0;background:color-mix(in srgb,var(--ink) 22%,transparent)}
-.cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:0 20px;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
+.cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:1.2px 20px 0;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
 @media (hover:hover){.cp:hover{transform:scale(1.025)}}
 .cp:active{transform:scale(.97)}
 .cp b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -283,17 +300,17 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .cp.done.new{animation:doneIn .9s var(--ease) both}
 @media (prefers-reduced-motion:reduce){.cp:hover,.cp:active{transform:none}}
 /* 拖著的那顆（跟著指標，見「拖到角落」）、拖到另一顆上＝換位置的那一顆（縮一點、細框）；放在本小節最後：蓋過滑過的放大與 .sel 的框 */
-.cp.drag{z-index:30;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.28)/* 例外：陰影黑 */;transition:background-color .22s var(--mo-out)}
+.cp.drag{z-index:33;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.28)/* 例外：陰影黑 */;transition:background-color .22s var(--mo-out)}
 .cp.over{transform:scale(.96);box-shadow:inset 0 0 0 2px var(--acc2)}
 /* --- 卡片外框（live.js 的 lcFrame；即時回報、完成紀錄共用） ---
    第一排：（全螢幕時）返回鍵、燈號、名稱、編輯次數的小膠囊；第二排：上一張／下一張（實心三角的外框膠囊）、報告；第三排：狀態、負責人、時間；
    內容、儲存回饋、底部工具列（編輯權限才有）。寬螢幕在右邊（.lc-pane，黏在上面、內容自己捲動）；其他全螢幕（.lc.full，在 #lcFull）。
    卡片裡的排法看卡片自己的寬度（@container lc） */
-.lc-pane{position:sticky;top:12px;min-width:0}
+.lc-pane{position:sticky;top:calc(var(--dtop-h,150px) + 12px);min-width:0}   /* 黏在固定頂部區（.dtop）下面 */
 .lc{--pad:24px;position:relative;display:flex;flex-direction:column;min-height:340px;padding:22px var(--pad) 0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);container:lc/inline-size}
 .lc.ro{min-height:0;padding-bottom:16px}
-.lc-pane .lc{max-height:calc(100dvh - 150px)}
-.lc-pane .lc:not(.ro){height:calc(100dvh - 250px);min-height:340px}   /* 可編輯的詳情卡高度跟著視窗（上面標題與搜尋列約 224px）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
+.lc-pane .lc{max-height:calc(100dvh - var(--dtop-h,150px) - 24px)}
+.lc-pane .lc:not(.ro){height:calc(100dvh - var(--dtop-h,150px) - 56px);min-height:340px}   /* 可編輯的詳情卡高度跟著視窗（上面固定的標題列與搜尋列＝--dtop-h）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
 .lc-in{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
 .lc-head{display:flex;align-items:center;gap:10px;min-height:40px}
 .lc-head .live-dot{width:10px;height:10px}
@@ -315,7 +332,7 @@ input.lc-title:focus{outline:none}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
-.lc-meta .ev-st,.lc-tag{height:26px;padding:0 12px;border-radius:999px;line-height:1}
+.lc-meta .ev-st,.lc-tag{height:26px;padding:2px 12px 0;border-radius:999px;line-height:1}
 .lc-tag{display:inline-flex;align-items:center;background:var(--blk2);color:var(--ink)}
 .lc-meta .lbl-row{margin:0}
 .lc-body{flex:1;min-height:0;display:grid;align-content:start;gap:4px;padding:0 8px 10px;margin:0 -8px}
@@ -381,7 +398,7 @@ button.ln-empty{cursor:text}
 .ln.tm span.tx{padding:0}
 .tmc{flex:none;font-size:13px;line-height:1.5;color:var(--muted);white-space:nowrap}
 .tmc.late{color:var(--late)}
-button.tmc{display:inline-flex;align-items:center;height:26px;min-height:26px;padding:0 11px;border:0;border-radius:999px;background:var(--bg);color:var(--ink)}
+button.tmc{display:inline-flex;align-items:center;height:26px;min-height:26px;padding:0 11px 1px;border:0;border-radius:999px;background:var(--bg);color:var(--ink)}
 button.tmc.late{color:var(--late)}
 /* 超連結：檢視是膠囊（.lnks）；編輯中一組兩欄（按鈕名稱、網址）＋刪除 */
 .lnks{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -398,7 +415,7 @@ a.lnk{display:inline-flex;align-items:center;height:32px;padding:0 14px;border-r
    人、時間、地點那一頁打開時那顆放大、其他變淡 --- */
 .lc-tools{position:relative;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 calc(-1*var(--pad));padding:14px var(--pad) 18px;border-top:1px solid var(--hair);border-radius:0 0 var(--r-lg) var(--r-lg);background:var(--blk)}
 .lc.full .lc-tools{border-radius:0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:0 17px 0 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
+.lc-pa{display:flex;align-items:center;gap:10px;max-width:46%;height:42px;min-height:42px;padding:1.9px 17px 1.1px 18px;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);font-size:14px;font-weight:500}
 .lc-pa span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lc-pa svg{flex:none;width:10px;height:10px;fill:currentColor;transition:transform var(--mo-base) var(--mo-spring)}
 .lc-pa[aria-expanded="true"] svg{transform:rotate(180deg)}
@@ -438,9 +455,10 @@ button.te-pl.plus{min-width:70px;justify-content:center;font-size:18px}
 .te-add{min-width:84px;height:36px;min-height:36px;margin-top:14px;padding:0 16px;border:1.5px dashed var(--ink);font-size:17px;line-height:1}
 .te-iss{font-size:13px}
 /* --- 拖到角落（live.js 的「拖到角落」）：拖著的膠囊跟著指標、越靠近哪一角就往那角歪、染上那角的顏色（左上刪除 --late、右上完成 --ok）；
-   碰到角落時角落放大；拖到另一顆上＝那一顆縮一點、細框（換位置；膠囊本身的 .cp.drag／.cp.over 在「膠囊清單」小節）。完成時的光暈與彩帶（.fete）是規格明寫的慶祝，例外允許 --- */
+   碰到角落時角落放大；拖到另一顆上＝那一顆縮一點、細框（換位置；膠囊本身的 .cp.drag／.cp.over 在「膠囊清單」小節）。完成時的光暈與彩帶（.fete）是規格明寫的慶祝，例外允許。
+   層級：兩個角落（.lz，32）與拖著的膠囊（.cp.drag，33）要高過固定頂部區（.dtop／.dsrow，31），拖到上方才看得到角落、卡片也不會鑽到標題列底色下面 --- */
 html.ev-drag-on,html.ev-drag-on *{-webkit-user-select:none;user-select:none;cursor:grabbing}
-.lz{position:fixed;top:0;z-index:20;display:grid;width:min(200px,38vw);aspect-ratio:1;color:var(--lite);pointer-events:none;opacity:0;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
+.lz{position:fixed;top:0;z-index:32;display:grid;width:min(200px,38vw);aspect-ratio:1;color:var(--lite);pointer-events:none;opacity:0;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-base) var(--mo-spring)}
 .lz.show{opacity:calc(.14 + var(--k,0)*.86)}
 .lz.del{left:0;place-items:start;padding:26px 0 0 26px;border-radius:0 0 100% 0;background:var(--late);transform-origin:0 0}
 .lz.ok{right:0;place-items:start end;padding:26px 26px 0 0;border-radius:0 0 0 100%;background:var(--ok);transform-origin:100% 0}
@@ -515,11 +533,16 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 左右兩欄（寬螢幕、打開一張時；live.js 的 lvWide）：左邊一欄膠囊、右邊卡片（.lc-pane，見「卡片外框」）。完成紀錄（#doneMD）共用 --- */
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
+/* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
+.wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
+#liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px))}
+#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
+#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
 .kid-list{display:flex;flex-wrap:wrap;gap:6px}
-.kid-ev{display:inline-flex;align-items:center;gap:7px;background:var(--bg);color:var(--ink);border-radius:999px;padding:3px 12px 3px 10px;font-size:13px}
+.kid-ev{display:inline-flex;align-items:center;gap:7px;background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px 2px 10px;font-size:13px}
 .kid-ev .live-dot{width:7px;height:7px}
 
 /* ===== 逐欄編輯（進度、完成紀錄、秘書處會議卡；views.js 的 fldRowHTML／evFieldsHTML／issueFieldsHTML／doneFieldsHTML；即時回報卡是原位編輯，在「即時回報」段） =====
@@ -580,7 +603,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
    編輯中：一個文件一列（膠囊＋小字網址＋修改／上下移／刪除），列與列之間細線 */
 .docs{display:flex;flex-wrap:wrap;gap:10px}
 .docs .empty{margin:0}
-.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px 0 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
+.doc-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:2.2px 16px 1.3px 14px;border:1px solid transparent;background:var(--blk2);border-radius:999px;color:var(--ink);text-decoration:none;font-size:14px;transition:background-color .2s,color .2s,scale .4s var(--mo-spring)}
 .doc-pill .ico{font-size:16px;flex:none}
 .doc-pill b{font-weight:500;overflow-wrap:anywhere}
 .doc-go{font-size:13px;color:var(--muted);transition:transform .35s var(--mo-spring),color .2s}
@@ -595,11 +618,11 @@ a.doc-pill:active{scale:.96}
 .docs-panel[hidden]{display:none}
 
 /* ===== 追蹤（會長室） ===== */
-/* 一筆一張：寬的時候兩欄、只有一筆時佔滿整列（auto-fit），每張上方細線；時程用細刻度（.tk，views.js 的 ticksHTML） */
+/* 一筆一張：寬的時候兩欄、只有一筆時佔滿整列（auto-fit），每張是圓角色塊；時程用細刻度（.tk，views.js 的 ticksHTML） */
 .follow-panel[hidden]{display:none}
-.follows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:0 28px}
+.follows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:10px}
 .follows .empty{grid-column:1/-1}
-.fw{display:grid;gap:6px;align-content:start;padding:14px 0 16px;border-top:1px solid var(--hair);min-width:0}
+.fw{display:grid;gap:6px;align-content:start;padding:14px 16px 16px;border-radius:var(--r-lg);background:var(--blk2);min-width:0}   /* 一筆一個圓角色塊（跟即時回報、預約同一種，2026-11-21 取代細線分隔） */
 .fw.gone{opacity:.55}
 .fw-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .fw-k{letter-spacing:.08em}
@@ -613,7 +636,7 @@ a.doc-pill:active{scale:.96}
 .fw-week{margin:0;max-height:220px;overflow:auto;font:inherit;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
 .follow-panel .add-row{margin-top:12px}
 @media (max-width:640px){
-  .fw{padding:12px 0 14px}
+  .fw{padding:12px 14px 14px}
 }
 
 /* ===== 各部門編輯量（會長室，activity.js） =====
@@ -641,7 +664,7 @@ a.doc-pill:active{scale:.96}
 .ac-cur circle{fill:var(--bg);stroke:var(--c);stroke-width:2;transition:opacity var(--mo-fast) var(--mo-out)}
 .ac-cur circle.dim{opacity:0}
 /* 小標籤：在圖的上方（padding-top 留的空間），左右跟著游標、不超出區塊 */
-.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:6px 12px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
+.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:7px 12px 5px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
 .ac-tip[hidden]{display:none}
 .ac-tip b{font-weight:500;letter-spacing:.04em;margin-right:2px}
 .ac-tip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -650,7 +673,7 @@ a.doc-pill:active{scale:.96}
 .ac-none{opacity:.7}
 /* 圖例：每個部門一顆小膠囊（色點＋名稱＋這週總數）；點了只看那個部門 */
 .ac-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.ac-k{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:3px 12px;font-size:12.5px;border-color:var(--hair);transition:opacity var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .22s var(--ease)}
+.ac-k{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px 2px;font-size:12.5px;border-color:var(--hair);transition:opacity var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .22s var(--ease)}
 .ac-k i{width:8px;height:8px;border-radius:50%;background:var(--c)}
 .ac-k .num{color:var(--muted)}
 .ac-k.zero{color:var(--muted)}
@@ -660,7 +683,7 @@ a.doc-pill:active{scale:.96}
 @media (max-width:640px){
   .ac-chart{padding-top:64px}
   .ac-xl{font-size:10px;letter-spacing:0}
-  .ac-k{min-height:28px;padding:2px 10px;font-size:12px}
+  .ac-k{min-height:28px;padding:3px 10px 1px;font-size:12px}
 }
 
 /* ===== 會議報告事項（秘書處，meeting.js） =====
@@ -686,7 +709,7 @@ a.doc-pill:active{scale:.96}
    上面一排部門膠囊（選到的實心；後面是份數；這週有新的亮綠點），下面週次小膠囊＋全文（等寬換行）＋複製 */
 .wk-panel[hidden]{display:none}
 .wk-depts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.wk-d{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:3px 12px;font-size:13px;border-color:var(--hair)}
+.wk-d{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:3.7px 12px 2.3px;font-size:13px;border-color:var(--hair)}
 .wk-d .num{font-size:12px;color:var(--muted)}
 .wk-d.none{color:var(--muted)}
 .wk-d[aria-selected="true"],.wk-d[aria-checked="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -734,7 +757,7 @@ a.doc-pill:active{scale:.96}
 .meet-edit{margin-top:var(--gap,16px)}
 
 /* ===== 會長預約（會長室分頁的 #bkPanel，booking.js；06） =====
-   一張卡片三段：待審申請、已核准的預約、開放時段。每段小標題＋件數，下面每筆一列（左邊時間與申請人、右邊按鈕）；列與列之間只用細線隔開。
+   一張卡片三段：待審申請、已核准的預約、開放時段。每段小標題＋件數，下面每筆一個圓角色塊（跟追蹤、即時回報同一種；左邊時間與申請人、右邊按鈕），塊與塊之間留空隙、不畫細線。
    按鈕沿用 .icon（次要）與 .primary（核准）；處理中按鈕停用（disabled 的外觀沿用全站）。沒有深色／手機專用規則：顏色全用變數，列在窄螢幕自動換行 */
 .bk-panel[hidden]{display:none}
 .bk-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
@@ -742,20 +765,22 @@ a.doc-pill:active{scale:.96}
 .bk-h:first-of-type{margin-top:0}
 .bk-h .num{font-size:12px;font-weight:400;color:var(--muted)}
 .bk-none{margin:0 0 4px;font-size:12.5px}
-.bk-row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--hair)}
+.bk-row{display:flex;align-items:center;justify-content:space-between;gap:8px 14px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;border-radius:var(--r-lg);background:var(--blk2)}
 .bk-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 200px}
 .bk-t b{font-size:14px;font-weight:600;letter-spacing:.03em}
 .bk-t .sub{overflow-wrap:anywhere}
 .bk-b{display:flex;gap:8px;flex:none}
-.bk-foot{margin-top:10px;border-top:1px solid var(--hair);padding-top:10px}
+.bk-foot{margin-top:12px}
 
 /* ===== 點名（秘書處會議分頁的 #attPanel，attendance.js；07） =====
-   一張卡片：右上「匯入名冊」「+ 場次」；場次膠囊一排（沿用週報的 .wk-d）；四個數字（出席、請假、缺席、還沒點）；下面一個部門一段，每人一顆按鈕，點一下換狀態。
+   一張卡片：右上「名冊」（進整理模式：+ 成員、匯入名冊、點人編輯／停用）「複製結果」「+ 場次」；場次膠囊一排、部門膠囊一排（沿用週報的 .wk-d）；四個數字（出席、請假、缺席、還沒點）；下面一個部門一段，每人一顆按鈕，點一下換狀態。
    狀態材質照 DESIGN-next 第三節：出席＝實心、請假＝外框、缺席＝斜紋、還沒點＝平面。手機兩欄、桌面自動多欄，按鈕高 52px 方便單手連點；顏色全用變數，深色不另寫。 */
 .at-panel[hidden]{display:none}
 .at-tools{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .at-st{margin:0 0 12px;font-size:12.5px;line-height:1.6}
 .at-pick{margin-bottom:12px}
+.at-dept{margin-bottom:12px}
+.at-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .at-sum{display:flex;gap:24px;padding:4px 0 14px;margin-bottom:4px;border-bottom:1px solid var(--hair)}
 .at-sum b{display:block;font-size:34px;font-weight:300;line-height:1}
 .at-sum small{font-size:12px;letter-spacing:.12em;color:var(--muted)}
@@ -767,6 +792,7 @@ a.doc-pill:active{scale:.96}
 .at-m .nm{display:flex;flex-direction:column;min-width:0;font-size:14.5px;line-height:1.3;overflow-wrap:anywhere}
 .at-m small{font-size:11.5px;color:var(--muted);letter-spacing:.06em}
 .at-m i{flex:none;font-style:normal;font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.at-m.off{opacity:.5}
 .at-m.on{background:var(--ink);color:var(--blk)}
 .at-m.on small,.at-m.on i{color:inherit;opacity:.75}
 .at-m.lv{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
@@ -777,7 +803,7 @@ a.doc-pill:active{scale:.96}
    實心「+ 議題」（主要動作的實心膠囊）、甘特圖時間軸的「編輯」；放不下時換行（手機：標題一列，下面一列切換與新增）。議題詳情那一頁（#progPanel.pv-on）切換與新增藏起來 */
 .pg-head{flex-wrap:wrap;gap:12px 16px;margin-bottom:16px}
 .g-term{flex:none}
-.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 22px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
+.pg-add{display:inline-flex;align-items:center;gap:8px;height:52px;padding:1.25px 22px .75px;border:0;border-radius:999px;background:var(--pri);color:var(--pri-ink);font-size:14.5px;letter-spacing:.06em}
 .pg-add .ico{width:18px;height:18px;margin:0;stroke-width:2}
 #progPanel.pv-on :is(.g-term,.pg-add){display:none}
 @media (max-width:640px){.pg-head .sec-h{flex-basis:100%}}
@@ -786,10 +812,12 @@ a.doc-pill:active{scale:.96}
 .range input{width:auto}
 .gantt{overflow-x:auto;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;border-color:var(--hair)}
 .g-row{display:grid;grid-template-columns:170px 1fr;transition:background-color .2s,opacity .2s}   /* 不畫格線（每一列的時程條本身就分得出每一列） */
-.g-name{position:sticky;left:0;padding:8px 10px 8px 0;font-size:13.5px;font-weight:500;line-height:1.35;display:flex;flex-direction:column;justify-content:center;z-index:6;background:var(--surface)}
+.g-name{position:sticky;left:0;padding:calc(8px + var(--g-pt,0px)) 10px var(--g-pb,8px) 0;font-size:13.5px;font-weight:500;line-height:1.35;display:flex;flex-direction:column;justify-content:center;z-index:6;background:var(--surface)}
 .g-name a{color:var(--ink);text-decoration:none}
+/* 名稱跟時程條上下置中：條不在列的正中（上方要留註記標籤的位置），layoutTrack 量好條的中線，把名稱的上內距加大（--g-pt）補上，下內距 --g-pb 歸零；表頭「議題」（.g-nh）跟月份標籤同一條中線 */
+.g-nh{justify-content:flex-start;padding-top:5px;padding-bottom:0;line-height:19px;font-weight:400}
 .g-name a:hover{text-decoration:underline}
-.g-axis{position:relative;height:40px}
+.g-axis{position:relative;height:44px}
 .g-axis span{position:absolute;top:5px;font-size:12px;color:var(--muted);transform:translateX(5px);white-space:nowrap}
 .g-track{position:relative;height:58px}
 /* ---- 細刻度（views.js 的 ticksHTML；會長室追蹤 .fw-bar、工作報告的期間甘特圖 .rg-bar 用。看板的甘特圖從 ui-12 起改用滑桿式時程條，見「滑桿式時程條」小節）----
@@ -805,7 +833,7 @@ a.doc-pill:active{scale:.96}
 /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝實心小膠囊（文字色底）＋細線連到條；其他＝條上方的短線（位置照日期），滑過才顯示標籤 */
 .g-mk{position:absolute;top:0;bottom:0;width:0;transition:opacity .2s}
 .g-mk.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾的處理紀錄：半透明（標籤與短線都是；跟完成紀錄的膠囊 .cp.done 同一個 .5；weekly.js 的 mkPending） */
-.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:4px 9px 5px;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底） */
+.g-mk .lbl{position:absolute;top:4px;left:0;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;background:var(--ink);color:var(--surface);line-height:1;padding:calc((22px - 1cap)/2) 9px;text-box:trim-both cap alphabetic;border-radius:999px;z-index:3}   /* 最新一筆註記：實心小膠囊（文字色底），高 22px（字置中：同「唯讀」，見 .dh-ro） */
 .g-mk .stem{position:absolute;left:-.5px;width:1px;background:var(--ink);z-index:1;opacity:.5}
 .g-mk.edgeL .lbl{transform:translateX(-8px)}
 .g-mk.edgeR .lbl{transform:translateX(calc(-100% + 8px))}
@@ -825,7 +853,7 @@ a.doc-pill:active{scale:.96}
 .lg-a{border-radius:6px 3px 3px 6px;background:var(--sl-fc)}
 .lg-b{border-radius:3px 6px 6px 3px;background:var(--sl-rest)}
 /* 今天標籤：時間軸上方的綠色小膠囊「今天 MM/DD」 */
-.g-axis .today-tag{top:19px;transform:translateX(-50%);color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:1px 8px 2px;line-height:14px}   /* 今天：綠色小膠囊 */
+.g-axis .today-tag{top:25px;transform:translateX(calc(-50% + var(--tt,0px)));color:var(--ok-ink);background:var(--ok);border-radius:999px;font-size:11px;z-index:3;font-weight:500;padding:calc((19px - 1cap)/2) 8px;line-height:1;text-box:trim-both cap alphabetic}   /* 今天：綠色小膠囊，高 19px（字置中：同「唯讀」，見 .dh-ro） */
 .g-issue{cursor:pointer}
 .g-undated .g-name a{color:var(--muted)}   /* 未排程的議題：沒有條，名稱淡一點 */
 .g-undated .g-track{height:34px}
@@ -846,7 +874,8 @@ a.doc-pill:active{scale:.96}
 .log li{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:3px 0 7px 16px;border-left:2px solid var(--hair);font-size:13.5px;line-height:1.45;transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s}
 .log li.pend{opacity:.5}   /* 時間行寫進來、那一行還沒勾：半透明（同 .g-mk.pend；淡入淡出用上面 .log li 的 opacity 過渡） */
 .log-dot{position:absolute;border-radius:50%;background:var(--tone,var(--ink))!important;width:10px;height:10px;left:-6px;top:7px;box-shadow:0 0 0 2.5px var(--surface)}
-.log-d{min-width:74px;font-size:14px}
+.log-d{flex:none;width:84px;font-size:14px}   /* 日期欄固定寬：每一列的膠囊與標題左緣才會對齊（以前最小寬 74px，數字寬度不同就差 1～2px） */
+.log li>.sub{text-spacing-trim:trim-start}   /* 「（即時回報）」換到下一行時，全形括號左半邊的空白不留，跟上一行的日期左緣對齊 */
 .log-p{margin-left:auto;font-size:12px}
 /* 進度卡片（甘特圖＋議題詳情合成一張）：預設 #pvGantt，點議題列換成 #pvDetail（切換動畫在 views.js 的 progShow）。
    詳情裡的議題用負邊距撐到區塊邊緣；--cpx＝區塊左右內距 */
@@ -868,7 +897,7 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
 .hpct small{font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;margin-right:6px;color:var(--muted);vertical-align:.45em}
 .hpct.none{font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:400;color:var(--muted)}
 .closed-tag{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.tag.sm{font-size:11px;min-height:20px;padding:0 7px 2px!important;line-height:17px}
+.tag.sm{font-size:11px;min-height:20px;padding:2.6px 7px .4px!important;line-height:17px}
 .card{padding:16px var(--cpx,18px);display:flex;flex-direction:column;gap:8px;scroll-margin-top:60px;border-radius:0;transition:background-color .25s,opacity .2s;background:transparent;border:0;border-top:1px solid var(--line)}
 .card.open{background:color-mix(in srgb,var(--ink) 5%,transparent)}
 .card-title{font-weight:700;font-size:16px;line-height:1.4}
@@ -876,8 +905,8 @@ input.card-title.bad{box-shadow:inset 0 0 0 1.5px var(--red)}
 .sec-edit .card-tools{display:flex}
 .meta{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .tags{display:flex;flex-wrap:wrap;gap:5px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.tag{font-size:12px;border-radius:999px;border:1px solid transparent;background:var(--blk2);min-height:24px;color:var(--ink);transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding:0 9px 2px!important;line-height:20px}
-.tag.cur{background:var(--acc);color:var(--acc-ink);font-weight:500;padding-top:.5px!important;padding-bottom:1.5px!important}   /* 目前的階段＝選中色（DESIGN-next 第二節 --acc） */
+.tag{font-size:12px;border-radius:999px;border:1px solid transparent;background:var(--blk2);min-height:24px;color:var(--ink);transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s var(--ease),background-color .2s,opacity .2s;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;padding:1.4px 9px 0!important;line-height:20px}
+.tag.cur{background:var(--acc);color:var(--acc-ink);font-weight:500}   /* 目前的階段＝選中色（DESIGN-next 第二節 --acc） */
 .c-track{position:relative;height:84px;margin:0 8px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* ---- 滑桿式時程條（DESIGN.md／DESIGN-next 第八節：比照 Android Material 的音量滑桿；views.js 的 sliderHTML／slFit／slAnim）----
    議題詳情（.c-bar）與甘特圖每一列（.g-bar.g，緊湊尺寸）共用同一套結構與樣式，兩者只差下面的變數。
@@ -971,19 +1000,21 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 進度條上的註記 ===== */
 .top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:18px;border-radius:999px;padding:0 8px;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
+.marker .lbl{z-index:3;position:absolute;left:0;transform:translateX(-50%);font-size:12px;white-space:nowrap;background:var(--blk2);border:1px solid transparent;max-width:160px;overflow:hidden;text-overflow:ellipsis;line-height:1;border-radius:999px;padding:calc((22px - 2px - 1cap)/2) 8px;text-box:trim-both cap alphabetic;transition:transform .18s var(--ease),box-shadow .18s,border-color .18s,padding .2s}
 .marker .stem{z-index:1;position:absolute;left:-.5px;width:1px;background:var(--mc);opacity:.55}
 /* 註記：時程條「上方」一根細長條（2026-11-05 改長條；2026-11-06 使用者嫌疊在刻度上又半透明粗糙，改成立在刻度上方、不重疊、實色）：
    最新一筆 3×16px 註記色，其他 12px、淡一點；透明可點範圍左右各 9px、往下蓋到刻度（::before） */
 .marker .dot{z-index:2;position:absolute;top:35px;border-radius:2px;background:var(--mc);transition:transform .18s var(--ease),box-shadow .18s;width:3px;height:16px;left:-1.5px;border:0;box-shadow:none;transform-origin:50% 100%;cursor:pointer}
 .marker .dot::before{content:"";position:absolute;inset:-6px -9px -24px}   /* 透明可點範圍：左右各 9px、往下蓋到刻度 */
 .marker{position:absolute;top:0;bottom:0;width:0;touch-action:none;--mc:var(--tone)!important}
-.marker.up .stem{top:22px;height:14px}
+.marker.up .stem{top:24px;height:12px}
 .marker.down .stem{top:48px;height:16px}
 .marker.up .lbl{top:2px}
 .marker.down .lbl{top:62px}
 .marker.edgeL .lbl{transform:translateX(-10px)}
 .marker.edgeR .lbl{transform:translateX(calc(-100% + 10px))}
+/* 字置中的後備（Firefox、舊 Safari 沒有 text-box）：照字型量出的內距；今天標籤、甘特圖與時程條的註記標籤共用 */
+@supports not (text-box:trim-both cap alphabetic){.g-axis .today-tag{padding:3px 8px 0;line-height:14px}.g-mk .lbl{padding:5.3px 9px 3.7px}.marker .lbl{line-height:16.7px;padding:1.3px 8px 0}}
 .sec-edit .marker{cursor:grab}
 .marker.pending .lbl{border-style:dashed;color:var(--tone-ink)}
 .marker.pending .dot{animation:pulse 1.1s ease-in-out infinite}
@@ -1012,16 +1043,13 @@ a.link:active{transform:scale(.96)}
 /* 左右兩欄（寬螢幕、打開一張時）：版面與卡片跟即時回報同一套（「即時回報」段的左右兩欄、卡片外框） */
 #doneMD{flex:1;min-height:0;display:flex;flex-direction:column}
 #doneMD.split #doneList{overflow:visible;margin:0;padding:4px 0 16px}
-/* 週資料夾（views.js 的 renderDone）：完成紀錄先列「一週一張」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；卡片底色、圓角、陰影跟即時回報一樣，左上角多一個資料夾的耳朵 */
-.wkfs{display:grid;gap:26px 14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));padding-top:12px}
-.wkf{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;min-width:0;padding:22px 22px 18px;border:0;border-radius:0 var(--r-lg) var(--r-lg) var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
-.wkf::before{content:"";position:absolute;left:0;top:-10px;width:68px;height:11px;border-radius:10px 10px 0 0;background:var(--blk)}
-.wkf-d{font-size:19px;font-weight:700;letter-spacing:.04em}
-.wkf-n{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-.wkf-n::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--done)}
-.wkf-pv{display:grid;width:100%;gap:3px;margin:6px 0 0;padding:0;list-style:none;font-size:14px;opacity:.7}
-.wkf-pv li{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.wkf-more{font-size:12.5px;color:var(--muted)}
+/* 週格子（views.js 的 renderDone）：完成紀錄先列「一週一格」，點進去是那一週的膠囊清單（.wk-head 是那一頁的標題）；格子底色、圓角、陰影跟即時回報卡片一樣，沒有資料夾造型 */
+.wkfs{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));padding-top:4px}   /* 填滿整排寬度：手機一排三格、電腦十格左右，格子隨寬度均分 */
+.wkf,.wk-fx{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;border:0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:center;font:inherit;transition:transform var(--mo-base) var(--mo-out)}
+.wkf{aspect-ratio:1;padding:8px}
+.wk-fx{position:fixed;z-index:60;box-sizing:border-box;pointer-events:none;will-change:left,top,width,height}   /* 翻開／收回時的分身（views.js wkFx）：底色、圓角、陰影跟格子一樣，從格子長到整個清單區 */
+.wkf-d{font-size:17px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.wkf-n{font-size:11px;color:var(--muted);white-space:nowrap}
 .wk-head{display:flex;align-items:baseline;gap:12px;margin:0 2px 14px}
 .wk-head h3{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
 .wk-head span{font-size:13px;color:var(--muted)}
@@ -1034,20 +1062,14 @@ a.link:active{transform:scale(.96)}
 @keyframes tick{0%{transform:scale(0) rotate(-45deg)}100%{transform:none}}
 @keyframes doneFlash{0%{opacity:0;transform:translateX(-14px)}40%{opacity:1;transform:none;background:color-mix(in srgb,var(--done) 22%,transparent)}100%{}}
 
-/* ===== 每週概述 ===== */
-/* 2026-11-06 起是設定裡的一頁（weekly.js 的 weekPane）：畫在設定的右側面板／手機子頁，平常藏著。
-   標題是區塊標題（.sec-h，區塊標題段；不畫分隔線），捲動時黏在面板上方；「返回」只在桌面出現（手機用子頁上方的「返回」） */
-.week-wrap{max-width:640px}
-.week-wrap[hidden]{display:none}
-.week-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:-14px;background:var(--bg);z-index:5;padding:14px 0 12px;margin:-14px 0 16px}   /* 黏住時往上多蓋 14px：面板／子頁上方有留白（.set-pane 14px、.set-sub-body 10px），不蓋住的話捲動時內容會從那段露出來（2026-11-06 使用者回報跑版） */
-/* 捲動時週報卡片從標題列底下滑過：標題列下面接一段底色往下淡掉（剛好是標題列與第一張卡片之間的 16px），卡片是慢慢淡入標題列底下，
-   不會被一刀切掉圓角（2026-11-16，03） */
-.week-top::after{content:"";position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(var(--bg) 25%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
-.week-top h2{flex:1;min-width:0}
-/* 「秘書處調閱 →」：秘書處的看板有「各部門週報」可以調閱每個部門的週報（秘書處自己不顯示） */
-.week-sec{flex:none;font-size:12.5px;color:var(--muted);text-decoration:none;letter-spacing:.06em;transition:color var(--mo-fast) var(--mo-out)}
-.week-sec:hover{color:var(--ink)}
-.week-sec[hidden]{display:none}
+/* ===== 每週報告（原「每週概述」；views.js 的 repHTML）=====
+   2026-11-21 起畫在完成紀錄的週頁最上方（.wk-rep），不再是設定裡的一頁。每份報告是一張可展開的卡片（.week，details）；沒有報告的週顯示 .wk-rn 一行字；
+   生成、新增鈕在 .wk-rtools。標題的英文小標與區塊標題沿用完成紀錄週頁（.wk-head） */
+.wk-rep{margin:0 0 14px}
+.wk-rt{font-size:15px;letter-spacing:.06em}
+.wk-rn{display:flex;align-items:baseline;gap:12px;margin:0 0 10px;padding:12px 20px;border-radius:999px;background:var(--surface);font-size:13px;color:var(--muted)}
+.wk-rn b{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:.06em}
+.wk-rtools{display:flex;gap:8px;flex-wrap:wrap}
 .week{margin-bottom:10px;background:var(--surface);border-radius:var(--r-lg);transition:transform .22s var(--ease),box-shadow .22s var(--ease),background-color .2s,opacity .2s;position:relative}   /* 平面色塊（--blk），週與週之間留 10px 縫，沒有細框 */
 .week summary{cursor:pointer;padding:8px 12px;display:flex;align-items:center;gap:8px;list-style:none}
 .week .week-del{margin-left:auto}
@@ -1055,45 +1077,28 @@ a.link:active{transform:scale(.96)}
 .week summary::before{color:var(--muted);transition:transform .15s;content:"";display:inline-block;flex:none;width:7px;height:9px;background:currentColor;clip-path:polygon(0 0,100% 50%,0 100%);margin:0 2px 0 1px}
 .week[open] summary::before{transform:rotate(90deg)}
 .week summary .num{font-size:18px;transition:letter-spacing .25s var(--ease)}
-.badge{font-size:11.5px;border-radius:999px;padding:0 8px;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
+.badge{font-size:11.5px;border-radius:999px;padding:2.1px 8px .9px;line-height:1.34;background:var(--acc2);color:var(--acc2-ink)}   /* 「最新」：焦點色（紅色只給逾期、刪除、報告） */
 .week-tools{display:flex;gap:6px;justify-content:flex-end;padding:0 12px;flex-wrap:wrap;animation:none}
 .week-text{white-space:pre-wrap;line-height:1.85;padding:6px 14px 14px;font-size:14.5px;word-break:break-word;animation:none;-webkit-user-select:text;user-select:text}
 .gen-btn{background:var(--pri);color:var(--pri-ink);border-color:var(--pri);display:inline-flex;align-items:center;gap:6px}
-#weekList .week:not([open]),#weekList .week:not([open]) summary{border-radius:999px}
-#weekList .week[open]{border-radius:var(--r-lg)}
-#weekList .week summary{padding:10px 20px}
+.wk-rep .week:not([open]),.wk-rep .week:not([open]) summary{border-radius:999px}
+.wk-rep .week[open]{border-radius:var(--r-lg)}
+.wk-rep .week summary{padding:10px 20px}
 .spark{flex:none;transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
 .gen-btn:hover .spark{transform:rotate(-12deg) scale(1.15)}
 .week-text .wl{display:block}
-/* 打開時標題列與週報逐一滑入（weekPane 加 .enter） */
-.week-wrap.enter .week,.week-wrap.enter .week-top>*{animation:slideIn .55s var(--ease) both}
-.week-wrap.enter .week:nth-child(1){animation-delay:0.080s}
-.week-wrap.enter .week:nth-child(2){animation-delay:0.130s}
-.week-wrap.enter .week:nth-child(3){animation-delay:0.180s}
-.week-wrap.enter .week:nth-child(4){animation-delay:0.230s}
-.week-wrap.enter .week:nth-child(5){animation-delay:0.280s}
-.week-wrap.enter .week:nth-child(6){animation-delay:0.330s}
-.week-wrap.enter .week:nth-child(7){animation-delay:0.380s}
-.week-wrap.enter .week:nth-child(8){animation-delay:0.430s}
-.week-wrap.enter .week:nth-child(9){animation-delay:0.480s}
-.week-wrap.enter .week:nth-child(10){animation-delay:0.530s}
 .week.new{animation:weekNew 1.2s var(--ease) both}
 [data-copyweek]{transition:background-color .2s,color .2s,transform .2s}
 [data-copyweek].copied{background:var(--ok);border-color:var(--ok);color:var(--ok-ink);animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
 .week:hover summary .num{letter-spacing:.04em}
-.week .badge{animation:none}
-#genWeek{padding-left:12px;padding-right:20px}
+[data-genweek]{padding-left:12px;padding-right:20px}
 @media (prefers-reduced-motion:reduce){
   .week:hover{transform:none!important}
 }
 .week:hover{transform:none!important}
 @media (max-width:640px){
   .week-text{font-size:14px}
-  .week-top{padding-bottom:10px;row-gap:10px}
-  .week-top h2{flex:1 0 100%}   /* 手機放不下「標題＋秘書處調閱＋兩顆按鈕」一列：標題自己一列，下面一列放其他的 */
-  #weekSecLink{margin-right:auto}
 }
-@keyframes slideIn{from{opacity:0;transform:translateX(26px)}}
 @keyframes weekNew{0%{opacity:0;transform:translateY(-12px) scale(.97)}35%{opacity:1;transform:none;box-shadow:0 0 0 2px var(--ink)}100%{box-shadow:none}}
 
 /* ===== 區塊切換（工具列的分頁：即時回報、進度、完成紀錄、部門自己的分頁） ===== */
@@ -1113,7 +1118,10 @@ a.link:active{transform:scale(.96)}
    （放進頁面的 SVG，零件填色在「部門標誌」段；大小跟主頁過場的終點一樣：畫面寬的 46%、最大 300），看板穩定了才淡掉 */
 .pfx-cover{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:var(--bg);pointer-events:none}
 .pfx-cover[data-k="tile"]{background:var(--blk)}
-.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible}
+/* 等看板穩定的這段（最多 1.6 秒）標誌輕輕呼吸一下（放大 4%、再回來；起點是不動的終點畫面，接得上主頁過場）。只動 transform、由合成器執行，
+   看板剛載入、主執行緒忙的時候也不會頓，畫面讀起來是「正在進入」而不是定住。延遲 .3 秒：載入很快時看不到，不多一個動作 */
+.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible;animation:pfxBreathe 1.3s var(--mo-out) .3s infinite alternate}
+@keyframes pfxBreathe{to{transform:scale(1.04)}}
 
 /* ===== 對話框與下拉選單 ===== */
 .danger-btn{color:var(--warn)}
@@ -1270,7 +1278,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .tb-main{display:flex;padding:6px;border-radius:999px;touch-action:none}
 #tabbar :is(.tb-main,.tb-gear){box-shadow:0 0 0 1px var(--hair),0 14px 30px -10px var(--stack-sh)}   /* 浮在內容上面：細線＋陰影（柔光主題也一樣，不疊 --blk-sh） */
 .tb-tabs{position:relative;z-index:1;display:flex;gap:2px}
-.tabbar .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;min-height:0;padding:5px 2px 4px;border:0;border-radius:24px;background:transparent;color:var(--tb-muted);font-size:11.5px;letter-spacing:.08em;line-height:1.2;-webkit-tap-highlight-color:transparent;transition:scale .18s var(--mo-out)}
+.tabbar .tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;min-height:0;padding:5px 2px 4px;border:0;border-radius:24px;background:transparent;color:var(--tb-muted);font-size:11.5px;letter-spacing:.08em;line-height:1.2;-webkit-tap-highlight-color:transparent;transition:scale .18s var(--mo-out)}
 .tabbar .tab.lit{scale:var(--ts,1)}   /* 按下時鏡片那一格的內容放大到 1.2（nav.js 寫 --ts）；換到別格時平順地縮回 */
 #tabbar .tab:hover,#tabbar .tab:active{transform:none;box-shadow:none}   /* 取消一般按鈕的 hover 浮起；不用 !important，按下的形變（inline）才不會被擋掉 */
 #tabbar .tb-gear:hover,#tabbar .tb-gear:active{transform:none}   /* 設定鍵：同上（陰影照舊） */
@@ -1286,9 +1294,9 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .tb-gear{width:62px;height:62px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;min-height:0;color:var(--tb-ink);-webkit-tap-highlight-color:transparent;transition:color .35s,background-color .35s}
 .tb-gear .ico{width:24px;height:24px}   /* 62 的圓鈕配 24 的圖示（同奇偶，落在整數像素） */
 #tabbar .tb-gear[hidden]{display:none}   /* 唯讀檢視時不出現（nav.js 的 renderTabbar） */
-/* 本週週報還沒產出（週五起，weekly.js 的 weekDotSync）：設定鍵右上角一顆紅點（以前在頁首「每週概述」鈕上） */
+/* 本週每週報告還沒產出（週五起，weekly.js 的 weekDotSync）：完成紀錄分頁鈕右上角一顆紅點 */
 .tb-due{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg);opacity:0;transform:scale(0);pointer-events:none;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-slow) var(--mo-spring)}
-#setBtn.due .tb-due{opacity:1;transform:none}
+#tabbar .tab.due .tb-due{opacity:1;transform:none}
 /* 設定鍵選取＝跟鏡片一樣的實心（--pri） */
 #tabbar .tb-gear.on{background:var(--pri);color:var(--pri-ink)}
 #tabbar .tb-gear.on .ico{stroke-width:2}
@@ -1406,6 +1414,10 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-lkb{width:calc(var(--hm-dot) - 4px);height:calc(var(--hm-dot) - 4px)}
 .hm-pub{background:var(--pri);color:var(--pri-ink)}
 .hm-pub .ico{width:calc(var(--hm-dot)*20/44);height:calc(var(--hm-dot)*20/44)}
+/* 「預約會長」：下排唯一帶字的鈕（2026-11-21，找不到預約入口），高度跟圓鈕一樣，左圖示右文字；連到會長室分頁第一張卡 */
+.hm-bk{display:flex;align-items:center;gap:7px;height:var(--hm-dot);min-height:0;padding:0 calc(var(--hm-dot)*16/44);border:0;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:14px;font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.hm-bk .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44);flex:none}
+@media (max-width:640px){.hm-bk{width:var(--hm-dot);padding:0;justify-content:center;border-radius:50%}.hm-bk span{display:none}}   /* 手機下排放不下文字：只留圖示圓鈕（aria-label 仍是「跟會長預約」） */
 .hm-lkc{position:relative;background:var(--blk2);color:var(--ink);text-decoration:none;-webkit-user-drag:none;transition:transform .22s var(--ease)}
 .hm-lkadd{box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink)}
 .hm-lkadd .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44)}
@@ -1435,7 +1447,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 @media (hover:none){.hm-tip{display:none}}
 /* 下排（手機 640px 以下）：固定在畫面底部、膠囊底板（陰影朝上）；輸入框 16px（iPhone：16px 以下聚焦時會整頁放大），寬度讓返回鍵到「加入」在 412 寬放得下 */
 @media (max-width:640px){
-  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;margin:0}
+  .hm-dock{position:fixed;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom) + var(--kb,0px));z-index:40;margin:0;transition:bottom var(--mo-base) var(--mo-out)}   /* --kb＝螢幕鍵盤高度（util.js 的 kbTrack）：鍵盤跳出時整條浮到鍵盤正上方 */
   .hm-dk-bg{display:block}
   .hm-dk-bg>span{box-shadow:0 -14px 30px -6px var(--wal-sh)}
   .hm-lkf input{width:88px;font-size:16px}
@@ -1527,7 +1539,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
    沒有自己的標題列（沒有 logo 與「關閉」）：進出都用工具列的設定鍵（工具列 z-index 45，蓋在設定上面；設定開著時設定鍵是選中的實心）。
    設定是部門內的一頁（ui-09）：部門標題列留在畫面上，設定（含手機子頁）從標題列下緣（--set-top，nav.js 的 setTopSync）開始蓋；開著時底下的頁面不捲。
    列：一列一塊平面色塊（--blk、圓角 14），列與列之間留 10px 縫，不做相連又各自圓角；列上只有圖示、名稱、右側箭頭，下面不放小字。
-   面板（合併頁、帳號、表單、編輯紀錄、每週概述）的標題是區塊標題（.sec-h，英文小標在上；dialog.js 的 panelHead），不畫分隔線；面板裡的清單也是一列一塊、留縫。
+   面板（合併頁、帳號、表單、編輯紀錄）的標題是區塊標題（.sec-h，英文小標在上；dialog.js 的 panelHead），不畫分隔線；面板裡的清單也是一列一塊、留縫。
    柔光主題的陰影（ui-10 C）：三個捲動容器（清單 .set-scroll、右側面板 .set-pane、手機子頁 .set-sub-body）左右各多留 --set-sx 的內距、再用同樣的負邊距抵掉，
    色塊的位置、寬度不變，陰影畫在內距裡、不被 overflow 切成直線；--set-sx＝陰影外擴距離（theme.css 的 --sh-pad，只有柔光有值）但不超過設定層自己的左右留白（捲動容器不會伸出螢幕）。
    清單最上面一列的上緣也留 --sh-pad（.set-inner）。其他主題 --sh-pad＝0，三個容器跟原本一樣。標題列圓鈕的陰影不被設定層蓋掉：見「部門標題列」段 body.set-open .dhead */
@@ -1545,7 +1557,7 @@ body.set-open #pageMain{overflow:hidden}
    標題列左上的圓鈕在這時是「上一頁」（views.js 的 homeSync）、回到設定清單。進出用換頁動畫（pagefx.js） */
 .set-sub{z-index:39}
 .set-sub-body{flex:1;min-height:0;margin:0 calc(-1*var(--set-sx));overflow:auto;overscroll-behavior:contain;padding:10px calc(2px + var(--set-sx)) calc(32px + var(--bar-in) + env(safe-area-inset-bottom))}
-/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄、每週概述同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
+/* 合併頁（nav.js 的 hubRun）：畫在右側面板／手機子頁裡，標題跟面板裡的表單、編輯紀錄同一種（區塊標題 .sec-h、不畫線），下面一列一個功能；
    從功能回來時整頁從右邊滑入淡入（跟面板表單同一個 paneFormIn） */
 .set-hub{display:grid;gap:16px;max-width:640px;animation:paneFormIn var(--mo-slow) var(--mo-out) both}
 .set-hub[hidden]{display:none}
@@ -1553,9 +1565,6 @@ body.set-open #pageMain{overflow:hidden}
 .dev-steps{list-style:none;counter-reset:dev;margin:0;padding:0;display:grid;gap:10px}
 .dev-steps li{counter-increment:dev;display:flex;gap:14px;align-items:baseline;padding:16px 20px;font-size:15px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .dev-steps li::before{content:counter(dev);flex:0 0 auto;color:var(--muted);font-family:"Jost",sans-serif;font-variant-numeric:tabular-nums}
-/* 「報告」那一列、合併頁裡「每週概述」那一列（登入前是清單上的「每週概述」）：本週週報還沒產出時，圖示右上角紅點 */
-.set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]) .sr-ico{position:relative}
-.set-row:is([data-set="week"],[data-set="report"],[data-hub="week"]).due .sr-ico::after{content:"";position:absolute;top:-2px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px var(--bg)}
 /* 登入前：整頁只有鎖頭（鎖扣循環開合，nav.js 的 gateAnim） */
 .set-gate{display:grid;justify-items:center;gap:10px;text-align:center;padding:12vh 0 0}
 .set-gate>b{font-size:18px;font-weight:700;letter-spacing:.08em}
@@ -1583,7 +1592,7 @@ body.set-open #pageMain{overflow:hidden}
 .acct-err{margin:4px 0 0;color:var(--red);font-size:13.5px}
 .acct-empty{padding:16px 20px}
 .acct-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.acct-chip{font-size:12px;line-height:1;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
+.acct-chip{font-size:12px;line-height:1;padding:6px 10px 4px;border-radius:999px;border:1px solid var(--hair);color:var(--ink)}
 .acct-chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .acct-person{display:grid;gap:2px}
 /* 帳號頁最上面：名稱、信箱、角色膠囊（一塊平面色塊；設定清單的「帳號」列只寫「帳號」） */
@@ -1675,15 +1684,22 @@ body.set-open #pageMain{overflow:hidden}
 .nd-lab{display:grid;justify-items:end;gap:3px;text-align:right}
 .nd-lab b{font-size:14px;font-weight:700;letter-spacing:.12em;white-space:nowrap}
 .nd-lab small{font-size:12px;color:var(--nd-mut);letter-spacing:.06em}
-.nd-list{display:grid;gap:12px}
-/* 一列＝標題（最多兩行，text-wrap:balance 讓兩行長度接近、不留孤字）＋一行小字（時刻、到 M/D） */
+/* 一項＝標題（最多兩行，text-wrap:balance 讓兩行長度接近、不留孤字）＋一行小字（時刻、到 M/D） */
 .nd-row{display:grid;gap:3px;min-width:0}
 .nd-row b{font-size:14px;font-weight:500;line-height:1.45;text-wrap:balance;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .nd-row small{font-size:12px;line-height:1.4;color:var(--nd-mut);white-space:nowrap}
-.nd-more{font-size:12px;color:var(--nd-mut)}
+.nd-count{margin-top:auto;align-self:flex-end;font-family:"Jost",sans-serif;font-weight:300;font-size:26px;line-height:1}   /* 右下角：當天總件數 */
 /* 沒有事件：卡片下方一條短細線 */
 .nd-empty{margin-top:auto}
 .nd-empty i{display:block;width:28px;height:1px;background:var(--nd-mut)}
+/* 桌面（1000px 以上）：兩張卡壓矮（約 130px），一個畫面能看到下面的行事曆；數字、件數縮小，內容不變 */
+@media (min-width:1000px){
+  .noti-days{gap:12px}
+  .nd-card{min-height:0;gap:10px;padding:14px 18px 12px}
+  .nd-head{padding-bottom:8px}
+  .nd-num{font-size:40px}
+  .nd-count{font-size:20px}
+}
 @media (max-width:640px){
   .noti-days{gap:10px}
   .nd-card{min-height:176px;padding:15px 14px 14px;border-radius:var(--r-lg);gap:12px}
@@ -1752,7 +1768,7 @@ body.set-open #pageMain{overflow:hidden}
 .tl-stp.l{right:16px;opacity:var(--l,0);background:var(--ink);color:var(--blk)}
 .tl-card.go-r .tl-stp.r,.tl-card.go-l .tl-stp.l{opacity:1}
 .tl-ctl{display:flex;justify-content:center;align-items:center;gap:18px}
-.tl-btn{height:40px;min-height:0;padding:0 22px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
+.tl-btn{height:40px;min-height:0;padding:2.9px 22px .6px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:14px;letter-spacing:.06em}
 .tl-btn.pri{background:var(--pri);color:var(--pri-ink);box-shadow:none}
 .tl-n{min-width:2em;text-align:center;font-size:15px;color:var(--muted)}
 .tl-undo{justify-content:center}
@@ -1767,12 +1783,12 @@ body.set-open #pageMain{overflow:hidden}
 /* ===== 行事曆（notify.js 的 calHTML；通知頁最下面，主頁的全會行事曆是公共版 .cal.pub） =====
    上面一大塊色塊（.cal-top）：英文小標＋「行事曆」、右上月份鈕（外框膠囊，點開月份選單）、模式切換、海報月曆；
    下面＝選到那一天的清單（.cal-list，一件事一張色塊；寬的時候兩欄）。換內容時舊的清單分身（.cal-ghost）原地淡出 */
-.cal{position:relative;display:grid;gap:14px;container-type:inline-size}
+.cal{position:relative;display:grid;gap:14px;container:cal/inline-size}
 .cal-top{display:grid;gap:18px;padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 .cal-h{display:flex;align-items:flex-start;gap:14px}
 .cal-h .sec-h{margin-right:auto}
 .cal-mp{position:relative;flex:none}
-.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:0 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
+.cal-mon{display:inline-flex;align-items:center;gap:8px;height:52px;min-height:0;padding:1px 18px 0 21px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--ink);font-size:15px}
 .cal-mon .ico{width:16px;height:16px;transition:transform var(--mo-base) var(--mo-spring)}
 .cal-mon[aria-expanded="true"] .ico{transform:rotate(180deg)}
 /* 月份選單：彈出層（--pop＋柔和陰影），一個學年的 12 個月三欄排；選到的那個月＝選中色底、粗體 */
@@ -1788,6 +1804,10 @@ body.set-open #pageMain{overflow:hidden}
 .ce-t b{font-size:17px;font-weight:500}
 .ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
 .ce-n{font-size:15.5px;font-weight:500;line-height:1.45}
+.ce-n.ck{display:flex;align-items:flex-start;gap:12px}
+.ce-n.ck .fld-check{margin-top:2px}
+.ce-n span,.ce-n.done{transition:color var(--mo-base) var(--mo-out)}
+.ce-n.done,.ce-n.done span{color:var(--muted);text-decoration:line-through}
 .ce-b{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--muted)}
 .ce-pl{display:inline-flex;align-items:center;gap:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-pl .ico{flex:none;width:15px;height:15px}
@@ -1796,7 +1816,19 @@ body.set-open #pageMain{overflow:hidden}
 .ce-k.pri{background:var(--pri);color:var(--pri-ink)}
 .ce-k.acc{background:var(--acc);color:var(--acc-ink)}
 .ce-k.line{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink)}
+/* 會長預約（會長室模式，booking.js）：開放時段與我的預約是普通的一列，右邊按鈕；月曆下面一小塊寫狀態與提醒（顏色全用變數，深色、手機不另寫） */
+.cal-ev.bk .ce-pl{flex:1 1 auto}
+.ce-act{margin-left:auto;display:flex;gap:8px;flex:none}
+.cal-bk{display:grid;justify-items:start;gap:10px;margin-top:12px}
+.cal-bk .sub{margin:0;font-size:12.5px;line-height:1.6}
+.cal-bk a{color:var(--ink);text-decoration:underline}
 .cal-none{margin:0;padding:22px 4px;color:var(--muted);font-size:14px}
+/* 桌面寬版（行事曆容器 1000px 以上）：左邊一欄放標題、搜尋、模式切換與找重疊（400px），右邊放海報月曆；月曆本身的縮小在「海報月曆」段 */
+@container cal (min-width:1000px){
+  .cal-top{grid-template-columns:minmax(300px,400px) minmax(0,1fr);column-gap:36px;align-content:start}
+  .cal-top>*{grid-column:1}
+  .cal-top>.pc{grid-column:2;grid-row:1/span 12}
+}
 @media (max-width:640px){
   .cal-top{padding:18px 16px}
   .cal-mon{height:46px;padding:0 14px 0 17px}
@@ -1807,7 +1839,7 @@ body.set-open #pageMain{overflow:hidden}
 .cal-modes{margin:0 -6px;padding:0 6px;overflow-x:auto;scrollbar-width:none}
 .cal-modes::-webkit-scrollbar{display:none}
 .cal-oth{display:flex;flex-wrap:wrap;gap:8px;margin-top:-6px}
-.cal-chip{height:36px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
+.cal-chip{height:36px;min-height:0;padding:2.9px 16px 1.1px;border:0;border-radius:999px;background:var(--blk2);color:var(--muted);font-size:13.5px;line-height:1;transition:background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .24s var(--mo-spring)}
 .cal-chip[aria-checked="true"]{background:var(--ink);color:var(--blk)}
 .cal-chip:active{transform:scale(.94)}
 .cal-oth .cal-chip{animation:rise var(--mo-base) var(--mo-out) both}
@@ -1870,7 +1902,7 @@ body.set-open #pageMain{overflow:hidden}
 .pc-d:active{transform:scale(.9)}
 @media (hover:hover){.pc-d:not(.sel):hover::before{opacity:.28;transform:none}}
 .pc-pad{visibility:hidden}
-.pc-n{font-size:19px;line-height:1}
+.pc-n{font-size:19px;line-height:1;padding-top:.9px}
 .pc-d.has .pc-n{font-weight:500}
 .pc-d.is-today .pc-n{color:var(--acc2);font-weight:700}
 .pc-d.sel::before{opacity:1;transform:none}
@@ -1884,6 +1916,14 @@ body.set-open #pageMain{overflow:hidden}
 .pc-e.cont-r::before{right:0;--dr:none;--lr:0px}
 .pc-e:not(.span)::after{content:"";position:absolute;top:0;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:currentColor}
 .pc-foot{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted);letter-spacing:.24em}
+/* 桌面寬版（放在行事曆左右兩欄時，見「行事曆」段）：月份標題最大 84px、日期圓 36px、一列 42px，首屏就看得到整個月 */
+@container cal (min-width:1000px){
+  .cal-top .pc-mon{font-size:clamp(56px,12cqw,84px)}
+  .cal-top .pc-yr{font-size:clamp(22px,4cqw,32px)}
+  .cal-top .pc-d{width:36px;height:36px;margin-top:2px}
+  .cal-top .pc-week{min-height:calc(42px + var(--lanes) * var(--pc-lane))}
+  .cal-top .pc-e{top:calc(42px + var(--ln) * var(--pc-lane))}
+}
 @media (max-width:640px){
   .pc-n{font-size:17px}
   .pc-wk{font-size:10.5px;letter-spacing:.02em}
@@ -1896,7 +1936,7 @@ body.set-open #pageMain{overflow:hidden}
 .lseg{display:inline-flex;padding:4px;border-radius:999px;background:var(--blk2);box-shadow:none;transform-origin:0 50%;   /* 按下時往右放大，貼著內容左邊也不會被切到 */
   touch-action:none;-webkit-user-select:none;user-select:none}
 .lseg-lens{position:absolute;left:0;top:4px;bottom:4px;z-index:0;border-radius:999px;background:var(--pri);pointer-events:none;will-change:transform}
-.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:4px 18px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
+.lseg>[data-k]{position:relative;z-index:1;min-height:32px;padding:4.9px 18px 3.1px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-size:13.5px;letter-spacing:.06em;scale:var(--ts,1);transition:color .35s;-webkit-tap-highlight-color:transparent}
 .lseg>[data-k][aria-selected="true"]{font-weight:500}
 .lseg>[data-k].lit{color:var(--pri-ink)}
 .lseg>[data-k]:hover,.lseg>[data-k]:active{transform:none;box-shadow:none}
@@ -1928,13 +1968,13 @@ body.set-open #pageMain{overflow:hidden}
 .lbl-n+.lbl-x{margin-left:-10px}
 .lbl-x{display:grid;place-items:center;width:30px;height:30px;min-height:0;margin-right:3px;padding:0;border:0;border-radius:50%;background:none;color:var(--muted);font-size:16px;line-height:1}
 .lbl-tag .lbl-in{width:8em;height:36px;padding:0 16px;border:0;border-radius:999px;background:transparent;font-size:13.5px}   /* 改名中：膠囊裡的輸入框 */
-.lbl-add{display:inline-grid;place-items:center;min-width:84px;height:36px;min-height:0;padding:0 16px;border:1.5px dashed var(--ink);border-radius:999px;background:transparent;color:var(--ink);font-size:17px;line-height:1}
+.lbl-add{display:inline-grid;place-items:center;min-width:84px;height:36px;min-height:0;padding:0 16px 2.4px;border:1.5px dashed var(--ink);border-radius:999px;background:transparent;color:var(--ink);font-size:17px;line-height:1}
 input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛線膠囊本身變成輸入框 */
 .tm-sec{display:grid;gap:8px;padding-top:4px}
 .tm-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .tm-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 14px;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .tm-name{font-weight:500}
-.tm-pill{display:inline-flex;align-items:center;height:22px;padding:0 10px 1px;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
+.tm-pill{display:inline-flex;align-items:center;height:22px;padding:2.9px 10px 1.1px;background:var(--blk2);border-radius:999px;font-size:11px;letter-spacing:.08em}
 .tm-pill.on{background:var(--acc2);color:var(--acc2-ink)}   /* 管理員：焦點色（紅色只給逾期、刪除、報告） */
 .tm-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
 .tm-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -1957,11 +1997,12 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .lg-item.old{border-color:var(--hair)}
 .lg-time{font-family:"Jost",sans-serif;font-size:15px;padding-top:2px;color:var(--muted)}
 .lg-main{display:grid;gap:8px;min-width:0}
-.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:0 12px 1px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
+.lg-who{justify-self:start;display:inline-flex;align-items:center;height:24px;padding:1.4px 12px .6px;border-radius:999px;background:var(--ink);color:var(--surface);font-size:12px;letter-spacing:.08em}
 .lg-old{color:var(--muted);font-size:13px;padding-top:2px}
 .lg-lines{list-style:none;margin:0;padding:0;display:grid;gap:5px}
-.lg-lines li{display:flex;gap:8px;align-items:baseline;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
-.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px 1px;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
+.lg-lines li{display:flex;gap:8px;align-items:center;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.lg-lines li>span:not(.lg-cat){padding-top:1px}   /* 膠囊跟旁邊的字上下對齊中線（字面中心比行盒中心高約 1px，補回） */
+.lg-cat{flex:none;display:inline-flex;align-items:center;height:20px;padding:1.4px 8px .6px;border:1px solid var(--red);color:var(--red);border-radius:999px;font-size:11px;letter-spacing:.06em}
 .log-more{display:block;margin:20px auto 0;border-radius:999px;padding-left:22px;padding-right:22px}
 .log-more[hidden]{display:none}
 .log-msg{text-align:center;margin:18px 0 0}
@@ -2007,18 +2048,23 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 /* 量測用（同一個 JS 工作裡加上又拿掉，畫面不會出現）：版面照列印 */
 .rpt-paper.rpt-measure{display:block;width:182mm}
 .rpt-measure .rpt-page{aspect-ratio:auto;padding:0;box-shadow:none}   /* 每章的最小高度（排成幾張紙時程式設的）量之前就先清掉了 */
-.rpt-measure :is(.rpt-ct,.rpt-bt,.rpt-ins,.rpt-img-h,.rpt-card-x,.rpt-card-add,.rpt-blk.is-blank,.rpt-ch.is-blank,[data-ph]:empty,.rpt-pg,.rpt-gap,.rpt-sp){display:none}
+.rpt-measure :is(.rpt-ct,.rpt-bt,.rpt-ins,.rpt-img-h,.rpt-card-x,.rpt-tr-x,.rpt-card-add,.rpt-blk.is-blank,.rpt-ch.is-blank,[data-ph]:empty:not(.rpt-td),.rpt-pg,.rpt-gap,.rpt-sp){display:none}
 .rpt-measure .rpt-blocks{display:block}
 .rpt-measure .rpt-blocks>.rpt-blk+.rpt-blk{margin-top:18px}
 .rpt-paper [contenteditable="true"]{outline:none;border-radius:4px;transition:background-color .2s,box-shadow .2s}
 .rpt-paper [contenteditable="true"]:hover{background:color-mix(in srgb,var(--ink) 3.5%,transparent)}
 .rpt-paper [contenteditable="true"]:focus{background:color-mix(in srgb,var(--ink) 5%,transparent);box-shadow:0 0 0 2px color-mix(in srgb,var(--ink) 8%,transparent)}
 .rpt-paper [data-ph]:empty::before{content:attr(data-ph);color:color-mix(in srgb,var(--muted) 62%,var(--blk))}
-/* --- 封面：上（logo＋部門｜日期）、中（英文小字＋大標題＋期間）、下（製作人｜看板網址）三段撐滿一頁 --- */
-.rpt-cover{display:flex;flex-direction:column;justify-content:space-between;gap:40px}
+/* --- 封面：上（logo＋部門｜日期）、中（英文小字＋大標題＋期間）、下（製作人｜看板網址）三段撐滿一頁；
+   .cv-art 是底下的圖案（data-cv：band 斜帶、curve 曲線、stripe 條紋；字在圖案上面）。顏色只用 --cv-c（＝部門主色）的深淺。
+   會議紀錄的封面（meeting.js）沒有 data-cv、沒有 .cv-art，維持單純白底 --- */
+.rpt-cover{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;gap:40px;--cv-c:var(--accent-light)}
+.cv-top,.cv-mid,.cv-foot{position:relative;z-index:1}
 .cv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .cv-org{display:flex;align-items:center;gap:14px}
 .cv-org b{font-size:15px;font-weight:700;letter-spacing:.14em}
+.cv-name{display:grid;gap:1px}
+.cv-name small{font-size:10.5px;letter-spacing:.22em;color:var(--muted)}
 .cv-logo .su-logo-c{display:block;height:34px;width:auto}   /* 封面一律原檔彩色 logo（shell.js 的 suLogoColor，不跟深淺色） */
 .cv-date{font-size:12px;letter-spacing:.08em;color:var(--muted)}
 .cv-mid{margin-top:12%}
@@ -2028,6 +2074,20 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .cv-foot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;font-size:11.5px;line-height:1.7;color:var(--muted)}
 .cv-col{display:grid;align-content:start}
 .cv-col>span:empty:not(:focus){min-height:1.7em}
+.cv-art{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;color:var(--cv-c);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cv-art svg{display:none;position:absolute;inset:0;width:100%;height:100%}   /* 只顯示選中的那一款（下面） */
+/* 有圖案的封面：標題改成較細、較克制的排版（留白多、小字字距寬）；中英文之間讓瀏覽器自動留空（text-autospace） */
+.rpt-cover[data-cv]{text-autospace:normal}
+.rpt-cover[data-cv] .cv-mid{margin-top:15%}
+.rpt-cover[data-cv] .cv-mid::before{content:"";display:block;width:34px;height:3px;margin-bottom:22px;background:var(--cv-c)}
+.rpt-cover[data-cv] .cv-mid h1{font-size:60px;font-weight:600;letter-spacing:.08em}
+.rpt-cover[data-cv] .cv-foot{grid-template-columns:minmax(0,1fr);width:40%;gap:14px;margin-bottom:12%}
+/* 三款圖案都是 .cv-art 裡的 svg（report.js 的 rptCoverArt）：斜帶＝右下角一條斜向色帶、上緣硬往下淡出；曲線＝右下角同心弧線；條紋＝右下角細直條、越右越高。
+   用 svg 不用漸層加旋轉：輸出 PDF 時圖案被紙邊裁在內文範圍裡，svg 的形狀不會跑掉。顏色是 currentColor（＝ --cv-c）。換款只是顯示哪一個 */
+.rpt-cover[data-cv="band"] .cv-art [data-k="band"],.rpt-cover[data-cv="curve"] .cv-art [data-k="curve"],.rpt-cover[data-cv="stripe"] .cv-art [data-k="stripe"]{display:block}
+/* 封面樣式鈕：放在封面下面那一條紙間空隙，滑過封面才出現（手機一直顯示），不印 */
+.rpt-cover .cv-tools{top:calc(100% + 1px);bottom:auto;right:50%;transform:translateX(50%)}
+.rpt-cover:is(:hover,:focus-within) .cv-tools{opacity:1;pointer-events:auto}
 .rpt-live{color:var(--ink);text-decoration:none;word-break:break-all}   /* 回到線上看板的連結（PDF 裡仍可點；網址照印，紙本也能照打） */
 /* --- 目錄：英文小字＋「目錄」，下面每章一列：細體大數字、章名、羅馬數字，列與列之間細線（參考樓層導覽卡） --- */
 .rpt-paper h2{display:flex;align-items:center;gap:12px;margin:0;padding:0;font-weight:500;font-size:16px;letter-spacing:.1em;flex:1;min-width:180px;white-space:nowrap}   /* 白紙上的標題（目錄、章節名稱；後面的 .toc-h h2、.rpt-ch-h h2 再各自改大小，所以這條要寫在它們前面）。ui-09 以前是全站 h2 的樣式，區塊標題改成 .sec-h 後留給白紙用 */
@@ -2064,19 +2124,30 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-ins{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:22px;padding-top:14px;border-top:1px dashed var(--hair);font-size:12px;color:var(--muted)}
 .rpt-ins button{min-height:0;height:30px;padding:0 13px;border:1px solid var(--hair);border-radius:999px;background:var(--blk);color:var(--ink);font-size:12.5px}
 .rpt-ins button:hover{border-color:var(--ink)}
-/* 圖片：寬度＝內文寬的 --w（25～100％），靠左／置中／靠右；高度最多 150mm（一頁放得下），不變形；右下角拖曳調大小 */
-.rpt-img{margin:0;width:var(--w,66%);max-width:100%;min-width:25%;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
-.rpt-img[data-al="c"]{margin-inline:auto}
-.rpt-img[data-al="r"]{margin-left:auto}
-.rpt-img-box{position:relative}
-.rpt-img img{display:block;width:100%;height:auto;max-height:150mm;object-fit:contain;object-position:left top;border-radius:2px}
-.rpt-img[data-al="c"] img{object-position:center top}.rpt-img[data-al="r"] img{object-position:right top}
+/* 圖片（report.js 的 rptImgBlk／rptImgSet）：版框 .rpt-img-frame 寬＝內文寬、高＝寬×--far（最大 0.82＝149mm，一頁放得下），圖在裡面用 --x --y --w 定位，
+   單位都是版框寬的％（container 的 cqw），所以預覽、手機整張縮小、列印的位置一樣。四個角縮放（等比例）、拖圖移動、下緣中間的長條調版框高度。
+   淡出：遮罩的四邊各一條漸層（--fl --fr --ft --fb ＝那一邊淡出的範圍），交集＝邊緣漸漸透明、融進紙的底色。觸控時選取後（focus-within）才關掉頁面捲動，才拖得動圖 */
+.rpt-img{--f:24;--fl:0%;--fr:0%;--ft:0%;--fb:0%;margin:0;width:100%;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.rpt-img[data-fade="all"]{--fl:calc(var(--f) * 1%);--fr:calc(var(--f) * 1%);--ft:calc(var(--f) * 1%);--fb:calc(var(--f) * 1%)}
+.rpt-img[data-fade="l"]{--fl:calc(var(--f) * 1%)}.rpt-img[data-fade="r"]{--fr:calc(var(--f) * 1%)}
+.rpt-img[data-fade="t"]{--ft:calc(var(--f) * 1%)}.rpt-img[data-fade="b"]{--fb:calc(var(--f) * 1%)}
+.rpt-img-frame{position:relative;container-type:inline-size;aspect-ratio:1 / var(--far,.6)}
+@media screen{.rpt-blk:is(:focus,:focus-within) .rpt-img-frame{outline:1px dashed var(--rest);outline-offset:2px}}   /* 選取時畫出版框（圖能移動的範圍），不印 */
+.rpt-img-box{position:absolute;left:calc(var(--x,0) * 1cqw);top:calc(var(--y,0) * 1cqw);width:calc(var(--w,66) * 1cqw)}
+.rpt-img img{display:block;width:100%;height:auto;border-radius:2px;cursor:grab;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fl)),linear-gradient(to left,transparent 0,#000 var(--fr)),linear-gradient(to bottom,transparent 0,#000 var(--ft)),linear-gradient(to top,transparent 0,#000 var(--fb));-webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right,transparent 0,#000 var(--fl)),linear-gradient(to left,transparent 0,#000 var(--fr)),linear-gradient(to bottom,transparent 0,#000 var(--ft)),linear-gradient(to top,transparent 0,#000 var(--fb));mask-composite:intersect}
+.rpt-img.sizing img{cursor:grabbing}
 .rpt-img figcaption{font-size:12px;color:var(--muted);letter-spacing:.04em}
-.rpt-img-h{position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--blk);cursor:nwse-resize;touch-action:none;opacity:0;transition:opacity .2s,transform .2s}
-.rpt-blk:hover .rpt-img-h,.rpt-blk:focus-within .rpt-img-h,.rpt-blk:focus .rpt-img-h,.rpt-img.sizing .rpt-img-h{opacity:1}
-.rpt-img.sizing .rpt-img-h{transform:scale(1.25)}
-.rpt-img.sizing{transition:none}
-.rpt-img:not(.sizing){transition:width .28s var(--mo-out)}
+.rpt-img-h{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--blk);touch-action:none;opacity:0;transition:opacity .2s,transform .2s}
+.rpt-img-h[data-h="tl"]{left:-8px;top:-8px;cursor:nwse-resize}.rpt-img-h[data-h="br"]{right:-8px;bottom:-8px;cursor:nwse-resize}
+.rpt-img-h[data-h="tr"]{right:-8px;top:-8px;cursor:nesw-resize}.rpt-img-h[data-h="bl"]{left:-8px;bottom:-8px;cursor:nesw-resize}
+.rpt-img-h[data-h="fh"]{left:50%;bottom:-6px;width:38px;height:10px;transform:translateX(-50%);cursor:ns-resize}
+.rpt-blk:is(:hover,:focus-within,:focus) .rpt-img-h,.rpt-img.sizing .rpt-img-h{opacity:1}
+.rpt-img.sizing .rpt-img-h:not([data-h="fh"]){transform:scale(1.2)}
+.rpt-blk:focus-within .rpt-img-box img,.rpt-blk:focus-within .rpt-img-h{touch-action:none}
+.rpt-img:not(.sizing) .rpt-img-box{transition:left .28s var(--mo-out),top .28s var(--mo-out),width .28s var(--mo-out)}
+.rpt-bt-lb{align-self:center;padding:0 2px 0 4px;color:var(--muted);font-size:11.5px}
 /* 卡片圖塊（分項說明）：兩欄或三欄，淡灰底、上面一條粗線，項目名稱粗體、說明內文 */
 .rpt-cards{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:12px}
 .rpt-cards[data-cols="3"]{--cols:3}
@@ -2087,6 +2158,22 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-card-x .ico{width:11px;height:11px}
 .rpt-blk:hover .rpt-card-x,.rpt-blk:focus-within .rpt-card-x{opacity:1}
 .rpt-card-add{margin-top:10px;min-height:0;height:28px;padding:0 12px;border:1px dashed var(--hair);border-radius:999px;background:transparent;color:var(--muted);font-size:12px}
+.rpt-lead{margin:0 0 16px;font-size:16px;font-weight:500;line-height:1.8;letter-spacing:.03em;text-autospace:normal}
+/* 表格（report.js 的 rptTr／rptTd）：div 格線，每列一個不切開的塊；表頭小字加粗線，列與列之間細線。欄寬由 data-t 決定 */
+.rpt-subh{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.12em}
+.rpt-tbl{--tc:minmax(0,1fr);border-top:1.5px solid var(--ink);text-autospace:normal}
+.rpt-tbl[data-t="issue"]{--tc:minmax(0,1.15fr) minmax(0,.7fr) minmax(0,1.7fr) minmax(0,1.35fr) minmax(0,.9fr)}
+.rpt-tbl[data-t="plan"]{--tc:minmax(0,2.2fr) minmax(0,.9fr) minmax(0,1fr)}
+.rpt-tr{position:relative;display:grid;grid-template-columns:var(--tc);gap:0 14px;padding:9px 0;border-bottom:1px solid var(--hair);font-size:12.5px;line-height:1.65}
+.rpt-th{padding:6px 0;border-bottom:1px solid var(--ink);color:var(--muted);font-size:11.5px;font-weight:600;letter-spacing:.1em}
+.rpt-td{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.rpt-td b{display:block;font-size:13.5px;font-weight:700;letter-spacing:.03em}
+.rpt-td small{display:block;color:var(--muted);font-size:11px;letter-spacing:.04em}
+.rpt-td .rpt-d{min-width:0;margin-right:.6em}
+.rpt-wait{color:var(--prog-lo-ink);font-weight:600}
+.rpt-tr-x{position:absolute;right:-26px;top:50%;transform:translateY(-50%);min-height:0;width:22px;height:22px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--muted);opacity:0;transition:opacity .2s}
+.rpt-tr-x .ico{width:11px;height:11px}
+.rpt-tr:hover .rpt-tr-x,.rpt-blk:focus-within .rpt-tr-x{opacity:1}
 .rpt-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
 .rpt-stats>div{display:grid;gap:2px;padding:10px 12px;border:1px solid var(--hair);border-radius:12px}
 .rpt-stats b{font-family:"Jost",sans-serif;font-size:28px;font-weight:400;line-height:1.1}
@@ -2094,10 +2181,9 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-stats small{color:var(--muted);font-size:11.5px}
 /* 期間甘特圖（report.js 的 rptGantt）：細刻度（.tk，views.js 的 ticksHTML；看板甘特圖 ui-12 起改滑桿式，報告不變）。一般區塊排列（比一整頁還高時可以在列與列之間換頁） */
 .rpt-gantt{margin:0}
-.rg-row{display:grid;grid-template-columns:minmax(0,150px) 40px minmax(0,1fr);align-items:center;gap:12px}
+.rg-row{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);align-items:center;gap:12px}
 .rg-row+.rg-row{margin-top:4px}
 .rg-t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rg-p{font-size:11.5px;color:var(--muted);text-align:right}
 .rg-bar{height:20px}
 /* 月份與「今天」不超出紙寬（2026-11-16 R1：超出時 Chromium 會把整份 PDF 縮小）：位置 --p（0～100），靠右放不下的往左對齊到時間軸右端，
    今天膠囊也不超出左端（1cqw＝時間軸寬的 1%）；還是超出的裁掉 */
@@ -2109,9 +2195,6 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .rpt-issue h3{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin:0;font-size:16px;font-weight:600}
 .rpt-st{color:var(--tone-ink);font-size:12.5px;font-weight:500}
 .rpt-meta2{margin:2px 0 6px;color:var(--muted);font-size:12.5px}
-.rpt-prog{position:relative;width:min(100%,360px);height:12px;margin:4px 0 8px}
-.rpt-prog::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;transform:translateY(-50%);background:var(--rest)}
-.rpt-prog i{position:absolute;left:0;top:50%;height:4px;transform:translateY(-50%);border-radius:2px;background:var(--tone)}
 .rpt-issue h4{margin:8px 0 2px;color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.06em}
 .rpt-issue p{margin:0}
 .rpt-tl{margin:0;padding-left:1.2em}
@@ -2155,7 +2238,7 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
   html,body{height:auto;overflow:visible;background:#fff}   /* 例外：工作報告的白紙（列印） */
   body.rpt-open>:not(#rptOv){display:none}
   body.rpt-open #rptOv{position:static;display:block;padding:0;background:#fff}   /* 例外：工作報告的白紙（列印） */
-  .rpt-bar,.rpt-pt,.rpt-ct,.rpt-bt,.rpt-ins,.rpt-pg,.rpt-gap,.rpt-sp,.rpt-img-h,.rpt-card-x,.rpt-card-add,.rpt-blk.is-blank,.rpt-ch.is-blank,.rpt-paper [data-ph]:empty{display:none}
+  .rpt-bar,.rpt-pt,.rpt-ct,.rpt-bt,.rpt-ins,.rpt-pg,.rpt-gap,.rpt-sp,.rpt-img-h,.rpt-card-x,.rpt-tr-x,.rpt-card-add,.rpt-blk.is-blank,.rpt-ch.is-blank,.rpt-paper [data-ph]:empty:not(.rpt-td){display:none}
   .rpt-scroll{overflow:visible;padding:0}
   .rpt-fit,.rpt-fit.is-fit{width:auto;height:auto;margin:0}
   .rpt-fit.is-fit>.rpt-paper{transform:none}
@@ -2227,11 +2310,6 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 .week.opening .wl:nth-child(22){animation-delay:0.645s}
 .week.opening .wl:nth-child(23){animation-delay:0.670s}
 .week.opening .wl:nth-child(24){animation-delay:0.695s}
-.week-wrap.enter .week-top>*:nth-child(1){animation-delay:0.000s}
-.week-wrap.enter .week-top>*:nth-child(2){animation-delay:0.040s}
-.week-wrap.enter .week-top>*:nth-child(3){animation-delay:0.080s}
-.week-wrap.enter .week-top>*:nth-child(4){animation-delay:0.120s}
-.week-wrap.enter .week-top>*:nth-child(5){animation-delay:0.160s}
 @keyframes dropIn{from{opacity:0;transform:translateY(-10px)}}
 
 /* ===== 編輯／檢視切換時的動畫 ===== */
@@ -2267,18 +2345,31 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
 
 
-/* ===== 行政會議議程（meeting.js 的 renderAgenda） =====
-   上面一排部門膠囊（沿用 .wk-d，選取＝實心；後面寫本週或週報日期），中間是併好的議程全文，下面「複製議程」「定版」，最下面是定版過的議程（跟週報同一種收合膠囊） */
-.ag-st{margin:0 0 12px;font-size:12.5px}
-.ag-text{margin:0 0 4px;padding:12px 14px;border:1px solid var(--hair);border-radius:12px}
-.ag-body:empty{display:none}
-.ag-h{margin:18px 0 8px;font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:.06em}
-.ag-done:empty{display:none}
-.mt-foot .primary{min-height:32px;padding:3px 16px;font-size:13px}
-/* 會議決議（定版議程裡逐部門一行，秘書處填；下次議程最前面列「上次決議追蹤」） */
-.ag-dec{margin-top:12px;padding-top:4px;border-top:1px solid var(--hair)}
-.ag-dec .ag-h{margin:10px 0 8px}
-.ag-dec-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px}
-.ag-dec-row span{flex:none;min-width:4.5em;color:var(--muted)}
-.ag-dec-row input{flex:1;min-width:0}
-.ag-dec-act{display:flex;justify-content:flex-end;margin-top:8px}
+/* ===== 行政會議資料（meeting.js 的 renderAgenda；2026-11-21 第三版：卡片就是文件，就地編輯） =====
+   標題列：「複製文字」「儲存」；上面一排會議膠囊（今天＋最近 6 場，沿用 .wk-d）；文件本身（#agDoc）：像正式文件，標題、日期、一個部門一段，字用內文大小；
+   要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回；最下面一排「加入部門報告」膠囊。 */
+.ag-past{margin-bottom:14px}
+.md-doc{display:grid;gap:4px}
+.md-title{margin:0;font-size:20px;font-weight:600;letter-spacing:.02em}
+.md-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 0 10px}
+.md-date{font-size:13px;color:var(--muted);padding:2px 8px;margin:0 -8px}
+.md-sec{border-top:1px solid var(--hair);padding:12px 0 6px}
+.md-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 8px;font-size:15px;font-weight:600}
+.md-chip{font-size:11.5px;font-weight:400;padding:2px 9px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--hair);color:var(--muted);letter-spacing:.04em}
+.md-x{margin-left:auto}
+.md-trk{margin:0 0 6px;font-size:14px;line-height:1.7}
+.md-trk b{display:inline-block;min-width:4.5em;margin-right:8px;color:var(--muted);font-weight:500}
+.md-e{border-radius:8px;cursor:text;transition:background-color var(--mo-base) var(--mo-out)}
+.md-e:hover,.md-e:focus-visible{background:var(--blk2);outline:0}
+.md-e.is-ed,.md-e.is-ed:hover{background:transparent}
+.md-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.75;padding:4px 6px;margin:0 -6px 8px}
+.md-note,.md-dec .md-e{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;padding:4px 8px;margin:0 -8px}
+.md-ph{color:var(--muted)}
+.md-lab{display:block;margin:10px 0 2px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.md-ex{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;margin-top:10px}
+.md-ex .md-note{grid-column:1/-1}
+.md-ext{font-size:14.5px;font-weight:500;padding:4px 8px;margin:0 -8px}
+.md-add{margin-top:8px}
+.md-in{width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.7;color:var(--ink)}
+.md-paste{border-top:1px solid var(--hair);padding-top:12px;margin-top:6px}
+.ag-st{margin:12px 0 0;font-size:12.5px}

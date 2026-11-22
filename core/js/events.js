@@ -11,34 +11,35 @@ document.addEventListener("click",async e=>{
   if(t.closest("[data-edcancel]")){cancelEdit();return}
   if(t.closest("[data-edsave]")){if(!fldCommitOpen())return;await saveFlow();return}   /* 還開著的那一欄先存回（填錯就停在原欄） */
   if(t.closest("[data-copyweek]")){const bt=t.closest("[data-copyweek]");const w=state.weeks.find(x=>x.id===t.closest("[data-week]").dataset.week);copyText(w.text);bt.classList.add("copied");bt.innerHTML="已複製"+ico("check","sm");clearTimeout(bt._t);bt._t=setTimeout(()=>{bt.classList.remove("copied");bt.textContent="複製文字"},1500);return}
-  if(t.closest("#genWeek")&&readOnly()){
+  if(t.closest("[data-genweek]")&&readOnly()){
     const r=buildWeekly();
-    const v=await ask("生成週報",[{name:"text",label:`統計期間 ${fmt(r.start)} 之後 – ${fmt(r.end)}（唯讀版不會儲存，按確定即複製全文）`,type:"textarea",value:r.text}],{wide:true});
+    const v=await ask("生成每週報告",[{name:"text",label:`統計期間 ${fmt(r.start)} 之後 – ${fmt(r.end)}（唯讀版不會儲存，按確定即複製全文）`,type:"textarea",value:r.text}],{wide:true});
     if(v&&v.text)copyText(v.text);return}
-  if(t.closest("#genWeek")&&!readOnly()){
+  if(t.closest("[data-genweek]")&&!readOnly()){
     const r=buildWeekly();
-    const v=await ask("生成週報",[{name:"date",label:"日期",type:"date",value:r.end},{name:"text",label:`內容（${fmt(r.start)} 之後 – ${fmt(r.end)}）`,type:"textarea",value:r.text}],{wide:true});
-    if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成週報")}return}
-  /* 週報（週報頁）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
-  if(t.closest("#addWeek,[data-editweek],[data-delweek]")&&!canEdit())return;
+    const v=await ask("生成每週報告",[{name:"date",label:"日期",type:"date",value:r.end},{name:"text",label:`內容（${fmt(r.start)} 之後 – ${fmt(r.end)}）`,type:"textarea",value:r.text}],{wide:true});
+    if(v&&v.text){{const nw={id:uid("w"),date:v.date||r.end,text:v.text,auto:true};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500)}snapshotBase(v.date||r.end);if(editing)changed();else save();toast("已產生並存成每週報告")}return}
+  /* 每週報告（完成紀錄的週頁，views.js 的 repHTML）：登入就能新增、修改、刪除，按確定直接儲存（沒有編輯階段） */
+  if(t.closest("[data-addweek],[data-editweek],[data-delweek]")&&!canEdit())return;
   if(t.closest("[data-delweek],[data-deldone],[data-delissue]")&&!fsDelOk())return;   /* firestore 模式：議題、週報只有部門管理員與總管理員能刪（規則要求同批寫刪除紀錄，02D D-d） */
-  if(t.closest("#addWeek")){
+  const aw=t.closest("[data-addweek]");
+  if(aw){
     const last=[...state.weeks].sort((a,b)=>b.date.localeCompare(a.date))[0];
-    const v=await ask("新增週報",[{name:"date",label:"日期",type:"date",value:today()},{name:"text",label:"內容",type:"textarea",value:last?last.text:""}],{wide:true});
-    if(v&&v.text)await settingSave(()=>{const nw={id:uid("w"),date:v.date||today(),text:v.text};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500);snapshotBase(v.date||today())},"已新增週報");return}
+    const v=await ask("新增每週報告",[{name:"date",label:"日期",type:"date",value:wkStart(today())===aw.dataset.addweek?today():addDays(aw.dataset.addweek,6)},{name:"text",label:"內容",type:"textarea",value:last?last.text:""}],{wide:true});
+    if(v&&v.text)await settingSave(()=>{const nw={id:uid("w"),date:v.date||today(),text:v.text};state.weeks.push(nw);newWeekId=nw.id;(openWeeks=openWeeks||new Set()).add(nw.id);setTimeout(()=>{newWeekId=null},1500);snapshotBase(v.date||today())},"已新增每週報告");return}
 
   const wk=t.closest("[data-week]");
   if(wk&&t.closest("[data-editweek]")){const w=state.weeks.find(x=>x.id===wk.dataset.week);
-    const v=await ask("編輯週報",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:fsDelOk()?"刪除此週":undefined});
-    if(v)await settingSave(()=>{if(v==="delete")state.weeks=state.weeks.filter(x=>x!==w);else Object.assign(w,{date:v.date||w.date,text:v.text})},v==="delete"?"已刪除週報":"已更新週報");return}
-  if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的週報？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除週報");return}
+    const v=await ask("編輯每週報告",[{name:"date",label:"日期",type:"date",value:w.date},{name:"text",label:"內容",type:"textarea",value:w.text}],{wide:true,danger:fsDelOk()?"刪除此週":undefined});
+    if(v)await settingSave(()=>{if(v==="delete")state.weeks=state.weeks.filter(x=>x!==w);else Object.assign(w,{date:v.date||w.date,text:v.text})},v==="delete"?"已刪除每週報告":"已更新每週報告");return}
+  if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的每週報告？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除每週報告");return}
 
   /* small events（即時回報） */
   /* 新增即時回報（右下角的浮動圓鈕，只有 canEdit 時算數：唯讀檢視中圓鈕正在消失時點到也不算）：開始編輯一張空白的卡片（打開、游標在名稱）；什麼都沒填就點外面＝不留（live.js 的 kpCommit） */
   if(t.closest("#addEvent")&&!editing&&canEdit()){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpFocus("title",true)}return}
   /* 「+ 議題」：加一個議題、換到它的詳情，游標直接在名稱上（整段選取，打字就換掉；沒有對話框）；沒命名就點外面／Esc＝不留（inmCommit） */
-  if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新議題",tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
+  if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新"+ISS,tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
     if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);inm={id:it.id,isNew:true};dirty=true}))progShow(it.id,()=>inmFocus(true));return}
   /* 議題詳情：點名稱＝原地改名稱 */
   const ing=t.closest("[data-iname-go]");if(ing){if(!editing&&canEdit()){const id=ing.closest("[data-issue]").dataset.issue;if(await startEdit("i:"+id,()=>{const it=state.issues.find(i=>i.id===id);inm={id,isNew:false,orig:it?it.title:""}}))inmFocus(false)}return}
@@ -65,7 +66,7 @@ document.addEventListener("click",async e=>{
   const ifx=t.closest("[data-iffx]");if(ifx){ifFldAct(ifx);return}
 
   /* issues */
-  if(t.closest("#autoRange")){const ds=state.issues.flatMap(i=>[i.start,i.end,...i.markers.map(m=>m.date)]).filter(Boolean).sort();if(!ds.length){toast("還沒有填日期的議題");return}state.range={start:ds[0].slice(0,7),end:ds[ds.length-1].slice(0,7)};changed();return}
+  if(t.closest("#autoRange")){const ds=state.issues.flatMap(i=>[i.start,i.end,...i.markers.map(m=>m.date)]).filter(Boolean).sort();if(!ds.length){toast("還沒有填日期的"+ISS);return}state.range={start:ds[0].slice(0,7),end:ds[ds.length-1].slice(0,7)};changed();return}
   const it=findIssue(t);if(!it)return;
   if(t.closest("[data-restore]")){if(!fldCommitOpen())return;it.doneAt=null;dirty=true;await saveFlow();toast("已取消結案，移回進行中");return}   /* 卡片會離開完成紀錄：直接儲存 */
   /* 結案／取消結案（編輯中，卡片工具列）：結案的議題儲存後移到完成紀錄 */
@@ -89,7 +90,7 @@ async function inmCommit(how){
   if(!it){inm=null;return}
   const v=(f?f.value:it.title).trim();
   if(!v&&how==="enter"){toast("請填名稱");if(f){f.classList.add("bad");f.focus()}return}
-  if(!v||(isNew?how!=="enter"&&v==="新議題":v===inm.orig)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改（跟開始改名時的原名比，不跟 it.title 比：上一次存檔被取消時 it.title 已經是新名稱）：只離開；新增的沒命名：不留，回甘特圖 */
+  if(!v||(isNew?how!=="enter"&&v==="新"+ISS:v===inm.orig)){inm=null;cancelEdit();if(isNew)pvIn($("#pvGantt"));return}   /* 沒改（跟開始改名時的原名比，不跟 it.title 比：上一次存檔被取消時 it.title 已經是新名稱）：只離開；新增的沒命名：不留，回甘特圖 */
   it.title=v;dirty=true;inmBusy=true;
   try{await saveFlow()}finally{inmBusy=false}
 }

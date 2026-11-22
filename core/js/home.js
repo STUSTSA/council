@@ -4,7 +4,7 @@
    - 手機（640px 以下）：錢包式卡片堆（見下面 WAL）。
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
-   - 下排：全會行事曆圓鈕、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
+   - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（進你的部門看板、打開行事曆的會長室模式（沒記到部門時到會長室頁））、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
@@ -154,9 +154,13 @@
      跨頁：播完主頁這一半才換頁，交接 sessionStorage「pfx-burst」＝{d,k}（只給下一頁讀一次，index.html 開頭讀完就刪），
      看板開頁第一格就蓋著同一個終點畫面（pagefx.js 的 cover），等看板穩定了再接著播後半（桌面：底板淡出、區塊浮上來；手機：標誌淡出、區塊不規則浮現）。
      減少動態時直接換頁、不交接 */
+  /* 進部門提速（2026-11-21）：點下去的那一刻，請 Service Worker 先把看板的檔案跟網路對一遍（sw.js 的 warm；換頁後 15 秒內直接用這一份，不用再等一輪），
+     並提前下載 Firebase 模組（store.js 的 storePreload）。沒有 Service Worker、不支援時什麼都不做，進部門照舊 */
+  function hmWarm(){try{storePreload();const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c)c.postMessage({type:"warm"})}catch(_){}}
   function hmEnter(i){
     const d=D[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
+    hmWarm();   /* 過場動畫播的這一秒不浪費：看板的檔案與 Firebase 模組同時開始準備（動畫與換頁的時間都不變） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
     dockMove(false);   /* 下排跟主頁其他東西一起退場（桌面、手機都是） */
@@ -268,7 +272,7 @@
     LK.list=nx;return true;
   }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
-  DKN.set("pub",$id("hmPub"));
+  DKN.set("pub",$id("hmPub"));DKN.set("bk",$id("hmBk"));
   /* 網站圖示：依序試 網站自己的 /favicon.ico → Google 圖示服務（只送 hostname，encodeURIComponent；要 64px）→ 都沒有就留著首字母圓鈕。
      Google 拿不到圖示時回一張 16×16 的預設地球（狀態可能是 404，瀏覽器照樣 load）：要 64 卻回兩邊都不超過 16 的圖＝當成沒有。
      （網站真的只有 16px 圖示、又不放在 /favicon.ico 時也會被當成沒有，顯示首字母；見交接說明一百零五。）
@@ -328,7 +332,7 @@
       else{n.className="hm-lkf";n.innerHTML=`<input class="hm-lku" id="hmLkU" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="https://" aria-label="網址"><input class="hm-lkn" id="hmLkN" type="text" autocomplete="off" maxlength="${LK_NAME}" enterkeyhint="done" placeholder="名稱" aria-label="名稱"><button type="button" class="primary hm-lkok">加入</button>`}}
     DKN.set(k,n);return n;
   }
-  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub","dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
+  const dkKeys=()=>{const full=LK.list.length>=LK_MAX;return ["pub",...(D.some(d=>d.id==="president")?["bk"]:[]),"dv",...LK.list.map(x=>x.k),...(LK.ed?["back",...(full?[]:["form"])]:full?[]:["add"])]};
   /* 畫下排：沿用節點（照代號），只增減有變的；anim＝寬度與位置用動畫滑過去，show＝這一個要捲進可見範圍（手機、編輯中放不下時） */
   function dkPaint(anim,show){
     const keys=dkKeys(),R=anim&&!reduceMotion(),r0=new Map();let w0=0;
@@ -445,10 +449,18 @@
   addEventListener("popstate",()=>{if(LY)layerClose(true)});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&LY){e.preventDefault();layerClose()}});   /* 行事曆的月份選單開著時，它自己在捕獲階段先關選單（notify.js） */
   $id("hmPub").innerHTML=ico("calendar","solo");
+  $id("hmBk").innerHTML=ico("clock","solo")+"<span>預約會長</span>";
+  $id("hmBk").addEventListener("click",()=>{if(H.busy)return;H.busy=true;lkEdit(false);tipHide();Sfx.play("enter");hmWarm();   /* 直接進你的部門看板、打開行事曆的會長室模式：下排先退場再換頁，不做色塊放大（焦點不一定在會長室） */
+    let mine="";try{mine=localStorage.getItem("stustsa-mydept")||""}catch(_){}
+    const to=D.some(d=>d.id===mine&&d.id!=="president")?mine:"president";   /* 你的部門看板的行事曆「會長室」模式；還不知道你的部門時到會長室頁（那裡有指路） */
+    try{sessionStorage.setItem("hm-dept",to)}catch(_){}
+    const go=()=>{location.href=to==="president"?`index.html?d=president&tab=ext`:`index.html?d=${to}&noti=pres`};
+    if(reduceMotion()){go();return}dockMove(false);setTimeout(go,MO.base)});
   $id("hmPub").addEventListener("click",e=>layerOpen("cal",e.currentTarget));
   $id("hmSet").addEventListener("click",e=>layerOpen("look",e.currentTarget));
 
   paint();hmCounts();
+  setTimeout(()=>(window.requestIdleCallback||setTimeout)(storePreload),2500);   /* 開場與主頁動畫都過了、閒下來才提前下載 Firebase 模組（進部門時才下載會多等好幾趟網路來回；下載一次之後瀏覽器會留著） */
   swReg(D.map(d=>deptLogo(d.id)));   /* 安裝成 App、離線打開：主頁也註冊 Service Worker，並把主頁用到的檔案與九個部門標誌收進離線備份（util.js） */
   if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */

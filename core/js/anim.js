@@ -90,13 +90,23 @@ const Anim=(()=>{
   async function show(el,kind="rise"){if(!el)return;el.hidden=false;return enter(el,kind)}
   async function hide(el,kind="fade"){if(!el||el.hidden)return;await leave(el,kind);el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}
   /* 依狀態出現／消失（每次重畫都可以呼叫，狀態沒變就什麼都不做）：出現＝略帶回彈放大，消失＝縮小淡出後才藏起來；第一次只設狀態、不播。
-     一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉 */
-  function toggle(el,on){
+     一開始消失就 inert（縮小淡出的途中點不到、也拿不到焦點），出現時拿掉。
+     collapse：這顆在排版裡佔位置（頁首的鈴鐺、「唯讀」膠囊、底部的設定圓鈕）時，出現／消失同時把它自己的長度（橫排＝寬、直排＝高）和跟旁邊的間距
+     從 0 補到原本大小（或反過來），旁邊的元件就跟著排版自然滑開／補位——進、出兩個方向同一條路，不量位置、不疊在一起、終點就是正常排版。縮的那顆比長的那顆快（base／slow），頁首兩顆一長一縮時標題不會被擠到截字 */
+  function toggle(el,on,{collapse=false}={}){
     if(!el)return;on=!!on;if(el._tgl===on)return;const first=el._tgl===undefined;el._tgl=on;
     el.getAnimations().forEach(a=>a.cancel());el.inert=!on;
-    if(on){el.hidden=false;if(!first)enter(el,"pop");return}
-    if(first||el.hidden||reduced()){el.hidden=true;return}
-    leave(el,"pop").then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
+    const run=grow=>{
+      const cs=getComputedStyle(el),pcs=getComputedStyle(el.parentElement),col=pcs.flexDirection.startsWith("column"),
+        gap=parseFloat(col?pcs.rowGap:pcs.columnGap)||0,size=el.getBoundingClientRect()[col?"height":"width"],
+        mx=col?"maxHeight":"maxWidth",mn=col?"minHeight":"minWidth",mg=col?"marginTop":"marginLeft",
+        shut={[mx]:"0px",[mn]:"0px",[mg]:`${-gap}px`,opacity:0,transform:"scale(.6)",clipPath:"inset(0px)"},
+        open={[mx]:`${size}px`,[mn]:"0px",[mg]:cs[mg],opacity:1,transform:"none",clipPath:"inset(-30px)"};   /* 縮到 0 寬時裡面的圖示會溢出來：用 clip-path 裁掉（-30px 留給陰影） */
+      return el.animate(grow?[shut,open]:[open,shut],{duration:grow?MO.slow:MO.base,easing:MO.out,fill:grow?"backwards":"forwards"}).finished.catch(()=>{});
+    };
+    if(on){el.hidden=false;if(!first&&!off()){collapse?run(true):enter(el,"pop")}return}
+    if(first||el.hidden||reduced()||(collapse&&off())){el.hidden=true;return}
+    (collapse?run(false):leave(el,"pop")).then(()=>{if(el._tgl===false){el.hidden=true;el.getAnimations().forEach(a=>a.cancel())}});
   }
   /* 燈號擴散（CSS 動畫 ping）：重畫後新的燈號會從頭播，跟原本的節奏對不上、看起來像跳一下。
      把每個 ping 動畫的起點都對齊到頁面時間軸 0，重畫前後相位一樣，所有燈號也同步 */

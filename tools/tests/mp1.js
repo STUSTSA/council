@@ -95,9 +95,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(await until(async()=>{const m=await read(`deptMembers/fruit__${U.edA}`);return m&&m.role==='editor'}),'名單：編輯者登入時補上自己那一份（含 role＝editor）');
   await until(async()=>!!(await read(`deptMembers/fruit__${U.edB}`)));
   await admin(d=>d.doc(`deptMembers/fruit__${U.edB}`).set({deptId:'fruit',uid:U.edB,at:TS.now()}));
-  const setHas=async(p,k)=>p.evaluate(k=>!!document.querySelector(`#setOv [data-set="${k}"]`),k);
-  const members=async p=>{await openSet(p);if(!await until(()=>setHas(p,'members'),4000))return false;
-    if(await p.evaluate(()=>paneKey==='members'))return true;await p.click('#setOv [data-set="members"]');await p.waitForTimeout(900);return true};
+  /* 部門成員在「帳號」頁裡（hub 的一列 data-hub="members"）；沒打開帳號頁就先打開 */
+  const toAcct=async p=>{await openSet(p);if(await p.evaluate(()=>paneKey!=='acct'&&!!document.querySelector('#setOv [data-set="acct"]'))){await p.click('#setOv [data-set="acct"]');await p.waitForTimeout(800)}};
+  const setHas=async(p,k)=>{await toAcct(p);return p.evaluate(k=>!!document.querySelector(`#setOv [data-hub="${k}"]`),k)};
+  const members=async p=>{if(!await until(()=>setHas(p,'members'),4000))return false;
+    await p.click('#setOv [data-hub="members"]');await p.waitForTimeout(900);return true};
 
   /* ---------- 1. 部門成員名單 ---------- */
   ok(await members(P.edA),'編輯者：設定有「部門成員」');
@@ -105,7 +107,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(txt.includes('adm 同學')&&txt.includes('部長')&&txt.includes('edA 同學')&&txt.includes('編輯者')&&txt.includes('edB 同學'),`編輯者：看得到本部門的成員與角色（${txt.replace(/\n/g,' / ')}）`);
   ok(!txt.includes('example.test'),'編輯者：名單沒有信箱');
   ok(txt.includes('成員')&&await P.edA.evaluate(()=>!document.querySelector('#setOv .acct-panel [data-rm],#setOv .acct-panel [data-new]')),'編輯者：沒有「新增編輯者」與「撤銷」；沒有 role 的舊文件顯示「成員」');
-  await openSet(P.nb);ok(!(await setHas(P.nb,'members')),'沒有角色的登入者：沒有「部門成員」');
+  ok(!(await setHas(P.nb,'members')),'沒有角色的登入者：沒有「部門成員」');
 
   /* ---------- 2. 部長：新增編輯者、撤銷 ---------- */
   ok(await members(P.adm),'部長：設定有「部門成員」');

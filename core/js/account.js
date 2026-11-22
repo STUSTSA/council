@@ -26,7 +26,8 @@ const deptNameOf=id=>(BOARD_DEPTS.find(d=>d.id===id)||{}).name||id;
 const acctDeptOpts=()=>BOARD_DEPTS.map(d=>[d.id,d.name]);
 const hm=ms=>{if(!ms)return "";const d=new Date(ms),p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`};
 const mmss=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`};
-const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
+/* 內建瀏覽器（LINE、臉書、IG、微信、Android WebView 與用 Google 搜尋／Lens 開的頁面）：Google 不讓這類環境登入，要先換到瀏覽器 */
+const inAppBrowser=()=>/\bLine\/|FBAN|FBAV|FB_IAB|Instagram|MicroMessenger|; wv\)|\bGSA\//i.test(navigator.userAgent);
 
 /* ---------- 登入狀態 ----------
    acct.user＝{uid,email,name}｜null；acct.roles＝自己的 roles 文件（即時監聽，角色被改或撤掉時畫面立刻跟著變）。 */
@@ -36,6 +37,8 @@ function acctLoad(){
   if(!acctMod)acctMod=storeModLoad("fb-account.js","board-account-ready","BoardAccount").then(A=>A.init(CFG.firebase));   /* 載入方式同 store.js */
   return acctMod;
 }
+/* 記下這台裝置上「你有部門角色」的部門代號（只存代號、不是機密）：首頁的「預約會長」靠它進你的部門行事曆（home.js）。總管理員與沒有角色的不記 */
+function acctMyDept(r){try{if(r&&r.depts&&r.depts[CFG.deptId]&&CFG.deptId!=="president")localStorage.setItem("stustsa-mydept",CFG.deptId)}catch(_){}}
 const acctSuper=()=>!!(acct.roles&&acct.roles.super);
 const acctDepts=()=>(acct.roles&&acct.roles.depts)||{};
 /* 02D：firestore 模式的看板跟著角色切換可編輯／唯讀（store.js 的 fsWriter），角色或登入狀態一變就重畫看板 */
@@ -62,7 +65,7 @@ async function acctStart(){
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;acctMyDept(r);A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
@@ -82,7 +85,7 @@ async function acctSignIn(){
   const A=await acctLoad();acct.err="";acctChanged();
   const c=await A.signIn();
   if(c&&c!=="redirect"&&!/popup-closed-by-user|cancelled-popup-request/.test(c)){acct.err=SIGNIN_ERR[c]||`登入失敗（${c}）`;acctChanged()}
-  return !c;
+  return c==="redirect"?"redirect":!c;   /* true＝登入了；"redirect"＝轉去 Google 登入頁；false＝取消或失敗 */
 }
 async function acctSignOut(){
   const A=await acctLoad();await A.signOut();
@@ -101,18 +104,17 @@ function acctGateHTML(){
   return `<div class="set-gate"><button type="button" class="set-gate-ico" data-fb-login aria-label="用 Google 登入">${GATE_LOCK}</button>${t||"<b>未登入</b>"}<button type="button" class="primary" data-fb-login>用 Google 登入</button>${acct.err?`<p class="acct-err" role="alert">${esc(acct.err)}</p>`:""}</div>`;
 }
 function acctSettingsInner(){
-  const wk=setRow("week","doc","每週概述");
-  if(!FB_ON)return setSec(wk)+lookSec();
-  if(!acct.ready)return setSec(wk)+`<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
-  if(!acct.user)return setSec(wk)+acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
+  if(!FB_ON)return lookSec();
+  if(!acct.ready)return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
+  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   /* 外觀：沒登入時沒有「帳號」頁，放在清單最後一列（nav.js） */
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、標籤、備份（只有匯出）；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")
       +setRow("backup","download","備份")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
   /* 06 登入了但還沒有任何部門角色：設定最上面一列「申請編輯權限」，點進帳號頁（有說明與申請）；看板內容照常可看，不強制跳頁 */
   const apply=!acctSuper()&&!Object.keys(acctDepts()).length?setSec(setRow("apply","edit","申請編輯權限")):"";
-  return apply+setSec(fsWriter()?setRow("report","doc","報告")+setRow("log","history","編輯紀錄"):wk)
-    +setSec(setRow("acct","people","帳號")+(fsWriter()?setRow("members","people","部門成員"):""))+ed
+  return apply+(fsWriter()?setSec(setRow("report","doc","工作報告")+setRow("log","history","編輯紀錄")):"")
+    +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec();   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
 }
@@ -120,7 +122,6 @@ function acctSettingsInner(){
 const ACCT_FLOWS={
   acct:()=>acctHub(),
   apply:()=>acctHub(),
-  members:()=>membersPanel(),
   council:()=>councilHub(),
 };
 document.addEventListener("click",async e=>{
@@ -176,6 +177,7 @@ async function acctHub(){
     return `<p class="set-p acct-empty">${q?`申請已送出，等待${esc(deptNameOf(q.deptId))}${q.role==="admin"?"總管理員":"部長"}審核。審核完成後重新整理就能編輯。`:"還沒有編輯權限。選擇部門與位階送出申請，部長審核後就能編輯。"}</p>`};
   return hubRun("帳號",()=>[
     {k:"name",ic:"edit",t:"名稱",flow:acctRename},
+    ...(fsWriter()?[{k:"members",ic:"people",t:"部門成員",flow:()=>membersPanel()}]:[]),   /* 05：這個部門有編輯權限的人看得到名單；部長多了邀請、撤銷與審核申請 */
     {k:"req",ic:"doc",t:"申請加入部門",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${rankT(q)}（等待審核）`,
@@ -631,16 +633,25 @@ async function joinFlow(){
   const token=joinToken();if(!token||joinBusy||!FB_ON)return;joinBusy=true;
   try{
     const A=await acctLoad();
-    if(!acct.user){
-      /* 取消登入不清掉權杖：同一個分頁之後從設定頁登入，還會接著加入 */
+    /* 還沒登入：一直問到登入成功或按取消。彈出視窗被關掉、登入失敗不能讓人卡在空畫面（以前只能重新掃 QR）；取消不清掉權杖，同一個分頁之後從設定頁登入還會接著加入 */
+    while(!acct.user){
       if(inAppBrowser()){const v=await ask("用瀏覽器開啟",[],{});if(v)acctCopyUrl();return}
-      const v=await ask("用 Google 登入",[],{});
-      if(!acct.user){if(!v)return;if(!await acctSignIn()){if(acct.err)toast(acct.err);return}}
-      for(let i=0;i<50&&!acct.user;i++)await new Promise(r=>setTimeout(r,100));   /* 等登入狀態傳到 acct（onUser） */
-      if(!acct.user)return;
+      const v=await ask("用 Google 登入",[],{note:acct.err});
+      if(acct.user)break;
+      if(!v)return;
+      const r=await acctSignIn();
+      if(r==="redirect")return;   /* 轉到 Google 登入頁：回來後會重新接著加入 */
+      if(r)break;
+      /* 取消或失敗：回到上面再問一次（失敗的原因寫在視窗裡） */
     }
+    for(let i=0;i<50&&!acct.user;i++)await new Promise(r=>setTimeout(r,100));   /* 等登入狀態傳到 acct（onUser） */
+    if(!acct.user)return;
     let inv;
-    try{inv=await A.invitePreview(token)}catch(_){toast("沒有連上網路，稍後再試");return}   /* 暫時的錯誤：權杖留著，重新整理或重新登入會再試 */
+    /* 暫時的錯誤（沒網路）：權杖留著，問要不要再試 */
+    for(;;){
+      try{inv=await A.invitePreview(token);break}
+      catch(_){if(!await ask("沒有連上網路，再試一次？",[],{}))return}
+    }
     if(!inv){joinClear();await ask("這張邀請已失效",[],{});return}
     if(inv.legacyTaken){joinClear();await ask("這張邀請綁定的舊身分已經被認領",[],{});return}
     const has=acctDepts()[inv.deptId];
@@ -650,13 +661,19 @@ async function joinFlow(){
     const v=await ask(`加入${deptNameOf(inv.deptId)}・${roleT(inv.role,inv.deptId)}`,[],{note:`剩 ${mmss(inv.expiresAt-A.serverNow())}`});
     clearInterval(tick);
     if(!v){joinClear();return}
-    try{
-      const r=await A.inviteRedeem(token);joinClear();
-      toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
-      if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
-    }catch(e){
-      joinClear();
-      await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${roleT(e.role,e.deptId)}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":e.code==="invalid"?"這張邀請已失效":acctErr(e),[],{});
+    for(;;){
+      try{
+        const r=await A.inviteRedeem(token);joinClear();
+        toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
+        if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
+        return;
+      }catch(e){
+        if(!["already","bound","legacy","invalid"].includes(e.code)){   /* 網路這類暫時的錯誤：邀請還沒用掉，權杖留著，問要不要再試 */
+          if(await ask(`${acctErr(e)}，再試一次？`,[],{}))continue;return}
+        joinClear();
+        await ask(e.code==="already"?`你已經是${deptNameOf(e.deptId)}的${roleT(e.role,e.deptId)}`:e.code==="bound"?"這張邀請只限指定的帳號使用":e.code==="legacy"?"這張邀請綁定的舊身分已經被認領":"這張邀請已失效",[],{});
+        return;
+      }
     }
   }finally{joinBusy=false}
 }

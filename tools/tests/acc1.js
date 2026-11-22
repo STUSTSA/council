@@ -95,7 +95,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok((await board(anon)).includes('測試卡片甲')&&!anon.toasts.some(x=>x.includes('要登入才能看')),'未登入：讀得到看板內容、不提示要登入（06 對外公開）');
   await openSet(anon);
   let s=await setText(anon);
-  ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有每週概述與「用 Google 登入」');
+  ok(s.includes('用 Google 登入')&&!s.includes('系統管理')&&!s.includes('人員'),'未登入：設定頁只有「用 Google 登入」');
   await anon.ctx.close();
   const line=await open(`${BASE}/index.html?d=fruit`,{ua:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36 Line/14.0.0'});
   await openSet(line);s=await setText(line);
@@ -168,13 +168,28 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(!(await u1.evaluate(()=>sessionStorage.getItem('workboard:join'))),'加入：權杖從這個分頁清掉');
   ok(!u1.errs.length,`掃 QR：沒有頁面錯誤 ${u1.errs.join(' | ')}`);
   ok(await until(async()=>(await boss.textContent('.acct-qr-t').catch(()=>'')).includes('已使用'))&&!(await boss.$('.acct-qr [data-revoke]')),'會長室：面板上那張 QR 被用掉後顯示「已使用」、不能再撤銷');
-  /* 暫時的錯誤（網路不穩）不能當成失效：權杖留著 */
+  /* 暫時的錯誤（網路不穩）不能當成失效：權杖留著，問要不要再試，按確定就接著加入 */
   {const tkT=crypto.randomBytes(32).toString('base64url');
     await admin(d=>d.doc(`invitations/${sha(tkT)}`).set({deptId:'events',role:'editor',status:'active',rev:1,createdBy:bossUid,createdAt:TS.now(),expiresAt:TS.fromMillis(Date.now()+300000),updatedAt:TS.now(),updatedBy:bossUid}));
     const p=await open(`${BASE}/index.html?d=fruit#join=${tkT}`);await dlg(p);await stubPopup(p,'u3');
     await p.evaluate(()=>{const A=window.BoardAccount,real=A.invitePreview;A.invitePreview=async()=>{A.invitePreview=real;throw Object.assign(new Error('unavailable'),{code:'unavailable'})}});
     await dlgAct(p,'ok');
-    ok(await toastHas(p,'沒有連上網路')&&(await p.evaluate(()=>sessionStorage.getItem('workboard:join')))===tkT&&!(await p.$('#dlg[open]')),'掃 QR：暫時的錯誤只提示重試、權杖留著');
+    ok((await dlg(p))==='沒有連上網路，再試一次？'&&(await p.evaluate(()=>sessionStorage.getItem('workboard:join')))===tkT,'掃 QR：暫時的錯誤問要不要再試、權杖留著');
+    await dlgAct(p,'ok');
+    ok((await dlg(p))==='加入活動部・編輯者','掃 QR：按再試後接著加入');
+    await p.ctx.close();}
+  /* 登入彈出視窗被關掉不能卡住：再問一次登入，成功後接著加入 */
+  {const tkP=crypto.randomBytes(32).toString('base64url');
+    await admin(d=>d.doc(`invitations/${sha(tkP)}`).set({deptId:'events',role:'editor',status:'active',rev:1,createdBy:bossUid,createdAt:TS.now(),expiresAt:TS.fromMillis(Date.now()+300000),updatedAt:TS.now(),updatedBy:bossUid}));
+    const p=await open(`${BASE}/index.html?d=fruit#join=${tkP}`);await dlg(p);await stubPopup(p,'u4');
+    await p.evaluate(()=>{const A=window.BoardAccount,real=A.signIn;A.signIn=async()=>{A.signIn=real;return 'auth/popup-closed-by-user'}});
+    await dlgAct(p,'ok');
+    ok((await dlg(p))==='用 Google 登入'&&(await p.evaluate(()=>sessionStorage.getItem('workboard:join')))===tkP,'掃 QR：關掉登入視窗後再問一次登入（權杖留著）');
+    await stubPopup(p,'u4');await dlgAct(p,'ok');
+    ok((await dlg(p))==='加入活動部・編輯者','掃 QR：再登入一次就接著加入');
+    await dlgAct(p,'ok');
+    const u4=await uidOf(p);
+    ok(await until(async()=>{const r=await read(`roles/${u4}`);return r&&r.depts.events==='editor'}),'掃 QR：新帳號登入兩次後拿到邀請指定的部門與角色');
     await p.ctx.close();}
   /* 重放、過期、綁定信箱、已有角色 */
   const scan=async(sub,token,expect,label)=>{const p=await open(`${BASE}/index.html?d=fruit#join=${token}`);
