@@ -13,6 +13,7 @@
 const Sfx=(()=>{
   let ctx=null,out=null,nz=null,pend=null,gestAt=-1e9,fired=false,down=null;
   const last={},now=()=>performance.now();
+  const LEAD=.02;   /* 每個音往後排 20ms：剛啟動的音訊裝置頭幾毫秒常被吃掉，短音（約 0.1 秒）會整個聽不到 */
   const on=()=>{try{return UI.get().sound!==false}catch(_){return true}};
   function init(){
     if(ctx)return true;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
@@ -21,10 +22,10 @@ const Sfx=(()=>{
     const b=ctx.createBuffer(1,Math.round(ctx.sampleRate*.05),ctx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);nz=b;return true;
   }
   /* 一個音：f0→f1（Hz）、長度、音量、波形、延遲（秒） */
-  function tone(f0,f1,dur,vol,type="sine",at=0){const t=ctx.currentTime+at,o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+  function tone(f0,f1,dur,vol,type="sine",at=0){const t=ctx.currentTime+LEAD+at,o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+dur);
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(out);o.start(t);o.stop(t+dur+.03)}
   /* 敲擊聲：一小段雜訊過帶通濾波 */
-  function tick(vol,freq=2600,at=0){const t=ctx.currentTime+at,n=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();n.buffer=nz;f.type="bandpass";f.frequency.value=freq;f.Q.value=1.2;
+  function tick(vol,freq=2600,at=0){const t=ctx.currentTime+LEAD+at,n=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();n.buffer=nz;f.type="bandpass";f.frequency.value=freq;f.Q.value=1.2;
     g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+.035);n.connect(f).connect(g).connect(out);n.start(t)}
   const K={
     move(){tick(.22,3000);tone(1320,1040,.05,.1,"triangle")},
@@ -46,9 +47,12 @@ const Sfx=(()=>{
     if(!on()||document.hidden||!K[k])return;
     const t=now(),fresh=t-gestAt<1000;
     if(!ctx&&!(fresh&&init()))return;   /* 還沒有操作過：不建立（剛在設定裡打開音效的那一下例外：操作後 1 秒內） */
-    if(ctx.state!=="running"){if(!fresh)return;ctx.resume().catch(()=>{})}   /* 被系統暫停（背景、來電）又不是剛操作：不排進去，免得恢復時一起響 */
+    if(ctx.state!=="running"&&!fresh)return;   /* 被系統暫停（背景、來電）又不是剛操作：不排進去，免得恢復時一起響 */
     fired=true;if(t-(last[k]||-1e9)<40)return;last[k]=t;
-    try{K[k]()}catch(_){}
+    const go=()=>{try{K[k]()}catch(_){}};
+    /* 還沒在跑（每一頁剛開的 AudioContext 一開始都是 suspended，從部門回主頁後的第一下就是）：等 resume 完成、真的跑起來才排音。
+       以前是 resume 的同時就排，音訊裝置還沒起來時整個短音被吃掉＝點了部門沒聲音 */
+    if(ctx.state==="running")go();else ctx.resume().then(()=>{if(ctx.state==="running")go()},()=>{})
   }
   function flush(){const p=pend;pend=null;if(p)fire(p.k)}
   /* 收著，這個工作結束才播；pri：1＝點擊預設音、2＝功能呼叫、3＝慶祝。比收著的高才換掉（同級先到先播） */
