@@ -318,7 +318,7 @@ function agSecHTML(it,x){
     ${evs.length?`<div class="events mt-list">${withState(data,()=>evs.map(e=>mtEvHTML(e,false,AG.open.has(e.id),`<div class="md-lab">這項的結論</div><div class="md-note md-e" data-ed="note" data-d="${esc(it.dept)}" data-ev="${esc(e.id)}" tabindex="0">${String(notes[e.id]||"").trim()?esc(notes[e.id]):agPh("點一下寫結論")}</div>`)).join(""))}</div>`:""}
     ${extra.map((y,j)=>`<div class="md-ex"><div class="md-ext md-e" data-ed="xt" data-d="${esc(it.dept)}" data-j="${j}" tabindex="0">${y.title?esc(y.title):agPh("臨時項目名稱")}</div><button type="button" class="icon md-x" data-md-xdel="${esc(it.dept)}" data-j="${j}" aria-label="刪除臨時項目">刪除</button><div class="md-note md-e" data-ed="xn" data-d="${esc(it.dept)}" data-j="${j}" tabindex="0">${String(y.note||"").trim()?esc(y.note):agPh("結論")}</div></div>`).join("")}
     <button type="button" class="ghost add-row md-add" data-md-xadd="${esc(it.dept)}">+ 臨時項目</button>
-    <div class="md-dec"><span class="md-lab">整體決議</span><div class="md-e" data-ed="dec" data-d="${esc(it.dept)}" tabindex="0">${String(it.decision||"").trim()?esc(it.decision):agPh("沒有決議就留白（下次議程最前面會列出）")}</div></div></section>`;
+    <div class="md-dec"><span class="md-lab">整體決議</span><div class="md-e" data-ed="dec" data-d="${esc(it.dept)}" tabindex="0">${String(it.decision||"").trim()?esc(it.decision):agPh("沒有決議就留白（下次議程最前面會列出）")}</div></div><div class="md-send"><button type="button" class="icon" data-md-send="${esc(it.dept)}"${fsMode()&&deptSourceOf(it.dept)==="firestore"?"":" disabled"}>送到部門等待合併</button><span class="sub">${it.sentAt?`上次送出 ${esc(it.sentAt.slice(5,16))}（${it.sentN||0} 項）`:(fsMode()&&deptSourceOf(it.dept)==="firestore"?"":"這個部門還在舊資料，不能送")}</span></div></section>`;
 }
 function agDocHTML(){
   const d=AG.doc,its=agItems(),prev=agPrev(d.date),proj=agProjects(),chips=its.filter(x=>!agItemOf(x.dept)),fresh=chips.filter(x=>x.fresh&&x.w);
@@ -406,6 +406,9 @@ document.addEventListener("click",async e=>{
   const ps=t.closest("[data-md-paste]");if(ps){if(!(await agLogin()))return;
     if(ps.dataset.mdPaste==="*")agItems().forEach(x=>{if(x.fresh&&x.w)agPaste(x.dept)});else agPaste(ps.dataset.mdPaste);agChanged();renderAgenda();return}
   const dr=t.closest("[data-md-drop]");if(dr){if(!(await agLogin()))return;AG.doc.items=AG.doc.items.filter(i=>i.dept!==dr.dataset.mdDrop);agChanged();renderAgenda();return}
+  const sd=t.closest("[data-md-send]");if(sd&&!sd.disabled){if(!(await agLogin()))return;const it=agItemOf(sd.dataset.mdSend);if(!it)return;
+    if(!agSaved()){toast("先按「儲存」，再送到部門");return}
+    clearTimeout(AG.t);await agSaveDoc(true);sd.disabled=true;const n=await mpSend(it);if(n){it.sentAt=nowStr();it.sentN=n;agChanged()}renderAgenda();return}
   const xa=t.closest("[data-md-xadd]");if(xa){if(!(await agLogin()))return;
     const it=agItemOf(xa.dataset.mdXadd);if(!it)return;it.extra=it.extra||[];if(it.extra.length>=20){toast("臨時項目最多 20 個");return}
     it.extra.push({id:uid("x"),title:"",note:""});renderAgenda();agChanged();const r=$(`#agDoc [data-md="${xa.dataset.mdXadd}"] .md-ext:last-of-type`)||[...document.querySelectorAll(`#agDoc [data-md="${xa.dataset.mdXadd}"] [data-ed=xt]`)].pop();if(r)agEditStart(r);return}
