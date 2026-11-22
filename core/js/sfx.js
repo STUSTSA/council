@@ -15,7 +15,11 @@ const Sfx=(()=>{
   const last={},now=()=>performance.now();
   const LEAD=.02;   /* 每個音往後排 20ms：剛啟動的音訊裝置頭幾毫秒常被吃掉，短音（約 0.1 秒）會整個聽不到 */
   const on=()=>{try{return UI.get().sound!==false}catch(_){return true}};
+  /* 丟掉現有的 AudioContext 下次重建：從部門按返回回到主頁（瀏覽器把這一頁放進往返快取再還原）後，舊的 context 可能是 closed、
+     或卡在 suspended／interrupted 而 resume() 永遠不回來——整頁從此沒聲音。重建出來的新 context 在使用者操作裡建立，一定能跑 */
+  function drop(){try{ctx&&ctx.close&&ctx.close().catch(()=>{})}catch(_){}ctx=out=nz=null}
   function init(){
+    if(ctx&&ctx.state==="closed")drop();
     if(ctx)return true;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
     ctx=new AC();out=ctx.createGain();out.gain.value=1;   /* 總音量（原 .5，2026-11-20 加倍）；後面接壓縮器，疊音（慶祝）不會削波破音 */
     const cp=ctx.createDynamicsCompressor();cp.threshold.value=-14;cp.knee.value=12;cp.ratio.value=6;cp.attack.value=.003;cp.release.value=.15;out.connect(cp);cp.connect(ctx.destination);
@@ -52,7 +56,11 @@ const Sfx=(()=>{
     const go=()=>{try{K[k]()}catch(_){}};
     /* 還沒在跑（每一頁剛開的 AudioContext 一開始都是 suspended，從部門回主頁後的第一下就是）：等 resume 完成、真的跑起來才排音。
        以前是 resume 的同時就排，音訊裝置還沒起來時整個短音被吃掉＝點了部門沒聲音 */
-    if(ctx.state==="running")go();else ctx.resume().then(()=>{if(ctx.state==="running")go()},()=>{})
+    if(ctx.state==="running"){go();return}
+    /* resume 等不到（300ms）或失敗＝這個 context 壞了（見 drop）：重建一個新的再排音 */
+    const c=ctx;let done=false;const redo=()=>{if(done)return;done=true;if(ctx===c)drop();if(init()){const c2=ctx;c2.resume().then(()=>{if(c2.state==="running")go()},()=>{})}};
+    const tm=setTimeout(redo,300);
+    c.resume().then(()=>{clearTimeout(tm);if(done)return;done=true;if(c.state==="running")go();else{done=false;redo()}},()=>{clearTimeout(tm);redo()})
   }
   function flush(){const p=pend;pend=null;if(p)fire(p.k)}
   /* 收著，這個工作結束才播；pri：1＝點擊預設音、2＝功能呼叫、3＝慶祝。比收著的高才換掉（同級先到先播） */
@@ -75,7 +83,7 @@ const Sfx=(()=>{
   const clickKind=t=>{if(!t||!t.closest)return "";for(const [s,k] of CLICK)if(t.closest(s))return k;return ""};
   const begin=()=>{gestAt=now();wake()};
   /* 切回前景、從返回／快取還原頁面：瀏覽器可能已把 AudioContext 暫停；能喚醒就先喚醒（沒有操作時瀏覽器會拒絕，下一次按下再喚醒） */
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ctx)wake()});addEventListener("pageshow",()=>{if(ctx)wake()});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&ctx)wake()});addEventListener("pageshow",e=>{if(e.persisted)drop();else if(ctx)wake()});   /* 從往返快取還原：舊的 context 一律丟掉，下一次操作重建 */
   addEventListener("pointerdown",e=>{fired=false;down={x:e.clientX,y:e.clientY};begin()},true);
   addEventListener("keydown",e=>{if(!e.repeat)fired=false;down=null;begin()},true);
   addEventListener("pointerup",begin,true);addEventListener("touchend",begin,true);   /* 觸控：瀏覽器把放開當成「使用者操作」，在這裡才能喚醒 */
