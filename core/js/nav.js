@@ -195,8 +195,8 @@ const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div>
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 /* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
 const devSec=()=>devShow()?setSec(setRow("device","device","這台裝置")):"";
-/* 「外觀」：firestore 模式登入後在「帳號」合併頁裡；其他情況（舊的看板登入、沒登入、唯讀）是設定清單最後一列 */
-const lookSec=()=>setSec(setRow("look","sliders","外觀"));
+/* 「外觀」：所有情況都是設定清單最後一列，點進去是合併頁（SET_HUBS.look；主題、深淺色、音效） */
+const lookSec=()=>setSec(setRow("look","palette","外觀"));
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有鎖頭（每週報告在完成紀錄的週頁裡，本來就公開看） */
 function settingsInner(){
@@ -382,7 +382,7 @@ const SET_HUBS={
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",off:!n,act:()=>forgetDevice()}])]},
     {head:()=>devForget()?hubSt([["記住的身分",remName()||"沒有記住身分"]]):"",   /* GitHub 模式：這台裝置記住了誰（忘記之後即時改） */
      foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
-  /* 外觀：沒有「帳號」合併頁時（舊的看板登入、沒登入、唯讀）的入口，內容跟帳號裡的外觀同一份（lookHTML） */
+  /* 外觀：設定清單最後一列的入口，內容跟主頁外觀層同一份（lookHTML） */
   look:()=>hubRun("外觀",()=>[],{foot:()=>lookHTML(false),mount:lookMount}),
   /* 學年與開學日：只有秘書處有這一列 */
   term:()=>hubRun("學年與開學日",()=>[
