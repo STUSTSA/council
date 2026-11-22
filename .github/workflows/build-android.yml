@@ -5,6 +5,7 @@ name: build-android-apk
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - "tools/android/**"
       - ".github/workflows/build-android.yml"
@@ -34,6 +35,7 @@ jobs:
           if-no-files-found: error
       # 另外放到 Release，手機點連結就能直接下載 .apk（不用登入、不用解壓縮 zip）
       - name: Publish APK to release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
