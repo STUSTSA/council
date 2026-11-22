@@ -84,40 +84,40 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
   /* ---------- F4 安裝成 App ---------- */
   const fakePrompt=p=>p.evaluate(()=>{const e=new Event('beforeinstallprompt',{cancelable:true});e.prompt=async()=>{window.__prompted=true};e.userChoice=Promise.resolve({outcome:'accepted'});dispatchEvent(e)});
   {const p=await open('rights');await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
-    ok(!(await setText(p)).includes('這台裝置'),'F4 電腦、瀏覽器還沒提供安裝：設定頁沒有「這台裝置」');
+    ok(!(await p.$('[data-set="device"]')),'F4 電腦、瀏覽器還沒提供安裝：設定頁沒有「安裝」那一列');
     await fakePrompt(p);await p.waitForTimeout(400);
-    ok((await setText(p)).includes('這台裝置'),'F4 瀏覽器支援安裝：出現「這台裝置」');
+    ok(!!(await p.$('[data-set="device"]')),'F4 瀏覽器支援安裝：出現「安裝」那一列');
     await p.click('[data-set="device"]');await p.waitForTimeout(800);
     const t=await p.evaluate(()=>{const b=[...document.querySelectorAll('.set-hub')].pop();return b?b.innerText:''});
-    ok(/安裝/.test(t)&&!/分享|加入主畫面/.test(t)&&!/忘記這台裝置/.test(t),`F4 這台裝置：只有一顆「安裝」（沒有步驟說明、沒有 GitHub 模式的忘記身分）`);
+    ok(/安裝/.test(t)&&!/分享|加入主畫面/.test(t)&&!/忘記這台裝置/.test(t),`F4 「安裝」頁：只有一顆「安裝」（沒有步驟說明、沒有 GitHub 模式的忘記身分）`);
     await p.click('[data-hub="install"]');await p.waitForTimeout(600);
     ok(await p.evaluate(()=>window.__prompted===true)&&p.toasts.includes('已安裝'),'F4 按「安裝」：叫出瀏覽器的安裝視窗，接受後提示已安裝');
     ok(await p.evaluate(()=>!document.querySelector('[data-hub="install"]')),'F4 安裝之後：「安裝」不再出現');
     ok(p.errs.length===0,`F4：沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);await p.ctx.close();}
-  /* 取消安裝：事件只能用一次，取消後「安裝」與「這台裝置」都收起來（等瀏覽器下次再給）；03 審查 P1-1 */
+  /* 取消安裝：事件只能用一次，取消後「安裝」那一列也收起來（等瀏覽器下次再給）；03 審查 P1-1 */
   {const p=await open('rights');await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);
     await p.evaluate(()=>{const e=new Event('beforeinstallprompt',{cancelable:true});e.prompt=async()=>{window.__n=(window.__n||0)+1};e.userChoice=Promise.resolve({outcome:'dismissed'});dispatchEvent(e)});
     await openSet(p);await p.click('[data-set="device"]');await p.waitForTimeout(800);await p.click('[data-hub="install"]');await p.waitForTimeout(700);
     ok(await p.evaluate(()=>window.__n===1&&!document.querySelector('[data-hub="install"]')&&!pwaCanInstall()),'F4 安裝視窗按取消：只叫一次，「安裝」收起來（不會留一顆按了沒反應的鈕）');
-    ok(!(await setText(p)).includes('這台裝置'),'F4 取消後沒有別的可做：「這台裝置」也收起來');
+    ok(!(await p.$('[data-set="device"]')),'F4 取消後沒有別的可做：「安裝」那一列也收起來');
     await p.ctx.close();}
   /* 沒登入也能安裝（Chrome 自己的安裝提示被收起來，要給入口；03 審查 P1-2） */
   {const p=await open('rights');await p.waitForTimeout(800);await fakePrompt(p);await openSet(p);
-    ok((await setText(p)).includes('這台裝置')&&(await setText(p)).includes('用 Google 登入'),'F4 沒登入：瀏覽器支援安裝時也有「這台裝置」');
-    await p.click('[data-set="device"]');await p.waitForTimeout(800);ok(!!(await p.$('[data-hub="install"]')),'F4 沒登入：「這台裝置」裡有「安裝」');
+    ok(!!(await p.$('[data-set="device"]'))&&(await setText(p)).includes('用 Google 登入'),'F4 沒登入：瀏覽器支援安裝時也有「安裝」那一列');
+    await p.click('[data-set="device"]');await p.waitForTimeout(800);ok(!!(await p.$('[data-hub="install"]')),'F4 沒登入：「安裝」頁裡有「安裝」');
     await p.ctx.close();}
   const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1';
   const IOS_CHROME='Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1';
   {const p=await open('rights',{ua:IOS,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
-    ok((await setText(p)).includes('這台裝置'),'F4 iPhone Safari 還沒加入主畫面：有「這台裝置」');
+    ok(!!(await p.$('[data-set="device"]')),'F4 iPhone Safari 還沒加入主畫面：有「安裝」那一列');
     await p.click('[data-set="device"]');await p.waitForTimeout(900);
     const st=await p.evaluate(()=>[...document.querySelectorAll('.dev-steps li')].map(x=>x.textContent));
     ok(st.length===3&&st[1].includes('加入主畫面')&&!(await p.$('[data-hub="install"]')),`F4 iPhone Safari：顯示加入主畫面的步驟、沒有「安裝」鈕（${st.join('／')}）`);
     await p.ctx.close();}
   {const p=await open('rights',{ua:IOS,w:390,vh:844,standalone:true});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
-    ok(!(await setText(p)).includes('這台裝置'),'F4 iPhone 已加入主畫面（從主畫面打開）：沒有「這台裝置」');await p.ctx.close();}
+    ok(!(await p.$('[data-set="device"]')),'F4 iPhone 已加入主畫面（從主畫面打開）：沒有「安裝」那一列');await p.ctx.close();}
   {const p=await open('rights',{ua:IOS_CHROME,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
-    ok(!(await setText(p)).includes('這台裝置'),'F4 iPhone 的 Chrome（不是 Safari）：不顯示步驟');await p.ctx.close();}
+    ok(!(await p.$('[data-set="device"]')),'F4 iPhone 的 Chrome（不是 Safari）：不顯示步驟');await p.ctx.close();}
 
   await b.close();srv.close();await t.cleanup();
   console.log(fails?`失敗 ${fails} 項（通過 ${passes}）`:`全部通過（${passes} 項）`);process.exit(fails?1:0);
