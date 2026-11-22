@@ -331,8 +331,8 @@ function renderAgenda(){
   const p=$("#agPanel");if(!p)return;p.hidden=!CFG.meeting;if(!CFG.meeting)return;
   if(!AG.doc)AG.doc=agDraftOf(today());
   if(AG.ed)return;   /* 就地編輯中不重畫（游標才不會跳） */
-  const past=[...(state.agendas||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6),cur=AG.doc.date;
-  $("#agPast").innerHTML=`<button type="button" class="wk-d" role="tab" data-md-pick="" aria-selected="${!agSaved()}">今天</button>`+past.map(a=>`<button type="button" class="wk-d" role="tab" data-md-pick="${esc(a.date)}" aria-selected="${a.date===cur}">${esc(fmt(a.date).slice(5))}</button>`).join("");
+  const td=today(),past=[...(state.agendas||[])].filter(a=>a.date!==td).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6),cur=AG.doc.date;   /* 今天那場（存過也一樣）只由「今天」膠囊代表 */
+  $("#agPast").innerHTML=`<button type="button" class="wk-d" role="tab" data-md-pick="" aria-selected="${cur===td}">今天</button>`+past.map(a=>`<button type="button" class="wk-d" role="tab" data-md-pick="${esc(a.date)}" aria-selected="${a.date===cur}">${esc(fmt(a.date).slice(5))}</button>`).join("");
   const y=$("#agDoc"),top=y.scrollTop;y.innerHTML=agDocHTML();y.scrollTop=top;
   const ok=AG.doc.items.some(agKeep);
   $("#agGo").disabled=AG.busy||!ok;$("#agCopy").disabled=!ok;
