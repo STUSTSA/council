@@ -455,3 +455,7 @@ DievE 決定：看板內容一律公開（第 5.1j 節之二）；登入的人�
 - **核准寫 roles**（`viaDeptRequest()`）：同一批把申請 `pending → approved`、`decidedBy＝自己`，並新增（或新建 roles 文件）那個部門的 `editor`；不能動 `super`、不能改別的部門、不能動已有該部門角色的人；`lastVia＝request`、`lastRef＝申請 ID`。
 - **部長讀申請人的 roles**（`adminSeesRequest()`，為了帶 `rev` 寫入）：申請 ID 固定是 `{uid}_{部門}`，只有「我是該部門部長、而且那一份申請還在待審」才讀得到；先用我自己的部門角色擋掉（便宜），才去查申請，因為規則每次評估最多 1000 個運算式（排在最後的部門試過會超過，R-04c 專門測）。
 - **攻擊測試**：沒登入不能送、不能替別人送、rank 與 role 不一致、別部門的部長審、部長核准部長申請、自己核准自己、一般編輯者審、核准夾帶 `super`／別的部門／沒同批寫 roles／只改 roles 不改申請、部長讀沒有待審申請的人的 roles、部長列出別部門或全部申請。
+
+### 5.1l 專案權限申請（`backend/tests/rules-08-project.test.js`，PJ-01～PJ-12）
+- 跟部門申請分開：任何登入的人送 `projectRequests/{自己的 UID}`；活動部部長或總管理員審（不能審自己）。核准＝同一批把 `projectGrants/{UID}` 寫成 `active: true`，撤銷＝同一份改 `active: false`（只有審核者）。兩個集合都有稽核連號（`auditLogs/{集合}_{UID}_{rev}`）。
+- 授權範圍：只有 `issues`（`deptId == 'events'`）的新增與修改；不能刪、不能改卡片、週報、標籤，也不改 `roles`。
