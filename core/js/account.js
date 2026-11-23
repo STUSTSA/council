@@ -286,8 +286,8 @@ const usageUrl=()=>{const id=fsMode()&&CFG.firebase&&CFG.firebase.projectId;retu
 async function councilHub(){
   await acctLoad();
   return hubRun("系統管理",()=>[
+    {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},   /* 最常用，放第一個 */
     {k:"people",ic:"people",t:"人員",flow:()=>peoplePanel()},
-    {k:"invite",ic:"share",t:"QR 邀請",flow:()=>invitePanel()},
     {k:"requests",ic:"doc",t:"申請",flow:()=>requestsPanel()},
     {k:"audit",ic:"history",t:"紀錄",flow:()=>auditPanel()},
     {k:"import",ic:"cloud",t:"匯入",flow:()=>importPanel()},
