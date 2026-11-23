@@ -118,10 +118,10 @@ function renderSections(){const k=secShown();document.querySelectorAll(".layout>
 let progOpen=null;   /* 進度：甘特圖／議題詳情切換（views.js 的 progShow）。即時回報、完成紀錄的左右兩欄在 live.js（lvWide） */
 /* 換分頁（DESIGN-next 第一節「部門內一次只顯示一區」、第五節「部門內換分頁」）：手機、桌面都一次只顯示一區。
    舊內容往一邊退、新內容從另一邊進，方向跟工具列一致：桌面（左側直排）上下、900px 以下（底部橫排）左右；往工具列後面的分頁＝舊的往上／左退、新的從下／右進，往前反過來。
-   舊區塊留成一層（.sg-out：原地絕對定位、不能點）淡出退開，結束後拿掉；新區塊裡的每一塊（面板）帶柔回彈滑進來，每塊錯開 30ms。
+   舊區塊留成一層（.sg-out：原地絕對定位、不能點）退開，結束後拿掉。桌面：舊的淡出，新區塊裡的每一塊（面板）帶柔回彈滑進來，每塊錯開 30ms。手機（底部橫排）：兩頁並排整頁滑動，不淡入淡出、不重疊（下面 secSwap）。
    標題列、搜尋列、工具列不動（只有鏡片滑過去）。只動 transform／opacity；關掉動態、背景分頁、instant 時直接換 */
 const SEC_IN="cubic-bezier(.25,1.12,.4,1)";
-function secFxStop(groups){groups.forEach(g=>{g.getAnimations().forEach(a=>a.cancel());[...g.children].forEach(c=>c.getAnimations().forEach(a=>{if(a.id==="sec-in")a.cancel()}));
+function secFxStop(groups){document.querySelector(".layout")?.classList.remove("sg-slide");groups.forEach(g=>{g.getAnimations().forEach(a=>a.cancel());[...g.children].forEach(c=>c.getAnimations().forEach(a=>{if(a.id==="sec-in")a.cancel()}));
   if(g.classList.contains("sg-out")){g.classList.remove("sg-out");g.style.top=g.style.left=g.style.width="";g.inert=false}})}
 function setSection(k,{instant}={}){
   if(!SECS.includes(k)||k===curSec)return;
@@ -139,7 +139,18 @@ function secSwap(prev,k,dir,instant){
   const r0=out&&out.offsetParent?out.getBoundingClientRect():null;
   renderSections();layoutAll();toTop();
   if(instant||reduceMotion()||document.hidden||!r0||!inn)return;
-  const [dx,dy]=isRail()?[0,48*dir]:[60*dir,0],lr=lay.getBoundingClientRect();
+  const lr=lay.getBoundingClientRect();
+  /* 手機：整頁跟著分頁方向並排滑動（舊頁往反方向滑出、新頁從那一邊滑進，兩頁同時移動、不重疊；只用 transform，距離＝內容寬＋左右內距，剛好滑出畫面） */
+  if(!isRail()){
+    const W=lr.width+16,fx={duration:MO.base,easing:MO.out};
+    lay.classList.add("sg-slide");out.classList.add("sg-out");out.inert=true;
+    Object.assign(out.style,{top:(r0.top-lr.top)+"px",left:(r0.left-lr.left)+"px",width:r0.width+"px"});
+    out.animate([{transform:"none"},{transform:`translateX(${-dir*W}px)`}],{...fx,fill:"forwards"})
+      .finished.catch(()=>{}).then(()=>{if(tok===secTok)secFxStop([out])});
+    inn.animate([{transform:`translateX(${dir*W}px)`},{transform:"none"}],fx);
+    return;
+  }
+  const [dx,dy]=[0,48*dir];
   /* 舊的：原地留一層，往反方向退出去 */
   out.classList.add("sg-out");out.inert=true;
   Object.assign(out.style,{top:(r0.top-lr.top)+"px",left:(r0.left-lr.left)+"px",width:r0.width+"px"});
