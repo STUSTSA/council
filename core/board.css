@@ -1116,6 +1116,8 @@ a.link:active{transform:scale(.96)}
    原地絕對定位（top／left／width 由程式寫）、不能點，退出去之後拿掉 */
 .sgroup:not(.cur){display:none}
 .sgroup.sg-out{display:grid;position:absolute;pointer-events:none}
+/* 手機換分頁：兩頁並排滑動（render.js 的 secSwap）。.layout 左右各多留 16px（＝頁面內距）才裁切，滑出畫面邊緣前不被內容寬度切掉 */
+.layout.sg-slide{overflow-x:clip;overflow-clip-margin:16px}
 @media print{.sgroup:not(.cur){display:grid}}   /* 列印照舊印全部區塊（依序往下排） */
 
 /* ===== 開頁進場畫面（學生會）：2026-11-06 起樣式在 core/splash.css（看板與總覽頁共用） ===== */
@@ -1342,17 +1344,27 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
   .tb-lens{left:6px;top:0;width:50px;height:44px}
 }
 
-/* ===== 新增即時回報的浮動圓鈕（nav.js 的 fabSync；DESIGN-next 第六節「部門內」） =====
+/* ===== 新增即時回報的浮動圓鈕與展開選項（nav.js 的 fabSync／fabOpen；DESIGN-next 第六節「部門內」） =====
    右下角 60 的圓鈕：主要動作色（--pri／--pri-ink）、加號、浮在內容上面所以帶柔和陰影；手機在工具列上方。
-   z-index 在設定、通知疊層（37、38）下面：疊層打開時被蓋住；出現、消失的動畫是 anim.js 的 Anim.toggle（pop） */
-.fab{position:fixed;right:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px));bottom:calc(32px + var(--sa-bottom));z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
+   平常 z-index 在設定、通知疊層（37、38）下面：疊層打開時被蓋住；出現、消失的動畫是 anim.js 的 Anim.toggle（pop）。
+   按下展開三個選項（.fab-menu：背景淡暗 .fab-scrim＋往上排的膠囊 .fab-opt，Keep 的做法）：展開時圓鈕（.open）與選項疊在背景上面（連工具列 45 也一起暗掉），加號轉成 ×；動畫在 nav.js（WAAPI），減少動態時不播 */
+.fab,.fab-menu{--fab-r:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px));--fab-b:calc(32px + var(--sa-bottom))}
+.fab{position:fixed;right:var(--fab-r);bottom:var(--fab-b);z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
 .fab[hidden]{display:none}
-@media print{.fab{display:none}}
-.fab .ico{width:24px;height:24px;stroke-width:2}
+@media print{.fab,.fab-menu{display:none}}
+.fab .ico{width:24px;height:24px;stroke-width:2;transition:transform var(--mo-base) var(--mo-spring)}
+.fab.open{z-index:48}
+.fab.open .ico{transform:rotate(135deg)}
 .fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.fab-menu[hidden]{display:none}
+.fab-scrim{position:fixed;inset:0;z-index:47;background:color-mix(in srgb,var(--bg) 72%,transparent)}
+.fab-opts{position:fixed;right:var(--fab-r);bottom:calc(var(--fab-b) + 74px);z-index:48;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.fab-opt{display:flex;align-items:center;gap:12px;min-height:0;height:52px;padding:0 24px 0 20px;border:0;border-radius:999px;background:var(--pop);color:var(--ink);font-size:15px;letter-spacing:.06em;box-shadow:0 12px 28px -10px var(--stack-sh)}
+.fab-opt .ico{width:22px;height:22px;stroke-width:1.9}
+.fab-opt:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 /* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
 @media (max-width:899px){
-  .fab{right:calc(max(12px,(100vw - 480px) / 2) + 1px);bottom:calc(106px + var(--sa-bottom))}
+  .fab,.fab-menu{--fab-r:calc(max(12px,(100vw - 480px) / 2) + 1px);--fab-b:calc(106px + var(--sa-bottom))}
 }
 
 /* ===== 主頁（home.html，core/js/home.js；DESIGN-next 第六節「主頁」） =====

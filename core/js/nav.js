@@ -112,12 +112,45 @@ function renderTabbar(){
 const liveCardOpen=()=>!!lvOpen||(CFG.mergeDone&&!!dnOpen);   /* 即時回報的卡片打開（live.js）；會長室、秘書處併進來的完成紀錄打開也算 */
 function fabSync(){
   let fb=$("#addEvent");
-  if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
+  if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" aria-haspopup="menu" aria-expanded="false" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
   const on=secTab("live")&&curSec==="live"&&!notiOpen&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
+  if(!on&&fabOn)fabClose(true);
   Anim.toggle(fb,on);
   /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
   document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
+/* ---------- 圓鈕展開的三個選項（文字、清單、時間；Google Keep 的做法） ----------
+   按圓鈕＝背景淡暗、三顆膠囊從圓鈕往上依序浮出（離圓鈕最近的先出）、加號轉成 ×；點背景、×、Esc、系統返回都收起。
+   選一個＝新增一張空白即時回報，並先放好那一種的第一行（events.js 的 #addEvent／[data-fabadd]，live.js 的 kpSeed）。沒有新資料欄位 */
+const FAB_OPTS=[["time","clock","時間"],["check","box","清單"],["text","text","文字"]];   /* 由上到下 */
+let fabOn=false;
+function fabMenuEl(){
+  let m=$("#fabMenu");
+  if(!m){document.body.insertAdjacentHTML("beforeend",`<div class="fab-menu" id="fabMenu" hidden><div class="fab-scrim" data-fabx></div><div class="fab-opts" role="menu" aria-label="新增內容類型">${FAB_OPTS.map(([k,ic,t])=>`<button type="button" class="fab-opt" role="menuitem" data-fabadd="${k}">${ico(ic,"solo")}<span>${t}</span></button>`).join("")}</div></div>`);m=$("#fabMenu")}
+  return m;
+}
+function fabOpen(){
+  if(fabOn)return;fabOn=true;
+  const m=fabMenuEl(),fb=$("#addEvent"),sc=m.querySelector(".fab-scrim"),os=[...m.querySelectorAll(".fab-opt")].reverse();   /* 反過來：離圓鈕最近的在前 */
+  m.getAnimations({subtree:true}).forEach(a=>a.cancel());m.hidden=false;fb.classList.add("open");fb.setAttribute("aria-expanded","true");fb.setAttribute("aria-label","收起新增選項");
+  Back.opened("fab",()=>fabClose(false,true));
+  if(reduceMotion())return;
+  sc.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});
+  os.forEach((o,i)=>o.animate([{opacity:0,transform:"translateY(28px) scale(.8)"},{opacity:1,transform:"none"}],{duration:MO.base+80,delay:i*50,easing:MO.spring,fill:"backwards"}));
+}
+/* 收起：now＝馬上藏（換頁、卡片打開時）；fromBack＝系統返回已經退了瀏覽紀錄 */
+function fabClose(now,fromBack){
+  if(!fabOn)return;fabOn=false;
+  const m=$("#fabMenu"),fb=$("#addEvent");if(!fromBack)Back.closed("fab");
+  if(fb){fb.classList.remove("open");fb.setAttribute("aria-expanded","false");fb.setAttribute("aria-label","新增即時回報")}
+  if(!m)return;
+  const done=()=>{if(!fabOn){m.hidden=true;m.getAnimations({subtree:true}).forEach(a=>a.cancel())}};
+  if(now||reduceMotion()){done();return}
+  m.querySelector(".fab-scrim").animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"});
+  const os=[...m.querySelectorAll(".fab-opt")];
+  Promise.all(os.map((o,i)=>o.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(20px) scale(.85)"}],{duration:MO.fast,delay:i*20,easing:MO.in,fill:"forwards"}).finished.catch(()=>{}))).then(done);
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fabOn){e.preventDefault();e.stopPropagation();fabClose()}},true);
 function tabGo(k){Sfx.play("tab");if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
 function setupTabbar(tb){
   const main=tb.querySelector(".tb-main"),gear=tb.querySelector(".tb-gear"),lensEl=tb.querySelector(".tb-lens");

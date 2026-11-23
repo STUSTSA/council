@@ -81,7 +81,7 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
   /* 新增圓鈕（ui-04）只在即時回報分頁、沒有卡片打開時出現：點之前先回到即時回報、收合打開的卡片 */
   const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});lvOpen=null;dnOpen=null;render()}).then(()=>p.waitForTimeout(400));
   /* ui-05：新增＝浮動圓鈕開一張空白卡片（900 寬是全螢幕），打名稱（Enter 到第一行打說明），返回鍵存檔並收回 */
-  const newCard=async(p,name,desc)=>{await liveTop(p);await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);
+  const newCard=async(p,name,desc)=>{await liveTop(p);await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);
     if(desc){await p.keyboard.press('Enter');await p.keyboard.type(desc)}await p.click('.lc-ed [data-lcback]');await settled(p)};
   /* ui-05：完成、刪除＝把膠囊拖到右上角、左上角（編輯中不能拖） */
   const dragTo=async(p,id,x,y)=>{await liveTop(p);const r=await p.$eval(`#events .cp[data-cp="${id}"]`,e=>{const b=e.getBoundingClientRect();return {x:b.left+b.width/2,y:b.top+b.height/2}});

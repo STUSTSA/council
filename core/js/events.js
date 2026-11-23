@@ -35,9 +35,13 @@ document.addEventListener("click",async e=>{
   if(wk&&t.closest("[data-delweek]")){e.preventDefault();const w=state.weeks.find(x=>x.id===wk.dataset.week);const v=await ask(`刪除 ${fmt(w.date)} 的每週報告？`,[],{danger:"刪除"});if(v==="delete")await settingSave(()=>{state.weeks=state.weeks.filter(x=>x!==w)},"已刪除每週報告");return}
 
   /* small events（即時回報） */
-  /* 新增即時回報（右下角的浮動圓鈕，只有 canEdit 時算數：唯讀檢視中圓鈕正在消失時點到也不算）：開始編輯一張空白的卡片（打開、游標在名稱）；什麼都沒填就點外面＝不留（live.js 的 kpCommit） */
-  if(t.closest("#addEvent")&&!editing&&canEdit()){const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
-    if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpFocus("title",true)}return}
+  /* 新增即時回報（右下角的浮動圓鈕，只有 canEdit 時算數：唯讀檢視中圓鈕正在消失時點到也不算）：按圓鈕展開「文字／清單／時間」三個選項（nav.js 的 fabOpen），點背景或再按＝收起；
+     選一個＝開始編輯一張空白的卡片（打開、游標在名稱），並先放好那一種的第一行（live.js 的 kpSeed）；什麼都沒填就點外面＝不留（live.js 的 kpCommit） */
+  if(t.closest("[data-fabx]")){fabClose();return}
+  if(t.closest("#addEvent")&&!editing&&canEdit()){fabOn?fabClose():fabOpen();return}
+  const fa=t.closest("[data-fabadd]");
+  if(fa&&!editing&&canEdit()){const kind=fa.dataset.fabadd;fabClose(true);const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
+    if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpSeed(kind)}return}
   /* 「+ 議題」：加一個議題、換到它的詳情，游標直接在名稱上（整段選取，打字就換掉；沒有對話框）；沒命名就點外面／Esc＝不留（inmCommit） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新"+ISS,tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
     if(await startEdit("i:"+it.id,()=>{state.issues.push(it);keepIds.add(it.id);inm={id:it.id,isNew:true};dirty=true}))progShow(it.id,()=>inmFocus(true));return}
