@@ -2497,8 +2497,12 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-tbi>.md-lab:first-child{margin-top:0}
 .ag-tools .wk-depts{flex-direction:column;align-items:stretch;gap:5px;margin-bottom:6px}
 .ag-tools .wk-d{justify-content:flex-start;min-height:30px;padding:3px 10px 2px;font-size:12.5px;overflow-wrap:anywhere}
-.ag-chips .wk-d.in-doc{border-color:var(--ink)}
 .ag-chips .wk-d[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ag-chips .wk-d{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.ag-chips .wk-d.is-alert{background:var(--prog-lo);border-color:var(--prog-lo);color:#fff}   /* 沒交報告的部門：整顆膠囊亮紅色 */
+.ag-chips .wk-d.is-alert[aria-pressed="true"]{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+.ag-chips .wk-d.is-drag{position:relative;z-index:3;pointer-events:none;transition:none;box-shadow:0 8px 22px color-mix(in srgb,#000 38%,transparent)}   /* 長按浮起、拖曳換報告順序 */
+.ag-left.is-dragging{overflow:hidden}
 .ag-n{margin-left:6px}
 .ag-right{display:flex;flex-direction:column;gap:12px;min-height:0}
 .ag-rb{display:flex;flex-direction:column;min-height:56px;flex:1 1 0;overflow:hidden;border-radius:16px;padding:10px 14px;box-shadow:inset 0 0 0 1px var(--hair);cursor:pointer;transition:flex-grow var(--mo-slow) var(--mo-out),box-shadow var(--mo-base) var(--mo-out)}
@@ -2515,12 +2519,16 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-btns{display:grid;gap:6px;margin:8px 0 6px}
 .ag-btns .wk-d{justify-content:center}
 .ag-btns .wk-d:disabled{opacity:.45;cursor:default}
-.ag-cards{display:grid;gap:6px;margin-bottom:10px}
-.ag-card{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--hair)}
-.ag-card b{font-size:13.5px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
-.ag-card .wk-d{flex:none;justify-content:center}
 .ag-rb .sub{margin:6px 0 0;font-size:12px;line-height:1.6}
-.ag-cardbox .meet-edit{padding:0;background:none;box-shadow:none}   /* 搬進來的「會議報告事項」：沒有自己的卡片底板 */
+.md-item{margin:0 0 12px;padding:4px 8px;margin-left:-8px;margin-right:-8px;border-radius:8px;cursor:pointer;transition:background-color var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out)}   /* 文件裡一張報告卡：只是排好版的文字，點了選到那一張 */
+.md-item:hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.md-item.is-sel{background:color-mix(in srgb,var(--ink) 6%,transparent);box-shadow:inset 3px 0 0 var(--ink)}
+.md-it{margin:0;font-size:14.5px;line-height:1.7}
+.md-ist{margin-left:8px;font-size:12px;color:var(--muted);letter-spacing:.04em}
+.md-id{margin:2px 0 0 1.5em;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7}
+.md-item .md-lab{margin-left:1.5em}
+.md-item .md-note{margin-left:calc(1.5em - 8px)}
+.ag-stt{display:flex;align-items:center;gap:8px;margin:0;font-size:14px}
 .md-recx{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 8px;font-size:14px;line-height:1.7;color:var(--prog-lo)}
 .md-recx:empty{display:none}
 .md-sec.is-alert{padding:12px 14px 6px;border-radius:8px;border-top-color:transparent;background:color-mix(in srgb,var(--prog-lo) 9%,var(--blk));box-shadow:inset 0 0 0 1.5px var(--prog-lo)}   /* 沒有報告事項的部門：整塊紅色警示 */
