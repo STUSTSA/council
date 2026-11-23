@@ -41,20 +41,4 @@ await p.keyboard.press('Escape');await p.waitForTimeout(2500);   /* ui-05：沒�
 console.log('finance saved',commits[0],Object.keys(files));console.log('fin errs',p.errs);
 A(/^data-finance\.json :: /.test(commits[0]||'')&&files['data-finance.json']&&files['data-finance.json'].events.some(e=>e.name==='預算表彙整'&&e.desc==='等各部門回傳'),'finance event saved to data-finance.json');A(!p.errs.length,'finance errors');
 // president
-p=await mk('?d=president');const p0=await p.evaluate(()=>[state.title,$('#followPanel').hidden,$('#follows').textContent.slice(0,40)]);console.log('pres',p0);A(!p0[1],'president has follow panel');
-await login(p);await p.evaluate(()=>setSection('ext',{instant:true}));await p.waitForTimeout(400);await p.click('#followPanel [data-edit]');await p.waitForTimeout(600);A(await p.evaluate(()=>secEd('follow')),'follow edit started');
-await p.click('#addFollow');await p.waitForTimeout(400);
-await p.evaluate(()=>{const s=document.querySelector('#dlgForm input[name=dept]');});
-await p.click('#dlgForm .csel-btn');await p.waitForTimeout(200);await p.click('#dlgForm .csel.open .csel-opt[data-v=finance]');await p.waitForTimeout(200);
-await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(1200);console.log('step2',await p.evaluate(()=>[$('#dlgForm b')?.textContent,[...document.querySelectorAll('#dlgForm .csel-opt')].map(x=>x.textContent)]));
-await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(800);
-// follow rights issue
-await p.click('#addFollow');await p.waitForTimeout(400);await p.click('#dlgForm .csel-btn');await p.click('#dlgForm .csel.open .csel-opt[data-v=rights]');
-await p.click('#dlgForm .csel:nth-of-type(2) .csel-btn').catch(()=>{});
-const cs=await p.$$('#dlgForm .csel');await (await cs[1].$('.csel-btn')).click();await p.click('#dlgForm .csel.open .csel-opt[data-v=issue]');await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(1200);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(800);
-await p.click('#addFollow');await p.waitForTimeout(400);await p.click('#dlgForm .csel-btn');await p.click('#dlgForm .csel.open .csel-opt[data-v=rights]');const cs2=await p.$$('#dlgForm .csel');await (await cs2[1].$('.csel-btn')).click();await p.click('#dlgForm .csel.open .csel-opt[data-v=week]');await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(1200);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(800);
-const fl=await p.evaluate(()=>[...document.querySelectorAll('#follows .fw')].map(f=>f.querySelector('.fw-top').textContent.replace(/\s+/g,' ')+' | '+f.querySelector('.fw-t').textContent));console.log('follows',fl);
-await p.click('#followPanel [data-edsave]');await p.waitForTimeout(2500);console.log('pres saved',commits[0]);
-const pf=(files['data-president.json']||{}).follows||[];A(fl.length===3&&pf.length===3&&['finance:live','rights:issue','rights:week'].every(k=>pf.some(f=>f.dept+':'+f.kind===k))&&/^data-president\.json :: /.test(commits[0]||''),'president follows three kinds and saves');
-await p.screenshot({path:'m2_pres.png'});console.log('pres errs',p.errs);A(!p.errs.length,'president errors');
 await b.close()})();

@@ -1,6 +1,6 @@
 /* xs1：會長室追蹤面板、會長室文件、工作報告的跳脫攻擊測試（2026-11-16，main 的 XSS 修正）
    用 8300（CLAUDE.md 的準備方式）。開會長室（?d=president），在頁面裡直接塞惡意資料再呼叫畫面函式：
-   A 追蹤面板（follow.js fwBody／renderFollows）：被追蹤部門的議題第一個註記日期塞「00000<img 」、下一段文字塞「src=x onerror=…」；
+   A 會長室收藏（follow.js favBody／favDetHTML、live.js 膠囊、views.js 甘特圖列）：被追蹤部門的議題第一個註記日期塞「00000<img 」、下一段文字塞「src=x onerror=…」；
      即時回報的完成日、最後更新日、議題結案日也塞 <img；追蹤項目 ID 塞引號與標籤。
    B 會長室文件（renderDocs、docURL）：網址填 javascript:、data:，文件 ID 塞引號與標籤；平常的網址照舊補 https://。
    C 工作報告（report.js rptHTML）：同一個議題底下，前一筆即時回報的完成日塞「2026-<img 」、下一筆的名稱塞「a src=x onerror=… 」；
@@ -17,7 +17,7 @@ let fail=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fail++}
   await ctx.route(/^https?:\/\/(?!127\.0\.0\.1:8300)/,r=>r.abort());   /* 其他對外請求一律擋掉 */
   const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));
   await p.goto(SITE+'index.html?d=president');await p.waitForTimeout(1800);
-  ok(await p.evaluate(()=>typeof fwBody==='function'&&typeof renderDocs==='function'&&typeof rptHTML==='function'&&!!CFG.follow),'會長室頁面載入、三個畫面函式都在');
+  ok(await p.evaluate(()=>typeof favBody==='function'&&typeof renderDocs==='function'&&typeof rptHTML==='function'&&!!CFG.follow),'會長室頁面載入、三個畫面函式都在');
 
   /* A 追蹤面板 */
   const A=await p.evaluate(async()=>{
@@ -37,18 +37,17 @@ let fail=0;const ok=(c,m)=>{console.log((c?'通過 ':'失敗 ')+m);if(!c)fail++}
     fwCache.set(dept.id,{at:Date.now(),data:nd,err:''});
     state.follows=[{id:'f1',dept:dept.id,kind:'issue',ref:'iX'},{id:'f2',dept:dept.id,kind:'done',ref:'iD'},
                    {id:'f3',dept:dept.id,kind:'live',ref:'eL'},{id:'f4"><img src=x onerror=window.__x=2>',dept:dept.id,kind:'done',ref:'eD'}];
-    renderFollows();
+    FAV_OPEN=dept.id+'|live|eL';renderEvents();renderGantt();
     await new Promise(r=>setTimeout(r,1200));
-    const box=document.querySelector('#follows');
+    const box=document.createElement('div');box.innerHTML=document.querySelector('#events').innerHTML+document.querySelector('#gantt').innerHTML+favDetHTML(dept.id,'done','iD')+favDetHTML(dept.id,'done','eD')+favDetHTML(dept.id,'issue','iX');document.body.append(box);
     return {tidied,x:window.__x,imgs:box.querySelectorAll('img,svg:not(.ico):not([class])').length,raw:box.querySelectorAll('img').length,
-      n:box.querySelectorAll('article.fw').length,txt:box.textContent,ids:[...box.querySelectorAll('article.fw')].map(a=>a.dataset.fw)};
+      n:box.querySelectorAll('.fav-cp,.g-fav,.fav-lc').length,txt:box.textContent};
   });
   ok(A.tidied,'A 讀進來時（normalize）不合格式的日期已經整理掉（04）');
   ok(A.x===undefined,`A 追蹤面板沒有執行注入的程式（window.__x=${A.x}）`);
   ok(A.raw===0,`A 追蹤面板沒有多出 img（${A.raw}）`);
-  ok(A.n===4,`A 四筆追蹤都畫出來（${A.n}）`);
+  ok(A.n>=5,`A 收藏的膠囊、甘特圖列、詳情都畫出來（${A.n}）`);
   ok(/<img /.test(A.txt)&&/src=x onerror=window\.__x=1/.test(A.txt),'A 惡意日期與註記照字面顯示');
-  ok(A.ids.includes('f4"><img src=x onerror=window.__x=2>'),'A 追蹤項目 ID 原樣留在 data-fw（沒有斷開屬性）');
 
   /* B 會長室文件 */
   const B=await p.evaluate(async()=>{

@@ -104,14 +104,10 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     await p.ctx.close();}
   {const p=await open('president',['rights'],{signin:'reader'});
     /* 追蹤一張權益部的卡片（畫面上的追蹤清單用 fwLoad＋fwBody 畫） */
-    const html=await p.evaluate(async id=>{const c=await fwLoad('rights',true);return fwBody({id:'f1',dept:'rights',kind:'live',ref:id},c.data).title},e0.id);
+    const html=await p.evaluate(async id=>{const c=await fwLoad('rights',true);return c.data.events.find(x=>x.id===id).name},e0.id);
     ok(html==='FS 權益部卡片','會長室追蹤：權益部（已切換）的卡片顯示 Firestore 的名稱');
     const rr=await p.evaluate(async()=>{const c=await fwLoad('events',true);return c.data.events.length});
     ok(rr===rt.events.length,'會長室追蹤：活動部（還在 GitHub）讀資料檔');
-    /* 追蹤面板真的畫出來（會長室資料檔的 follows 裡有權益部的項目時） */
-    const fol=await p.evaluate(()=>(state.follows||[]).filter(f=>f.dept==='rights').length);
-    if(fol){await p.evaluate(()=>renderFollows&&renderFollows());await p.waitForTimeout(1500);
-      const txt=await p.evaluate(()=>document.body.innerText);ok(!/登入後才看得到/.test(txt),`會長室追蹤面板：權益部的 ${fol} 項讀得到（已登入）`);}
     ok(p.errs.length===0,`會長室：沒有頁面錯誤${p.errs.length?'：'+p.errs.join(' | '):''}`);
     await p.ctx.close();}
 

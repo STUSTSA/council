@@ -93,22 +93,28 @@ function renderGantt(){
      今天＝每列一條細綠線（在條的後面，從把手上下露出來），時間軸上方綠色小膠囊寫日期 */
   const grid=inRange?`<span class="today" style="left:${tp}%"></span>`:"";
   let h=`<div style="min-width:${width+nameW}px"><div class="g-row"><div class="g-name g-nh sub">${ISS}</div><div class="g-axis">${inRange?`<span class="today-tag" style="left:${tp}%">今天 ${fmt(today()).slice(5)}</span>`:""}${ms.map((m,k)=>`<span style="left:${pos(ymd(m))}%">${!fit&&(k===0||m.getMonth()===0)?m.getFullYear()+"/":""}${m.getMonth()+1}月</span>`).join("")}</div></div>`;
-  h+=list.map(it=>{
+  /* 會長收藏的別的部門的進度（follow.js 的 favItems）：跟自己的列同一種，只是名稱列寫部門、點了開原看板，不能拖、不能改 */
+  const favI=favItems().issue.filter(x=>inView(x.i)&&hasDates(x.i));
+  const rowOf=(it,fd)=>{
     let s=it.start,e=it.end;if(e<s)[s,e]=[e,s];
     /* p：把手的位置（%）＝今天在條上的位置，不四捨五入（才跟今天線對齊）；還沒開始＝0（把手在最左）、已經結束＝100（最右）。
        期間超出時間軸範圍時條被切在範圍邊緣，把手照樣對齊今天線 */
     const l=pos(s),r=pos(e),w=Math.max(.8,r-l),p=r>l?clamp((tp-l)/(r-l)*100):tp>=l?100:0;
     /* 註記（DESIGN.md 第八節：不用小圓點）：最新一筆＝深色膠囊標籤＋細線連到條；其他＝條上方的短線（位置照日期，滑過才顯示標籤）；還沒勾的處理紀錄 .pend 半透明 */
     const gL=latestMarkerId(it.markers.filter(m=>m.date));const mk=it.markers.filter(m=>m.date).map(m=>{const x=pos(m.date);return `<span class="g-mk ${x<6?"edgeL":x>94?"edgeR":""} ${m.id!==gL?"quiet":""}${mkPending(m)?" pend":""}" style="left:${x}%"><span class="stem"></span><span class="lbl">${esc(m.text)}</span></span>`}).join("");
-    return `<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${esc(fmt(s).slice(5))} – ${esc(fmt(e).slice(5))}</span></div>
+    const dates=`${esc(fmt(s).slice(5))} – ${esc(fmt(e).slice(5))}`;
+    return fd?`<div class="g-row g-issue g-fav" data-fk="gf${esc(fd)}${esc(it.id)}"><div class="g-name"><b class="g-fav-t">${esc(it.title)}</b><span class="sub" style="font-size:11.5px">${esc(deptName(fd))} · ${dates}</span></div>
+      <div class="g-track">${grid}${sliderHTML(it,{l,w,p,sel:false})}${mk}</div></div>`
+    :`<div class="g-row g-issue" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">${dates}</span></div>
       <div class="g-track">${grid}${sliderHTML(it,{l,w,p,sel:it.id===ganttSel})}${mk}</div></div>`;
-  }).join("");
+  };
+  h+=list.map(it=>rowOf(it)).join("")+favI.map(x=>rowOf(x.i,x.dept)).join("");
   /* 還沒填期間的議題也列出來（沒有條），才點得到詳情去補日期 */
   h+=undated.map(it=>`<div class="g-row g-issue g-undated" data-jump="${esc(it.id)}" data-fk="g${esc(it.id)}"><div class="g-name"><a href="#" data-jump="${esc(it.id)}">${esc(it.title)}</a><span class="sub" style="font-size:11.5px">未排程</span></div><div class="g-track">${grid}</div></div>`).join("");
   h+="</div>";
   /* 空狀態：唯讀＝「目前沒有進行中的議題」；已登入＝只寫狀態（DESIGN.md「介面不放教學說明文字」；ui-11）；github 模式還沒登入的照舊 */
-  if(!act.length)h+=`<p class="empty">${boardLocked()?`目前沒有進行中的${ISS}。`:loggedIn()?`還沒有${ISS}。`:`還沒有${ISS}，登入後按「+ ${ISS}」開始。`}</p>`;
-  else if(!all.length)h+=`<p class="empty">這段期間沒有${ISS}。</p>`;
+  if(!act.length&&!favI.length)h+=`<p class="empty">${boardLocked()?`目前沒有進行中的${ISS}。`:loggedIn()?`還沒有${ISS}。`:`還沒有${ISS}，登入後按「+ ${ISS}」開始。`}</p>`;
+  else if(!all.length&&!favI.length)h+=`<p class="empty">這段期間沒有${ISS}。</p>`;
   morphTo($("#gantt"),h);   /* 原位更新（morph.js）：沒變的列、時程條、註記都是同一個節點 */
 }
 

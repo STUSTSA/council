@@ -6,6 +6,8 @@ ICONS.tag='<path d="M3.6 12.6V4.6a.8.8 0 0 1 .8-.8h8l7.6 7.6a1.2 1.2 0 0 1 0 1.7
 /* 2026-11-17 新介面：首頁鍵是簡單的五邊形房子（沒有門），整顆是 .i-roof，按下整顆往上跳 1.8px 再落回（board.css「線條 icon」的 icoRoof）；
    眼睛＝標題列的唯讀檢視鈕（沒有動作） */
 /* 加號＝新增即時回報的浮動圓鈕（nav.js 的 fabSync），按下轉一下 */
+/* 書籤＝會長的「收藏」鈕（follow.js 的 favBtnHTML）；已收藏時整個填滿（board.css 的 .fav-btn） */
+ICONS.bookmark='<path class="i-bm" d="M7.2 4.2h9.6a1 1 0 0 1 1 1v14.6l-5.8-4.1-5.8 4.1V5.2a1 1 0 0 1 1-1z"/>';
 ICONS.plus='<path class="i-plus" d="M12 5.5v13M5.5 12h13"/>';
 /* 減號＝對話框數字上下按鈕的「減一」（加一用加號） */
 ICONS.minus='<path d="M5.5 12h13"/>';

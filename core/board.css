@@ -344,9 +344,16 @@ input.lc-title:focus{outline:none}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
-/* 收藏鈕（會長在別的部門看板；follow.js 的 favBtnHTML）、共編鈕（卡片所屬部門的管理員、會長的「申請共編」；coedit.js）：即時回報詳情的上下張列右側、議題卡片標題列；跟「報告」鈕同一個尺寸，收藏、共編中後實心 */
-.fav-btn,.co-btn{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
-.fav-btn[aria-pressed="true"],.co-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
+/* 共編鈕（卡片所屬部門的管理員、會長的「申請共編」；coedit.js）：跟「報告」鈕同一個尺寸，有共編對象時實心 */
+.co-btn{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
+.co-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
+/* 收藏鈕＝書籤圖示（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；
+   圓鈕 38px、圖示 22px、文字色外框（比一般次要鈕明顯）；收藏後整個填滿成實心 */
+.fav-btn{flex:none;display:inline-grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);background:transparent;transition:background-color .2s,color .2s,scale .3s var(--mo-spring)}
+.fav-btn .ico{width:22px;height:22px}
+.fav-btn:active{scale:.92}
+.fav-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
+.fav-btn[aria-pressed="true"] .ico path{fill:currentColor}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
 .lc-meta .ev-st,.lc-tag{height:26px;padding:2px 12px 0;border-radius:999px;line-height:1}
@@ -618,13 +625,14 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
 .sgroup-ext>.panel,.ag-cols>.panel{margin:0}
 /* 會長室「會長室」分頁在電腦版（1000px 以上）：兩欄排，不再整條滿寬疊到底。
-   左欄＝預約、文件、秘書處會議開關（都矮）；右欄＝追蹤（高，跨左欄三列）；手機與 1000px 以下維持單欄 */
+   第一排＝預約（有的時候，滿寬）；第二排＝文件｜秘書處會議開關並排；手機與 1000px 以下維持單欄 */
 @media (min-width:1000px){
-  .sgroup-ext:has(#followPanel){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;column-gap:16px}
-  .sgroup-ext>#bkPanel,.sgroup-ext>#docsPanel,.sgroup-ext>#grantPanel{grid-column:1}
-  .sgroup-ext>#followPanel{grid-column:2;grid-row:1/span 3}
-  .sgroup-ext #follows{grid-template-columns:minmax(0,1fr)}
-}
+  .sgroup-ext:has(#docsPanel){grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;align-items:stretch}
+  .sgroup-ext>#bkPanel{grid-column:1/-1}
+  .sgroup-ext>#grantPanel{align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+  .sgroup-ext>#docsPanel:not(.sec-edit){display:flex;align-items:center;gap:8px 16px}   /* 文件：標題與膠囊同一排（一排就好，不要兩層） */
+  .sgroup-ext>#docsPanel:not(.sec-edit) .panel-head{margin:0;flex:none}
+  .sgroup-ext>#docsPanel:not(.sec-edit) .docs{flex:1;min-width:0}
 }
 /* 秘書處「會議」分頁：點名、會議資料左右兩區（641px 以上），手機上下排 */
 .ag-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
@@ -649,27 +657,10 @@ a.doc-pill:active{scale:.96}
 .docs-panel .add-row{margin-top:12px}
 .docs-panel[hidden]{display:none}
 
-/* ===== 追蹤（會長室） ===== */
-/* 一筆一張：寬的時候兩欄、只有一筆時佔滿整列（auto-fit），每張是圓角色塊；時程用細刻度（.tk，views.js 的 ticksHTML） */
-.follow-panel[hidden]{display:none}
-.follows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:10px}
-.follows .empty{grid-column:1/-1}
-.fw{display:grid;gap:6px;align-content:start;padding:14px 16px 16px;border-radius:var(--r-lg);background:var(--blk2);min-width:0}   /* 一筆一個圓角色塊（跟即時回報、預約同一種，2026-11-21 取代細線分隔） */
-.fw.gone{opacity:.55}
-.fw-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.fw-k{letter-spacing:.08em}
-.fw-open{margin-left:auto;color:var(--muted);text-decoration:none;font-size:12px}
-.fw-open:hover{color:var(--ink)}
-.fw-t{margin:0;font-size:16px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
-.fw-meta{margin:0;font-size:12.5px;color:var(--muted)}
-.fw-text{margin:0;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
-.fw-mk{margin:0;font-size:12px}
-.fw-bar{height:16px;margin:2px 0}   /* 細刻度（views.js 的 ticksHTML） */
-.fw-week{margin:0;max-height:220px;overflow:auto;font:inherit;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
-.follow-panel .add-row{margin-top:12px}
-@media (max-width:640px){
-  .fw{padding:12px 14px 14px}
-}
+/* ===== 會長收藏（follow.js 的 favItems；live.js、views.js 把它們放進會長室自己的即時回報與甘特圖） =====
+   即時回報清單裡是普通膠囊（.cp）：名稱右邊寫部門、點一下在原位展開唯讀詳情；甘特圖裡是普通的一列，名稱底下寫「部門 · 期間」，唯讀 */
+.fav-lc{grid-column:1/-1;min-height:0}   /* 點收藏的膠囊在原位展開唯讀詳情：佔滿一整列 */
+.g-fav .g-fav-t{font-weight:500}
 
 /* ===== 會議報告事項（秘書處，meeting.js） =====
    2026-11-06 使用者：不要直接粗暴地條列。一次一個部門（上面部門膠囊＋右邊「開啟看板 →」），每一筆是跟即時回報同一種膠囊（.events .ev：收合白色膠囊、點了展開），
