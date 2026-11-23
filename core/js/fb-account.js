@@ -321,6 +321,25 @@ async function roleWrite(target, mutate, via, r = "") {
     tx.set(auditRef("roles", target, rev), audit("roles", target, rev, via, before || {}, after, r || via));
   });
 }
+/* 總管理員移除別人的帳號：同一批撤光角色（稽核 via＝revoke、ref＝remove）、刪專員名單、刪 users 與 profiles（規則：不能是自己，批次後對方沒有任何權限）。
+   Firebase 驗證裡的登入帳號是用戶端刪不掉的（要到主控台 Authentication）；對方再登入時 ensureUser 會重新建 users／profiles */
+async function accountRemove(target) {
+  if (!target || target === uid()) throw fail("self");
+  await runTransaction(db, async tx => {
+    const s = await tx.get(ref("roles", target)), cur = s.exists() ? s.data() : null, before = cur ? plainRole(cur) : null;
+    const depts = Object.keys(before ? before.depts : {});
+    const ms = await Promise.all(depts.map(d => tx.get(ref("deptMembers", rosterId(d, target)))));
+    if (before && (before.super || depts.length)) {
+      const after = { super: false, depts: {} }, rev = cur.rev + 1;
+      tx.set(ref("roles", target), { ...after, rev, lastVia: "revoke", lastRef: "remove", updatedAt: NOW(), updatedBy: uid() });
+      tx.set(auditRef("roles", target, rev), audit("roles", target, rev, "revoke", before, after, "remove"));
+    }
+    ms.forEach(m => { if (m.exists()) tx.delete(m.ref); });
+    tx.delete(ref("users", target));
+    tx.delete(ref("profiles", target));
+  });
+  await drop(`${uid()}|profiles`);
+}
 
 /* ---------- 權限申請 ---------- */
 /* 04：每人每個部門一份申請，文件 ID＝{自己的 UID}_{部門}（規則要求）。待審中不能再送；撤回、被拒絕、已核准之後再申請＝同一份改回 pending（rev +1＋稽核）。
@@ -462,7 +481,7 @@ async function projectRevoke(target) {
 
 const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
-  rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
+  rolesList, usersList, roleWrite, accountRemove, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
   projectMine, onProjectGrant, projectRequestCreate, projectPending, projectHolders, projectDecide, projectApprove, projectRevoke,
   auditList, auditChain, serverNow: () => serverNow() };
 window.BoardAccount = api;
