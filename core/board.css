@@ -1394,7 +1394,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-wc,.wks-c{background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink)}   /* 卡片堆的共用外觀（主頁手機部門卡片、完成紀錄週疊卡）：底色、往上的陰影；圓角各自 --r-lg */
 .hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.wks-wal{flex:none;height:calc(100dvh - 290px);min-height:380px;margin-top:6px;overflow:hidden}   /* 完成紀錄的週卡堆（沿用 .hm-wal／.hm-wc，高度固定一屏，不跟頁面一起捲）；overflow 裁掉往下排出畫面的卡 */
+.wks-wal{--wal-bt:calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom));flex:none;height:calc(100dvh - 290px + var(--wal-bt));min-height:380px;margin:6px 0 calc(-1*var(--wal-bt));overflow:clip;overflow-clip-margin:36px}   /* 完成紀錄的週卡堆（沿用 .hm-wal／.hm-wc，高度固定一屏，不跟頁面一起捲）；overflow:clip 裁掉往下排出畫面的卡，clip-margin 留出卡片陰影往上、往左右散開的範圍（不裁成硬邊；clip 不產生捲動範圍）。--wal-bt＝.wrap 的底內距：往下抵掉它，疊卡一路延伸到螢幕最底（含手勢橫條的安全區），不在橫條上方切一條直線 */
 button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;border:0;font:inherit;text-align:left}   /* 週卡是 button（主頁部門卡是 a）：button 的內容預設垂直置中，改成從左上開始 */
 .hm-wc .wks-r{display:block}
 .hm-wc .hm-nm{font-size:20px}
