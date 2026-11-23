@@ -15,13 +15,14 @@ const sec=d=>p.evaluate(d=>{const x=document.querySelector(`#agDoc [data-md=${d}
 /* 不進任何編輯模式，文件就直接看得到 */
 A(await p.evaluate(()=>/行政會議/.test(document.querySelector('#agDoc .md-title').textContent)&&document.querySelector('#agDoc .md-date').textContent.length>5&&!document.querySelector('#agDoc textarea,#agDoc input')),'一打開就看得到文件（標題、日期），沒有輸入框');
 A(await p.evaluate(()=>document.querySelector('#agGo').disabled&&document.querySelector('#agCopy').disabled),'還沒有內容：「儲存」「複製文字」停用');
-const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agDoc [data-md-paste]')].map(x=>x.dataset.mdPaste+':'+x.textContent).join(' '));
+const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agLeft [data-md-paste]')].map(x=>x.dataset.mdPaste+':'+x.textContent).join(' '));
 console.log(chipTxt);
 A(/marketing:.*本週/.test(chipTxt)&&/events:.*01\/06/.test(chipTxt)&&/works:.*無週報/.test(chipTxt),'文件下面一排部門膠囊：本週／舊的日期／無週報');
-await p.click('#agDoc [data-md-paste=marketing]');await p.waitForTimeout(1500);
+await p.click('#agLeft .ag-tg');await p.waitForTimeout(500);   /* 手機：左邊工具收成一列，先展開 */
+await p.click('#agLeft [data-md-paste=marketing]');await p.waitForTimeout(1500);
 A((await sec('marketing')).text.includes('社群排程'),'點「行銷部」膠囊：週報放進文件');
 A(await p.evaluate(()=>!window.__xss&&!document.querySelector('#agDoc img')),'週報文字裡的 HTML 不會變成標籤');
-await p.click('#agDoc [data-md-paste=events]');await p.waitForTimeout(500);
+await p.click('#agLeft [data-md-paste=events]');await p.waitForTimeout(500);
 /* 就地編輯：點文字 → 輸入框 → 點別處收回 */
 await p.click('#agDoc [data-md=events] [data-ed=text]');await p.waitForTimeout(500);
 A(await p.evaluate(()=>!!document.querySelector('#agDoc [data-md=events] [data-ed=text] textarea')&&!document.querySelector('#agDoc [data-md=marketing] textarea')),'點一段文字：只有那一段變成輸入框，其他維持文件原貌');
