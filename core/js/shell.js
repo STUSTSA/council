@@ -100,6 +100,11 @@ const SHELL_HTML=`<div class="pager" id="pager">
             <div class="panel-head"><h2 class="sec-h" id="mpH" data-en="MEETING">會議結論</h2><span class="sub" id="mpCnt"></span></div>
             <div id="mpList"></div>
           </section>
+          <!-- 共編（coedit.js）：別的部門邀請你們共編、別的部門申請共編你們的卡片、已同意共編的卡片；沒有事項就整張不顯示 -->
+          <section class="panel mp-panel" id="coPanel" aria-labelledby="coH" hidden>
+            <div class="panel-head"><h2 class="sec-h" id="coH" data-en="CO-EDIT">共編</h2><span class="sub" id="coCnt"></span></div>
+            <div id="coList"></div>
+          </section>
           <section class="panel" id="livePanel" aria-labelledby="evH">
             <div class="panel-head"><h2 class="sec-h" id="evH" data-en="LIVE">即時回報</h2></div>
             <div class="md" id="liveMD"><div class="ev-list" id="events" data-flip></div><div class="lc-pane" id="evDetail" hidden></div></div>

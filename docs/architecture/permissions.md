@@ -459,3 +459,12 @@ DievE 決定：看板內容一律公開（第 5.1j 節之二）；登入的人�
 ### 5.1l 專案權限申請（`backend/tests/rules-08-project.test.js`，PJ-01～PJ-12）
 - 跟部門申請分開：任何登入的人送 `projectRequests/{自己的 UID}`；活動部部長或總管理員審（不能審自己）。核准＝同一批把 `projectGrants/{UID}` 寫成 `active: true`，撤銷＝同一份改 `active: false`（只有審核者）。兩個集合都有稽核連號（`auditLogs/{集合}_{UID}_{rev}`）。
 - 授權範圍：只有 `issues`（`deptId == 'events'`）的新增與修改；不能刪、不能改卡片、週報、標籤，也不改 `roles`。
+
+### 5.1m 跨部門共編（2026-11-23，`backend/tests/rules-09-coedit.test.js`，CO-01～CO-13；`tools/tests/co1.js`）
+- 資料：卡片多一個欄位 `co`＝`{invite, ask, depts}`（部門代號陣列）。`invite`＝主要部門（卡片 `deptId`）邀請、等對方部門管理員同意；`ask`＝別的部門申請、等主要部門管理員同意；`depts`＝已同意共編。只有進行中（`open`）的卡片能共編；新建卡片不能帶 `co`；一般編輯、排序、永久刪除都不能動 `co`（`unchanged`）。
+- 分享狀態另開一條 `allow update: if coShare()`（運算式各算各的；只改 `co`、`updatedAt`、`updatedBy`），每一步只動一個部門：邀請（主要部門管理員／總管理員）、申請（對方部門管理員；會長室的總管理員代表 `president`）、同意邀請（被邀請部門的管理員）、同意申請（主要部門管理員／總管理員）、拒絕／撤回／退出／收回（兩邊任一邊的管理員）。**任何一邊都不能單方面把部門加進 `depts`**；不能邀請自己的部門、不能不存在的部門、三個清單合計最多 9 個、不能重複。
+- 共編的編輯者（`co.depts` 與自己的 `roles.depts` 有交集，編輯者或管理員）：只能改 `title`、`blocks`（`version` +1＋同一批新建那一版，跟秘書處會議編輯 `meetingEdit` 同一組欄位）；不能改時間標記、專員、標籤、超連結、完成、排序、刪除、分享。被收回就立刻不能改（每次請求都讀 `roles` 與卡片）。
+- 規則運算式用量：`cards` 的 `create`／`update` 已接近每個請求 1000 個的上限，所以 `co` 只放一個欄位、`collabEdit` 擺在 `update` 的第一個並用 `'co' in resource.data` 提早結束（沒有 `co` 的卡片幾乎不增加用量）；改這裡要重跑 `rules-02a`（N-13）。
+- 查詢：`cards` 條件 `co.invite`／`co.depts`／`co.ask` `array-contains` 自己部門＋`state == 'open'`（單欄位索引合併，不另建複合索引；若正式環境要求索引，網頁讀取失敗時「共編」區當成沒有事項、看板其餘照常）。
+- 稽核：共編的內容修改有版本紀錄（`by`）；分享狀態的變動沒有另寫 `auditLogs`（卡片沒有 `rev`，跟排序一樣只蓋 `updatedAt`／`updatedBy`）〔待決定：要不要補〕。
+
