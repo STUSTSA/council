@@ -2442,6 +2442,7 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-entry .panel-head{margin-bottom:10px}
 .ag-open-t{font-size:13px;color:var(--muted)}
 .ag-peek{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;cursor:pointer;border-radius:6px;outline:0}
+#agOv[data-mode="agenda"] .ag-cardbox{display:none}   /* 會議資料（合併議程）只有一塊右欄；會議記錄才有卡片編輯 */
 .ag-peek:focus-visible{box-shadow:0 0 0 2px var(--ink)}
 .ag-pk-p{position:relative;display:grid;width:100%;box-sizing:border-box;text-align:left;gap:3px;max-height:150px;overflow:hidden;padding:16px 20px;border-radius:6px;background:var(--blk);color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.2)/* 例外：陰影黑 */;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent);transition:transform var(--mo-base) var(--mo-spring)}
 .ag-peek:hover .ag-pk-p,.ag-peek:focus-visible .ag-pk-p{transform:translateY(-2px)}

@@ -64,14 +64,18 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">會議資料</h2><span class="ag-open-t">開啟文件 ›</span></div>
         <div class="ag-peek" id="agPeek" role="button" tabindex="0" aria-label="開啟行政會議資料"></div>
       </section>
+      <section class="panel follow-panel meet-panel ag-entry" id="mnEntry" aria-labelledby="mnH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="mnH" data-en="MINUTES">會議記錄</h2><span class="ag-open-t">開始編輯 ›</span></div>
+        <div class="ag-peek" id="mnPeek" role="button" tabindex="0" aria-label="開啟會議記錄"></div>
+      </section>
       <div class="ag-ov" id="agOv" role="dialog" aria-modal="true" aria-label="行政會議資料" hidden>
-        <div class="anim-top" data-fx-keep><div class="anim-title"><b class="sec-h" data-en="AGENDA">行政會議資料</b></div><div class="anim-ctl"><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button><button type="button" id="agClose" aria-label="關閉行政會議資料">關閉</button></div></div>
+        <div class="anim-top" data-fx-keep><div class="anim-title"><b class="sec-h" id="agTitle" data-en="AGENDA">行政會議資料</b></div><div class="anim-ctl"><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button><button type="button" id="agClose" aria-label="關閉行政會議資料">關閉</button></div></div>
         <div class="ag-scroll">
           <div class="ag-wrap">
             <aside class="ag-tools ag-left" id="agLeft" aria-label="會議與部門報告"></aside>
             <div class="ag-center"><article class="md-doc ag-paper" id="agDoc" spellcheck="false"></article></div>
             <aside class="ag-right" id="agRight" data-focus="card" aria-label="文字備註與卡片編輯">
-              <section class="ag-rb ag-note" data-rb="note"><h3 class="ag-rh"><span>文字備註</span><span class="ag-rd" id="agNoteD"></span></h3><div class="ag-rbi" id="agNoteBody"></div></section>
+              <section class="ag-rb ag-note" data-rb="note"><h3 class="ag-rh"><span id="agNoteT">文字備註</span><span class="ag-rd" id="agNoteD"></span></h3><div class="ag-rbi" id="agNoteBody"></div></section>
               <section class="ag-rb ag-cardbox" data-rb="card"><h3 class="ag-rh"><span>卡片編輯</span><span class="ag-rd" id="agCardD"></span></h3><div class="ag-rbi" id="agCardBody"></div></section>
             </aside>
           </div>
@@ -182,7 +186,8 @@ function suLogoColor(label){
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
     ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
     const att=document.getElementById("attPanel"),ent=document.getElementById("agEntry");
-    if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */
+    if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}
+    {const mn=document.getElementById("mnEntry");if(mn)x.append(mn)}   /* 會議記錄入口：往下另開一塊（專注編輯整理好的會議資料） */   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */
     const ov=document.getElementById("agOv"),more=document.getElementById("agMore");   /* 會議資料自己一頁：蓋在整個畫面上（不在分頁裡）；會議報告事項（會長室開放當天改部門卡片）與各部門週報放在文件下面 */
     if(ov){document.body.append(ov);[["#meetEdPanel",more],["#wkPanel",more]].forEach(([q,to])=>{const p=document.querySelector(q);if(p&&to)to.append(p)})}}
   /* 關閉的區塊 */

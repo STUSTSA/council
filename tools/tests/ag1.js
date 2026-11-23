@@ -36,7 +36,7 @@ A(sc&&sc.agendas&&sc.agendas.length===1&&sc.agendas[0].date===T&&sc.agendas[0].t
 A(sc.agendas[0].items.find(i=>i.dept==='events').text.includes('改過的內容'),'改過的文字有存進去');
 A(!st.puts[API+'data-marketing.json'].agendas&&st.commits.every(m=>!/marketing/.test(m)),'沒有改動各部門的資料');
 /* 存過的：之後每改一處自動存 */
-await p.evaluate(()=>agSelect('events'));await p.click('#agRec');await p.fill('#agRec','自動存的記錄');await p.waitForTimeout(3500);
+await p.evaluate(()=>{closeAgenda(true);openAgenda('minutes');agSelect('events')});await p.waitForTimeout(800);await p.click('#agRec');await p.fill('#agRec','自動存的記錄');await p.waitForTimeout(3500);
 A(remote().agendas[0].items.find(i=>i.dept==='events').rec==='自動存的記錄','存過之後：改一處就自動存（不用再按儲存）');
 await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
 A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&agItemOf('events').rec==='自動存的記錄'),'重新整理後文件還在');
@@ -49,6 +49,10 @@ await p.mouse.move(bw.x+bw.width/2,bw.y+bw.height/2,{steps:8});await p.waitForTi
 A(await p.evaluate(()=>{const o=AG.doc.items.map(i=>i.dept);return o.indexOf('events')<o.indexOf('marketing')&&[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('events')<[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('marketing')}),'長按拖曳膠囊：議程裡的報告順序換了、紙上跟著換');
 await p.waitForTimeout(3000);
 A(remote().agendas.length===1,'換順序後仍是同一天一份');
+await p.evaluate(()=>{closeAgenda(true);openAgenda('minutes')});await p.waitForTimeout(800);
+A(await p.evaluate(()=>document.querySelector('#agOv').dataset.mode==='minutes'&&!!document.querySelector('#agCardBody')&&/會議記錄/.test(document.querySelector('#agTitle').textContent)),'會議記錄：打開是會議記錄頁（有卡片編輯）');
+await p.evaluate(()=>{closeAgenda(true);openAgenda('agenda')});await p.waitForTimeout(800);
+A(await p.evaluate(()=>document.querySelector('#agOv').dataset.mode==='agenda'&&getComputedStyle(document.querySelector('.ag-cardbox')).display==='none'&&!!document.querySelector('#agTx')&&!document.querySelector('#agRec')),'會議資料：只有議程文字，沒有記錄與卡片編輯');
 await p.screenshot({path:'ag1_done.png'});
 {const e=p.errs.filter(x=>!x.startsWith('console:Failed to load resource'));A(!e.length,'沒有程式錯誤 '+JSON.stringify(e))};
 c.q='?d=secretariat';await b.close();process.exit(bad?1:0)})();
