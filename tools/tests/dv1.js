@@ -114,6 +114,20 @@ const file=f=>JSON.parse(fs.readFileSync(path.join(ROOT,f),'utf8'));
     const st=await p.evaluate(()=>[...document.querySelectorAll('.dev-steps li')].map(x=>x.textContent));
     ok(st.length===3&&st[1].includes('加入主畫面')&&!(await p.$('[data-hub="install"]')),`F4 iPhone Safari：顯示加入主畫面的步驟、沒有「安裝」鈕（${st.join('／')}）`);
     await p.ctx.close();}
+  /* 安裝頁選項：Android 有 APK（推薦）與網頁版；iPhone Safari 的「加入主畫面」會叫出分享面板 */
+  const ANDROID='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36';
+  {const p=await open('rights',{ua:ANDROID,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await fakePrompt(p);await openSet(p);
+    await p.click('[data-set="device"]');await p.waitForTimeout(900);
+    const r=await p.evaluate(()=>[...document.querySelectorAll('[data-hub]')].map(x=>x.dataset.hub+':'+(x.querySelector('.sr-tag')||{}).textContent));
+    ok(r.join()==='apk:推薦,install:undefined',`F4 Android：APK 排第一並標推薦、網頁版第二（${r.join('／')}）`);
+    await p.ctx.close();}
+  {const p=await open('rights',{ua:ANDROID,w:390,vh:844});await p.waitForTimeout(800);await openSet(p);
+    await p.click('[data-set="device"]');await p.waitForTimeout(900);
+    const r=await p.evaluate(()=>[...document.querySelectorAll('[data-hub]')].map(x=>x.dataset.hub+':'+!!x.querySelector('.sr-tag')));
+    ok(r.join()==='apk:false',`F4 Android 瀏覽器沒提供安裝：只有 APK、不標推薦（${r.join('／')}）`);await p.ctx.close();}
+  {const p=await open('rights',{ua:IOS,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);await p.evaluate(()=>{window.__sh=0;navigator.share=async()=>{window.__sh++}});
+    await p.click('[data-set="device"]');await p.waitForTimeout(900);await p.click('[data-hub="ios"]');await p.waitForTimeout(400);
+    ok(await p.evaluate(()=>window.__sh===1)&&!!(await p.$('.dev-steps')),'F4 iPhone Safari：按「加入主畫面」叫出分享面板，步驟仍顯示');await p.ctx.close();}
   {const p=await open('rights',{ua:IOS,w:390,vh:844,standalone:true});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);
     ok(!(await p.$('[data-set="device"]')),'F4 iPhone 已加入主畫面（從主畫面打開）：沒有「安裝」那一列');await p.ctx.close();}
   {const p=await open('rights',{ua:IOS_CHROME,w:390,vh:844});await signIn(p,'rb','權益編輯一');await p.waitForTimeout(800);await openSet(p);

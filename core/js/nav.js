@@ -190,7 +190,7 @@ document.addEventListener("click",e=>{
 const SR_CHEV='<span class="sr-chev" aria-hidden="true"><svg viewBox="0 0 8 14" width="7" height="12"><path d="M1.5 1.5 6.5 7l-5 5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 /* 一列：k＝項目代號；attr＝"set"（設定清單）或 "hub"（合併頁裡的一列） */
 /* 設定列：只有圖示、名稱、右側箭頭（DESIGN-next 第十二節：列下面不放小字，目前的值也不放）。k、標題 t 一律在這裡跳脫（03 審查 P2-3），呼叫端傳純文字、不傳 HTML */
-const setRow=(k,ic,t,off,attr="set")=>`<button type="button" class="set-row" data-${attr}="${esc(k)}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><b class="sr-t">${esc(t)}</b>${off?"":SR_CHEV}</button>`;
+const setRow=(k,ic,t,off,attr="set",tag="")=>`<button type="button" class="set-row" data-${attr}="${esc(k)}"${off?' aria-disabled="true"':""}${attr==="set"&&k===paneKey?' aria-current="true"':""}><span class="sr-ico">${ico(ic,"solo")}</span><b class="sr-t">${esc(t)}</b>${tag?`<span class="sr-tag">${esc(tag)}</span>`:""}${off?"":SR_CHEV}</button>`;
 const setSec=rows=>`<section class="set-sec"><div class="set-list">${rows}</div></section>`;
 const GATE_LOCK='<svg viewBox="0 0 64 64" width="104" height="104" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="gate-shackle" d="M22 29v-8a10 10 0 0 1 20 0v8"/><g class="gate-body"><rect x="14" y="29" width="36" height="26" rx="7"/><circle cx="32" cy="39.5" r="2.6"/><path d="M32 42v5"/></g></svg>';
 /* 「這台裝置」：沒登入、唯讀時只在有東西可做（安裝、加入主畫面）時出現（03 F4、審查 P1-2：Chrome 自己的安裝提示被 pwa.js 收起來，要給一個入口） */
@@ -355,7 +355,7 @@ function hubRun(title,rows,{head=()=>"",foot=()=>"",mount}={}){   /* head：標�
     const host=setPaneHost();if(!host)return res();
     const box=document.createElement("div");box.className="set-hub";host.prepend(box);
     let list=[];
-    const draw=()=>{list=rows();morphTo(box,`${panelHead(title)}${head()}${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.off,"hub")).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
+    const draw=()=>{list=rows();morphTo(box,`${panelHead(title)}${head()}${list.length?`<div class="set-list">${list.map(r=>setRow(r.k,r.ic,r.t,r.off,"hub",r.tag)).join("")}</div>`:""}${foot()}`);weekDotSync();if(mount)mount(box)};   /* 原位更新：外觀的分段切換、沒變的列留著 */
     const me=hubNow={inFlow:false,draw,end(){if(hubNow===me)hubNow=null;box.remove();res()}};   /* draw：資料變了（帳號、角色，account.js 的 acctChanged）時原位重畫 */
     draw();
     box.addEventListener("click",async e=>{
@@ -380,7 +380,7 @@ const SET_HUBS={
     ...(fsMode()?[]:[{k:"import",ic:"upload",t:"匯入備份",act:()=>$("#importFile").click()}])]),   /* firestore 模式只能匯出（匯入會整份取代；回復路徑＝匯出 → 改回 github → 在 github 模式匯入，docs/遷移步驟.md 第 4 節）。events.js 的 #importFile 也擋下 */
   /* 這台裝置：安裝（瀏覽器支援時）；iPhone／iPad Safari 的加入主畫面步驟（03 F4）；忘記記住的身分（只有 GitHub 模式） */
   device:()=>hubRun(devForget()?"這台裝置":"安裝",()=>{const n=remName();
-    return [...(pwaCanInstall()?[{k:"install",ic:"download",t:"安裝",act:async()=>{await pwaInstall();if(!devForget()&&!devShow())paneDismiss()}}]:[]),   /* 安裝完沒有別的可做：收掉這一頁 */
+    return [...pwaOptions().map(o=>({...o,act:async()=>{await o.act();if(!devForget()&&!devShow())paneDismiss()}})),   /* 安裝完沒有別的可做：收掉這一頁 */
       ...(!devForget()?[]:[{k:"forget",ic:"device",t:"忘記這台裝置",off:!n,act:()=>forgetDevice()}])]},
     {head:()=>devForget()?hubSt([["記住的身分",remName()||"沒有記住身分"]]):"",   /* GitHub 模式：這台裝置記住了誰（忘記之後即時改） */
      foot:()=>pwaIosSteps()?`<ol class="dev-steps">${PWA_IOS_STEPS.map(t=>`<li>${esc(t)}</li>`).join("")}</ol>`:""}),
