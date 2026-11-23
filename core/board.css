@@ -1600,6 +1600,8 @@ body.set-open #pageMain{overflow:hidden}
 .sr-ico{font-size:22px;line-height:1;display:grid}
 .sr-t{flex:1;min-width:0;font-weight:500;letter-spacing:.06em}
 .sr-chev{color:var(--muted);display:grid}
+/* 「安裝」頁的「推薦」膠囊：接在名稱右邊、箭頭左邊 */
+.sr-tag{flex:none;padding:3px 12px 2px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:12px;letter-spacing:.12em;line-height:1.5}
 .set-p{margin:0;color:var(--muted);font-size:14px;line-height:1.85;padding:0}
 
 /* ===== 帳號與系統管理（02B，account.js）=====
