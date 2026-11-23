@@ -48,12 +48,6 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="panel-head"><h2 class="sec-h" id="atH" data-en="ATTENDANCE">點名</h2><span class="at-tools"><button type="button" class="icon" data-at="roster" disabled>名冊</button><button type="button" class="icon" data-at="copy" disabled>複製結果</button><button type="button" class="icon" data-at="addsess" disabled>+ 場次</button></span></div>
         <div id="attBody"></div>
       </section>
-      <section class="panel act-panel" id="actPanel" aria-labelledby="acH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="acH" data-en="ACTIVITY">各部門編輯量</h2><button type="button" class="icon" id="actRefresh">重新整理</button></div>
-        <p class="sub ac-info" id="actInfo"></p>
-        <div class="ac-chart" id="actChart"></div>
-        <div class="ac-legend" id="actLegend"></div>
-      </section>
       <section class="panel follow-panel" id="followPanel" data-edbox="s:follow" aria-labelledby="fwH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="fwH" data-en="FOLLOW">追蹤</h2><button type="button" class="icon card-edit-btn" data-edit="s:follow">編輯</button></div>
         <div class="follows" id="follows" data-flip></div>
@@ -184,7 +178,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
+    ["#bkPanel","#docsPanel","#grantPanel","#followPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
     const att=document.getElementById("attPanel"),ent=document.getElementById("agEntry");
     if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}
     {const mn=document.getElementById("mnEntry");if(mn)x.append(mn)}   /* 會議記錄入口：往下另開一塊（專注編輯整理好的會議資料） */   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */
