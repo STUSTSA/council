@@ -484,6 +484,11 @@ function invitePanel(){
     p.onEnd(()=>{if(curOff)curOff()});
     const statusOf=i=>i.status==="used"?`已使用 · ${esc(nameOf(i.usedBy))} · ${hm(i.usedAt)}`:i.status==="revoked"?"已撤銷":i.expiresAt<=A.serverNow()?"已過期":`剩 ${mmss(i.expiresAt-A.serverNow())}`;
     const load=async()=>{list=await A.inviteList().catch(()=>list)};
+    /* 最近的邀請：只列還有效與已使用的（最多 5 筆）；過期、撤銷的合成一行小字，不每筆佔一張卡 */
+    const invList=()=>{
+      const dead=i=>i.status==="revoked"||(i.status==="active"&&i.expiresAt<=A.serverNow()),shown=list.filter(i=>!dead(i)).slice(0,5),n=list.length-list.filter(i=>!dead(i)).length;
+      if(!shown.length&&!n)return "";
+      return `${shown.length?`<p class="acct-sub">最近的邀請</p>`:""}<div class="set-list acct-invites">${shown.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${esc(roleT(i.role,i.deptId))}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>${n?`<p class="acct-more">另有 ${n} 筆已過期或撤銷</p>`:""}`};
     const draw=async()=>{
       if(!p.alive)return;
       const qr=cur?await qrSvg(joinUrl(cur.token,cur.deptId)):"";
@@ -491,7 +496,7 @@ function invitePanel(){
           <b>${esc(deptNameOf(cur.deptId))}・${esc(roleT(cur.role,cur.deptId))}</b><span class="acct-qr-t${cur.status==="active"?" num":""}">${curText()}</span>
           <div class="acct-acts"><button type="button" class="primary" data-regen>重新產生</button>${live()?`<button type="button" class="danger" data-revoke="${esc(cur.h)}">撤銷</button>`:""}</div></div>`
         :`<button type="button" class="primary acct-new" data-new>產生 QR</button>`)
-        +`<div class="set-list acct-invites">${list.map(i=>`<div class="acct-line"><span><b>${esc(deptNameOf(i.deptId))}・${esc(roleT(i.role,i.deptId))}</b><small data-left="${i.status==="active"?i.expiresAt:""}">${statusOf(i)}</small></span>${i.status==="active"&&i.expiresAt>A.serverNow()&&(!cur||i.h!==cur.h)?`<button type="button" class="icon danger" data-revoke="${esc(i.h)}">撤銷</button>`:""}</div>`).join("")}</div>`;
+        +invList();
     };
     p.every(()=>{
       const t=p.box.querySelector(".acct-qr-t");
