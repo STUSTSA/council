@@ -77,7 +77,7 @@ const XSS='<img src=x onerror="window.__xss=1">';
     await (await storeWriteGet()).saveAgenda(CFG.firebase,T,a);state.agendas=[a];render()},[T,aid]);
   await pe.evaluate(()=>{AG.doc=null;render()});await ext(pe);
   await pe.evaluate(()=>mtLoadAll(true));await until(()=>pe.evaluate(()=>!MT.loading&&MT.depts.get('rights')&&MT.depts.get('rights').data),10000);
-  await pe.waitForSelector('#agDoc [data-md=rights]');await pe.waitForTimeout(800);
+  await pe.click('#agPeek');await pe.waitForSelector('#agDoc [data-md=rights]');await pe.waitForTimeout(800);
   const evSel='#agDoc [data-md=rights]',E=async(sel,txt)=>{await pe.click(sel);await pe.fill(sel+' input,'+sel+' textarea',txt);await pe.keyboard.press('Control+Enter');await pe.waitForTimeout(300)};
   {ok(await pe.evaluate(s=>!!document.querySelector(s+' [data-mtev=ec1]'),evSel),'行政會議文件裡有權益部的報告卡片')}
   await pe.click(evSel+' [data-mtev=ec1] summary');await pe.waitForTimeout(300);await E(evSel+' [data-ed=note][data-ev=ec1]','結論：照原案 '+XSS);

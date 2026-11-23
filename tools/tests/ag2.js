@@ -11,7 +11,7 @@ st.puts[API+'data-secretariat.json']={schemaVersion:14,id:'board-secretariat',me
 const p=await mk(412,860,'dark',true);
 await p.context().route(/127\.0\.0\.1:8300\/data-.*\.json/,r=>r.fulfill({status:404,body:''}));
 await p.evaluate(([o,r])=>{localStorage.setItem('workboard:ghtoken','T');localStorage.setItem('workboard:board-secretariat',JSON.stringify({id:'board-secretariat',issues:[],events:[],members:[],weeks:[],savedAt:'2000-01-01 00:00',sync:{owner:o,repo:r,branch:'main',path:'data-secretariat.json'}}))},API.split('/repos/')[1].split('/').slice(0,2).map(decodeURIComponent));await p.reload();await p.waitForTimeout(3500);await login(p);await p.waitForTimeout(800);
-await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);
+await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
 const T2=T;
 A(await p.evaluate(()=>/上次決議追蹤/.test(document.querySelector('#agDoc').textContent)&&/貼文延到下週/.test(document.querySelector('#agDoc').textContent)&&!/活動部/.test(document.querySelector('#agDoc .md-sec').textContent)),'文件最前面列上次決議，沒有決議的部門不列');
 A(await p.evaluate(()=>!document.querySelector('#xx')),'決議文字裡的 HTML 不會變成標籤');
@@ -44,7 +44,7 @@ const tx=await p.evaluate(()=>agDocText(AG.doc));
 A(/上次決議追蹤/.test(tx)&&/會議紀錄/.test(tx)&&/社群排程.*：結論：照原案/.test(tx)&&/下週討論/.test(tx)&&/決議：本週決議/.test(tx),'複製文字含議程、結論、臨時項目與決議');
 await p.click('#agDoc [data-md-xdel=marketing]');await p.waitForTimeout(3500);
 A(remote().agendas.find(a=>a.date===T).items.find(i=>i.dept==='marketing').extra.length===0,'刪除臨時項目：自動存');
-await p.evaluate(()=>{AG.doc=agDraftOf(today());renderAgenda()});await p.waitForTimeout(400);await p.evaluate(()=>document.getElementById('agPanel').scrollIntoView());await p.locator('#agPanel').screenshot({path:'doc_mob.png'});await p.setViewportSize({width:1100,height:900});await p.waitForTimeout(500);await p.locator('#agPanel').screenshot({path:'doc_desk.png'});await p.setViewportSize({width:412,height:860});await p.waitForTimeout(300);
+await p.evaluate(()=>{AG.doc=agDraftOf(today());renderAgenda()});await p.waitForTimeout(400);await p.evaluate(()=>0);await p.locator('#agOv').screenshot({path:'doc_mob.png'});await p.setViewportSize({width:1100,height:900});await p.waitForTimeout(500);await p.locator('#agOv').screenshot({path:'doc_desk.png'});await p.setViewportSize({width:412,height:860});await p.waitForTimeout(300);
 await p.click('#agPast [data-md-pick="2026-11-13"]');await p.waitForTimeout(600);
 A(await p.evaluate(()=>/2026\/11\/13/.test(document.querySelector('#agDoc .md-date').textContent)),'上面一排可以切到以前的會議');
 {const e=p.errs.filter(x=>!x.startsWith('console:Failed to load resource'));A(!e.length,'沒有程式錯誤 '+JSON.stringify(e))}

@@ -10,7 +10,7 @@ st.puts[API+'data-works.json']={schemaVersion:11,id:'board-works',members:[],iss
 const p=await mk(412,860,'dark',true);
 await p.context().route(/127\.0\.0\.1:8300\/data-.*\.json/,r=>r.fulfill({status:404,body:''}));
 await p.evaluate(([o,r])=>{localStorage.setItem('workboard:ghtoken','T');localStorage.setItem('workboard:board-secretariat',JSON.stringify({id:'board-secretariat',issues:[],events:[],members:[],weeks:[],savedAt:'2000-01-01 00:00',sync:{owner:o,repo:r,branch:'main',path:'data-secretariat.json'}}))},API.split('/repos/')[1].split('/').slice(0,2).map(decodeURIComponent));await p.reload();await p.waitForTimeout(3500);await login(p);await p.waitForTimeout(800);
-await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);
+await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
 const sec=d=>p.evaluate(d=>{const x=document.querySelector(`#agDoc [data-md=${d}]`);return x?{text:x.querySelector('[data-ed=text]').textContent}:null},d);
 /* 不進任何編輯模式，文件就直接看得到 */
 A(await p.evaluate(()=>/行政會議/.test(document.querySelector('#agDoc .md-title').textContent)&&document.querySelector('#agDoc .md-date').textContent.length>5&&!document.querySelector('#agDoc textarea,#agDoc input')),'一打開就看得到文件（標題、日期），沒有輸入框');
@@ -41,7 +41,7 @@ A(!st.puts[API+'data-marketing.json'].agendas&&st.commits.every(m=>!/marketing/.
 /* 存過的：之後每改一處自動存 */
 await p.click('#agDoc [data-md=events] [data-ed=dec]');await p.fill('#agDoc [data-md=events] [data-ed=dec] input','自動存的決議');await p.keyboard.press('Enter');await p.waitForTimeout(3500);
 A(remote().agendas[0].items.find(i=>i.dept==='events').decision==='自動存的決議','存過之後：改一處就自動存（不用再按儲存）');
-await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);
+await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
 A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&/自動存的決議/.test(document.querySelector('#agDoc').textContent)),'重新整理後文件還在');
 await p.click('#agDoc [data-md-drop=events]');await p.waitForTimeout(800);
 if(await p.$('#dlgForm input[name=pw]')){await p.fill('#dlgForm input[name=pw]','password-long-1');await p.click('#dlgForm [data-act=ok]')}
