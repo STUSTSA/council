@@ -1626,6 +1626,11 @@ body.set-open #pageMain{overflow:hidden}
 .set-row[aria-current="true"] .sr-chev{color:var(--ink)}
 .set-row[aria-disabled="true"]{cursor:default;opacity:.5}
 .set-row[aria-disabled="true"]:hover,.set-row[aria-disabled="true"]:active{background:var(--blk)}
+/* 強制刷新那一列：更新中（aria-busy）不能再按、圖示轉圈 */
+.set-row[aria-busy="true"]{cursor:default;opacity:.6}
+.set-row[aria-busy="true"] .sr-spin{animation:sr-spin .9s linear infinite}
+@keyframes sr-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.set-row[aria-busy="true"] .sr-spin{animation:none}}
 .sr-ico{font-size:22px;line-height:1;display:grid}
 .sr-t{flex:1;min-width:0;font-weight:500;letter-spacing:.06em}
 .sr-chev{color:var(--muted);display:grid}

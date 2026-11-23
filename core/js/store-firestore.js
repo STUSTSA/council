@@ -81,6 +81,8 @@ async function eventsByScope(cfg, scope, from, to, o = {}) {
 }
 /* 登出、換帳號：這台裝置上存的讀取結果全部清掉（不留給下一個人） */
 const clearCache = async () => { await drop(""); return wipePersistence(); };   /* 回傳 true＝連 Firestore 的離線快取也清了（連線已終止，呼叫端要重新載入頁面） */
+/* 設定的「強制刷新」：這個登入身分在這台裝置上存的讀取結果全部作廢（別的部門、行事曆、名單下次用到時才重讀；目前的部門由呼叫端立刻強制重讀） */
+const dropCache = () => drop("");
 
-window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope, clearCache, stats };
+window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope, clearCache, dropCache, stats };
 dispatchEvent(new Event("board-firestore-ready"));
