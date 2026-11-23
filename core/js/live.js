@@ -7,7 +7,7 @@
    版面：寬螢幕（lvWide：即時回報容器可用寬度 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
    編輯中：lvPane＝卡片內容換成哪一頁（staff 人／time 時間／place 地點；null＝逐行內容），lvPop＝母議題選單開著，lvSeg＝時間頁選到的那一段 {tid,k,buf}。
    kp＝{id,before}：正在原位編輯的那張與開始前的內容（render.js 的 startEdit 設定）；kpSt＝儲存回饋 {id,st:"saving"|"ok"|"fail"|"bad",msg,before,after}。 */
-let lvOpen=null,dnOpen=null,lvPane=null,lvPop=false,lvSeg=null;
+let lvOpen=null,dnOpen=null,lvPane=null,lvPop=false,lvSeg=null,lvDragAt=0;   /* lvDragAt：最近一次在時間頁上下拖曳調整的時刻（拖完放開不當成「點一下」開選擇器） */
 let kp=null,kpSt=null;
 /* 寬螢幕的判斷（DESIGN-next 第七節「卡片寬不到 980」）：量即時回報／完成紀錄容器（#liveMD、#doneMD）的可用寬度，不看視窗寬。
    ResizeObserver 只記看得到的那一個（藏起來的分頁量到 0，不算）；寬窄真的變了才在下一格重畫——分不分欄只改容器的高度、不改寬度，不會形成迴圈 */
@@ -342,6 +342,25 @@ function lvSegTick(dir,set){
   teTick(t,s.k,dir,set);kpSync(ev);render();Sfx.play("roll");
   const el=document.querySelector(`.lc-ed .sg.on`);if(el&&!reduceMotion())el.animate([{transform:`translateY(${(dir||1)>0?8:-8}px)`,opacity:.2},{transform:"none",opacity:1}],{duration:MO.fast,easing:MO.out});
 }
+/* 時間頁：點日期、時、分（不是拖曳）＝跳出系統的月曆或時間選擇器（原生 input date／time 的 showPicker，安卓是月曆與錶盤）；選好套用到那一段。拖曳、滾輪、方向鍵、打數字照舊 */
+function tePick(sg){
+  if(performance.now()-lvDragAt<500||typeof HTMLInputElement.prototype.showPicker!=="function")return;
+  const ev=kpEv(),t=ev&&ev.times.find(x=>x.id===sg.dataset.tid);if(!t)return;
+  const k=sg.dataset.sg,isD=k==="d"||k==="ed",end=!isD&&k[0]==="e",o=teSplit(t),cur=isD?(k==="ed"?o.ed:o.d):(end?o.eh:o.h);
+  document.querySelectorAll(".te-pk").forEach(x=>x.remove());
+  const inp=document.createElement("input"),r=sg.getBoundingClientRect();
+  inp.type=isD?"date":"time";inp.className="te-pk";inp.tabIndex=-1;inp.setAttribute("aria-hidden","true");inp.value=cur||"";inp.style.left=r.left+"px";inp.style.top=r.bottom+"px";
+  const gone=()=>{clearTimeout(inp._t);inp.remove()};inp._t=setTimeout(gone,120000);
+  inp.addEventListener("cancel",gone);
+  inp.addEventListener("change",()=>{const v=inp.value;gone();if(!v)return;const e2=kpEv(),t2=e2&&e2.times.find(x=>x.id===sg.dataset.tid);if(!t2)return;const q=teSplit(t2);
+    if(k==="d"){q.d=v;if(q.ed&&q.ed<=v)q.ed=""}
+    else if(k==="ed"){if(v<=q.d){kpSay("bad","結束日期要晚於開始日期");return}q.ed=v}
+    else if(end){if(!q.ed&&v<=q.h){kpSay("bad","結束時間要晚於開始時間");return}q.eh=v}
+    else{q.h=v;if(!q.ed&&q.eh&&q.eh<=v)q.eh=""}
+    teJoin(t2,q);kpSync(e2);render();Sfx.play("roll")});
+  document.body.append(inp);
+  try{inp.showPicker()}catch(_){gone()}
+}
 /* 編輯中卡片裡的點擊（回傳 true＝處理掉了） */
 function lvEdClick(t,ev){
   const ck=t.closest("[data-kpck]");if(ck){lvCheck(ev,ck);return true}
@@ -354,7 +373,7 @@ function lvEdClick(t,ev){
   const tdel=t.closest("[data-kptdel]");if(tdel){ev.times=ev.times.filter(x=>x.id!==tdel.dataset.kptdel);kpSync(ev);render();return true}
   const tm=t.closest("[data-kptm]");if(tm){lvPane="time";lvSeg=tm.dataset.kptm?{tid:tm.dataset.kptm,k:"d",buf:""}:null;render();document.querySelector(".lc-ed .sg.on")?.focus({preventScroll:true});lvBodyIn();return true}
   if(t.closest("[data-kplkdel]")){const lk=t.closest(".kp-lk");ev.links=ev.links.filter(x=>x.id!==lk.dataset.lk);render();return true}
-  const sg=t.closest("[data-sg]");if(sg){lvSeg={tid:sg.dataset.tid,k:sg.dataset.sg,buf:""};document.querySelectorAll(".lc-ed .sg.on").forEach(x=>x.classList.remove("on"));sg.classList.add("on");sg.focus({preventScroll:true});return true}
+  const sg=t.closest("[data-sg]");if(sg){lvSeg={tid:sg.dataset.tid,k:sg.dataset.sg,buf:""};document.querySelectorAll(".lc-ed .sg.on").forEach(x=>x.classList.remove("on"));sg.classList.add("on");sg.focus({preventScroll:true});tePick(sg);return true}
   const set=t.closest("[data-teset]");if(set){const tt=ev.times.find(x=>x.id===set.dataset.tid);if(!tt)return true;const o=teSplit(tt),k=set.dataset.teset,d=new Date();
     if(k==="s"){const m=Math.round(d.getMinutes()/5)*5;o.h=`${pad((d.getHours()+(m===60?1:0))%24)}:${pad(m%60)}`;lvSeg={tid:tt.id,k:"h",buf:""}}
     else if(k==="e"){const h=Math.min(23,+(o.h||"00").slice(0,2)+1);o.eh=pad(h)+":"+(o.h||"00:00").slice(3);if(!o.ed&&o.eh<=o.h)o.eh="";lvSeg={tid:tt.id,k:"eh",buf:""}}
@@ -440,7 +459,7 @@ document.addEventListener("wheel",e=>{const sg=kp&&e.target.closest&&e.target.cl
   document.addEventListener("pointerdown",e=>{const sg=e.pointerType==="touch"&&kp&&e.target.closest&&e.target.closest(".lc-ed .sg");if(!sg)return;d={sg,y:e.clientY,n:0}});
   addEventListener("pointermove",e=>{if(!d)return;const n=Math.trunc((d.y-e.clientY)/18);if(n===d.n)return;
     if(!lvSeg||lvSeg.tid!==d.sg.dataset.tid||lvSeg.k!==d.sg.dataset.sg)lvSeg={tid:d.sg.dataset.tid,k:d.sg.dataset.sg,buf:""};
-    const step=n>d.n?1:-1;d.n=n;d.moved=true;lvSegTick(step)});
+    const step=n>d.n?1:-1;d.n=n;d.moved=true;lvDragAt=performance.now();lvSegTick(step)});
   addEventListener("pointerup",()=>{d=null});addEventListener("pointercancel",()=>{d=null});
 })();
 /* 整理這張卡片（存檔前）：去掉前後空白、名稱網址都空的超連結不留、時間行的文字寫進時間標記的名稱。
