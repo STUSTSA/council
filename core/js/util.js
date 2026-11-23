@@ -83,4 +83,8 @@ function swReg(extra){
 })();
 
 /* 固定頂部區（.dtop）佔的高度（shell.js 量好寫進 --dtop-h）：捲動到某個元素時，要讓出這段 */
-function dtopH(){return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0}
+const PHONE_MQ=matchMedia("(max-width:640px)");
+/* 看板主頁的捲動層：手機是標題列下面的 #wrapSc（標題列固定不捲），電腦是整頁 #pageMain */
+const pageSc=()=>document.getElementById(PHONE_MQ.matches?"wrapSc":"pageMain");
+function dtopH(){if(PHONE_MQ.matches)return 0;   /* 手機：標題列在捲動層外面，不會蓋住內容，不用讓出 */
+  return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0}
