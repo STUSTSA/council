@@ -596,7 +596,10 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .stg-del{width:30px;min-height:30px;padding:0}
 /* ===== 部門專用分頁（dept/config.js 的 ext：會長室「會長室」、秘書處「會議」；shell.js 把面板搬進 .sgroup-ext） =====
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
-.sgroup-ext>.panel{margin:0}
+.sgroup-ext>.panel,.ag-cols>.panel{margin:0}
+/* 秘書處「會議」分頁：點名、會議資料左右兩區（641px 以上），手機上下排 */
+.ag-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:641px){.ag-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* ===== 文件（會長室，follow.js 的 renderDocs） =====
    平常：一排膠囊按鈕（外框、文件 icon、名稱、右邊 ↗），點了新分頁打開；按下微縮、滑過 ↗ 往右上推。
@@ -2418,7 +2421,8 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 #agDrive[hidden]{display:none}   /* 還沒設定雲端硬碟時藏起來（.icon 的 display 會蓋過 hidden 屬性） */
 .ag-entry .panel-head{margin-bottom:10px}
 .ag-open-t{font-size:13px;color:var(--muted)}
-.ag-peek{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.ag-peek{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;cursor:pointer;border-radius:6px;outline:0}
+.ag-peek:focus-visible{box-shadow:0 0 0 2px var(--ink)}
 .ag-pk-p{position:relative;display:grid;width:100%;box-sizing:border-box;text-align:left;gap:3px;max-height:150px;overflow:hidden;padding:16px 20px;border-radius:6px;background:var(--blk);color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.2)/* 例外：陰影黑 */;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent);transition:transform var(--mo-base) var(--mo-spring)}
 .ag-peek:hover .ag-pk-p,.ag-peek:focus-visible .ag-pk-p{transform:translateY(-2px)}
 .ag-pk-t{font-size:16px;font-weight:600}
