@@ -1127,10 +1127,10 @@ a.link:active{transform:scale(.96)}
    （放進頁面的 SVG，零件填色在「部門標誌」段；大小跟主頁過場的終點一樣：畫面寬的 46%、最大 300），看板穩定了才淡掉 */
 .pfx-cover{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:var(--bg);pointer-events:none}
 .pfx-cover[data-k="tile"]{background:var(--blk)}
-/* 等看板載入的這段（資料慢時最多 6 秒）標誌循環呼吸：放大 8%、微微上浮再回來（起點是不動的終點畫面，接得上主頁過場；淡出時停在哪一格都順）。
-   只動 transform、由合成器執行，主執行緒忙的時候也不會頓。一開始就動（不延遲），讓人看得出「正在進入」；關掉動態時不建底板（pagefx.js） */
-.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible;animation:pfxBreathe .9s ease-in-out infinite alternate;will-change:transform}
-@keyframes pfxBreathe{to{transform:translateY(-6px) scale(1.08)}}
+/* 等看板載入的這段（資料慢時最多 6 秒）標誌的零件循環動作：用「部門標誌」段那一套各部門的動作（印章蓋下、小人跳、眨眼…），--dg-n:infinite 讓它一直播到底板淡出。
+   只動 transform、由合成器執行，主執行緒忙的時候也不會頓；起點與終點都是不動的標誌，接得上主頁過場。關掉動態時不建底板（pagefx.js） */
+.pfx-cover{--dg-n:infinite}
+.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible}
 
 /* ===== 對話框與下拉選單 ===== */
 .danger-btn{color:var(--warn)}
@@ -1498,7 +1498,7 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
    原本就是白色的零件（秘書處的 .dg-w）跟著所在底板的底色，才分得出來：
    色塊、卡片、桌面鋪滿的分身、看板開頁的色塊底板＝--blk；手機翻面的部門底板、看板開頁的翻面底板、部門標題列（.dh-logo）＝--bg（交接前後同色，深色時沒有白塊）。
    標誌出現的地方一律把檔案放進頁面（不用 <img>），這幾條才吃得到。
-   被選到時（.on：桌面焦點那張 .hm-tile、手機焦點卡 .hm-wc）小人做一次動作。零件之間的白縫是畫在鄰居身上的缺口，所以零件只往「離開鄰居」的方向動，
+   被選到時（.on：桌面焦點那張 .hm-tile、手機焦點卡 .hm-wc）小人做一次動作；進部門的底板（.pfx-cover）等載入時是同一套動作循環播（--dg-n:infinite）。零件之間的白縫是畫在鄰居身上的缺口，所以零件只往「離開鄰居」的方向動，
    或原地縮小再回來，不壓進鄰居；要一起動的零件在檔案裡包成 .dg-ga／.dg-gb，整個小人是 .dg-all。只動 transform。
    class 一律 dg- 開頭，不跟版面的 class 共用（進場動畫只挑版面上的區塊，不會挑到零件） */
 .hm-lg .dg{display:block;width:100%;height:100%;overflow:visible}
@@ -1508,30 +1508,30 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
 .dg-b{fill:var(--mk-b)}
 .dg-o{fill:var(--mk-c)}
 .dg :is(path,rect,g){transform-box:fill-box;transform-origin:50% 100%}
-:is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-all{animation:dg-hop .6s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="president"] .dg-ga{animation:dg-crown .8s .05s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="secretariat"] .dg-all{animation:dg-hop .5s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="secretariat"] .dg-p2{animation:dg-tap .8s .12s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="secretariat"] .dg-p5{transform-origin:50% 50%;animation:dg-blink .3s .5s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="rights"] .dg-ga{transform-origin:100% 100%;animation:dg-stamp .75s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="rights"] .dg-p0{transform-origin:100% 100%;animation:dg-jolt .75s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="rights"] .dg-p2{transform-origin:50% 50%;animation:dg-ink .75s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="finance"] .dg-all{animation:dg-coin 1s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="finance"] .dg-ga{animation:dg-bob 1s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="works"] .dg-ga{animation:dg-hat .8s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="works"] .dg-p0{transform-origin:50% 0;animation:dg-duck .8s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="affairs"] .dg-all{transform-origin:50% 50%;animation:dg-turn .8s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="affairs"] .dg-p1{--x:0px;--y:-8px;animation:dg-peek .7s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="affairs"] .dg-gb{--x:-8px;--y:0px;animation:dg-peek .7s .06s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="affairs"] .dg-p8{--x:8px;--y:0px;animation:dg-peek .7s .12s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="affairs"] .dg-p11{--x:0px;--y:8px;animation:dg-peek .7s .18s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="marketing"] .dg-all{animation:dg-hop .6s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="marketing"] .dg-p1{transform-origin:100% 50%;animation:dg-fold .8s .1s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="marketing"] .dg-p2{transform-origin:0 50%;animation:dg-fold .8s .1s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="pr"] .dg-ga{animation:dg-shake .8s .08s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="pr"] :is(.dg-p1,.dg-p2){animation:dg-lift .8s .08s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="events"] .dg-all{animation:dg-tilt .9s both}
-:is(.hm-tile,.hm-wc).on .dg[data-d="events"] .dg-p1{transform-origin:50% 50%;animation:dg-idea .9s .05s both}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="president"] .dg-all{animation:dg-hop .6s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="president"] .dg-ga{animation:dg-crown .8s .05s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="secretariat"] .dg-all{animation:dg-hop .5s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="secretariat"] .dg-p2{animation:dg-tap .8s .12s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="secretariat"] .dg-p5{transform-origin:50% 50%;animation:dg-blink .3s .5s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="rights"] .dg-ga{transform-origin:100% 100%;animation:dg-stamp .75s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="rights"] .dg-p0{transform-origin:100% 100%;animation:dg-jolt .75s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="rights"] .dg-p2{transform-origin:50% 50%;animation:dg-ink .75s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="finance"] .dg-all{animation:dg-coin 1s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="finance"] .dg-ga{animation:dg-bob 1s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="works"] .dg-ga{animation:dg-hat .8s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="works"] .dg-p0{transform-origin:50% 0;animation:dg-duck .8s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="affairs"] .dg-all{transform-origin:50% 50%;animation:dg-turn .8s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="affairs"] .dg-p1{--x:0px;--y:-8px;animation:dg-peek .7s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="affairs"] .dg-gb{--x:-8px;--y:0px;animation:dg-peek .7s .06s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="affairs"] .dg-p8{--x:8px;--y:0px;animation:dg-peek .7s .12s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="affairs"] .dg-p11{--x:0px;--y:8px;animation:dg-peek .7s .18s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="marketing"] .dg-all{animation:dg-hop .6s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="marketing"] .dg-p1{transform-origin:100% 50%;animation:dg-fold .8s .1s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="marketing"] .dg-p2{transform-origin:0 50%;animation:dg-fold .8s .1s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="pr"] .dg-ga{animation:dg-shake .8s .08s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="pr"] :is(.dg-p1,.dg-p2){animation:dg-lift .8s .08s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="events"] .dg-all{animation:dg-tilt .9s both var(--dg-n,1)}
+:is(.hm-tile.on,.hm-wc.on,.pfx-cover) .dg[data-d="events"] .dg-p1{transform-origin:50% 50%;animation:dg-idea .9s .05s both var(--dg-n,1)}
 @keyframes dg-hop{30%{transform:translateY(-7px)}62%{transform:none}80%{transform:translateY(-2px)}}
 @keyframes dg-crown{28%{transform:translate(3px,-22px) rotate(12deg)}56%{transform:none}74%{transform:translateY(-6px) rotate(-3deg)}}
 @keyframes dg-tap{15%,45%,75%{transform:translateY(5px)}30%,60%,90%{transform:none}}
