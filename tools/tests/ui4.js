@@ -105,7 +105,7 @@ const vis=(p,sel)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&
     ok(await p.evaluate(()=>$('#addEvent').hidden),'有卡片打開（右側詳情）：圓鈕不出現');
     await p.evaluate(()=>{lvOpen=null;dnOpen=null;render()});await p.waitForTimeout(700);
     const n0=await p.evaluate(()=>state.events.length);
-    await p.click('#addEvent');await p.waitForTimeout(900);
+    await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForTimeout(900);
     const s=await p.evaluate(()=>({n:state.events.length,editing,fab:$('#addEvent').hidden}));
     ok(s.n===n0+1&&s.editing&&s.fab,`點圓鈕：新增一張並開始編輯（${n0}→${s.n}），編輯中圓鈕不出現`);
     await p.evaluate(()=>cancelEdit());await p.waitForTimeout(800);}
