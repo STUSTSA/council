@@ -109,7 +109,7 @@ function acctGateHTML(){
 function acctSettingsInner(){
   if(!FB_ON)return lookSec();
   if(!acct.ready)return `<div class="set-gate"><span class="set-gate-ico">${GATE_LOCK}</span></div>`+lookSec();
-  if(!acct.user)return acctGateHTML()+devSec()+lookSec();   
+  if(!acct.user)return acctGateHTML()+devSec()+refreshSec()+lookSec();   
   /* 02D：有這個部門角色的人多報告、編輯紀錄（版本歷史，team.js 的 fsLoadLog）、標籤；備份（只有匯出）放在系統管理裡、只有總管理員看得到；學年與開學日（只有總管理員能寫 org/config）、人員（舊身分）不出現 */
   const ed=fsWriter()?setSec(setRow("labels","tag","標籤")):"";
   /* 「帳號」列只寫「帳號」：名稱、信箱、角色畫在帳號頁最上面（acctHub 的 head；ui-08 列下面不放小字） */
@@ -119,7 +119,24 @@ function acctSettingsInner(){
     +setSec(setRow("acct","people","帳號"))+ed
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec()   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
+    +refreshSec()
     +lookSec();   /* 外觀：獨立一列放最後（2026-11-22 起不再接在帳號頁下面） */
+}
+/* 強制刷新（2026-11-23）：平常用這台裝置存的讀取結果（fs-cache.js）省讀取量；趕資料（催交、開會前）按一下就作廢本裝置的快取、立刻重讀目前這個部門。
+   只立刻讀目前的部門（一次讀取量＝這個部門的文件數）；別的部門、行事曆、名單下次用到時才重讀。有未儲存的修改時不動，免得蓋掉。 */
+const refreshSec=()=>setSec(`<button type="button" class="set-row" data-fb-refresh><span class="sr-ico">${ico("refresh","sr-spin")}</span><span class="sr-t">強制刷新</span></button>`);
+let acctRefreshing=false;
+async function acctRefresh(btn){
+  if(acctRefreshing||!fsMode())return;
+  if(editing||dirty){toast("有還沒儲存的修改，先儲存或取消再刷新");return}
+  acctRefreshing=true;btn.setAttribute("aria-busy","true");const t=btn.querySelector(".sr-t");t.textContent="更新中…";
+  try{
+    const fs=await storeFsGet();await fs.dropCache();
+    if(typeof fwCache!=="undefined")fwCache.clear();if(typeof MT!=="undefined")MT.at=0;
+    const r=await storeFsLoad(true);storeFsErr=null;storeFsUse(r);render();
+    toast("已更新為最新內容");
+  }catch(e){fsReadErr("強制刷新",e);toast("更新失敗，請稍後再試")}
+  finally{acctRefreshing=false;btn.removeAttribute("aria-busy");t.textContent="強制刷新"}
 }
 /* 這些列在 firestore 模式下不用舊的看板登入（nav.js 的點擊處理看 ACCT_FLOWS） */
 const ACCT_FLOWS={
@@ -131,6 +148,7 @@ document.addEventListener("click",async e=>{
   if(!e.target.closest)return;
   if(e.target.closest("#setOv [data-fb-login]")){await acctSignIn();return}
   if(e.target.closest("#setOv [data-fb-copy]")){acctCopyUrl();return}
+  const rf=e.target.closest("#setOv [data-fb-refresh]");if(rf){acctRefresh(rf);return}
   const nm=e.target.closest("#setOv [data-acct-name]");if(nm)acctNameEdit(nm);
 });
 document.addEventListener("keydown",e=>{
