@@ -85,3 +85,6 @@ document.addEventListener("click",e=>{
   const p=e.target.closest("[data-look-pal]");if(p){UI.set({pal:p.dataset.lookPal});return}
   if(e.target.closest("[data-look-snd]"))UI.set({sound:!UI.get().sound});
 });
+
+/* 禁止縮放：iOS Safari 無視 viewport 的 user-scalable=no，雙指縮放要在 gesture 事件擋掉（樣式部分在 board.css 的 html 那條） */
+for(const t of ["gesturestart","gesturechange","gestureend"])document.addEventListener(t,e=>e.preventDefault(),{passive:false});

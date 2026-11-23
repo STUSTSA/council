@@ -35,7 +35,8 @@
 /* 新增即時回報的浮動圓鈕可能出現的畫面（body.fab-room：可編輯的單位的即時回報分頁，nav.js 的 fabSync），內容最下面一律多讓出它的高度，
    最後一顆膠囊不會被蓋住；圓鈕出現、消失（打開卡片、搜尋、唯讀檢視）時留白不變，內容不會跳 */
 body.fab-room{--fab-in:76px}
-html{height:100%;-webkit-tap-highlight-color:transparent}
+/* 禁止縮放（iPhone 用網頁／加入主畫面時手指一縮放版面就跑掉）：viewport 的 maximum-scale 在 iOS 會被忽略，所以這裡再用 touch-action 擋雙指縮放與雙擊縮放（只留上下左右捲動）；另有 theme.js 擋 iOS 的 gesturestart。有自己 touch-action 的元件（拖曳、滑動）照舊 */
+html{height:100%;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
 body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font:15px/1.6 "Jost","Noto Sans TC",system-ui,"PingFang TC","Microsoft JhengHei",sans-serif}   /* 2026-11-06 使用者：數字字體統一。Jost 排第一：數字、英文都是 Jost，中文 Jost 沒有字就落到 Noto Sans TC */
 .sub{color:var(--muted);font-size:13px}
 h1{margin:0;font-size:clamp(26px,3.2vw,38px);font-weight:400;letter-spacing:.08em;line-height:1.2}
