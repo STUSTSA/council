@@ -2400,6 +2400,7 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
    標題列：「複製文字」「儲存」。三欄（.ag-wrap）：左 .ag-left（切換會議、加入部門報告）、中 .ag-paper（白紙，配色變數跟工作報告的白紙同一組，見「工作報告」段）、右 .ag-right（目前選到那一段的工具）；
    左右欄捲動時固定在畫面上（sticky）。要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回。
    手機（1000px 以下）：單欄，左右工具收成兩列可展開的標題（.ag-tg，grid-template-rows 0fr↔1fr 展開），白紙在下面。 */
+#agDrive[hidden]{display:none}   /* 還沒設定雲端硬碟時藏起來（.icon 的 display 會蓋過 hidden 屬性） */
 .ag-wrap{display:grid;grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(220px,270px);gap:20px;align-items:start}
 .ag-center{min-width:0}
 .ag-paper{max-width:210mm;margin:0 auto;box-sizing:border-box;min-height:min(297mm,75vh);padding:clamp(22px,6.667%,14mm);border-radius:4px;background:var(--blk);color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑，同工作報告白紙 */;--blk2:#f1f1f4}
