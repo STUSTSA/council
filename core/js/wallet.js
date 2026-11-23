@@ -44,34 +44,43 @@ const Wallet=(()=>{
   return {make,WH,WU,WG};
 })();
 
-/* 捲動縮疊（手機）：原本的手指捲動不變，清單項目（即時回報的膠囊 .cp、設定的列 .set-row）捲到上方固定區下面時不被切掉，
-   而是停在固定區下緣、縮小疊起來——跟完成紀錄的週疊卡同一個視覺：新的在前面、舊的縮小（每層 .05，最多三層）露一條在上面。
-   只寫 translate／scale／z-index（獨立屬性，不碰 transform，拖曳排序、點開成全螢幕、原位更新照舊）；不碰樣式與點擊。
-   捲動容器：.page（即時回報頁）、.set-scroll、.set-sub-body（設定）；固定區下緣＝#dsRow（沒有就 #dTop）的底，設定層沒有固定區就用容器自己的上緣。
-   拖曳排序中（html.ev-drag-on）、減少動態、桌面寬度一律不套用並還原。 */
+/* 捲動縮疊（手機，通知頁的日期卡 .cal-ev）：原本的手指捲動不變，卡片捲到上方固定區下面時不被切掉，停在固定區下緣、縮小疊起來——
+   跟完成紀錄的週疊卡同一個視覺：新的在前面、舊的縮小（每層 .05，最多三層）露一條在上面。
+   「釘在固定區下緣」交給瀏覽器的 position:sticky（board.css「手機通知頁卡片捲動縮疊」，跟著原生捲動在合成層上跑，不會落後半拍而抖動）；
+   這裡只算縮小與露出的那一條（translate／scale 獨立屬性，不碰 transform，勾選、點擊、原位更新照舊）。
+   每次捲動只量固定區與卡片所在清單的位置，各張的排版位置算好存起來（只在張數或尺寸變了才重算，不逐張量、沒有強制重排），只寫有變的幾張；
+   看不到的清單（別的分頁）整個略過。減少動態、641px 以上不套用並還原。 */
 const Pile=(()=>{
-  const SC=".page,.set-scroll,.set-sub-body",IT=".cp,.set-row",LAY=3,PEEK=7,STEP=.05,GAP=10,PAD=14;
-  let raf=0;
-  const on=()=>matchMedia("(max-width:640px)").matches&&!reduceMotion()&&!document.documentElement.classList.contains("ev-drag-on");
-  function clear(el){if(el._pl){el._pl=0;el._ty=0;el._s=1;el.style.translate=el.style.scale=""}}
+  const LAY=3,PEEK=7,STEP=.05,PAD=14,HOST="#notiPage .cal-list",ITEM=".cal-ev";
+  let raf=0,dirty=true,ro=null,PT=0,hosts=[];
+  const on=()=>matchMedia("(max-width:640px)").matches&&!reduceMotion();
+  function put(el,ty,s){const k=ty.toFixed(1)+"|"+s.toFixed(3);if(el._pk===k)return;el._pk=k;
+    if(s===1){el.style.translate=el.style.scale=""}else{el.style.translate=`0 ${ty.toFixed(1)}px`;el.style.scale=s.toFixed(3)}}
+  /* 量一次（卡片張數、尺寸、固定區高度變了才重量；ResizeObserver 把 dirty 打開）：固定區下緣（--dtop-h）、每張卡在捲動內容裡的位置與高度。
+     捲動中只讀 scrollTop，不量任何東西（offsetTop 含 sticky 的位移，不能用，所以照排版順序累加高度與間距） */
+  function measure(sc){
+    dirty=false;hosts=[...sc.querySelectorAll(HOST)].filter(g=>g.offsetHeight);
+    PT=(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0)+PAD;
+    sc.style.setProperty("--pile-top",PT+"px");
+    const st=sc.scrollTop,t0=sc.getBoundingClientRect().top;
+    hosts.forEach(g=>{
+      if(ro&&!g._po_ro){g._po_ro=1;ro.observe(g)}
+      const gap=parseFloat(getComputedStyle(g).rowGap)||0;let y=0;g._pn=[];g._pc=g.childElementCount;g._po=g.getBoundingClientRect().top-t0+st;
+      [...g.children].forEach(k=>{const h=k.offsetHeight;if(k.matches(ITEM))g._pn.push([k,y,h]);y+=h+gap})})
+  }
   function run(sc){
-    const its=[...sc.querySelectorAll(IT)];if(!its.length)return;
-    if(!on()){its.forEach(el=>{clear(el);el.style.zIndex=""});return}
-    const sr=sc.getBoundingClientRect();let edge=sr.top;
-    if(sc.matches(".page")){const b=document.getElementById("dsRow")||document.getElementById("dTop");if(b&&b.offsetHeight)edge=Math.max(edge,b.getBoundingClientRect().bottom)}
-    const P=edge+PAD;
-    const m=its.map(el=>{const r=el.getBoundingClientRect(),h=el.offsetHeight,s=el._s||1;   /* 量到的位置先扣掉自己加上去的位移與縮放，才是排版的原位 */
-      return {el,h,nat:r.top-(el._ty||0)-h*(1-s)/2}});
-    let any=false;
-    m.forEach(({el,h,nat},i)=>{
-      const d=P-nat;
-      if(d<=0||el.classList.contains("drag")){clear(el);return}
-      any=true;const r=d/(h+GAP),ty=d-PEEK*Math.min(r,LAY-1),s=1-STEP*Math.min(r,LAY);
-      el._pl=1;el._ty=ty;el._s=s;el.style.translate=`0 ${ty.toFixed(1)}px`;el.style.scale=s.toFixed(4)});
-    m.forEach(({el},i)=>{el.style.zIndex=any?String(i+1):""});   /* 後面的在前面：滑進來的新項目蓋過已經疊起來的 */
+    if(typeof notiOpen==="undefined"||!notiOpen)return;   /* 通知頁沒開：不做事（別的分頁捲動時零成本） */
+    if(dirty||!hosts.length||hosts.some(g=>!g.isConnected||g._pc!==g.childElementCount||!(g._pn[0]&&g._pn[0][0].isConnected)))measure(sc);
+    if(!hosts.length)return;
+    const st=sc.scrollTop,live=on();
+    hosts.forEach(g=>{if(!g.offsetParent)return;   /* 清單不在畫面上（別的分頁）：略過 */
+      g._pn.forEach(([el,n,h])=>{const d=live?PT+st-g._po-n:0;
+        if(d<=0)put(el,0,1);else{const r=d/(h+12);put(el,-PEEK*Math.min(r,LAY-1),1-STEP*Math.min(r,LAY))}})})
   }
   const tick=sc=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>run(sc))};
-  document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.matches&&t.matches(SC))tick(t)},{capture:true,passive:true});
-  addEventListener("resize",()=>document.querySelectorAll(SC).forEach(run));
+  document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.matches&&t.matches(".page"))tick(t)},{capture:true,passive:true});
+  const redo=()=>{dirty=true;document.querySelectorAll(".page").forEach(tick)};
+  addEventListener("resize",redo);
+  if(window.ResizeObserver){ro=new ResizeObserver(redo);["dTop","dsRow"].forEach(id=>{const e=document.getElementById(id);if(e)ro.observe(e)})}
   return {run};
 })();

@@ -1603,7 +1603,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + var(--sa-bottom));display:grid;gap:10px}   /* 列與列、塊與塊的間距一律 10px（跟 .set-list 同一個值；2026-11-22 使用者：每個之間間距一樣）；上緣至少留柔光陰影的外擴距離 */
 /* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
 .set-list{display:grid;gap:10px}
-.set-row{position:relative;width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
+.set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
 .set-row:hover{transform:none;box-shadow:var(--blk-sh);background:color-mix(in srgb,var(--ink) 6%,var(--blk))}
 .set-row:active,.set-row[aria-current="true"]{transform:none;background:color-mix(in srgb,var(--ink) 11%,var(--blk))}
 .set-row[aria-current="true"] .sr-chev{color:var(--ink)}
@@ -1858,6 +1858,8 @@ body.set-open #pageMain{overflow:hidden}
 @container (min-width:760px){.cal-list{grid-template-columns:1fr 1fr}}
 .cal-ghost{position:absolute;margin:0;pointer-events:none}
 .cal-ev{display:grid;gap:12px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+/* 手機通知頁卡片捲動縮疊（640px 以下；動作在 core/js/wallet.js 的 Pile）：日期卡捲到固定區下緣時用 sticky 釘住（--pile-top 由 Pile 依固定區高度寫在捲動容器上），縮小與露出的那一條由 Pile 寫 translate／scale */
+@media (max-width:640px){#notiPage .cal-ev{position:sticky;top:var(--pile-top,0px);will-change:translate,scale}}
 .ce-t{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--hair)}
 .ce-t b{font-size:17px;font-weight:500}
 .ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
