@@ -57,16 +57,23 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="follows" id="follows" data-flip></div>
         <button class="ghost edit-only add-row" id="addFollow">+ 追蹤項目</button>
       </section>
-      <!-- 秘書處：行政會議資料（2026-11-21，meeting.js 的 renderAgenda）：中間是白紙文件預覽、要改的地方點一下就地編輯；左邊切換會議與加入部門報告、右邊是目前那一段的工具 -->
-      <section class="panel follow-panel meet-panel ag-panel" id="agPanel" aria-labelledby="agH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button></div>
-        <div class="ag-wrap">
-          <aside class="ag-tools ag-left" id="agLeft" aria-label="會議與部門報告"></aside>
-          <div class="ag-center"><article class="md-doc ag-paper" id="agDoc" spellcheck="false"></article></div>
-          <aside class="ag-tools ag-right" id="agRight" aria-label="這一段的工具"></aside>
-        </div>
-        <p class="sub ag-st" id="agSt"></p>
+      <!-- 秘書處：會議資料入口（2026-11-23：「會議」分頁只有「點名」「會議資料」兩個區塊；點進會議資料才打開自己一個頁面 #agOv，文件預覽＋左右工具＋會議報告事項＋各部門週報都整合在那一頁，meeting.js 的 renderAgenda） -->
+      <section class="panel follow-panel meet-panel ag-entry" id="agEntry" aria-labelledby="agH" hidden>
+        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">會議資料</h2><span class="ag-open-t">開啟文件 ›</span></div>
+        <button type="button" class="ag-peek" id="agPeek" aria-label="開啟行政會議資料"></button>
       </section>
+      <div class="ag-ov" id="agOv" role="dialog" aria-modal="true" aria-label="行政會議資料" hidden>
+        <div class="anim-top" data-fx-keep><div class="anim-title"><b class="sec-h" data-en="AGENDA">行政會議資料</b></div><div class="anim-ctl"><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button><button type="button" id="agClose" aria-label="關閉行政會議資料">關閉</button></div></div>
+        <div class="ag-scroll">
+          <div class="ag-wrap">
+            <aside class="ag-tools ag-left" id="agLeft" aria-label="會議與部門報告"></aside>
+            <div class="ag-center"><article class="md-doc ag-paper" id="agDoc" spellcheck="false"></article></div>
+            <aside class="ag-tools ag-right" id="agRight" aria-label="這一段的工具"></aside>
+          </div>
+          <p class="sub ag-st" id="agSt"></p>
+          <div class="ag-more" id="agMore"></div>
+        </div>
+      </div>
       <section class="panel follow-panel meet-panel wk-panel" id="wkPanel" aria-labelledby="wkH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="wkH" data-en="WEEKLY">各部門週報</h2><button type="button" class="icon" data-mtrefresh>擷取最新</button></div>
         <div class="wk-depts" id="wkDepts" role="tablist" aria-label="部門"></div>
@@ -167,7 +174,9 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel","#meetEdPanel","#attPanel","#agPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)})}
+    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel","#attPanel","#agEntry"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
+    const ov=document.getElementById("agOv"),more=document.getElementById("agMore");   /* 會議資料自己一頁：蓋在整個畫面上（不在分頁裡），會議報告事項與各部門週報也放進那一頁 */
+    if(ov){document.body.append(ov);["#meetEdPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p&&more)more.append(p)})}}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();
