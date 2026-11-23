@@ -48,11 +48,6 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <div class="panel-head"><h2 class="sec-h" id="atH" data-en="ATTENDANCE">點名</h2><span class="at-tools"><button type="button" class="icon" data-at="roster" disabled>名冊</button><button type="button" class="icon" data-at="copy" disabled>複製結果</button><button type="button" class="icon" data-at="addsess" disabled>+ 場次</button></span></div>
         <div id="attBody"></div>
       </section>
-      <section class="panel follow-panel" id="followPanel" data-edbox="s:follow" aria-labelledby="fwH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="fwH" data-en="FOLLOW">追蹤</h2><button type="button" class="icon card-edit-btn" data-edit="s:follow">編輯</button></div>
-        <div class="follows" id="follows" data-flip></div>
-        <button class="ghost edit-only add-row" id="addFollow">+ 追蹤項目</button>
-      </section>
       <!-- 秘書處：會議資料入口（2026-11-23：「會議」分頁只有「點名」「會議資料」兩個區塊；點進會議資料才打開自己一個頁面 #agOv，文件預覽＋左右工具＋會議報告事項＋各部門週報都整合在那一頁，meeting.js 的 renderAgenda） -->
       <section class="panel follow-panel meet-panel ag-entry" id="agEntry" aria-labelledby="agH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">會議資料</h2><span class="ag-open-t">開啟文件 ›</span></div>
@@ -178,7 +173,7 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#bkPanel","#docsPanel","#grantPanel","#followPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
+    ["#bkPanel","#docsPanel","#grantPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
     const att=document.getElementById("attPanel"),ent=document.getElementById("agEntry");
     if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}
     {const mn=document.getElementById("mnEntry");if(mn)x.append(mn)}   /* 會議記錄入口：往下另開一塊（專注編輯整理好的會議資料） */   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */

@@ -1,4 +1,4 @@
-/* 核心｜會長室的「追蹤」面板（設定檔 follow:true 的部門才有）
+/* 核心｜會長室收藏的別的部門項目與跨部門讀取（設定檔 follow:true 的部門才有收藏）
    follows[]：{id,dept,kind,ref}；kind＝live 即時回報／issue 議題進度／done 完成紀錄／week 週報（ref:"latest"＝永遠最新一份）
    其他部門的資料只讀：先用 GitHub 讀（有權杖時最新），不行再讀網站上的檔案；每 5 分鐘、回到分頁時重新整理。
    02D D-b：已切到新資料庫（source:"firestore"）的部門改讀 Firestore（store.js 的 storeDeptData；要登入），還沒切換的照舊讀資料檔。
@@ -19,17 +19,27 @@ async function fwLoad(id,force){
   if(data)data=normalize(data);
   const v={at:data?Date.now():Date.now()-3e5+3e4,data,err:data?"":(err||"讀不到這個部門的資料")};fwCache.set(id,v);return v;   /* 讀不到的 30 秒後再試（不是 5 分鐘） */
 }
-/* 某部門某類別可以選的項目 → [[ref,顯示文字],…] */
-function fwOptions(d,kind){
-  if(kind==="live")return d.events.filter(e=>!e.doneAt).map(e=>[e.id,e.name]);
-  if(kind==="issue")return d.issues.filter(i=>!i.doneAt).map(i=>[i.id,i.title]);
-  if(kind==="done")return [...d.issues.filter(i=>i.doneAt).map(i=>[i.id,`${i.title}（議題 ${fmt(i.doneAt)}）`,i.doneAt]),...d.events.filter(e=>e.doneAt).map(e=>[e.id,`${evName(e)}（即時回報 ${fmt(e.doneAt)}）`,e.doneAt])].sort((a,b)=>b[2].localeCompare(a[2])).slice(0,60).map(([a,b])=>[a,b]);
-  if(kind==="week")return [["latest","（永遠顯示最新一份）"],...[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)).map(w=>[w.id,`${fmt(w.date)} 的週報`])];
-  return [];
+/* 會長收藏的項目（state.follows 裡的 live／issue）→ 讀到的別的部門資料裡還在進行中的那幾筆；自動出現在會長室自己的甘特圖（views.js 的 renderGantt）
+   與即時回報清單（live.js 的 renderEvents）。還沒讀過的部門在背景讀，讀完重畫；讀不到的就不顯示（不重試成迴圈：失敗的結果也記在 fwCache） */
+const fwBusy=new Set();
+const favRedraw=()=>{if(!editing){renderGantt();renderEvents()}};   /* 只重畫這兩處（編輯中不動） */
+function favItems(){
+  const out={live:[],issue:[]};
+  if(!CFG.follow)return out;
+  const need=new Set();
+  (state.follows||[]).forEach(f=>{
+    if((f.kind!=="live"&&f.kind!=="issue")||f.dept===CFG.deptId)return;
+    const c=fwCache.get(f.dept);
+    if(!c){need.add(f.dept);return}
+    if(!c.data)return;
+    if(f.kind==="live"){const e=c.data.events.find(x=>x.id===f.ref&&!x.doneAt);if(e)out.live.push({e,dept:f.dept})}
+    else{const i=c.data.issues.find(x=>x.id===f.ref&&!x.doneAt);if(i)out.issue.push({i,dept:f.dept})}
+  });
+  need.forEach(id=>{if(fwBusy.has(id))return;fwBusy.add(id);fwLoad(id).finally(()=>{fwBusy.delete(id);favRedraw()})});
+  return out;
 }
-/* 一筆追蹤的內容（找不到時說明原因）→ {title, st（燈號顏色：ok／go／stall／done）, meta（標籤列的 HTML）, body（內容）, gone}
-   外觀跟即時回報、進度同一套：左邊膠囊（.cp）、右邊詳情用 .lc 外框（唯讀；逐行內容用即時回報的 lcLinesHTML） */
-function fwBody(f,d){
+/* 一筆追蹤的內容（找不到時說明原因）→ {title, st, meta（標籤列）, body}；會長室點收藏的膠囊時在原位展開的唯讀詳情，用 .lc 外框（逐行內容用即時回報的 lcLinesHTML） */
+function favBody(f,d){
   const miss=t=>({title:t,st:"stall",meta:"",body:`<p class="sub">原本追蹤的項目已經被刪除或搬走。</p>`,gone:true});
   const when=s=>s?`<span class="num">${esc(fmt(s).slice(5))}${String(s).length>10?" "+esc(String(s).slice(11,16)):""}</span>`:"";
   if(f.kind==="live"||(f.kind==="done"&&d.events.some(e=>e.id===f.ref))){
@@ -51,56 +61,26 @@ function fwBody(f,d){
   }
   return miss("（不支援的類別）");
 }
-/* 追蹤清單：左邊一欄膠囊、右邊選到的那一筆詳情（手機上下排）；選到哪一筆記在 FW_SEL（重新整理回到第一筆） */
-let FW_SEL="";
-function renderFollows(){
-  const panel=$("#followPanel");if(!panel)return;
-  panel.hidden=!CFG.follow;if(!CFG.follow)return;
-  const fs=state.follows||[];
-  if(!fs.some(f=>f.id===FW_SEL))FW_SEL=fs[0]?fs[0].id:"";
-  const rows=fs.map(f=>{
-    const dp=fwDept(f.dept),c=fwCache.get(f.dept);
-    const b=!c?{title:"讀取中…",st:"stall",meta:"",body:""}:c.data?fwBody(f,c.data):{title:"（讀不到）",st:"stall",meta:"",body:`<p class="sub">${esc(c.err)}</p>`,gone:true};
-    return {f,dp,b,on:f.id===FW_SEL};
-  });
-  $("#follows").innerHTML=rows.length?`<div class="fw-split"><div class="cps">${rows.map(({f,dp,b,on})=>`<article class="fw${b.gone?" gone":""}" data-fw="${esc(f.id)}"><button type="button" class="cp${on?" sel":""}" data-fwcp="${esc(f.id)}" data-st="${esc(b.st)}"${on?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(b.title)}</b><span class="cp-d">${esc(dp?dp.name:f.dept)}</span></button></article>`).join("")}</div>
-    <div class="fw-pane">${rows.map(({f,dp,b,on})=>`<article class="lc ro fw-lc" data-st="${esc(b.st)}" data-fwd="${esc(f.id)}"${on?"":" hidden"}><div class="lc-in"><div class="lc-head"><span class="live-dot" aria-hidden="true"></span><b class="lc-title">${esc(b.title)}</b>${dp?`<a class="fw-open" href="?d=${encodeURIComponent(dp.id)}" target="_blank" rel="noopener">開啟${esc(dp.name)}看板 →</a>`:""}<button type="button" class="icon danger edit-only" data-fwdel>移除</button></div>
-      <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:f.dept)}</span><span class="lc-tag">${esc(FW_KIND[f.kind]||"")}</span>${b.meta}</div><div class="lc-body">${b.body}</div></div></article>`).join("")}</div></div>`
-    :`<p class="empty">還沒有追蹤任何項目。到其他部門的看板按「收藏」，或登入後按這區的「編輯」→「+ 追蹤項目」。</p>`;
-  /* 需要的部門資料還沒讀過就去讀，讀完再畫一次 */
-  const need=[...new Set(fs.map(f=>f.dept))].filter(id=>!fwCache.has(id));
-  if(need.length)Promise.all(need.map(id=>fwLoad(id))).then(renderFollows);
+/* 收藏的膠囊點一下在原位展開唯讀詳情（再點收起）；不開別的頁面 */
+let FAV_OPEN="";
+function favDetHTML(dept,kind,ref){
+  const c=fwCache.get(dept);if(!c||!c.data)return "";
+  const b=favBody({dept,kind,ref},c.data),dp=fwDept(dept);
+  return `<article class="lc ro fav-lc" data-st="${esc(b.st)}"><div class="lc-in"><div class="lc-head"><span class="live-dot" aria-hidden="true"></span><b class="lc-title">${esc(b.title)}</b></div>
+    <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:dept)}</span>${b.meta}</div><div class="lc-body">${b.body}</div></div></article>`;
 }
-async function addFollow(){
-  const depts=(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId);
-  const v=await ask("追蹤項目",[{name:"dept",label:"部門",type:"select",value:depts[0]&&depts[0].id,options:depts.map(d=>[d.id,d.name])},
-    {name:"kind",label:"要追蹤的是",type:"select",value:"live",options:Object.entries(FW_KIND)}]);
-  if(!v)return;
-  const c=await fwLoad(v.dept,true);
-  if(!c.data){toast(c.err);return}
-  const opts=fwOptions(c.data,v.kind);
-  if(!opts.length){toast(`${fwDept(v.dept).name}目前沒有可以追蹤的${FW_KIND[v.kind]}`);return}
-  const w=await ask(`選擇${fwDept(v.dept).name}的${FW_KIND[v.kind]}`,[{name:"ref",label:"項目",type:"select",value:opts[0][0],options:opts}]);
-  if(!w)return;
-  if((state.follows||[]).some(f=>f.dept===v.dept&&f.kind===v.kind&&f.ref===w.ref)){toast("已經在追蹤了");return}
-  state.follows.push({id:uid("f"),dept:v.dept,kind:v.kind,ref:w.ref});changed();
-}
-document.addEventListener("click",async e=>{
-  const t=e.target;if(!t.closest)return;
-  if(t.closest("#addFollow")){if(secEd("follow"))await addFollow();return}
-  const cp=t.closest("[data-fwcp]");
-  if(cp){FW_SEL=cp.dataset.fwcp;renderFollows();if(!matchMedia("(min-width:1000px)").matches){const d=document.querySelector(".fw-pane");d&&d.scrollIntoView({behavior:"smooth",block:"start"})}return}
-  const del=t.closest("[data-fwdel]");
-  if(del&&secEd("follow")){const id=del.closest("[data-fwd]").dataset.fwd;state.follows=state.follows.filter(f=>f.id!==id);changed();return}
+document.addEventListener("click",e=>{
+  const b=e.target.closest&&e.target.closest("[data-favopen]");if(!b)return;
+  FAV_OPEN=FAV_OPEN===b.dataset.favopen?"":b.dataset.favopen;favRedraw();
 });
 if(CFG.follow){
-  const refresh=()=>{fwCache.clear();renderFollows()};
+  const refresh=()=>{[...new Set((state.follows||[]).map(f=>f.dept))].forEach(id=>fwLoad(id,true).then(favRedraw))};   /* 重新讀、讀到再換，不先清空（不會閃） */
   setInterval(refresh,3e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
 }
 
-/* ---------- 收藏（2026-11-23，DievE）：會長在別的部門看板（即時回報、完成紀錄、進度）按「收藏」＝加進會長室的「追蹤」清單 ----------
+/* ---------- 收藏（2026-11-23，DievE）：會長在別的部門看板（即時回報、完成紀錄、進度）按「收藏」＝加進會長室自己的甘特圖與即時回報 ----------
    存在 deptSettings/president 的 follows（跟「+ 追蹤項目」同一份；store-write.js 的 setFavorite，規則本來就允許會長室管理員與總管理員）。
-   只有會長室管理員與總管理員、在「不是會長室」的部門看板、會長室已在新資料庫時才有這顆鈕；收藏的會出現在會長室「追蹤」（含進度與最後更新），在那裡也能移除 */
+   只有會長室管理員與總管理員、在「不是會長室」的部門看板、會長室已在新資料庫時才有這顆鈕；收藏的進行中項目自動出現在會長室自己的甘特圖（進度）與即時回報清單（favItems），點了開原看板；要取消收藏回原看板再按一次書籤 */
 const FAV={keys:null,busy:false,loading:false};
 const favOk=()=>CFG.deptId!=="president"&&deptSourceOf("president")==="firestore"&&!!(acct.user&&(acctSuper()||acctDepts().president==="admin"));
 const favKey=(dept,ref)=>dept+"|"+ref;
@@ -111,7 +91,7 @@ function favLoad(){
 }
 /* kind：live 即時回報／issue 進度／done 完成紀錄；id：卡片或議題的 ID。還沒讀到會長室的清單時鈕先停用 */
 function favBtnHTML(kind,id){
-  if(!favOk())return "";
+  if(!favOk()||kind==="done")return "";
   favLoad();
   const on=!!FAV.keys&&FAV.keys.has(favKey(CFG.deptId,id));
   return `<button type="button" class="fav-btn" data-fav="${esc(id)}" data-favk="${esc(kind)}" aria-pressed="${on}" aria-label="${on?"取消收藏":"收藏"}" title="${on?"已收藏（點一下取消）":"收藏到會長室追蹤"}"${FAV.keys&&!FAV.busy?"":" disabled"}>${ico("bookmark","solo")}</button>`;

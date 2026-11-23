@@ -131,7 +131,9 @@ function renderEvents(){
   $("#liveMD").classList.toggle("split",split);
   const cp=ev=>cpHTML(ev,{sel:split&&ev.id===lvOpen,away:!wide&&ev.id===lvOpen});
   /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著。新增鈕是右下角的浮動圓鈕（nav.js 的 fabSync） */
-  morphTo($("#events"),live.length?`<div class="cps">${rep.map(cp).join("")}${rep.length&&rest.length?'<span class="sepr" aria-hidden="true"></span>':""}${rest.map(cp).join("")}</div>`:`<p class="empty">目前沒有即時回報。</p>`);
+  /* 會長收藏的別的部門的即時回報（follow.js 的 favItems）：排在自己的後面，名稱右邊寫部門，點了開原看板 */
+  const fav=favItems().live.map(({e,dept})=>{const key=`${dept}|live|${e.id}`;return `<button type="button" class="cp fav-cp${FAV_OPEN===key?" sel":""}" data-favopen="${esc(key)}" data-st="${esc(evStatus(e))}"><span class="live-dot" aria-hidden="true"></span><b>${esc(evName(e))}</b><span class="cp-d">${esc(deptName(dept))}</span></button>${FAV_OPEN===key?favDetHTML(dept,"live",e.id):""}`}).join("");
+  morphTo($("#events"),live.length||fav?`<div class="cps">${rep.map(cp).join("")}${rep.length&&rest.length?'<span class="sepr" aria-hidden="true"></span>':""}${rest.map(cp).join("")}${fav&&live.length?'<span class="sepr" aria-hidden="true"></span>':""}${fav}</div>`:`<p class="empty">目前沒有即時回報。</p>`);
   if(split){morphTo(pane,lcLiveHTML(live.find(e=>e.id===lvOpen),{k:"live",ids}));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   document.body.classList.toggle("lc-lock",split&&editing&&!!kp);   /* 寬螢幕編輯中：鎖住整頁捲動（卡片內容自己捲） */
   lcFullSync();Anim.syncPings();fabSync();

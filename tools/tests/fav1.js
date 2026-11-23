@@ -1,7 +1,7 @@
 /* 會長室「收藏」（follow.js 的 favBtnHTML、store-write.js 的 setFavorite）：會長（會長室管理員）在別的部門看板按「收藏」＝加進 deptSettings/president 的 follows
    1. 會長室管理員在權益部看板：即時回報詳情有「收藏」鈕；一般登入者（只有權益部編輯者）、沒登入、在會長室自己的看板都沒有
    2. 按下去：follows 多一筆 {dept:rights, kind:live, ref:rights__ID}、rev+1、稽核紀錄；鈕變「已收藏」；再按＝拿掉
-   3. 收藏後會長室的「追蹤」畫面有那一項
+   3. 收藏後會長室自己的即時回報清單有那一張（膠囊）
    4. 沒有權限的帳號直接呼叫 setFavorite 被規則拒絕、follows 不變
    執行（自己開模擬器與網站）：cd backend && firebase emulators:exec --only firestore,auth --project demo-stustsa-board "node ../tools/tests/fav1.js" */
 const {chromium}=require('playwright');const fs=require('fs');const path=require('path');const http=require('http');
@@ -82,7 +82,8 @@ const XSS='<img src=x onerror="window.__xss=1">';
   ok(await pa.evaluate(()=>document.querySelector('.lc [data-fav]').getAttribute('aria-label')==='取消收藏'),'鈕變成實心（已收藏）');
   if(process.env.SHOTS){await pa.waitForTimeout(500);await pa.locator('.lc').first().screenshot({path:process.env.SHOTS+'/fav_on.png'})}
   await pp.reload();await pp.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await pp.waitForTimeout(2500);
-  ok(await pp.evaluate(id=>!!document.querySelector('#follows [data-fw]')&&state.follows.some(f=>f.dept==='rights'&&f.ref===id),id),'會長室的追蹤清單有收藏的那一項');
+  await pp.evaluate(()=>setSection&&setSection('live',{instant:true}));await until(()=>pp.evaluate(()=>!!document.querySelector('#events .fav-cp')),8000);
+  ok(await pp.evaluate(id=>!!document.querySelector('#events .fav-cp')&&state.follows.some(f=>f.dept==='rights'&&f.ref===id),id),'會長室自己的即時回報清單有收藏的那一項（膠囊，部門名在右邊）');
   await pa.click('.lc [data-fav]');
   await until(async()=>!((await read('deptSettings/president')).follows||[]).some(f=>f.ref===`${D}__${id}`),8000);
   const a2=await read('deptSettings/president');ok(a2.rev===a1.rev+1,`再按＝取消收藏（rev ${a2.rev}）`);
