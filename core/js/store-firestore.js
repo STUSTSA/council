@@ -3,7 +3,7 @@
    只讀，不寫（02D 的寫入在 store-write.js）：查詢條件照 docs/architecture/indexes.md（規則不是篩選器，查詢要帶規則需要的條件，例如卡片只查 open／done）。
    cfg＝dept/config.js 的 BOARD_BASE.firebase（網頁設定，不是機密）。
    回傳 {data（schemaVersion 13 的部門資料）, src（每份文件 {id, ...時間值換成 __ts}）, orig（原始文件，寫入時沿用沒改的欄位，時間戳記保留微秒）}。 */
-import { fb, authReady } from "./fb-app.js";
+import { fb, authReady, wipePersistence } from "./fb-app.js";
 import { cached, drop, stats } from "./fs-cache.js";
 import { doc, getDoc, getDocs, collection, collectionGroup, query, where, orderBy, limitToLast, endBefore, Timestamp }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
@@ -80,7 +80,7 @@ async function eventsByScope(cfg, scope, from, to, o = {}) {
   return cached(`${auth.currentUser.uid}|scope|${scope}|${from}|${to}`, TTL_EVENTS, () => many(query(collection(db, "events"), where("scope", "==", scope), ...range)), T);
 }
 /* 登出、換帳號：這台裝置上存的讀取結果全部清掉（不留給下一個人） */
-const clearCache = () => drop("");
+const clearCache = async () => { await drop(""); return wipePersistence(); };   /* 回傳 true＝連 Firestore 的離線快取也清了（連線已終止，呼叫端要重新載入頁面） */
 /* 設定的「強制刷新」：這個登入身分在這台裝置上存的讀取結果全部作廢（別的部門、行事曆、名單下次用到時才重讀；目前的部門由呼叫端立刻強制重讀） */
 const dropCache = () => drop("");
 
