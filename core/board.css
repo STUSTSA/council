@@ -196,7 +196,9 @@ body.set-open .dhead{position:relative;z-index:40}
 .dh-st{display:contents}
 .dh-sp{flex:1;min-width:0}
 /* 通知鈕的紅色數字（彈出動畫由 anim.js 的 pop） */
-.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:var(--lite);font-size:11.5px;line-height:21.4px;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}   /* 數字用實際字型 Jost 量墨跡：行高 21.4px（比框高多 1.4px）把數字往下推 1px 才上下置中，左右本來就置中 */
+.noti-n{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--late);color:var(--lite);font-size:11.5px;line-height:21.4px;letter-spacing:0;text-align:center;box-shadow:0 0 0 3px var(--bg);pointer-events:none}
+/* 紅色數字置中：新版瀏覽器用 text-box 把文字框修到剛好是數字的高度（大寫字高到基線），上面留 (20px − 字高) ÷ 2，不管字型的上下留白是多少都置中；舊版瀏覽器退回行高 21.4px（用 Jost 量墨跡把數字往下推 1px） */
+@supports (text-box:trim-both cap alphabetic){.noti-n{line-height:1;text-box:trim-both cap alphabetic;padding-top:calc((20px - 1cap) / 2)}}
 .noti-n[hidden]{display:none}
 /* 離線中（pwa.js 的 offlinePill，放在 #saveInfo 前面）：部門名旁邊一顆小膠囊 */
 .offline-pill{flex:none;display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 12px 0 10px;border-radius:999px;background:var(--blk);color:var(--red);font-size:12px;letter-spacing:.14em;line-height:1;animation:rise .4s var(--ease) both}
