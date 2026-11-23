@@ -3,13 +3,14 @@
    卡片元素要有 class="hm-wc" 與 data-i（第幾張）。用法：const W=Wallet.make({onShow,onEnter}); W.bind(容器,起始張); W.f＝要停在哪張 */
 
 const Wallet=(()=>{
-  const WU=60,WH=196,WG=10,WDRAG=140;
+  const WU0=60,WH0=196,WG0=10,WDRAG=140;
   function make(o){
+    const WU=o.WU||WU0,WH=o.WH||WH0,WG=o.WG||WG0,ST=o.STEP==null?.05:o.STEP,BK=o.BK||2;   /* 間距、焦點卡高度、縮小幅度可由呼叫的人給（通知頁疊卡：每張完整露出不互蓋） */
     const W={f:0,p:0,v:0,d:null,raf:0,lock:false,lr:null,els:[],snd:false,nav:null};
     W.draw=()=>{
-      const els=W.els,p=W.p,y0=WU*Math.max(0,Math.min(p,2)),rf=Math.max(0,Math.min(els.length-1,Math.round(p)));
-      els.forEach((el,i)=>{const d=i-p,y=d<=0?y0+Math.max(d,-2)*WU-(d<-2?Math.min(1,-2-d)*16:0):d<=1?y0+d*(WH+WG):y0+WH+WG+(d-1)*WU,sc=d<0?1+Math.max(d,-3)*.05:1;
-        el.style.transform=`translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;el.style.opacity=d>=-2?"":Math.max(0,3+d).toFixed(3)});
+      const els=W.els,p=W.p,y0=WU*Math.max(0,Math.min(p,BK)),rf=Math.max(0,Math.min(els.length-1,Math.round(p)));
+      els.forEach((el,i)=>{const d=i-p,y=d<=0?y0+Math.max(d,-BK)*WU-(d<-BK?Math.min(1,-BK-d)*16:0):d<=1?y0+d*(WH+WG):y0+WH+WG+(d-1)*WU,sc=d<0?1+Math.max(d,-3)*ST:1;
+        el.style.transform=`translate3d(0,${y.toFixed(1)}px,0) scale(${sc.toFixed(4)})`;el.style.opacity=d>=-BK?"":Math.max(0,BK+1+d).toFixed(3)});
       if(W.lr!==rf){if(W.lr!=null&&W.snd)Sfx.play("roll");W.lr=rf;o.onShow&&o.onShow(rf,els);els.forEach((el,i)=>{const on=i===rf;el.style.zIndex=10+i;el.classList.toggle("on",on);el.tabIndex=on?0:-1;if(on)el.setAttribute("aria-current","true");else el.removeAttribute("aria-current")})}
     }
     W.run=()=>{
@@ -41,7 +42,7 @@ const Wallet=(()=>{
     }
     return W;
   }
-  return {make,WH,WU,WG};
+  return {make,WH:WH0,WU:WU0,WG:WG0};
 })();
 
 /* 捲動縮疊（手機，通知頁的日期卡 .cal-ev）：原本的手指捲動不變，卡片捲到上方固定區下面時不被切掉，停在固定區下緣、縮小疊起來——
