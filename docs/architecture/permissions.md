@@ -466,5 +466,5 @@ DievE 決定：看板內容一律公開（第 5.1j 節之二）；登入的人�
 - 共編的編輯者（`co.depts` 與自己的 `roles.depts` 有交集，編輯者或管理員）：只能改 `title`、`blocks`（`version` +1＋同一批新建那一版，跟秘書處會議編輯 `meetingEdit` 同一組欄位）；不能改時間標記、專員、標籤、超連結、完成、排序、刪除、分享。被收回就立刻不能改（每次請求都讀 `roles` 與卡片）。
 - 規則運算式用量：`cards` 的 `create`／`update` 已接近每個請求 1000 個的上限，所以 `co` 只放一個欄位、`collabEdit` 擺在 `update` 的第一個並用 `'co' in resource.data` 提早結束（沒有 `co` 的卡片幾乎不增加用量）；改這裡要重跑 `rules-02a`（N-13）。
 - 查詢：`cards` 條件 `co.invite`／`co.depts`／`co.ask` `array-contains` 自己部門＋`state == 'open'`（單欄位索引合併，不另建複合索引；若正式環境要求索引，網頁讀取失敗時「共編」區當成沒有事項、看板其餘照常）。
-- 稽核：共編的內容修改有版本紀錄（`by`）；分享狀態的變動沒有另寫 `auditLogs`（卡片沒有 `rev`，跟排序一樣只蓋 `updatedAt`／`updatedBy`）〔待決定：要不要補〕。
+- 稽核：共編的內容修改有版本紀錄（`by`）；分享狀態的每一步（邀請、申請、同意、收回…）同一批新建 `auditLogs/cards_{卡片ID}_co_{log}`（`co.log`＝這次的亂數；內容＝這一步前後三個清單、`rev`＝卡片版本號；`cardCoOk`、`coLogged`；沒有、內容不符、沿用舊的都拒絕；只有總管理員讀得到），CO-14。
 

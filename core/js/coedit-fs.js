@@ -26,7 +26,11 @@ async function step(cfg, cardId, fn) {
       if (!s.exists() || s.data().state !== "open") throw fail("gone");
       const cur = s.data().co || {}, co = fn({ invite: [...(cur.invite || [])], ask: [...(cur.ask || [])], depts: [...(cur.depts || [])] });
       if (!co) throw fail("gone");
-      tx.update(ref, { co, updatedAt: serverTimestamp(), updatedBy: me });
+      const log = [...crypto.getRandomValues(new Uint8Array(8))].map(b => b.toString(16).padStart(2, "0")).join(""),   /* 稽核紀錄的 ID 後綴（規則 cardCoOk：cards_{卡片}_co_{log}） */
+        snap = o => ({ invite: o.invite || [], ask: o.ask || [], depts: o.depts || [] });
+      tx.update(ref, { co: { ...snap(co), log }, updatedAt: serverTimestamp(), updatedBy: me });
+      tx.set(doc(db, "auditLogs", `cards_${cardId}_co_${log}`), { col: "cards", docId: cardId, rev: s.data().version || 1, action: "co", actor: me, at: serverTimestamp(),
+        before: snap(cur), after: snap(co), ref: log });
     }, { maxAttempts: 3 });
   } catch (e) { throw e && e.code ? e : fail("error"); }
 }

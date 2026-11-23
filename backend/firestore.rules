@@ -466,6 +466,20 @@ service cloud.firestore {
           && a().before == { 'title': c0.title, 'deptId': c0.deptId, 'state': c0.state }
           && a().after == { 'state': 'purging' };
       }
+      // 共編分享狀態的稽核紀錄：每次改 cards 的 co（邀請、申請、同意、收回…）同一批新建一筆（卡片規則的 coShare 要求）。
+      // ID＝cards_{卡片ID}_co_{ref}，ref＝這次寫進 co.log 的亂數；內容＝這一步前後三個清單（before／after）、rev＝卡片版本號
+      function coList(c, k) { return c.get('co', {}).get(k, []); }
+      function coSnap(c) { return { 'invite': coList(c, 'invite'), 'ask': coList(c, 'ask'), 'depts': coList(c, 'depts') }; }
+      function cardCoOk() {
+        let c0 = get(doc('cards', a().docId)).data;
+        let c1 = getAfter(doc('cards', a().docId)).data;
+        return a().col == 'cards' && a().action == 'co'
+          && a().ref is string && a().ref.matches('^[A-Za-z0-9]{8,40}$')
+          && aid == 'cards_' + a().docId + '_co_' + a().ref
+          && c1.co.get('log', null) == a().ref && c1.updatedBy == me() && c1.updatedAt == request.time
+          && a().rev == c0.version
+          && a().before == coSnap(c0) && a().after == coSnap(c1);
+      }
       // 02D D-d 議題、週報、標籤的刪除紀錄：只能在刪掉那份文件的同一批建立（批次後不存在），寫的人是部門管理員或總管理員，
       // 內容＝被刪的那一版：標題（議題 title、週報 date、標籤 name）、部門、rev（週報與標籤沒有 rev＝0）。ID 見上面的 delLogRef
       function delTitle(x) { return a().col == 'issues' ? x.title : (a().col == 'weeks' ? x.date : x.name); }
@@ -487,7 +501,7 @@ service cloud.firestore {
         && a().action is string && a().action.matches('^[A-Za-z]{1,20}$')        // 04：動作＝一個英文單字；ref＝字串，最多 200 字
         && short(a().ref, 200)
         && a().actor == me() && a().at == request.time
-        && (chainOk() || (a().col == 'cards' && cardPurgeOk()) || (a().col in ['issues', 'weeks', 'labels'] && deleteOk()));
+        && (chainOk() || (a().col == 'cards' && (cardPurgeOk() || cardCoOk())) || (a().col in ['issues', 'weeks', 'labels'] && deleteOk()));
     }
 
     // ===================== 舊身分（決定 A4） =====================
@@ -606,32 +620,26 @@ service cloud.firestore {
       function coSide(x)     { return isAdmin(x) || (x == 'president' && isSuper()); }   // 對方部門的管理員（會長室的總管理員代表 president）
       function coOld(k)      { return resource.data.get('co', {}).get(k, []); }
       function coNew(k)      { return d().get('co', {}).get(k, []); }
-      function coAdd(k)      { return coNew(k).removeAll(coOld(k)); }
-      function coDel(k)      { return coOld(k).removeAll(coNew(k)); }
-      function coQuiet(ks)   { return (!ks.hasAny(['invite']) || (coAdd('invite').size() == 0 && coDel('invite').size() == 0))
-                                 && (!ks.hasAny(['ask']) || (coAdd('ask').size() == 0 && coDel('ask').size() == 0))
-                                 && (!ks.hasAny(['depts']) || (coAdd('depts').size() == 0 && coDel('depts').size() == 0)); }
-      function coNone(x)     { return !coOld('invite').hasAny([x]) && !coOld('ask').hasAny([x]) && !coOld('depts').hasAny([x]); }
+      // 稽核：同一批一定要新建 auditLogs/cards_{卡片ID}_co_{co.log}（沒有就不能改，也不能沿用舊的）
+      function coLogged()    { let g = 'cards_' + id + '_co_' + d().co.get('log', ''); return d().co.get('log', null) is string
+                                && !exists(doc('auditLogs', g)) && existsAfter(doc('auditLogs', g)); }
+      // 一步只動一個部門（同意＝從一個清單拿掉、加進另一個）。運算式用量吃緊：三個清單的前後差各算一次（ai＝invite 新增、di＝invite 拿掉…）
+      function coStep(oi, oa, od, ni, na, nd) {
+        let ai = ni.removeAll(oi); let di = oi.removeAll(ni);
+        let aa = na.removeAll(oa); let da = oa.removeAll(na);
+        let ad = nd.removeAll(od); let dd = od.removeAll(nd);
+        let n = ai.size() + di.size() + aa.size() + da.size() + ad.size() + dd.size();
+        return (n == 1 && ai.size() == 1 && ai[0] in deptIds() && ai[0] != resource.data.deptId && !oa.hasAny(ai) && !od.hasAny(ai) && coOwner())      // 主要部門邀請
+            || (n == 1 && aa.size() == 1 && aa[0] in deptIds() && aa[0] != resource.data.deptId && !oi.hasAny(aa) && !od.hasAny(aa) && coSide(aa[0]))  // 對方申請
+            || (n == 2 && ad.size() == 1 && di == ad && coSide(ad[0]))                                                                               // 對方同意邀請
+            || (n == 2 && ad.size() == 1 && da == ad && coOwner())                                                                                  // 主要部門同意申請
+            || (n == 1 && ai.size() + aa.size() + ad.size() == 0 && (coOwner() || coSide(di.concat(da).concat(dd)[0])));                           // 拒絕、撤回、退出、收回
+      }
       function coClean()     { return coNew('invite').toSet().size() == coNew('invite').size() && coNew('ask').toSet().size() == coNew('ask').size()
                                  && coNew('depts').toSet().size() == coNew('depts').size()
                                  && coNew('invite').size() + coNew('ask').size() + coNew('depts').size() <= 9; }
-      // 主要部門邀請 x（x 之前跟這張卡片沒有任何關係）
-      function coInviteStep() { let a = coAdd('invite'); return a.size() == 1 && a[0] in deptIds() && a[0] != resource.data.deptId && coNone(a[0])
-                                 && coDel('invite').size() == 0 && coQuiet(['ask', 'depts']) && coOwner(); }
-      // x 的管理員申請共編
-      function coAskStep()   { let a = coAdd('ask'); return a.size() == 1 && a[0] in deptIds() && a[0] != resource.data.deptId && coNone(a[0])
-                                 && coDel('ask').size() == 0 && coQuiet(['invite', 'depts']) && coSide(a[0]); }
-      // x 的管理員同意主要部門的邀請
-      function coAcceptStep() { let a = coAdd('depts'); return a.size() == 1 && coOld('invite').hasAny([a[0]]) && coDel('invite') == [a[0]]
-                                 && coAdd('invite').size() == 0 && coQuiet(['ask']) && coDel('depts').size() == 0 && coSide(a[0]); }
-      // 主要部門的管理員同意 x 的申請
-      function coGrantStep()  { let a = coAdd('depts'); return a.size() == 1 && coOld('ask').hasAny([a[0]]) && coDel('ask') == [a[0]]
-                                 && coAdd('ask').size() == 0 && coQuiet(['invite']) && coDel('depts').size() == 0 && coOwner(); }
-      // 拒絕、撤回、退出、收回：從三個清單的其中一個拿掉一個部門 x；主要部門的管理員或 x 的管理員都可以
-      function coDropStep()   { let r = coDel('invite').concat(coDel('ask')).concat(coDel('depts'));
-                                 return r.size() == 1 && coAdd('invite').size() + coAdd('ask').size() + coAdd('depts').size() == 0 && (coOwner() || coSide(r[0])); }
-      function coShare()      { return live() && onlyChanged(['co', 'updatedAt', 'updatedBy']) && d().co.keys().hasOnly(['invite', 'ask', 'depts']) && stamped() && coClean()
-                                 && (coInviteStep() || coAskStep() || coAcceptStep() || coGrantStep() || coDropStep()); }
+      function coShare()     { return live() && onlyChanged(['co', 'updatedAt', 'updatedBy']) && d().co.keys().hasOnly(['invite', 'ask', 'depts', 'log']) && coLogged() && stamped() && coClean()
+                                 && coStep(coOld('invite'), coOld('ask'), coOld('depts'), coNew('invite'), coNew('ask'), coNew('depts')); }
       // 永久刪除 ①：開始。刪除權限＝該部門編輯者以上、總管理員。
       // 02B：同一批一定要新建刪除紀錄 auditLogs/cards_{id}_purge_{purgeLog}（誰、何時、標題；不能略過、不能沿用舊的）；
       // 為了讓整批讀取留在上限內，開始那一批不刪時間事件（02A 原本可以先刪 3 個），時間事件全部在 ② 清除

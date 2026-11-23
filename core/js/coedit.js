@@ -10,7 +10,7 @@ const coSee=()=>fsMode()&&deptSourceOf(CFG.deptId)==="firestore"&&!!storeFsBase&
 /* 這個部門的管理員（會長室的總管理員代表會長室）：能替自己的部門同意、婉拒、退出 */
 const coMyAdmin=()=>!!(acct.user&&(acctDepts()[CFG.deptId]==="admin"||(CFG.deptId==="president"&&acctSuper())));
 const coName=d=>{const x=BOARD_DEPTS.find(y=>y.id===d);return x?x.name:d};
-const coErr=e=>e&&e.code==="permission-denied"?"沒有權限，沒有變更":e&&e.code==="gone"?"這張卡片已經變了（完成、刪除或對方已處理），請重新整理":e&&e.code==="conflict"?"這張卡片剛被別人改過，請重新整理再改":"沒有成功，請稍後再試";
+const coErr=e=>e&&e.code==="permission-denied"?"沒有權限，沒有變更":e&&e.code==="gone"?"這張卡片已經完成、刪除，或已經在申請、共編中（對方已處理），請重新整理":e&&e.code==="conflict"?"這張卡片剛被別人改過，請重新整理再改":"沒有成功，請稍後再試";
 const coWait=()=>{if(editing||CO.busy){toast("請先儲存或取消編輯目前的卡片");return true}return false};
 /* ---- 資料 ---- */
 async function coLoad(){

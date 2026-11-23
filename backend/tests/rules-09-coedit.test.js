@@ -16,7 +16,17 @@ beforeEach(async () => {
   await seed(t, async db => { const c = cardData('rtAdm'); const b = db.batch(); b.set(db.doc('cards/c1'), c); b.set(db.doc('cards/c1/versions/1'), verData('rtAdm', 'c1', c)); await b.commit(); });
 });
 const db = u => google(t, u);
-const share = (u, cur, p) => db(u).doc('cards/c1').set({ ...cur, co: { ...(cur.co || {}), ...p }, updatedAt: NOW(), updatedBy: u });
+let seq = 0;
+const snap = o => ({ invite: (o && o.invite) || [], ask: (o && o.ask) || [], depts: (o && o.depts) || [] });
+// 分享狀態的一步＝卡片的 co（帶 log）＋同一批新建的稽核紀錄；攻擊測試用 o 改 log／稽核內容（o.noAudit＝不寫稽核）
+const share = (u, cur, p, o = {}) => {
+  cur = { version: 1, ...cur };
+  const log = o.log || `lg${Date.now()}${++seq}x`, x = db(u), b = x.batch(), after = { ...(cur.co || {}), ...p };
+  b.set(x.doc('cards/c1'), { ...cur, co: { ...after, log }, updatedAt: NOW(), updatedBy: u });
+  if (!o.noAudit) b.set(x.doc(`auditLogs/cards_c1_co_${log}`), { col: 'cards', docId: 'c1', rev: cur.version, action: 'co', actor: u, at: NOW(),
+    before: snap(cur.co), after: o.after || snap(after), ref: log });
+  return b.commit();
+};
 const setCo = async (o) => { await seed(t, d => d.doc('cards/c1').update(Object.fromEntries(Object.entries(o).map(([k, v]) => [k === 'state' ? k : `co.${k}`, v])))); };
 const cur = () => readDoc(t, 'cards/c1');
 const edit = async (u, p) => { const c = await cur(); const n = { ...c, ...p, version: c.version + 1, updatedAt: NOW(), updatedBy: u };
@@ -127,6 +137,22 @@ describe('CO-08～CO-12 共編的編輯者', () => {
     await assertFails(createCard(db('rtAdm'), 'rtAdm', 'c2', { co: { depts: ['events'] } }));
     await assertSucceeds(createCard(db('rtAdm'), 'rtAdm', 'c3'));
     await assertSucceeds(edit('rtEd', { title: '自己人改' }));
+  });
+});
+
+describe('CO-14 稽核紀錄', () => {
+  it('CO-14 分享狀態每一步都要同批新建稽核紀錄；內容要跟前後狀態一致；不能沿用舊的；紀錄只有總管理員讀得到', async () => {
+    const c = await cur();
+    await assertFails(share('rtAdm', c, { invite: ['events'] }, { noAudit: true }));
+    await assertFails(share('rtAdm', c, { invite: ['events'] }, { after: { invite: ['marketing'], ask: [], depts: [] } }));
+    await assertFails(share('rtAdm', c, { invite: ['events'] }, { log: 'short' }));
+    await assertSucceeds(share('rtAdm', c, { invite: ['events'] }, { log: 'abcdef123456' }));
+    const a = await readDoc(t, 'auditLogs/cards_c1_co_abcdef123456');
+    assert.deepEqual([a.action, a.actor, a.after.invite, a.before.invite], ['co', 'rtAdm', ['events'], []]);
+    await assertFails(share('evAdm', await cur(), { invite: [], depts: ['events'] }, { log: 'abcdef123456' }));   // 沿用舊紀錄
+    await assertSucceeds(share('evAdm', await cur(), { invite: [], depts: ['events'] }));
+    await assertSucceeds(db('boss').doc('auditLogs/cards_c1_co_abcdef123456').get());
+    await assertFails(db('rtAdm').doc('auditLogs/cards_c1_co_abcdef123456').get());
   });
 });
 

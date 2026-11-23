@@ -67,7 +67,7 @@ function favDetHTML(dept,kind,ref){
   const c=fwCache.get(dept);if(!c||!c.data)return "";
   const b=favBody({dept,kind,ref},c.data),dp=fwDept(dept);
   return `<article class="lc ro fav-lc" data-st="${esc(b.st)}"><div class="lc-in"><div class="lc-head"><span class="live-dot" aria-hidden="true"></span><b class="lc-title">${esc(b.title)}</b></div>
-    <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:dept)}</span>${b.meta}</div><div class="lc-body">${b.body}</div></div></article>`;
+    <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:dept)}</span>${b.meta}${kind==="live"&&typeof coAskBtnHTML==="function"?coAskBtnHTML(dept,StoreMap.nid(dept,ref),b.title):""}</div><div class="lc-body">${b.body}</div></div></article>`;
 }
 document.addEventListener("click",e=>{
   const b=e.target.closest&&e.target.closest("[data-favopen]");if(!b)return;
