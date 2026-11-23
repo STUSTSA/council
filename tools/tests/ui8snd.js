@@ -20,7 +20,8 @@ const STUB=()=>{const L=window.__snd={made:0,groups:[],cur:null};
   const grp=()=>{if(!L.cur){L.cur=[];L.groups.push(L.cur);queueMicrotask(()=>{L.cur=null})}return L.cur};
   const param=(rec,key)=>({value:0,setValueAtTime(v){if(rec&&rec[key]===undefined)rec[key]=v;return this},exponentialRampToValueAtTime(v){if(rec)rec[key+'1']=v;return this},linearRampToValueAtTime(){return this}});
   const node=o=>Object.assign(o,{connect:x=>x,disconnect(){}});
-  class AC{constructor(){L.made++;this.state='running';this.currentTime=0;this.sampleRate=44100;this.destination=node({})}
+  class AC{constructor(){L.made++;this.state='running';this.t0=performance.now();this.sampleRate=44100;this.destination=node({})}
+    get currentTime(){return (performance.now()-this.t0)/1000}   /* 會走的時鐘：sfx.js 用它偵測輸出裝置死掉（currentTime 不走＝重建） */
     createGain(){return node({gain:param()})}
     createDynamicsCompressor(){return node({threshold:param(),knee:param(),ratio:param(),attack:param(),release:param()})}
     createBuffer(c,n){const d=new Float32Array(n);return {getChannelData:()=>d}}
