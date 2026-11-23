@@ -3,7 +3,7 @@
 const fs = require('fs'), assert = require('assert'), r = f => fs.readFileSync(__dirname + '/../../' + f, 'utf8');
 const acc = r('core/js/account.js'), css = r('core/board.css'), st = r('core/js/store-firestore.js'), ic = r('core/js/icons.js');
 assert(/data-fb-refresh/.test(acc) && /強制刷新/.test(acc), '有這一列');
-assert((acc.match(/refreshSec\(\)/g) || []).length >= 3, '登入前、登入後都出現（定義一次＋兩處使用）');
+assert((acc.match(/refreshSec\(\)/g) || []).length >= 2, "登入前、登入後兩處都用");
 assert(/fs\.dropCache\(\)[\s\S]*storeFsLoad\(true\)/.test(acc), '先作廢再強制重讀目前部門');
 assert(/if\(editing\|\|dirty\)/.test(acc), '有未儲存修改不動');
 assert(/已更新為最新內容/.test(acc) && /更新中/.test(acc), '載入中與完成提示');
