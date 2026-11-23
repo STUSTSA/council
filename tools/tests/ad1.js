@@ -23,7 +23,7 @@ await p.locator('#livePanel').screenshot({path:`ad_${tag}.png`});
 const id=await p.evaluate(()=>liveOrder()[0].id);await p.evaluate(i=>startEdit('e:'+i),id);await p.waitForTimeout(700);
 const v2=await m();console.log(tag,'editing',JSON.stringify(v2));ok(!v2.shown,tag+' 編輯中藏起來');
 await p.evaluate(()=>cancelEdit());await p.waitForTimeout(700);
-await p.click('#addEvent');await p.waitForTimeout(700);
+await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForTimeout(700);
 const r=await p.evaluate(()=>({dlg:$('#dlg').open?$('#dlgForm b').textContent:null,editing,sel:lvOpen&&(state.events.find(e=>e.id===lvOpen)||{}).name,split:$('#liveMD').classList.contains('split'),full:!!document.querySelector('#lcFull:not([hidden]) .lc.full'),nameOpen:!!document.activeElement&&document.activeElement.matches('.lc-ed [data-kptitle]')}));   /* 03：原位編輯器的名稱欄（游標在裡面）；ui-05：打開的那張是 lvOpen */
 console.log(tag,'after click',JSON.stringify(r),'errs',p.errs);
 if(w>=1000)ok(!r.dlg&&r.editing&&r.sel==='新的即時回報'&&r.split&&r.nameOpen,tag+' 桌面：開始編輯一筆空白的並選到');

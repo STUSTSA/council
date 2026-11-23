@@ -35,7 +35,7 @@ console.log('rights errs',p.errs);A(!p.errs.length,'rights errors');
 p=await mk('?d=finance');const f0=await p.evaluate(()=>[state.title,$('#dhName').textContent,state.events.length,state.issues.length,cloudCfg().path,$('#saveInfo').textContent]);console.log('finance',f0);
 A(f0[2]===0&&f0[3]===0&&f0[4]==='data-finance.json','finance blank board');
 await p.screenshot({path:'m2_fin.png'});
-await login(p);await p.click('#addEvent');await p.waitForTimeout(800);
+await login(p);await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForTimeout(800);
 await p.fill('#evDetail [data-kptitle]','預算表彙整');await p.keyboard.press('Enter');await p.waitForTimeout(300);await p.keyboard.type('等各部門回傳');   /* 03：原位編輯器；ui-05：名稱按 Enter＝新增第一行（以前是「+ 新增一行」鈕 data-kpadd） */
 await p.keyboard.press('Escape');await p.waitForTimeout(2500);   /* ui-05：沒有「儲存」鈕（以前 data-kpsave），Esc＝存檔並離開編輯 */
 console.log('finance saved',commits[0],Object.keys(files));console.log('fin errs',p.errs);

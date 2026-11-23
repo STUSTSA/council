@@ -50,7 +50,7 @@ const login=async p=>{await p.click('#setOv .set-gate .primary');await p.waitFor
  await p.keyboard.press('Escape');await p.waitForTimeout(700);await p.keyboard.press('Escape');await p.waitForTimeout(700);
  log('settings closed:',await p.evaluate(()=>setOpen));
  // 主頁開對話框應該是跳出的
- await p.click('#editBtn');await p.waitForTimeout(800);await p.click('#addEvent').catch(()=>{});await p.waitForTimeout(500);
+ await p.click('#editBtn');await p.waitForTimeout(800);await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForTimeout(500);
  log('main dlg modal:',await p.evaluate(()=>{const d=document.querySelector('#dlg');return [d.open,d.classList.contains('in-pane'),d.parentNode.tagName,getComputedStyle(d).position]}));
  await p.screenshot({path:'sp_main_dlg.png'});
  log('errs',p.errs);}
