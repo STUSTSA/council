@@ -8,7 +8,7 @@ await p.waitForFunction(()=>!document.body.classList.contains('intro'));await p.
 const st=()=>p.evaluate(()=>{const m=document.querySelector('#fabMenu'),f=$('#addEvent');return {open:!!m&&!m.hidden,cls:f.classList.contains('open'),opts:m?[...m.querySelectorAll('.fab-opt')].map(o=>o.textContent.trim()):[],depth:Back.depth(),editing}});
 await p.screenshot({path:`${OUT}/fab_${tag}_before.png`});
 await p.click('#addEvent');await p.waitForTimeout(700);
-let s=await st();ok(s.open&&s.cls&&s.opts.join()==='時間,清單,文字'&&s.depth===1,tag+' 展開：三個選項（由上到下 時間、清單、文字）、圓鈕變 ×、推一筆返回紀錄 '+JSON.stringify(s));
+const hm=await p.evaluate(()=>$('.dhead .dh-home').classList.contains('up'));let s=await st();ok(!hm,tag+' 展開時左上鍵不換成上一頁（不閃）');ok(s.open&&s.cls&&s.opts.join()==='時間,清單,文字'&&s.depth===1,tag+' 展開：三個選項（由上到下 時間、清單、文字）、圓鈕變 ×、推一筆返回紀錄 '+JSON.stringify(s));
 await p.screenshot({path:`${OUT}/fab_${tag}_open.png`});
 const g=await p.evaluate(()=>{const f=$('#addEvent').getBoundingClientRect();return [...document.querySelectorAll('.fab-opt')].map(o=>{const r=o.getBoundingClientRect();return [Math.round(r.bottom),Math.round(r.right)]}).concat([[Math.round(f.top),Math.round(f.right)]])});
 ok(g[0][0]<g[1][0]&&g[1][0]<g[2][0]&&g[2][0]<g[3][0],tag+' 選項在圓鈕上方依序排好 '+JSON.stringify(g));
