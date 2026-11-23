@@ -131,7 +131,7 @@ function setSection(k,{instant}={}){
 }
 /* 從 prev 那一區換到 k 那一區（dir：1＝往工具列後面、-1＝往前；通知與行事曆 noti 也用這一套，notify.js 的 openNoti／closeNoti） */
 function secSwap(prev,k,dir,instant){
-  const tok=++secTok,lay=document.querySelector(".layout"),sc=$("#pageMain");
+  const tok=++secTok,lay=document.querySelector(".layout"),sc=pageSc();
   const groups=[...lay.querySelectorAll(":scope>.sgroup")],out=groups.find(g=>g.dataset.sec===prev),inn=groups.find(g=>g.dataset.sec===k);
   /* 區塊頂端已經捲到畫面外時，捲回來讓新區塊從頭看 */
   const toTop=()=>{const d=lay.getBoundingClientRect().top-sc.getBoundingClientRect().top-dtopH()-12;if(d<0)sc.scrollTop+=d};

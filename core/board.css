@@ -126,6 +126,18 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 .page-main{width:100vw}
 .wrap{--wrap-pt:calc(20px + var(--sa-top));max-width:1500px;margin:0 auto;padding:var(--wrap-pt) max(16px,var(--sa-right)) calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom)) calc(var(--rail-in) + max(16px,var(--sa-left)))}
 .pager::-webkit-scrollbar{display:none}
+/* ----- 手機固定頂部（640px 以下）：標題列（.dtop）與搜尋列（.dsrow）不動，只有下面的資訊自己捲（.wrap-sc）。跟完成紀錄一樣「上面是上面、下面是下面」，
+   捲到頭拉過去的回彈、iPhone 的橡皮筋都只動資訊區，標題列與搜尋列紋風不動。電腦版 .wrap-sc／.wrap-in 是 display:contents（等於沒有），照舊整頁捲動、標題列黏住 ----- */
+.wrap-sc,.wrap-in{display:contents}
+@media (max-width:640px){
+  .page-main{overflow-y:hidden}
+  .wrap{height:100%;display:flex;flex-direction:column;padding-bottom:0}
+  :is(.dtop,.dsrow){position:relative;top:auto;flex:none}   /* 不再黏住：它們本來就在捲動層外面（桌面的 sticky 規則在上面） */
+  .wrap-sc{--wsx-l:max(14px,var(--sa-left));--wsx-r:max(14px,var(--sa-right));display:block;flex:1;min-height:0;margin:0 calc(-1 * var(--wsx-r)) 0 calc(-1 * var(--wsx-l));padding:0 var(--wsx-r) calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom)) var(--wsx-l);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none}
+  .wrap-sc::-webkit-scrollbar{display:none}
+  body.set-open .wrap-sc{overflow-y:hidden}   /* 設定開著：底下的資訊區不捲（桌面是 body.set-open #pageMain） */
+  .wrap-in{display:block}
+}
 @media (max-width:640px){
   .wrap{--wrap-pt:calc(14px + var(--sa-top));padding-right:max(14px,var(--sa-right));padding-left:max(14px,var(--sa-left))}
 }
@@ -1606,7 +1618,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + var(--sa-bottom));display:grid;gap:10px}   /* 列與列、塊與塊的間距一律 10px（跟 .set-list 同一個值；2026-11-22 使用者：每個之間間距一樣）；上緣至少留柔光陰影的外擴距離 */
 /* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
 .set-list{display:grid;gap:10px}
-.set-row{position:relative;width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
+.set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
 .set-row:hover{transform:none;box-shadow:var(--blk-sh);background:color-mix(in srgb,var(--ink) 6%,var(--blk))}
 .set-row:active,.set-row[aria-current="true"]{transform:none;background:color-mix(in srgb,var(--ink) 11%,var(--blk))}
 .set-row[aria-current="true"] .sr-chev{color:var(--ink)}
@@ -1861,6 +1873,8 @@ body.set-open #pageMain{overflow:hidden}
 @container (min-width:760px){.cal-list{grid-template-columns:1fr 1fr}}
 .cal-ghost{position:absolute;margin:0;pointer-events:none}
 .cal-ev{display:grid;gap:12px;padding:18px 20px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
+/* 手機通知頁卡片捲動縮疊（640px 以下；動作在 core/js/wallet.js 的 Pile）：日期卡捲到固定區下緣時用 sticky 釘住（--pile-top 由 Pile 依固定區高度寫在捲動容器上），縮小與露出的那一條由 Pile 寫 translate／scale */
+@media (max-width:640px){#notiPage .cal-ev{position:sticky;top:var(--pile-top,0px);will-change:translate,scale}}
 .ce-t{display:flex;align-items:baseline;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--hair)}
 .ce-t b{font-size:17px;font-weight:500}
 .ce-t span{margin-left:auto;font-size:13px;color:var(--muted)}
