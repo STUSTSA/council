@@ -2067,12 +2067,14 @@ input.lbl-add{width:9em;font-size:13.5px;text-align:center}   /* 新增中：虛
 }
 
 /* ===== 工作報告 ===== */
-.rpt-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + var(--sa-top)) max(clamp(14px,3vw,40px),var(--sa-right)) 0 max(clamp(14px,3vw,40px),var(--sa-left))}
-.rpt-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + var(--sa-bottom))}
+.rpt-ov,.ag-ov{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;gap:10px;padding:calc(14px + var(--sa-top)) max(clamp(14px,3vw,40px),var(--sa-right)) 0 max(clamp(14px,3vw,40px),var(--sa-left))}
+.ag-ov[hidden]{display:none}
+body.ag-open{overflow:hidden}
+.rpt-scroll,.ag-scroll{flex:1;overflow:auto;overflow-anchor:none;scrollbar-gutter:stable;padding:6px 0 calc(48px + var(--sa-bottom))}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
 /* 例外：工作報告的白紙（紙上的顏色只在這一條定義，下面的紙張元件一律引用這些變數） */
-.rpt-paper,.ag-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
+.rpt-paper,.ag-paper,.ag-pk-p,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
 .rpt-paper{--pad:6.667%;width:210mm;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;color:var(--ink);font-size:14px;line-height:1.75}
 .rpt-page{position:relative;aspect-ratio:210/297;padding:var(--pad) var(--pad) calc(var(--pad) + 8px);border-radius:4px;background:var(--blk);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑 */}
 .rpt-paper .num{font-family:"Jost",sans-serif}
@@ -2399,14 +2401,27 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 
 
 /* ===== 行政會議資料（meeting.js 的 renderAgenda；2026-11-23 第四版：白紙文件預覽＋左右工具，跟工作報告預覽同一個感覺） =====
-   標題列：「複製文字」「儲存」。三欄（.ag-wrap）：左 .ag-left（切換會議、加入部門報告）、中 .ag-paper（白紙，配色變數跟工作報告的白紙同一組，見「工作報告」段）、右 .ag-right（目前選到那一段的工具）；
+   「會議」分頁只有「點名」「會議資料」兩個區塊：會議資料是入口卡（.ag-entry／.ag-peek，一張白紙縮圖），點了打開自己一頁（#agOv，外殼樣式跟工作報告預覽 .rpt-ov 同一條規則），頁裡有文件預覽與左右工具、下面是會議報告事項與各部門週報（.ag-more）。
+   頁首列：「複製文字」「存到雲端」「儲存」「關閉」。三欄（.ag-wrap）：左 .ag-left（切換會議、加入部門報告）、中 .ag-paper（白紙，配色變數跟工作報告的白紙同一組，見「工作報告」段）、右 .ag-right（目前選到那一段的工具）；
    左右欄捲動時固定在畫面上（sticky）。要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回。
    手機（1000px 以下）：單欄，左右工具收成兩列可展開的標題（.ag-tg，grid-template-rows 0fr↔1fr 展開），白紙在下面。 */
 #agDrive[hidden]{display:none}   /* 還沒設定雲端硬碟時藏起來（.icon 的 display 會蓋過 hidden 屬性） */
+.ag-entry .panel-head{margin-bottom:10px}
+.ag-open-t{font-size:13px;color:var(--muted)}
+.ag-peek{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.ag-pk-p{position:relative;display:grid;width:100%;box-sizing:border-box;text-align:left;gap:3px;max-height:150px;overflow:hidden;padding:16px 20px;border-radius:6px;background:var(--blk);color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.2)/* 例外：陰影黑 */;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent);transition:transform var(--mo-base) var(--mo-spring)}
+.ag-peek:hover .ag-pk-p,.ag-peek:focus-visible .ag-pk-p{transform:translateY(-2px)}
+.ag-pk-t{font-size:16px;font-weight:600}
+.ag-pk-m{font-size:12px;color:var(--muted);margin-bottom:6px}
+.ag-pk-p p{margin:0;font-size:12.5px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-pk-p p b{display:inline-block;min-width:4.5em;margin-right:8px;font-weight:600}
+.ag-pk-e{font-size:12.5px;color:var(--muted)}
+.ag-pk-s{font-size:12px;color:var(--muted)}
+.ag-more{display:grid;gap:14px;max-width:1100px;margin:28px auto 0}
 .ag-wrap{display:grid;grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(220px,270px);gap:20px;align-items:start}
 .ag-center{min-width:0}
 .ag-paper{max-width:210mm;margin:0 auto;box-sizing:border-box;min-height:min(297mm,75vh);padding:clamp(22px,6.667%,14mm);border-radius:4px;background:var(--blk);color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑，同工作報告白紙 */;--blk2:#f1f1f4}
-.ag-tools{position:sticky;top:12px;max-height:calc(100dvh - 24px - var(--sa-top) - var(--sa-bottom));overflow:auto;border-radius:16px;padding:12px 14px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ag-tools{position:sticky;top:12px;max-height:calc(100dvh - 120px - var(--sa-top) - var(--sa-bottom));overflow:auto;border-radius:16px;padding:12px 14px;box-shadow:inset 0 0 0 1px var(--hair)}
 .ag-tg{display:flex;width:100%;align-items:center;margin-bottom:10px;pointer-events:none;gap:8px;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .ag-left .ag-tg,.ag-tg .ev-chev{display:none}   /* 電腦版：右邊的標題只當標題（寫目前是哪個部門），左邊不需要標題、也不能收合 */
 .ag-tgs{font-weight:400;color:var(--muted)}

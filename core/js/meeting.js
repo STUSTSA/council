@@ -359,11 +359,19 @@ function agSelect(dept){
   if(!dept||dept===AG.sel)return;AG.sel=dept;
   document.querySelectorAll("#agDoc .md-sec[data-md]").forEach(x=>x.classList.toggle("is-sel",x.dataset.md===dept));agRenderTools();
 }
+/* 「會議」分頁裡的入口卡：一小張白紙縮圖（標題、日期時間地點、各部門第一行），整張可點，點了打開 #agOv */
+function agPeekHTML(){
+  const d=AG.doc,when=[fmt(d.date),d.time,d.place].filter(Boolean).map(esc).join("　");
+  const rows=d.items.slice(0,4).map(i=>`<p><b>${esc(i.deptName)}</b>${esc(String(i.text||"").trim().split("\n")[0].slice(0,40))}</p>`).join("");
+  return `<span class="ag-pk-p"><span class="ag-pk-t">${esc(d.title||"行政會議")}</span><span class="ag-pk-m">${when}</span>${rows||'<span class="ag-pk-e">還沒有部門報告</span>'}</span><span class="ag-pk-s">${agSaved()?`已存　${esc((d.at||"").slice(5,16))}`:"草稿：還沒存"}・${d.items.length} 個部門</span>`;
+}
 function renderAgenda(){
-  const p=$("#agPanel");if(!p)return;p.hidden=!CFG.meeting;if(!CFG.meeting)return;
+  const e=$("#agEntry");if(!e||!$("#agOv"))return;e.hidden=!CFG.meeting;if(!CFG.meeting)return;
   if(!AG.doc)AG.doc=agDraftOf(today());
+  $("#agPeek").innerHTML=agPeekHTML();
+  if($("#agOv").hidden)return;   /* 還沒打開文件頁：只更新入口縮圖 */
   if(AG.ed)return;   /* 就地編輯中不重畫（游標才不會跳） */
-  const y=$("#agDoc"),top=y.scrollTop;y.innerHTML=agDocHTML();y.scrollTop=top;agRenderTools();
+  const y=$("#agDoc"),top=$("#agOv .ag-scroll").scrollTop;y.innerHTML=agDocHTML();$("#agOv .ag-scroll").scrollTop=top;agRenderTools();
   const ok=AG.doc.items.some(agKeep);
   $("#agGo").disabled=AG.busy||!ok;$("#agCopy").disabled=!ok;{const d=$("#agDrive");d.hidden=!driveReady();d.disabled=!ok}
   $("#agSt").textContent=AG.busy?"儲存中…":agSaved()?`已存（${(AG.doc.at||"").slice(5,16)}${AG.doc.by?"　"+AG.doc.by:""}）；之後每改一處會自動存。`:"草稿：還沒存。點文字就地修改，按「儲存」存成這一天的議程。";
@@ -430,7 +438,10 @@ async function agSave(a,okMsg,failMsg,denyMsg){
 }
 document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#agDoc .mt-ev"))return;if(d.open)AG.open.add(d.dataset.mtev);else AG.open.delete(d.dataset.mtev)},true);
 document.addEventListener("click",async e=>{
-  const t=e.target;if(!t.closest||!t.closest("#agPanel"))return;
+  const t=e.target;if(!t.closest)return;
+  if(t.closest("#agPeek")){openAgenda();return}
+  if(t.closest("#agClose")){closeAgenda();return}
+  if(!t.closest("#agOv"))return;
   const tg=t.closest("[data-ag-tg]");if(tg){tg.closest(".ag-tools").classList.toggle("is-open");return}
   const pk=t.closest("[data-md-pick]");if(pk){clearTimeout(AG.t);AG.doc=agDraftOf(pk.dataset.mdPick||today());AG.sel="";renderAgenda();return}
   const rf=t.closest("[data-md-refresh]");if(rf&&!rf.disabled){if(!(await agLogin()))return;const it=agItemOf(AG.sel),x=agItems().find(i=>i.dept===AG.sel);if(!it||!x||!x.w)return;
@@ -458,3 +469,17 @@ document.addEventListener("click",async e=>{
   const ed=t.closest("[data-ed]");if(ed&&!t.closest("summary"))agEditStart(ed);
 });
 document.addEventListener("keydown",e=>{const el=e.target;if(e.key==="Enter"&&el.matches&&el.matches("#agDoc .md-e")&&!el.querySelector("input,textarea")){e.preventDefault();agEditStart(el)}});
+
+/* 會議資料自己一頁（#agOv，常駐在 body，打開才顯示）：跟編輯紀錄、工作報告同一種全螢幕頁，換頁動畫、返回鍵、Esc 都照那兩個的做法（Back.layers.agenda） */
+function openAgenda(){
+  const ov=$("#agOv");if(!ov||!ov.hidden)return;
+  const from=pageUnder(ov);ov.hidden=false;document.body.classList.add("ag-open");Back.layers.agenda();
+  renderAgenda();PageFx.swap(from,ov);
+}
+function closeAgenda(instant){
+  const ov=$("#agOv");if(!ov||ov.hidden)return;Back.closed("agenda");
+  const done=()=>{ov.hidden=true;document.body.classList.remove("ag-open");renderAgenda()};
+  if(instant===true||reduceMotion())return done();
+  PageFx.swap(ov,pageUnder(ov),{done});
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#agOv")&&!$("#agOv").hidden&&!AG.ed&&!rptOpen&&!$("#dlg").open)closeAgenda()});
