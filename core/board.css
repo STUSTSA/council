@@ -1381,7 +1381,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .noti-wal{--wal-top:196px}   /* 通知頁疊卡：上面沒有區塊標題列，比完成紀錄多出一段高度 */
 /* 通知頁疊卡（手機）：每張卡都是完整的圓角卡片、互不蓋住（收起＝92px 高，保留英文小標、名稱、件數；wallet.js 的 WU 給 102）；點到的那張（.on）整張展開成 196px 看到全部（日期、大數字），再點才進內容 */
-.noti-wal .hm-wc{height:92px;padding:16px 22px;overflow:hidden;transition:height var(--mo-base) var(--mo-out)}
+.noti-wal .hm-wc{height:92px;padding:16px 22px;overflow:hidden;box-shadow:0 10px 24px -10px var(--wal-sh);transition:height var(--mo-base) var(--mo-out)}   /* 卡片互不蓋住，陰影改往下：不再有往上的陰影被固定區下緣裁掉（第一張上方的硬邊），也不會把下面那張的上緣染灰 */
 .noti-wal .hm-wc.on{height:196px;padding-top:20px}
 .noti-wal .hm-wc:not(.on) .hm-n{left:auto;right:22px;top:50%;translate:0 -50%;font-size:28px}
 .noti-wal .hm-wc:not(.on) .wks-r{display:none}
