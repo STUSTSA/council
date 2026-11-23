@@ -23,6 +23,10 @@ service cloud.firestore {
     function isEditor(d)    { return d is string && deptRole(d) in ['admin', 'editor']; }
     function isAdmin(d)     { return d is string && deptRole(d) == 'admin'; }
     function deptWriter(d)  { return isEditor(d) || isSuper(); }
+    // 專案權限（獨立於部門角色）：只能改活動部的「專案」（issues 且 deptId＝events）；授權存在 projectGrants/{uid}，由活動部部長或總管理員核准
+    function projDecider()  { return isSuper() || isAdmin('events'); }
+    function projectEditor(dp) { return dp == 'events' && signedIn() && exists(doc('projectGrants', me()))
+                                   && get(doc('projectGrants', me())).data.active == true; }
     function deptIds()      { return ['rights', 'president', 'secretariat', 'marketing', 'finance',
                                       'events', 'affairs', 'pr', 'works', 'fruit']; }
     function d()            { return request.resource.data; }
@@ -367,6 +371,52 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ===================== 專案權限申請（跟部門申請分開；只由活動部部長或總管理員審） =====================
+    // 申請 projectRequests/{自己的 UID}（每人一份；撤回、被拒絕、已核准之後再申請＝同一份改回 pending）；
+    // 核准＝同一批把 projectGrants/{申請人 UID} 寫成 active＝true。授權只讓人改活動部的專案（issues），不給活動部的其他編輯權、不改 roles。
+    match /projectRequests/{id} {
+      allow get, list: if signedIn() && (id == me() || projDecider());
+      function askOk() {
+        return d().keys().hasOnly(['uid', 'note', 'status', 'rev', 'createdAt', 'updatedAt', 'updatedBy'])
+          && d().uid == me() && id == me() && d().status == 'pending'
+          && (!d().keys().hasAny(['note']) || (d().note is string && d().note.size() <= 200))
+          && d().createdAt == request.time && stamped();
+      }
+      function decided(st) {
+        return resource.data.status == 'pending' && resource.data.uid != me() && d().status == st
+          && d().decidedBy == me() && d().decidedAt == request.time
+          && onlyChanged(['status', 'decidedBy', 'decidedAt', 'rev', 'updatedAt', 'updatedBy']);
+      }
+      allow create: if signedIn() && askOk() && d().rev == 1 && auditAfter('projectRequests', id, 1);
+      allow update: if revNext() && auditAfter('projectRequests', id, d().rev) && stamped() && (
+          (resource.data.uid == me() && resource.data.status == 'pending' && d().status == 'cancelled'
+             && onlyChanged(['status', 'rev', 'updatedAt', 'updatedBy']))
+       || (signedIn() && resource.data.uid == me() && resource.data.status in ['cancelled', 'rejected', 'approved'] && askOk())
+       || (projDecider() && decided('rejected'))
+       || (projDecider() && decided('approved')
+             && getAfter(doc('projectGrants', resource.data.uid)).data.active == true
+             && getAfter(doc('projectGrants', resource.data.uid)).data.updatedAt == request.time) );
+      allow delete: if false;
+    }
+    match /projectGrants/{gid} {
+      allow get: if signedIn() && (gid == me() || projDecider());
+      allow list: if projDecider();
+      function shape() {
+        return d().keys().hasOnly(['uid', 'active', 'rev', 'updatedAt', 'updatedBy']) && d().uid == gid && d().active is bool && stamped();
+      }
+      function viaApprove() {                                                     // 核准：申請同一批從 pending 改成 approved、決定的人是自己
+        let rb = get(doc('projectRequests', gid)).data;
+        let ra = getAfter(doc('projectRequests', gid)).data;
+        return projDecider() && gid != me() && d().active == true
+          && rb.status == 'pending' && ra.status == 'approved' && ra.decidedBy == me();
+      }
+      allow create: if shape() && d().rev == 1 && viaApprove() && auditAfter('projectGrants', gid, 1);
+      allow update: if shape() && revNext() && unchanged(['uid']) && auditAfter('projectGrants', gid, d().rev)
+        && ((resource.data.active == false && viaApprove())
+            || (projDecider() && resource.data.active == true && d().active == false));   // 撤銷
+      allow delete: if false;
+    }
+
     // ===================== 稽核紀錄（只能新增，任何人都不能改、刪） =====================
     match /auditLogs/{aid} {
       function a()      { return request.resource.data; }
@@ -392,13 +442,13 @@ service cloud.firestore {
       }
       // 受 rev 鏈保護的文件：ID＝{col}_{docId}_{rev}
       function chainOk() {
-        return a().col in ['roles', 'invitations', 'roleRequests', 'grants', 'legacyIdentities',
+        return a().col in ['roles', 'invitations', 'roleRequests', 'projectRequests', 'projectGrants', 'grants', 'legacyIdentities',
                            'bookings', 'deptSettings', 'migrations']
           && aid == a().col + '_' + a().docId + '_' + string(a().rev)
           && target().rev == a().rev && target().updatedBy == me()
           && (a().col != 'roles' || (rolesOk() && a().action == target().lastVia && a().ref == target().lastRef))
-          && (!(a().col in ['invitations', 'roleRequests', 'bookings', 'migrations']) || statusOk())
-          && (!(a().col in ['grants', 'legacyIdentities', 'deptSettings']) || plainOk());
+          && (!(a().col in ['invitations', 'roleRequests', 'projectRequests', 'bookings', 'migrations']) || statusOk())
+          && (!(a().col in ['grants', 'legacyIdentities', 'deptSettings', 'projectGrants']) || plainOk());
       }
       // 02B 卡片刪除紀錄：只能在「開始永久刪除」那一批建立（卡片批次前 open／done、批次後 purging、deletedBy＝自己、
       // deletedAt＝這次寫入），內容＝卡片的標題、部門、狀態與版本號。ID＝cards_{卡片ID}_purge_{ref}，ref＝卡片的 purgeLog
@@ -680,8 +730,8 @@ service cloud.firestore {
           && (kept('markers') || (d().get('markers', []) is list && d().get('markers', []).size() <= 300));
       }
       allow get, list: if true;   // 06 對外公開
-      allow create: if safeId(id) && shape() && deptWriter(d().deptId) && d().rev == 1 && stamped() && importTagOk();
-      allow update: if shape() && deptWriter(resource.data.deptId) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
+      allow create: if safeId(id) && shape() && (deptWriter(d().deptId) || projectEditor(d().deptId)) && d().rev == 1 && stamped() && importTagOk();
+      allow update: if shape() && (deptWriter(resource.data.deptId) || projectEditor(resource.data.deptId)) && unchanged(['deptId', 'importBatch']) && revNext() && stamped();
       allow delete: if delLogged('issues', id) || importRollback('issues');
     }
     match /weeks/{id} {
