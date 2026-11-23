@@ -140,6 +140,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     const wantW=r.vw>=1280?36:40;   /* 1280 以上通知頁三欄、月曆縮小（日期圓 36）；1000～1279 兩欄與手機是 40 */
     ok(r.w===wantW&&r.selBg===r.acc&&r.op==='1',`選到的日期＝--acc 實心圓 ${wantW}px（視窗 ${r.vw}；${r.w}、${r.selBg}）`);
     {const vw0=p.viewportSize();for(const w of [1100,412]){await p.setViewportSize({width:w,height:vw0.height});await p.waitForTimeout(600);
+      if(w<640){await p.evaluate(()=>notiViewShow('cal'));await p.waitForTimeout(700)}   /* 手機：通知頁是疊卡，行事曆在點進去的內容裡 */
       ok(await p.evaluate(()=>$('.pc-d.sel').getBoundingClientRect().width)===40,`${w} 寬（兩欄／手機）：選到的日期圓 40px`)}
       await p.setViewportSize(vw0);await p.waitForTimeout(600)}
     ok(r.tdc===r.acc2&&+r.fw>=700,`今天＝--acc2 粗體（${r.tdc}、${r.fw}）`);
@@ -239,9 +240,9 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     const l0=await q.evaluate(()=>$('#tabbar .tab.on').dataset.tab);
     await q.click('#notiBtn');await q.waitForTimeout(1000);
     const r=await q.evaluate(()=>({open:notiOpen,tab:$('#tabbar .tab.on').dataset.tab,sw:document.documentElement.scrollWidth,pw:$('#pageMain').scrollWidth,cw:$('#pageMain').clientWidth,w:innerWidth,
-      cards:[...document.querySelectorAll('.nd-card')].map(c=>Math.round(c.getBoundingClientRect().width)),tl:Math.round($('#notiTally').getBoundingClientRect().width)}));
+      cards:[...document.querySelectorAll('#notiWal .hm-wc')].map(c=>Math.round(c.getBoundingClientRect().width))}));   /* 手機：四張疊卡（今日、明日、清點、行事曆） */
     ok(r.open&&r.tab===l0&&r.sw<=r.w&&r.pw<=r.cw+1,`412：鏡片留在原分頁（${r.tab}）、沒有橫捲（${r.sw}/${r.pw}/${r.cw}）`);
-    ok(r.cards.length===2&&Math.abs(r.cards[0]-r.cards[1])<=1,`412：今日／明日兩張並排（${r.cards}）`);
+    ok(r.cards.length===4&&r.cards.every(x=>Math.abs(x-r.cards[0])<=1),`412：疊卡四張同寬（${r.cards}）`);
     await q.screenshot({path:'ui6_412.png'});
     ok(q.errs.length===0,`412 沒有頁面錯誤${q.errs.length?'：'+q.errs.join(' | '):''}`);
     await q.close();}

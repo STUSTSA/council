@@ -17,25 +17,31 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const
     const b=$('#notiBtn .noti-n').textContent;e.times=e.times.filter(x=>x.id!=='tZ');e.blocks=e.blocks.filter(x=>x.id!=='bZ');render();return [a,b,$('#notiBtn .noti-n').textContent]});
   say(bd[0]===''&&bd[1]==='1'&&bd[2]==='',`${w} badge 逾期數：時間標記沒有連到行時是空的（${JSON.stringify(bd[0])}），加一行過期沒勾的變 ${bd[1]}，拿掉回到空的`)}
  await p.click('#notiBtn');await p.waitForTimeout(900);
- const cards=await p.evaluate(()=>[...document.querySelectorAll('#notiPage .nd-card')].map(c=>(c.querySelector('.nd-count')?.textContent||'0')+':'+c.classList.contains('today')));
- say(cards.join()==='2:true,2:false',`${w} cards ${cards}`);
+ const ph=w<640;   /* 手機：通知頁是四張疊卡（今日、明日、清點、行事曆；notify.js 的 notiStack），點卡進內容；電腦照舊 */
+ if(ph){const sc4=await p.evaluate(()=>[...document.querySelectorAll('#notiWal .hm-wc')].map(c=>c.dataset.k+':'+c.querySelector('.hm-n').textContent));
+   say(sc4.length===4&&sc4[0]==='today:2'&&sc4[1]==='tomorrow:2'&&/^tally:\d+$/.test(sc4[2])&&/^cal:\d+$/.test(sc4[3]),`${w} stack ${sc4}`);
+   await p.evaluate(()=>notiViewShow('cal'));await p.waitForTimeout(700)}
+ else{const cards=await p.evaluate(()=>[...document.querySelectorAll('#notiPage .nd-card')].map(c=>(c.querySelector('.nd-count')?.textContent||'0')+':'+c.classList.contains('today')));
+ say(cards.join()==='2:true,2:false',`${w} cards ${cards}`)}
  const po=await p.evaluate(()=>[$('.pc-mon').textContent.replace(/^\d+/,''),document.querySelectorAll('.pc-e.span').length,Math.max(...[...document.querySelectorAll('.pc-week')].map(x=>+x.style.getPropertyValue('--lanes')))]);
  say(/^[A-Z]{3}$/.test(po[0])&&po[1]>=2&&po[2]>=2,`${w} poster ${po}`);
  await p.screenshot({path:`nt1_${w}.png`});
  /* 卡片：點明日＝行事曆選到那一天，下面的清單是那一天 */
- await p.click('#notiPage .nd-card:not(.today)');await p.waitForTimeout(900);
+ if(ph){await p.evaluate(()=>notiViewShow(null));await p.waitForTimeout(700);await p.evaluate(()=>notiEnter(1));await p.waitForTimeout(900)}else await p.click('#notiPage .nd-card:not(.today)');await p.waitForTimeout(900);
  const od=await p.evaluate(()=>[NOTI.day===addDays(today(),1),document.querySelectorAll('.cal-list .cal-ev').length,$('.pc-d.sel')?.dataset.calday===NOTI.day]);
  say(od[0]&&od[1]===2&&od[2],`${w} open day ${od}`);
  /* 今日卡片：點了放大成全螢幕的「今日」層（本來就要做） */
- await p.evaluate(()=>$('#notiPage .nd-card.today').scrollIntoView({block:'center'}));await p.click('#notiPage .nd-card.today');await p.waitForTimeout(250);
+ if(ph){await p.evaluate(()=>{notiViewShow(null)});await p.waitForTimeout(700);await p.evaluate(()=>openToday($('#notiWal .hm-wc')))}
+ else{await p.evaluate(()=>$('#notiPage .nd-card.today').scrollIntoView({block:'center'}));await p.click('#notiPage .nd-card.today')}await p.waitForTimeout(250);
  await p.screenshot({path:`nt1_${w}_today_mid.png`});await p.waitForTimeout(900);
  const tl=await p.evaluate(()=>[todayOpen,!$('#todayOv').hidden,[...document.querySelectorAll('#todayOv .td-sec h3')].map(h=>h.textContent.replace(/\s+/g,'')).join('/'),document.querySelectorAll('#todayOv .td-row').length]);
  say(tl[0]&&tl[1]&&tl[2]==='本來就要做2'&&tl[3]===2,`${w} today layer ${tl}`);
  await p.screenshot({path:`nt1_${w}_today.png`});
  await p.keyboard.press('Escape');await p.waitForTimeout(1200);
- const tc2=await p.evaluate(()=>[todayOpen,$('#todayOv').hidden,notiOpen,$('#notiPage .nd-card.today').style.opacity]);
+ const tc2=await p.evaluate(ph=>[todayOpen,$('#todayOv').hidden,notiOpen,$(ph?'#notiWal .hm-wc':'#notiPage .nd-card.today').style.opacity],ph);
  say(!tc2[0]&&tc2[1]&&tc2[2]&&tc2[3]==='',`${w} today closed, noti still open ${tc2}`);
  /* 換月（月份選單）、點日期 */
+ if(ph){await p.evaluate(()=>notiViewShow(null));await p.waitForTimeout(700);await p.evaluate(()=>notiViewShow('cal'));await p.waitForTimeout(700)}
  await p.evaluate(()=>$('#notiPage .cal').scrollIntoView());await p.click('[data-calmon]');await p.waitForTimeout(400);
  const nm=await p.evaluate(()=>{const ms=[...document.querySelectorAll('.cal-pop [data-calset]')].map(x=>x.dataset.calset);return ms[ms.indexOf(NOTI.month)+1]||ms[0]});
  await p.click(`.cal-pop [data-calset="${nm}"]`);await p.waitForTimeout(700);
