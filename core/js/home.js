@@ -210,10 +210,12 @@
      網址只收 http(s)（沒寫通訊協定＝https；javascript:、data: 等其他協定不收）；名稱與網址進畫面一律經過 esc，打開用新分頁、不帶 opener 與 referrer。
      圖示（lkIco）：先向那個網站自己要 /favicon.ico；要不到再向 Google 的圖示服務要（只送網域）；兩邊都沒有顯示網域第一個字母（跟其他圓鈕一樣大的圓鈕；中文網域改用名稱第一個字，見 lkFirst）。不帶 referrer。
      內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
+     自訂圖示（2026-11-23，DievE）：每個連結可選一個線條圖示取代網站圖示／首字母；存在同一筆 {u,n,i}（i＝LK_ICOS 裡的圖示名，沒有＝自動）。
+     編輯中點連結＝在它上方浮出圖示選單（#hmIcoPick，自動＋LK_ICOS），選了就換、再點同一個或點外面、Esc 關閉；不認得的 i 讀回來當沒有。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半（手機才畫；桌面是分開的圓鈕，ui-12）各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
-  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
+  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,LK_ICOS=["link","home","doc","calendar","people","user","cap","flag","bookmark","bell","pin","clock","tag","share","download","cloud","live","progress","done","eye"],SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
   const lkCut=s=>[...String(s==null?"":s).trim()].slice(0,LK_NAME).join("");
   function lkUrl(raw){
     let s=String(raw==null?"":raw).trim();if(!s||s.length>2000)return null;
@@ -228,17 +230,17 @@
     let raw;try{raw=localStorage.getItem(LK_KEY)}catch(_){lkOk=false;return []}
     let a;try{a=JSON.parse(raw||"[]")}catch(_){a=[]}
     const out=[];if(!Array.isArray(a))return out;
-    for(const x of a){if(out.length>=LK_MAX)break;const u=x&&typeof x==="object"&&lkUrl(x.u);if(u)out.push({u,n:typeof x.n==="string"?lkCut(x.n):"",k:lkKey()})}
+    for(const x of a){if(out.length>=LK_MAX)break;const u=x&&typeof x==="object"&&lkUrl(x.u);if(u)out.push({u,n:typeof x.n==="string"?lkCut(x.n):"",i:LK_ICOS.includes(x.i)?x.i:"",k:lkKey()})}
     return out;
   }
-  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n})=>({u,n}))))}catch(_){lkOk=false}}
+  function lkWrite(){try{localStorage.setItem(LK_KEY,JSON.stringify(LK.list.map(({u,n,i})=>i?{u,n,i}:{u,n})))}catch(_){lkOk=false}}
   /* 跟存的那份對齊（別的分頁可能改過）：同網址同名稱的沿用原本的畫面代號（節點、焦點不動），其餘換新；有變回傳 true。
      加、刪之前都先對一次，再寫回——編輯中收到別的分頁的修改時不會被這個分頁的舊清單整份蓋掉 */
   function lkSync(){
     if(!lkOk)return false;
     const nx=lkRead(),pool=LK.list.slice();
-    if(!lkOk||nx.length===pool.length&&nx.every((x,i)=>x.u===pool[i].u&&x.n===pool[i].n))return false;
-    nx.forEach(x=>{const i=pool.findIndex(o=>o.u===x.u&&o.n===x.n);if(i>=0)x.k=pool.splice(i,1)[0].k});
+    if(!lkOk||nx.length===pool.length&&nx.every((x,i)=>x.u===pool[i].u&&x.n===pool[i].n&&x.i===pool[i].i))return false;
+    nx.forEach(x=>{const i=pool.findIndex(o=>o.u===x.u&&o.n===x.n&&o.i===x.i);if(i>=0)x.k=pool.splice(i,1)[0].k});
     LK.list=nx;return true;
   }
   const LK={list:lkRead(),ed:false},DKN=new Map(),dk=$id("hmDk"),dkIn=$id("hmDkIn"),dkBg=[dk.querySelector(".hm-dk-l>span"),dk.querySelector(".hm-dk-r>span")];
@@ -258,7 +260,7 @@
     const p=new URL(u),key=p.origin,hit=LK_ICO.get(key);if(hit===""||lkLan(p.hostname))return;
     const srcs=hit?[hit]:[key+"/favicon.ico",LK_G+encodeURIComponent(p.hostname)+"&sz=64"];let i=0;
     const img=document.createElement("img");img.className="hm-lki";img.alt="";img.referrerPolicy="no-referrer";img.decoding="async";img.draggable=false;
-    const dead=()=>{if(w.isConnected)return false;img.removeAttribute("src");img.remove();return true};
+    const dead=()=>{if(w.isConnected&&img.isConnected)return false;img.removeAttribute("src");img.remove();return true};
     const next=()=>{if(dead())return;if(++i<srcs.length)img.src=srcs[i];else{img.remove();if(!hit)LK_ICO.set(key,"")}};
     img.addEventListener("load",()=>{if(dead())return;
       const iw=img.naturalWidth,ih=img.naturalHeight;
@@ -284,11 +286,17 @@
     }
     return h.charAt(0).toUpperCase();
   }
+  /* 圓鈕的臉：選了圖示＝線條圖示（.pick）；沒選＝首字母，再試網站圖示（.fav）。換圖示時原地重畫，節點不換 */
+  function lkFace(w,x){
+    const a=w.firstElementChild,l=document.createElement("b");l.className="hm-lkl";l.setAttribute("aria-hidden","true");
+    a.textContent="";a.append(l);w.classList.remove("fav");w.classList.toggle("pick",!!x.i);
+    if(x.i){l.innerHTML=ico(x.i,"solo");return}
+    l.textContent=lkFirst(x,lkHost(x.u));lkIco(w,x.u);
+  }
   function lkNode(x){
-    const h=lkHost(x.u),nm=x.n||h,w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
-    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"><b class="hm-lkl" aria-hidden="true"></b></a>`;
-    w.querySelector(".hm-lkl").textContent=lkFirst(x,h);
-    lkIco(w,x.u);
+    const nm=x.n||lkHost(x.u),w=document.createElement("span");w.className="hm-lk";w.dataset.k=x.k;w.dataset.nm=nm;
+    w.innerHTML=`<a class="hm-lkc" href="${esc(x.u)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(nm)}"></a>`;
+    lkFace(w,x);
     return w;
   }
   function dkNode(k){
@@ -333,7 +341,7 @@
   function nope(el){el.setAttribute("aria-invalid","true");if(!reduceMotion())el.animate([{transform:"none"},{transform:"translateX(-6px)"},{transform:"translateX(5px)"},{transform:"translateX(-3px)"},{transform:"none"}],{duration:MO.slow,easing:"ease-out"})}
   function lkEdit(on){
     if(LK.ed===on)return;const had=dk.contains(document.activeElement);
-    LK.ed=on;tipHide();
+    LK.ed=on;tipHide();ipClose();
     if(!on){lkSync();const f=DKN.get("form");if(f)f.querySelectorAll("input").forEach(i=>{i.value="";i.removeAttribute("aria-invalid")})}
     dkPaint(true,on?"back":"add");
     if(on){const u=$id("hmLkU");(u||DKN.get("back")).focus({preventScroll:true})}
@@ -353,7 +361,30 @@
     lkSync();const i=LK.list.findIndex(x=>x.k===k);if(i>=0){LK.list.splice(i,1);lkWrite()}dkPaint(true);   /* 別的分頁已經刪掉同一個：只換成最新的清單 */
     const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
   }
+  /* 圖示選單（編輯中點連結）：浮在那顆圓鈕上方、左右夾在畫面內；選了就換並存，再點同一顆或點外面或 Esc 關閉 */
+  let ip=null,ipK=null;
+  function ipClose(){if(!ip)return;ipK=null;ip.classList.remove("on");ip.inert=true}
+  function ipOpen(w){
+    const k=w.dataset.k,x=LK.list.find(l=>l.k===k);if(!x)return;
+    if(ipK===k){ipClose();return}
+    if(!ip){ip=document.createElement("div");ip.className="hm-ip";ip.id="hmIcoPick";ip.setAttribute("role","group");ip.setAttribute("aria-label","選擇圖示");
+      ip.innerHTML=`<button type="button" class="hm-ipb hm-ipa" data-i="" aria-label="自動（網站圖示）">自動</button>`+LK_ICOS.map(n=>`<button type="button" class="hm-ipb" data-i="${n}" aria-label="${n}">${ico(n,"solo")}</button>`).join("");
+      ip.addEventListener("click",e=>{const b=e.target.closest(".hm-ipb");if(b)lkSetIcon(ipK,b.dataset.i)});
+      document.body.append(ip)}
+    ipK=k;ip.inert=false;
+    ip.querySelectorAll(".hm-ipb").forEach(b=>b.classList.toggle("sel",b.dataset.i===(x.i||"")));
+    const r=w.getBoundingClientRect(),pw=ip.offsetWidth,ph=ip.offsetHeight,vw=document.documentElement.clientWidth;
+    const L=Math.max(8,Math.min(vw-pw-8,r.left+r.width/2-pw/2));
+    ip.style.transform=`translate(${L.toFixed(1)}px,${Math.max(8,r.top-ph-12).toFixed(1)}px)`;
+    ip.classList.add("on");
+  }
+  function lkSetIcon(k,i){
+    lkSync();const x=LK.list.find(l=>l.k===k);ipClose();if(!x||x.i===i)return;
+    x.i=i;lkWrite();const w=DKN.get(k);if(w)lkFace(w,x);
+  }
   dk.addEventListener("click",e=>{
+    const lw=LK.ed&&e.target.closest&&e.target.closest(".hm-lk");
+    if(lw&&!e.target.closest(".hm-lkx")){e.preventDefault();ipOpen(lw);return}   /* 編輯中點連結＝選圖示（不打開網址；鍵盤 Enter 也一樣） */
     const t=e.target.closest&&e.target.closest("button");if(!t||!dk.contains(t))return;
     if(t.classList.contains("hm-lkadd"))lkEdit(true);
     else if(t.classList.contains("hm-lkb"))lkEdit(false);
@@ -362,8 +393,8 @@
   });
   dk.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.matches&&e.target.matches(".hm-lkf input")&&!e.isComposing){e.preventDefault();lkAdd()}});
   dk.addEventListener("input",e=>{if(e.target.matches&&e.target.matches(".hm-lku"))e.target.removeAttribute("aria-invalid")});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!e.isComposing&&LK.ed&&!LY){e.preventDefault();lkEdit(false)}});   /* 注音選字中的 Esc 給輸入法，不結束編輯 */
-  document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk")))lkEdit(false)},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!e.isComposing&&LK.ed&&!LY){e.preventDefault();if(ipK)ipClose();else lkEdit(false)}});   /* 注音選字中的 Esc 給輸入法，不結束編輯 */
+  document.addEventListener("pointerdown",e=>{if(LK.ed&&!(e.target.closest&&e.target.closest("#hmDk,#hmIcoPick")))lkEdit(false);else if(ipK&&!(e.target.closest&&e.target.closest("#hmIcoPick,.hm-lk")))ipClose()},true);   /* 點下排以外＝結束編輯（那一下照樣算數） */
   addEventListener("storage",e=>{if(e.key!==LK_KEY&&e.key!==null)return;   /* 別的分頁改了：沒在編輯就跟著換；編輯中先不動畫面（加、刪、結束編輯時才對齊） */
     if(!LK.ed&&lkSync())dkPaint(false)});
   /* 名稱的小膠囊：只給有滑鼠的桌面（hover），圖示上方置中；換到別的連結時原地換字與位置，移開淡出 */
