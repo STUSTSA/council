@@ -2469,3 +2469,41 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .mp-meta{margin:0 0 4px;font-size:12px;color:var(--muted);letter-spacing:.04em}
 .mp-note{margin:0 0 10px;font-size:14px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
 .mp-act{display:flex;justify-content:flex-end;gap:8px}
+
+/* ===== AI 小幫手（ai.js；知識文件 core/ai-help.md；主控台設定見 docs/AI小幫手設定.md） =====
+   右下角 44 的圓鈕（--blk 底、1px --hair 細線＋浮起陰影），點開是對話面板（--blk 圓角 24；桌面在右下角 380 寬，手機在底部工具列上方、左右各 12）。
+   圓鈕跟 .fab（新增即時回報）同一欄：.fab 出現時圓鈕往上讓一格（只動 bottom，有過渡）；z-index 36（同 .fab，設定、通知疊層蓋得住它），面板 50。
+   訊息：自己是實心膠囊（--pri），小幫手是 --blk2 圓角；面板底部固定輸入列，bottom 加 --kb（螢幕鍵盤，DESIGN.md「螢幕鍵盤」）。 */
+.ai-fab{position:fixed;right:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px) + 8px);bottom:calc(40px + var(--sa-bottom));z-index:36;display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);color:var(--ink);box-shadow:0 0 0 1px var(--hair),0 10px 24px -10px var(--stack-sh);transition:bottom var(--mo-base) var(--mo-out),background-color var(--mo-base),color var(--mo-base),transform var(--mo-base) var(--mo-spring)}
+.ai-fab .ico{width:22px;height:22px;margin:0}
+.ai-fab[aria-expanded="true"]{background:var(--pri);color:var(--pri-ink)}
+.ai-fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+body:has(.fab:not([hidden])) .ai-fab{bottom:calc(104px + var(--sa-bottom))}
+.ai-pn{--ai-b:calc(24px + var(--sa-bottom) + var(--kb,0px));position:fixed;right:calc(max(16px,var(--sa-right)) + 8px);bottom:var(--ai-b);z-index:50;display:flex;flex-direction:column;width:380px;height:560px;max-height:calc(100dvh - var(--ai-b) - var(--sa-top) - 16px);border-radius:24px;background:var(--blk);color:var(--ink);box-shadow:0 0 0 1px var(--hair),0 24px 60px -18px var(--stack-sh);overflow:hidden;opacity:0;transform:translateY(14px) scale(.97);transform-origin:100% 100%;transition:opacity var(--mo-base) var(--mo-out),transform var(--mo-slow) var(--mo-spring),bottom var(--mo-base) var(--mo-out)}
+.ai-pn[hidden]{display:none}
+.ai-pn.on{opacity:1;transform:none}
+.ai-hd{display:flex;align-items:center;gap:8px;padding:14px 12px 10px 18px}
+.ai-hd b{font-size:15px;letter-spacing:.04em}
+.ai-hd .sub{flex:1;min-width:0;font-size:12px;color:var(--muted);line-height:1.4}
+.ai-x{flex:none;display:grid;place-items:center;width:34px;height:34px;min-height:0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted)}
+.ai-x .ico{width:18px;height:18px;margin:0}
+.ai-log{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;overflow:auto;overscroll-behavior:contain;padding:6px 14px 10px}
+.ai-m{max-width:88%;padding:9px 14px;border-radius:18px;font-size:14px;line-height:1.65;overflow-wrap:anywhere;animation:rise .28s var(--mo-out)}
+.ai-me{align-self:flex-end;border-bottom-right-radius:6px;background:var(--pri);color:var(--pri-ink)}
+.ai-bot{align-self:flex-start;border-bottom-left-radius:6px;background:var(--blk2)}
+.ai-wait{color:var(--muted);animation:ai-pulse 1.2s ease-in-out infinite}
+@keyframes ai-pulse{50%{opacity:.45}}
+.ai-sg{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 8px}
+.ai-sg[hidden]{display:none}
+.ai-chip{min-height:0;padding:7px 13px;border:0;border-radius:999px;background:transparent;box-shadow:inset 0 0 0 1px var(--hair);color:var(--ink);font-size:13px}
+.ai-in{display:flex;gap:8px;padding:8px 12px 12px}
+.ai-in input{flex:1;min-width:0;height:44px;padding:0 16px;border:0;border-radius:999px;background:var(--blk2);color:var(--ink);font-size:16px}
+.ai-go{flex:none;display:grid;place-items:center;width:44px;height:44px;min-height:0;padding:0;border-radius:50%}
+.ai-go .ico{width:20px;height:20px;margin:0}
+.ai-pn.busy .ai-go{opacity:.5;pointer-events:none}
+@media (max-width:899px){
+  .ai-fab{right:calc(max(12px,(100vw - 480px) / 2) + 9px);bottom:calc(114px + var(--sa-bottom))}
+  body:has(.fab:not([hidden])) .ai-fab{bottom:calc(178px + var(--sa-bottom))}
+  .ai-pn{--ai-b:calc(var(--sa-bottom) + max(94px,var(--kb,0px) + 12px));left:12px;right:12px;width:auto;margin:0 auto;max-width:480px}
+}
+@media print{.ai-fab,.ai-pn{display:none}}
