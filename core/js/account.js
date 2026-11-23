@@ -47,8 +47,7 @@ let acctCanW="",acctNameEd=false;   /* acctNameEd：帳號頁的名稱正在就�
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
   if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow&&!acctNameEd)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
-  const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
-    if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
+  const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();}
 }
 /* 登入狀態與第一次的角色都讀到了（boot.js 等它再決定要不要提示唯讀） */
 let acctKnownOk;const acctKnown=new Promise(r=>acctKnownOk=r);

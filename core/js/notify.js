@@ -5,9 +5,6 @@
    - 由上到下：今日／明日 → 清點區（已過期、本週到期）→ 行事曆。
    - 本部門的事＝還沒結案的即時回報上記錄的時間（ev.times）。不推播，只在看板裡顯示。 */
 let notiOpen=false;
-/* 部門色：會長室「各部門編輯量」的折線與圖例在用（activity.js） */
-const DEPT_COLORS=["#e0342a","#0a5baa","#f0bc23","#2f8f84","#a24fc0","#d84f92","#c26a12","#3d7fe0","#6b6b75"];
-const deptColor=id=>DEPT_COLORS[Math.max(0,(window.BOARD_DEPTS||[]).findIndex(d=>d.id===id))%DEPT_COLORS.length];
 const WD="日一二三四五六";
 /* 一份看板資料 → 事件清單 {key,date,end,time,etime,title,place,ev,dept}（還沒結案的即時回報上的時間） */
 function notiItems(s,dept){

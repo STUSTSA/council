@@ -16,7 +16,8 @@ function homeUp(){
   if(Back.up())return;
   if(progOpen&&curSec==="progress")progShow(null);
 }
-const homeDeep=()=>Back.depth()>0||(!!progOpen&&curSec==="progress");
+/* 圓鈕展開的選項（nav.js 的 fabOpen）雖然佔一筆返回紀錄，但不算「更深一頁」：左上鍵不換成上一頁（換了會在淡暗背景後面閃一下） */
+const homeDeep=()=>Back.depth()-(Back.has("fab")?1:0)>0||(!!progOpen&&curSec==="progress");
 function homeSync(){
   const home=$(".dhead .dh-home");if(!home)return;
   const deep=homeDeep();if(home.classList.contains("up")===deep&&home.firstElementChild)return;
