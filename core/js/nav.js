@@ -136,7 +136,7 @@ function fabOpen(){
   Back.opened("fab",()=>fabClose(false,true));
   if(reduceMotion())return;
   sc.animate([{opacity:0},{opacity:1}],{duration:MO.base,easing:MO.out});
-  os.forEach((o,i)=>o.animate([{opacity:0,transform:"translateY(28px) scale(.8)"},{opacity:1,transform:"none"}],{duration:MO.base+80,delay:i*50,easing:MO.spring,fill:"backwards"}));
+  os.forEach((o,i)=>o.animate([{opacity:0,transform:"translateY(24px)"},{opacity:1,transform:"translateY(0)"}],{duration:MO.base+60,delay:i*45,easing:MO.out,fill:"backwards"}));
 }
 /* 收起：now＝馬上藏（換頁、卡片打開時）；fromBack＝系統返回已經退了瀏覽紀錄 */
 function fabClose(now,fromBack){
@@ -148,7 +148,7 @@ function fabClose(now,fromBack){
   if(now||reduceMotion()){done();return}
   m.querySelector(".fab-scrim").animate([{opacity:1},{opacity:0}],{duration:MO.fast,easing:MO.in,fill:"forwards"});
   const os=[...m.querySelectorAll(".fab-opt")];
-  Promise.all(os.map((o,i)=>o.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(20px) scale(.85)"}],{duration:MO.fast,delay:i*20,easing:MO.in,fill:"forwards"}).finished.catch(()=>{}))).then(done);
+  Promise.all(os.map((o,i)=>o.animate([{opacity:1,transform:"translateY(0)"},{opacity:0,transform:"translateY(16px)"}],{duration:MO.fast,delay:i*20,easing:MO.in,fill:"forwards"}).finished.catch(()=>{}))).then(done);
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&fabOn){e.preventDefault();e.stopPropagation();fabClose()}},true);
 function tabGo(k){Sfx.play("tab");if(setOpen)closeSettings();if(notiOpen){closeNoti(false,k);return}setSection(k)}   /* 通知與行事曆那一頁：按任一分頁＝離開這一頁、到那個分頁（notify.js） */
