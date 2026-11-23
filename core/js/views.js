@@ -417,7 +417,7 @@ function doneCardHTML(id,full){
     meta:`<span class="ev-st">完成</span>${lcWhen(o.doneAt)}<span>${ISS}</span>`,body,tail,save:""});
 }
 /* ---------- 完成紀錄：一週一張疊卡（跟主頁部門卡片同一套外觀） ----------
-   完成紀錄列「一週一張」整寬疊起來的卡片（週一到週日，最新的在最上面；沒有完成紀錄的週不出現）：每張露出「WEEK N」、第 N 週、日期範圍與張數，點一張就地展開、裡面是那一週的膠囊清單（再點一次收起、點別週換那張展開），卡片的開法沿用即時回報（live.js）。
+   完成紀錄列「一週一張」整寬疊起來的卡片（週一到週日，最新的在最上面；從開學第 1 週到這一週每週都有一張，沒有完成紀錄的也在，進去可補每週報告）：每張露出「WEEK N」、第 N 週、日期範圍與張數，點一張就地展開、裡面是那一週的膠囊清單（再點一次收起、點別週換那張展開），卡片的開法沿用即時回報（live.js）。
    分週只看完成日（doneAt，日期字串）：同一張卡分段完成、結案在不同週，各自出現在完成那一週。資料不變，只在前端分組。
    doneWeek＝展開的那一週（週一的日期）；null＝全部收起。展開的那一週比部門主頁更深：登記在 Back（左上角鍵變「上一頁」、系統返回鍵關掉這一頁），頁面裡不另放返回鈕。 */
 const wkStart=d=>addDays(d,-((pd(d).getDay()+6)%7));
@@ -425,8 +425,8 @@ const wkStart=d=>addDays(d,-((pd(d).getDay()+6)%7));
 const wkRange=s=>`${fmt(s).slice(5)} – ${fmt(addDays(s,6)).slice(5)}`;
 function wkNo(s){const t=termCfg().termStart||CFG.term.start;if(!t)return 0;const n=Math.round((pd(s)-pd(wkStart(t)))/6048e5)+1;return n>=1&&n<=40?n:0}
 const wkLabel=s=>wkNo(s)?`第 ${wkNo(s)} 週`:`${fmt(s).slice(5)} 當週`,wkEn=s=>wkNo(s)?`WEEK ${wkNo(s)}`:"WEEK";
-/* 列出的週：有完成紀錄的週、有每週報告的週，再加上這一週（沒有完成紀錄也要進得去每週報告） */
-function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});[...state.weeks.map(x=>x.date).filter(Boolean),today()].forEach(d=>{const w=wkStart(d);if(!m.has(w))m.set(w,[])});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
+/* 列出的週：從開學那一週（第 1 週，開學日沒設或還沒到就不補）一路到這一週，每週一張（沒有完成紀錄也在，進去可以補每週報告）；加上有完成紀錄、有每週報告的週（開學前的也留著）。全在前端用既有資料算，不多讀 */
+function doneWeeks(items){const m=new Map();items.forEach(x=>{const w=wkStart(x.d);if(!m.has(w))m.set(w,[]);m.get(w).push(x)});const t=termCfg().termStart||CFG.term.start,cur=wkStart(today());for(let w=t&&t<=today()?wkStart(t):cur,n=0;w<=cur&&n<60;w=addDays(w,7),n++)if(!m.has(w))m.set(w,[]);[...state.weeks.map(x=>x.date).filter(Boolean),today()].forEach(d=>{const w=wkStart(d);if(!m.has(w))m.set(w,[])});return [...m].sort((a,b)=>b[0].localeCompare(a[0]))}
 /* 進去／離開那一週（只改狀態與 Back 登記，不畫） */
 /* 手機（640px 以下，跟主頁同一條線）＝整寬疊卡；電腦＝跟電腦版主頁一樣的一排方塊（.wks-rail，用主頁的 .hm-tile、焦點框 .hm-ring）：焦點那一週的內容畫在下面。
    手機展開一週比主頁更深（登記 Back）；電腦只是換焦點，不登記 Back（doneWeek＝焦點週，null 時焦點在最新的一週） */
