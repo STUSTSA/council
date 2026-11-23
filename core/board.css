@@ -344,6 +344,9 @@ input.lc-title:focus{outline:none}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
+/* 共編鈕（卡片所屬部門的管理員、會長的「申請共編」；coedit.js）：跟「報告」鈕同一個尺寸，有共編對象時實心 */
+.co-btn{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
+.co-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
 /* 收藏鈕＝書籤圖示（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；
    圓鈕 38px、圖示 22px、文字色外框（比一般次要鈕明顯）；收藏後整個填滿成實心 */
 .fav-btn{flex:none;display:inline-grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);background:transparent;transition:background-color .2s,color .2s,scale .3s var(--mo-spring)}
