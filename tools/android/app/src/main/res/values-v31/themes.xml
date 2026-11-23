@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12 以上的啟動畫面：底色與主題相同，系統列透明，避免啟動時出現黑帶 -->
+<!-- Android 12 以上的啟動畫面：底色與主題相同（淺色／深色各一）、圖示換成全透明，只剩乾淨底色，直接接網頁的進場動畫；系統列透明，避免啟動時出現黑帶 -->
 <resources>
     <style name="AppTheme" parent="android:Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>
@@ -11,5 +11,6 @@
         <item name="android:enforceStatusBarContrast">false</item>
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowSplashScreenBackground">@color/app_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_empty</item>
     </style>
 </resources>
