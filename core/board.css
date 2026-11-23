@@ -1116,6 +1116,8 @@ a.link:active{transform:scale(.96)}
    原地絕對定位（top／left／width 由程式寫）、不能點，退出去之後拿掉 */
 .sgroup:not(.cur){display:none}
 .sgroup.sg-out{display:grid;position:absolute;pointer-events:none}
+/* 手機換分頁：兩頁並排滑動（render.js 的 secSwap）。.layout 左右各多留 16px（＝頁面內距）才裁切，滑出畫面邊緣前不被內容寬度切掉 */
+.layout.sg-slide{overflow-x:clip;overflow-clip-margin:16px}
 @media print{.sgroup:not(.cur){display:grid}}   /* 列印照舊印全部區塊（依序往下排） */
 
 /* ===== 開頁進場畫面（學生會）：2026-11-06 起樣式在 core/splash.css（看板與總覽頁共用） ===== */
