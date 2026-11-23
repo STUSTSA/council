@@ -555,11 +555,13 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 左右兩欄（寬螢幕、打開一張時；live.js 的 lvWide）：左邊一欄膠囊、右邊卡片（.lc-pane，見「卡片外框」）。完成紀錄（#doneMD）共用 --- */
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
-/* 即時回報分欄時：搜尋列維持滿寬、不動（點卡片前後完全一樣），右邊的詳情卡從搜尋列下面開始，黏在標題列與搜尋列（--sr-h＝50px 高＋18px 下邊距）下面，可編輯的卡片多出約 100px 高 */
-#liveMD.split{--sr-h:68px}
-#liveMD.split .lc-pane{top:calc(var(--dhd-h,64px) + var(--sr-h));margin-bottom:calc(36px - var(--pane-d))}
-#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - var(--sr-h) - 36px)}
-#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - var(--sr-h) - 24px)}
+/* 即時回報（電腦）：沒點卡片時搜尋列滿寬；點開一張就縮回左欄寬（寬度與右內距有過渡動畫，所以平常也寫成明確寬度），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 用版面位置量），
+   詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高。右內距縮成 0：搜尋列的底色與淡出不蓋到右邊詳情卡的柔光陰影。 */
+.wrap:has(#liveMD) .dsrow{width:calc(100% + 2 * var(--dtop-x));transition:width var(--mo-slow) var(--mo-out),padding-right var(--mo-slow) var(--mo-out)}
+.wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + var(--dtop-x));padding-right:0}
+#liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
+#liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
+#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
@@ -1377,7 +1379,8 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-wc,.wks-c{background:var(--blk);box-shadow:0 -14px 30px -6px var(--wal-sh);color:var(--ink)}   /* 卡片堆的共用外觀（主頁手機部門卡片、完成紀錄週疊卡）：底色、往上的陰影；圓角各自 --r-lg */
 .hm-wc{position:absolute;left:0;right:0;top:0;display:block;height:196px;padding:20px 22px;border-radius:var(--r-lg);text-decoration:none;transform-origin:50% 0;will-change:transform;-webkit-user-drag:none}
 .hm-wc:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.wks-wal{--wal-bt:calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom));flex:none;height:calc(100dvh - 290px + var(--wal-bt));min-height:380px;margin:6px 0 calc(-1*var(--wal-bt));overflow:clip;overflow-clip-margin:36px}   /* 完成紀錄的週卡堆（沿用 .hm-wal／.hm-wc，高度固定一屏，不跟頁面一起捲）；overflow:clip 裁掉往下排出畫面的卡，clip-margin 留出卡片陰影往上、往左右散開的範圍（不裁成硬邊；clip 不產生捲動範圍）。--wal-bt＝.wrap 的底內距：往下抵掉它，疊卡一路延伸到螢幕最底（含手勢橫條的安全區），不在橫條上方切一條直線 */
+.noti-wal{--wal-top:196px}   /* 通知頁疊卡：上面沒有區塊標題列，比完成紀錄多出一段高度 */
+.wks-wal{--wal-bt:calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom));flex:none;height:calc(100dvh - var(--wal-top,290px) + var(--wal-bt));min-height:380px;margin:6px 0 calc(-1*var(--wal-bt));overflow:clip;overflow-clip-margin:36px}   /* 完成紀錄的週卡堆（沿用 .hm-wal／.hm-wc，高度固定一屏，不跟頁面一起捲）；overflow:clip 裁掉往下排出畫面的卡，clip-margin 留出卡片陰影往上、往左右散開的範圍（不裁成硬邊；clip 不產生捲動範圍）。--wal-bt＝.wrap 的底內距：往下抵掉它，疊卡一路延伸到螢幕最底（含手勢橫條的安全區），不在橫條上方切一條直線 */
 button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;border:0;font:inherit;text-align:left}   /* 週卡是 button（主頁部門卡是 a）：button 的內容預設垂直置中，改成從左上開始 */
 .hm-wc .wks-r{display:block}
 .hm-wc .hm-nm{font-size:20px}

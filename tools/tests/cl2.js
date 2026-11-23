@@ -49,7 +49,7 @@ const dismiss=async p=>{await p.waitForTimeout(600);if(await p.evaluate(()=>!!do
   ok(p.errs.filter(e=>!/500/.test(e)).length===0,'沒有錯誤：'+p.errs.join('|'));
   const m=p;await m.setViewportSize({width:412,height:860});await m.emulateMedia({colorScheme:'dark'});await m.waitForTimeout(600);
   await m.evaluate(()=>{const e=state.events.find(x=>!x.doneAt),t=today();e.times=[{id:'tA',label:'世新學運報導初版',start:t+'T10:00',end:'',place:'學生會辦公室'}];e.blocks=[{id:'bA',text:'x',check:true,timeId:'tA'}];render()});
-  await m.evaluate(()=>{renderNoti();$('.cal-list').scrollIntoView()});await m.waitForTimeout(600);await m.waitForTimeout(300);
+  await m.evaluate(()=>{if(NOTI.view!=='cal')notiViewShow('cal');renderNoti();$('.cal-list').scrollIntoView()});await m.waitForTimeout(600);await m.waitForTimeout(300);
   ok(await m.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&!!$('[data-calck]:checked')),'412 寬沒有橫捲、已勾的顯示為勾');
   await m.screenshot({path:'cl2_mob.png'});
   await b.close();console.log(`${passes} 項通過，${fails} 項失敗`);process.exit(fails?1:0);

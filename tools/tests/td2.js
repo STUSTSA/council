@@ -4,11 +4,12 @@
 const c=require('./common');(async()=>{const {b,mk,login}=await c.setup();
 for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const p=await mk(w,h,sc,tc);
  await p.click('#notiBtn');await p.waitForTimeout(900);
- await p.click('#notiPage .nd-card.today');await p.waitForTimeout(1200);
+ const CARD=w<640?'#notiWal .hm-wc':'#notiPage .nd-card.today';   /* 手機：通知頁是疊卡（第一張焦點卡＝今日） */
+ await p.click(CARD);await p.waitForTimeout(1200);
  console.log(w,'today open',await p.evaluate(()=>todayOpen));
  const t0=Date.now();await p.keyboard.press('Escape');
- const tr=await p.evaluate(()=>new Promise(res=>{const out=[],s=performance.now(),card=$('#notiPage .nd-card.today');(function f(){const t=performance.now()-s;
-   const m=getComputedStyle(card).transform,sc=m==='none'?1:+m.match(/matrix\(([^,]+)/)[1];out.push([Math.round(t),+sc.toFixed(3),$('#todayOv').hidden?'card':'ov']);if(t<1300)requestAnimationFrame(f);else res(out)})()}));
+ const tr=await p.evaluate(sel=>new Promise(res=>{const out=[],s=performance.now(),card=$(sel);(function f(){const t=performance.now()-s;
+   const m=getComputedStyle(card).transform,sc=m==='none'?1:+m.match(/matrix\(([^,]+)/)[1];out.push([Math.round(t),+sc.toFixed(3),$('#todayOv').hidden?'card':'ov']);if(t<1300)requestAnimationFrame(f);else res(out)})()}),CARD);
  const swap=tr.find(x=>x[2]==='card'),land=tr.filter(x=>x[2]==='card').map(x=>x[1]);
  console.log(w,'swap at',swap&&swap[0],'ms; card scale min',Math.min(...land),'max',Math.max(...land),'end',land[land.length-1]);
  console.log(w,'samples',tr.filter((x,i)=>i%6===0).map(x=>x.join(':')).join(' '));
