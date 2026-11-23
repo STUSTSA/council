@@ -68,7 +68,10 @@ const SHELL_HTML=`<div class="pager" id="pager">
           <div class="ag-wrap">
             <aside class="ag-tools ag-left" id="agLeft" aria-label="會議與部門報告"></aside>
             <div class="ag-center"><article class="md-doc ag-paper" id="agDoc" spellcheck="false"></article></div>
-            <aside class="ag-tools ag-right" id="agRight" aria-label="這一段的工具"></aside>
+            <aside class="ag-right" id="agRight" data-focus="card" aria-label="文字備註與卡片編輯">
+              <section class="ag-rb ag-note" data-rb="note"><h3 class="ag-rh"><span>文字備註</span><span class="ag-rd" id="agNoteD"></span></h3><div class="ag-rbi" id="agNoteBody"></div></section>
+              <section class="ag-rb ag-cardbox" data-rb="card"><h3 class="ag-rh"><span>卡片編輯</span><span class="ag-rd" id="agCardD"></span></h3><div class="ag-rbi"><div id="agCardTools"></div><div id="agCardHost"></div></div></section>
+            </aside>
           </div>
           <p class="sub ag-st" id="agSt"></p>
           <div class="ag-more" id="agMore"></div>
@@ -177,8 +180,8 @@ function suLogoColor(label){
     ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
     const att=document.getElementById("attPanel"),ent=document.getElementById("agEntry");
     if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */
-    const ov=document.getElementById("agOv"),more=document.getElementById("agMore");   /* 會議資料自己一頁：蓋在整個畫面上（不在分頁裡），會議報告事項與各部門週報也放進那一頁 */
-    if(ov){document.body.append(ov);["#meetEdPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p&&more)more.append(p)})}}
+    const ov=document.getElementById("agOv"),more=document.getElementById("agMore"),host=document.getElementById("agCardHost");   /* 會議資料自己一頁：蓋在整個畫面上（不在分頁裡）；會議報告事項（改部門卡片）放進右下「卡片編輯」，各部門週報放在文件下面 */
+    if(ov){document.body.append(ov);[["#meetEdPanel",host],["#wkPanel",more]].forEach(([q,to])=>{const p=document.querySelector(q);if(p&&to)to.append(p)})}}
   /* 關閉的區塊 */
   Object.entries(CFG.sections).forEach(([k,on])=>document.body.classList.toggle("no-"+k,!on));
 })();

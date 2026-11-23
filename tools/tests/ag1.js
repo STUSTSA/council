@@ -15,9 +15,9 @@ const sec=d=>p.evaluate(d=>{const x=document.querySelector(`#agDoc [data-md=${d}
 /* 不進任何編輯模式，文件就直接看得到 */
 A(await p.evaluate(()=>/行政會議/.test(document.querySelector('#agDoc .md-title').textContent)&&document.querySelector('#agDoc .md-date').textContent.length>5&&!document.querySelector('#agDoc textarea,#agDoc input')),'一打開就看得到文件（標題、日期），沒有輸入框');
 A(await p.evaluate(()=>document.querySelector('#agGo').disabled&&document.querySelector('#agCopy').disabled),'還沒有內容：「儲存」「複製文字」停用');
-const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agLeft [data-md-paste]')].map(x=>x.dataset.mdPaste+':'+x.textContent).join(' '));
+const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agLeft [data-md-paste]')].map(x=>x.dataset.mdPaste+':'+x.textContent+x.title).join(' '));
 console.log(chipTxt);
-A(/marketing:.*本週/.test(chipTxt)&&/events:.*01\/06/.test(chipTxt)&&/works:.*無週報/.test(chipTxt),'文件下面一排部門膠囊：本週／舊的日期／無週報');
+A(/marketing:.*本週/.test(chipTxt)&&/events:.*01\/06/.test(chipTxt)&&/works:.*沒有週報/.test(chipTxt),'文件下面一排部門膠囊：本週／舊的日期／無週報');
 await p.click('#agLeft .ag-tg');await p.waitForTimeout(500);   /* 手機：左邊工具收成一列，先展開 */
 await p.click('#agLeft [data-md-paste=marketing]');await p.waitForTimeout(1500);
 A((await sec('marketing')).text.includes('社群排程'),'點「行銷部」膠囊：週報放進文件');
@@ -39,11 +39,11 @@ A(sc&&sc.agendas&&sc.agendas.length===1&&sc.agendas[0].date===T&&sc.agendas[0].t
 A(sc.agendas[0].items.find(i=>i.dept==='events').text.includes('改過的內容'),'改過的文字有存進去');
 A(!st.puts[API+'data-marketing.json'].agendas&&st.commits.every(m=>!/marketing/.test(m)),'沒有改動各部門的資料');
 /* 存過的：之後每改一處自動存 */
-await p.click('#agDoc [data-md=events] [data-ed=dec]');await p.fill('#agDoc [data-md=events] [data-ed=dec] input','自動存的決議');await p.keyboard.press('Enter');await p.waitForTimeout(3500);
-A(remote().agendas[0].items.find(i=>i.dept==='events').decision==='自動存的決議','存過之後：改一處就自動存（不用再按儲存）');
+await p.evaluate(()=>agSelect('events'));await p.click('#agRec');await p.fill('#agRec','自動存的記錄');await p.waitForTimeout(3500);
+A(remote().agendas[0].items.find(i=>i.dept==='events').rec==='自動存的記錄','存過之後：改一處就自動存（不用再按儲存）');
 await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
-A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&/自動存的決議/.test(document.querySelector('#agDoc').textContent)),'重新整理後文件還在');
-await p.click('#agDoc [data-md-drop=events]');await p.waitForTimeout(800);
+A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&/自動存的記錄/.test(document.querySelector('#agDoc').textContent)),'重新整理後文件還在');
+await p.evaluate(()=>{agSelect('events');document.querySelector('#agRight [data-md-drop=events]').click()});await p.waitForTimeout(800);
 if(await p.$('#dlgForm input[name=pw]')){await p.fill('#dlgForm input[name=pw]','password-long-1');await p.click('#dlgForm [data-act=ok]')}
 await p.waitForTimeout(3500);
 A(remote().agendas.length===1&&remote().agendas[0].items.length===1,'移除一個部門：自動存、同一天仍是一份');
