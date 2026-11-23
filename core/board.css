@@ -552,7 +552,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
 /* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
-.wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
+.wrap:has(#liveMD.wide) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + var(--dtop-x));padding-right:0}   /* 寬螢幕一進即時回報就是窄的（不是點卡片才縮），右邊不留內距：不蓋到右邊詳情卡的陰影 */
 #liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
 #liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
 #liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}

@@ -136,7 +136,7 @@ function renderEvents(){
   if(lvOpen&&!ids.includes(lvOpen)){lvOpen=null;lcGone()}
   if(!editing){kp=null;lvPane=null;lvPop=false;lvSeg=null;if(kpSt&&kpSt.st!=="saving"&&kpSt.id!==lvOpen)kpSt=null}   /* 收合（或換成別張）＝儲存回饋與「復原」消失 */
   const wide=lvWide(),split=wide&&!!lvOpen,pane=$("#evDetail");
-  $("#liveMD").classList.toggle("split",split);
+  $("#liveMD").classList.toggle("wide",wide);$("#liveMD").classList.toggle("split",split);
   lvRise(split);
   const cp=ev=>cpHTML(ev,{sel:split&&ev.id===lvOpen,away:!wide&&ev.id===lvOpen});
   /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著。新增鈕是右下角的浮動圓鈕（nav.js 的 fabSync） */
