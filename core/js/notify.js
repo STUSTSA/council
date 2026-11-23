@@ -342,7 +342,7 @@ function notiViewShow(v){
 function notiEnter(i){
   const k=(notiCards()[i]||{}).k;
   if(k==="today"){const c=$("#notiWal .hm-wc.on")||$("#notiWal .hm-wc");setTimeout(()=>{if(notiOpen)openToday(c)},0)}
-  else if(k==="tomorrow"){const d=addDays(today(),1),m=d.slice(0,7);if(m!==NOTI.month){NOTI.month=m;calLoad(NOTI)}calDay(NOTI,d);notiViewShow("cal")}
+  else if(k==="tomorrow"){const c=$("#notiWal .hm-wc.on")||$("#notiWal .hm-wc");setTimeout(()=>{if(notiOpen)openToday(c,addDays(today(),1))},0)}   /* 明日跟今日同一種展開（卡片長成全螢幕的清單） */
   else if(k==="tally")notiViewShow("tally");
   else if(k==="cal")notiViewShow("cal");
 }
@@ -490,10 +490,10 @@ async function notiRetime(evId,tid){
    點今日卡片：卡片放大成全螢幕的一層（跟今日卡片同色：--pri 底、--pri-ink 字）：大日期、今日、月份與星期、關閉鈕、「本來就要做」清單（今天本部門的事）。
    返回鍵／手勢、Esc、「關閉」都會關。資料只讀 */
 let todayOpen=false;
-function todayHTML(){
-  const t=today(),own=notiMine().filter(x=>covers(x,t));
-  return `<div class="td-in"><div class="td-top"><span class="td-num num">${+t.slice(8)}</span><span class="td-lab"><b>今日</b><small class="num">${+t.slice(5,7)} 月・週${WD[pd(t).getDay()]}</small></span><button type="button" class="td-x-btn" data-tdclose aria-label="關閉今日">${ico("close","solo")}關閉</button></div>
-    <section class="td-sec"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${own.map((x,i)=>`<li class="td-row" style="--i:${i}"><span class="td-t num">${esc(dayWhen(x,t))}</span><span class="td-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></li>`).join("")}</ol>`:`<p class="td-none">今天沒有排定的事</p>`}</section></div>`;
+function todayHTML(day){
+  const t=day||today(),tm=!!day&&day!==today(),lb=tm?"明日":"今日",own=notiMine().filter(x=>covers(x,t));
+  return `<div class="td-in"><div class="td-top"><span class="td-num num">${+t.slice(8)}</span><span class="td-lab"><b>${lb}</b><small class="num">${+t.slice(5,7)} 月・週${WD[pd(t).getDay()]}</small></span><button type="button" class="td-x-btn" data-tdclose aria-label="關閉${lb}">${ico("close","solo")}關閉</button></div>
+    <section class="td-sec"><h3>本來就要做<span class="num">${own.length}</span></h3>${own.length?`<ol class="td-list">${own.map((x,i)=>`<li class="td-row" style="--i:${i}"><span class="td-t num">${esc(dayWhen(x,t))}</span><span class="td-x"><b>${esc(x.title)}</b>${daySub(x)?`<small>${esc(daySub(x))}</small>`:""}</span></li>`).join("")}</ol>`:`<p class="td-none">${tm?"明天":"今天"}沒有排定的事</p>`}</section></div>`;
 }
 /* 彈簧曲線取樣（質量 1、阻尼比 z、勁度 k）：回傳 0→1 的進度（會超過 1 再回來＝Q 彈）與總時間，拿來產生 Web Animations 的關鍵影格 */
 function springCurve(z,k,tol=.0015){
@@ -537,11 +537,11 @@ function tdCardLand(card,tail){
 }
 /* 卡片藏起來／換回來要「瞬間」：卡片本身的 opacity 有 CSS 過渡，直接改會慢慢淡入，今日層收掉後卡片晚一點才出現＝閃一下（2026-11-06 使用者回報） */
 function tdCardShow(card,on){if(!card)return;card.style.transition="none";card.style.opacity=on?"":"0";void card.offsetWidth;card.style.transition=""}
-function openToday(card){
+function openToday(card,day){
   if(todayOpen)return;todayOpen=true;
   let ov=$("#todayOv");if(!ov){document.body.insertAdjacentHTML("beforeend",`<div class="td-ov" id="todayOv" role="dialog" aria-modal="true" aria-label="今日" hidden><div class="td-bg"></div><div class="td-scroll"></div></div>`);ov=$("#todayOv")}
   ov.getAnimations({subtree:true}).forEach(a=>a.cancel());
-  ov.querySelector(".td-scroll").innerHTML=todayHTML();ov.querySelector(".td-scroll").scrollTop=0;ov.hidden=false;ov.classList.remove("off");Back.opened("today",i=>closeToday(i));ov._card=card;
+  ov.querySelector(".td-scroll").innerHTML=todayHTML(day);ov.querySelector(".td-scroll").scrollTop=0;ov.hidden=false;ov.classList.remove("off");Back.opened("today",i=>closeToday(i));ov._card=card;
   if(reduceMotion()||!card){ov.classList.add("on");return}
   tdCardShow(card,false);ov.classList.add("on");
   todayMorph(ov,card,false).then(()=>ov.getAnimations({subtree:true}).forEach(a=>a.cancel())).catch(()=>{});
