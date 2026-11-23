@@ -1127,10 +1127,10 @@ a.link:active{transform:scale(.96)}
    （放進頁面的 SVG，零件填色在「部門標誌」段；大小跟主頁過場的終點一樣：畫面寬的 46%、最大 300），看板穩定了才淡掉 */
 .pfx-cover{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:var(--bg);pointer-events:none}
 .pfx-cover[data-k="tile"]{background:var(--blk)}
-/* 等看板穩定的這段（最多 1.6 秒）標誌輕輕呼吸一下（放大 4%、再回來；起點是不動的終點畫面，接得上主頁過場）。只動 transform、由合成器執行，
-   看板剛載入、主執行緒忙的時候也不會頓，畫面讀起來是「正在進入」而不是定住。延遲 .3 秒：載入很快時看不到，不多一個動作 */
-.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible;animation:pfxBreathe 1.3s var(--mo-out) .3s infinite alternate}
-@keyframes pfxBreathe{to{transform:scale(1.04)}}
+/* 等看板載入的這段（資料慢時最多 6 秒）標誌循環呼吸：放大 8%、微微上浮再回來（起點是不動的終點畫面，接得上主頁過場；淡出時停在哪一格都順）。
+   只動 transform、由合成器執行，主執行緒忙的時候也不會頓。一開始就動（不延遲），讓人看得出「正在進入」；關掉動態時不建底板（pagefx.js） */
+.pfx-cover svg{display:block;width:min(46vw,300px);height:auto;aspect-ratio:1;overflow:visible;animation:pfxBreathe .9s ease-in-out infinite alternate;will-change:transform}
+@keyframes pfxBreathe{to{transform:translateY(-6px) scale(1.08)}}
 
 /* ===== 對話框與下拉選單 ===== */
 .danger-btn{color:var(--warn)}
