@@ -14,15 +14,16 @@ await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.cli
 const sec=d=>p.evaluate(d=>{const x=document.querySelector(`#agDoc [data-md=${d}]`);return x?{text:x.querySelector('[data-ed=text]').textContent}:null},d);
 /* 不進任何編輯模式，文件就直接看得到 */
 A(await p.evaluate(()=>/行政會議/.test(document.querySelector('#agDoc .md-title').textContent)&&document.querySelector('#agDoc .md-date').textContent.length>5&&!document.querySelector('#agDoc textarea,#agDoc input')),'一打開就看得到文件（標題、日期），沒有輸入框');
-A(await p.evaluate(()=>document.querySelector('#agGo').disabled&&document.querySelector('#agCopy').disabled),'還沒有內容：「儲存」「複製文字」停用');
-const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agLeft [data-md-paste]')].map(x=>x.dataset.mdPaste+':'+x.textContent+x.title).join(' '));
+A(await p.evaluate(()=>!document.querySelector('#agGo').disabled&&!document.querySelector('#agCopy').disabled),'預設就有各部門的報告：「儲存」「複製文字」可以按');
+const chipTxt=await p.evaluate(()=>[...document.querySelectorAll('#agLeft [data-md-sel]')].map(x=>x.dataset.mdSel+(x.classList.contains('is-alert')?':紅':':正常')).join(' '));
 console.log(chipTxt);
-A(/marketing:.*本週/.test(chipTxt)&&/events:.*01\/06/.test(chipTxt)&&/works:.*沒有週報/.test(chipTxt),'文件下面一排部門膠囊：本週／舊的日期／無週報');
+A(/marketing:正常/.test(chipTxt)&&/events:紅/.test(chipTxt)&&/works:紅/.test(chipTxt),'左邊部門膠囊：有報告卡片的正常、沒交的整顆亮紅');
+A(await p.evaluate(()=>document.querySelector('#agDoc [data-md=works]').classList.contains('is-alert')&&!document.querySelector('#agDoc .mt-ev')&&!!document.querySelector('#agDoc [data-md=marketing] [data-agc=e1]')),'預設所有部門都在文件裡：沒交的整塊紅、報告卡片是排好版的文字（沒有嵌入的深色卡片）');
 await p.click('#agLeft .ag-tg');await p.waitForTimeout(500);   /* 手機：左邊工具收成一列，先展開 */
-await p.click('#agLeft [data-md-paste=marketing]');await p.waitForTimeout(1500);
-A((await sec('marketing')).text.includes('社群排程'),'點「行銷部」膠囊：週報放進文件');
+await p.click('#agLeft [data-md-sel=marketing]');await p.waitForTimeout(1200);
+A(await p.evaluate(()=>document.querySelector('#agDoc [data-md=marketing]').textContent.includes('社群排程')),'行銷部要報告的卡片名稱印在文件裡');
 A(await p.evaluate(()=>!window.__xss&&!document.querySelector('#agDoc img')),'週報文字裡的 HTML 不會變成標籤');
-await p.click('#agLeft [data-md-paste=events]');await p.waitForTimeout(500);
+await p.click('#agLeft [data-md-sel=events]');await p.waitForTimeout(800);
 /* 就地編輯：點文字 → 輸入框 → 點別處收回 */
 await p.click('#agDoc [data-md=events] [data-ed=text]');await p.waitForTimeout(500);
 A(await p.evaluate(()=>!!document.querySelector('#agDoc [data-md=events] [data-ed=text] textarea')&&!document.querySelector('#agDoc [data-md=marketing] textarea')),'點一段文字：只有那一段變成輸入框，其他維持文件原貌');
@@ -43,10 +44,15 @@ await p.evaluate(()=>agSelect('events'));await p.click('#agRec');await p.fill('#
 A(remote().agendas[0].items.find(i=>i.dept==='events').rec==='自動存的記錄','存過之後：改一處就自動存（不用再按儲存）');
 await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
 A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&/自動存的記錄/.test(document.querySelector('#agDoc').textContent)),'重新整理後文件還在');
-await p.evaluate(()=>{agSelect('events');document.querySelector('#agRight [data-md-drop=events]').click()});await p.waitForTimeout(800);
-if(await p.$('#dlgForm input[name=pw]')){await p.fill('#dlgForm input[name=pw]','password-long-1');await p.click('#dlgForm [data-act=ok]')}
-await p.waitForTimeout(3500);
-A(remote().agendas.length===1&&remote().agendas[0].items.length===1,'移除一個部門：自動存、同一天仍是一份');
+/* 長按部門膠囊拖到另一顆：換報告順序 */
+if(!await p.$eval('#agLeft',e=>e.classList.contains('is-open')))await p.click('#agLeft .ag-tg');await p.waitForTimeout(600);
+const bx=async d=>(await p.$('#agLeft [data-md-sel='+d+']')).boundingBox();
+const bm=await bx('marketing'),bw=await bx('events');
+await p.mouse.move(bm.x+bm.width/2,bm.y+bm.height/2);await p.mouse.down();await p.waitForTimeout(500);
+await p.mouse.move(bw.x+bw.width/2,bw.y+bw.height/2,{steps:8});await p.waitForTimeout(200);await p.mouse.up();await p.waitForTimeout(800);
+A(await p.evaluate(()=>{const o=AG.doc.items.map(i=>i.dept);return o.indexOf('events')<o.indexOf('marketing')&&[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('events')<[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('marketing')}),'長按拖曳膠囊：議程裡的報告順序換了、紙上跟著換');
+await p.waitForTimeout(3000);
+A(remote().agendas.length===1,'換順序後仍是同一天一份');
 await p.screenshot({path:'ag1_done.png'});
 {const e=p.errs.filter(x=>!x.startsWith('console:Failed to load resource'));A(!e.length,'沒有程式錯誤 '+JSON.stringify(e))};
 c.q='?d=secretariat';await b.close();process.exit(bad?1:0)})();

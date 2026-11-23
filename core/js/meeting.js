@@ -272,7 +272,7 @@ document.addEventListener("click",e=>{
    - 儲存：還沒存過的是草稿（記憶體裡），按「儲存」存成這一天的議程（一天一份）；存過的之後每改一處就自動存。上面一排「今天」「11/13」…可以切到以前的會議。複製文字＝議程＋會議紀錄。
    存在哪：GitHub 模式存進秘書處自己的資料檔（state.agendas）；firestore 模式存 meetingMinutes/{日期} 的 agenda 欄位（秘書處與總管理員讀寫，其他人讀不到）。
    資料：agendas[]＝{id,date,title,by,at,prev,items:[{dept,deptName,weekDate,text,decision,notes{卡片id:結論},extra[{id,title,note}]}]}。畫面插入的文字一律 esc。 */
-const AG={card:"",doc:null,busy:false,t:0,ed:null,open:new Set(),again:false,sel:""};   /* sel：右邊工具現在對著哪個部門那一段 */   /* doc：現在看的那份（草稿或存過的）；ed：就地編輯中的欄位 */
+const AG={card:"",doc:null,busy:false,t:0,ed:null,again:false,sel:""};   /* sel：右邊工具現在對著哪個部門那一段 */   /* doc：現在看的那份（草稿或存過的）；ed：就地編輯中的欄位 */
 /* 各部門最新一份週報（有內容的）：fresh＝這週產出的 */
 function agItems(){
   const last=d=>(d&&d.weeks?[...d.weeks].filter(w=>w.text&&String(w.text).trim()).sort((a,b)=>b.date.localeCompare(a.date))[0]:null)||null;
@@ -300,10 +300,16 @@ function agTermDefault(){const t=termCfg(),m=String(t.yearLabel||"").match(/\d+/
 const agDraftOf=date=>{const a=(state.agendas||[]).find(x=>x.date===date);return a?JSON.parse(JSON.stringify(a)):{date,title:"行政會議",term:agTermDefault(),items:[]}};
 const agSaved=()=>!!AG.doc&&(state.agendas||[]).some(a=>a.date===AG.doc.date);
 const agItemOf=dept=>AG.doc.items.find(i=>i.dept===dept);
-const agKeep=i=>String(i.text||"").trim()||String(i.rec||"").trim()||String(i.decision||"").trim()||Object.values(i.notes||{}).some(v=>String(v).trim())||(i.extra||[]).some(x=>x.title||x.note);
+/* 這個部門現在要報告的卡片（會議要報告、還沒完成） */
+function agEvs(dept){const d=mnData(dept);return d?d.events.filter(e=>!e.doneAt&&reportOn(e)):[]}
+const agEmpty=it=>!String(it.text||"").trim()&&!String(it.rec||"").trim()&&!agEvs(it.dept).length;   /* 沒交報告：什麼都沒有 */
+const agKeep=i=>agEvs(i.dept).length||String(i.text||"").trim()||String(i.rec||"").trim()||String(i.decision||"").trim()||Object.values(i.notes||{}).some(v=>String(v).trim())||Object.keys(i.cards||{}).length||(i.extra||[]).some(x=>x.title||x.note);
 /* 複製的文字：議程＋會議紀錄（結論、臨時項目、決議） */
 function agDocText(a){
-  const L=[agText(a.date,a.items,agPrev(a.date),a.title,agWhen(a))],mn=[];
+  const L=[agText(a.date,[],agPrev(a.date),a.title,agWhen(a))],mn=[];
+  a.items.forEach(it=>{   /* 各部門工作報告：週報文字，再接要報告的卡片（編號、名稱、說明） */
+    const tx=String(it.text||"").trim(),rows=agEvs(it.dept).map((e,i)=>{const c=agCardOf(it,e);return `${i+1}. ${c.name}`+(String(c.desc||"").trim()?"\n   "+String(c.desc).trim().replace(/\n/g,"\n   "):"")});
+    if(!tx&&!rows.length)return;L.push((tx.includes(it.deptName)?"":it.deptName+"\n")+[tx,...rows].filter(Boolean).join("\n"))});
   {const h=[a.chair?`會議主席：${a.chair}`:"",a.attend?`出席人員：${a.attend}`:""].filter(Boolean);if(h.length)L.splice(1,0,h.join("\n"))}
   a.items.forEach(it=>{
     const rows=[],data=mnData(it.dept);
@@ -323,20 +329,23 @@ const agPh=t=>`<span class="md-ph">${t}</span>`;
 /* 報告卡片在文件裡的「事項」：文件自己的一份文字（it.cards[卡片id]={name,desc}，選填），沒改過就是部門卡片原本的名稱與說明；不會改到部門的卡片 */
 const agCardOf=(it,e)=>{const c=(it.cards||{})[e.id];return c?{...e,name:c.name??e.name,desc:c.desc??e.desc}:e};
 const AG_N="壹貳參肆伍陸柒捌玖拾";
-function agSecHTML(it,x){
-  const data=mnData(it.dept),evs=data?data.events.filter(e=>!e.doneAt&&reportOn(e)):[],notes=it.notes||{},extra=it.extra||[],tx=String(it.text||"").trim();
-  const empty=!tx&&!String(it.rec||"").trim()&&!evs.length;   /* 還沒有報告事項可以呈現：整段紅色警示，秘書可以直接點下去手動輸入／貼上這個部門的文字 */
+function agSecHTML(it){
+  const data=mnData(it.dept),evs=agEvs(it.dept),notes=it.notes||{},extra=it.extra||[],tx=String(it.text||"").trim();
+  const empty=agEmpty(it);   /* 沒有報告事項可以呈現：整段紅色警示，秘書可以直接點下去手動輸入／貼上這個部門的文字 */
+  /* 報告卡片在文件裡只是排好版的文字（編號、名稱、狀態、說明、結論），點一項＝右邊「卡片編輯」只改那一張 */
+  const cards=data?withState(data,()=>evs.map((e,i)=>{const c=agCardOf(it,e),st=evStatus(e);
+    return `<div class="md-item${AG.card===e.id&&it.dept===AG.sel?" is-sel":""}" data-agc="${esc(e.id)}"><p class="md-it"><span class="num">${i+1}.</span> <b>${esc(c.name)}</b><span class="md-ist">${EV_ST[st]}</span></p>${String(c.desc||"").trim()?`<p class="md-id">${esc(c.desc)}</p>`:""}<div class="md-lab md-rec">結論</div><div class="md-note md-e" data-ed="note" data-d="${esc(it.dept)}" data-ev="${esc(e.id)}" tabindex="0">${String(notes[e.id]||"").trim()?esc(notes[e.id]):agPh("點一下寫結論")}</div></div>`}).join("")):"";
   return `<section class="md-sec${it.dept===AG.sel?" is-sel":""}${empty?" is-alert":""}" data-md="${esc(it.dept)}">${tx.includes(it.deptName)?"":`<h5 class="md-h">${esc(it.deptName)}</h5>`}${empty?`<p class="md-alert">${esc(it.deptName)}還沒有報告事項可以呈現：請在下面手動輸入，或把這個部門的文字貼進來。</p>`:""}
-    <div class="md-text md-e" data-ed="text" data-d="${esc(it.dept)}" tabindex="0">${tx?esc(it.text):agPh("沒有週報內容，點一下輸入")}</div>
+    ${tx||empty?`<div class="md-text md-e" data-ed="text" data-d="${esc(it.dept)}" tabindex="0">${tx?esc(it.text):agPh("點一下手動輸入這個部門的文字")}</div>`:""}
     <div class="md-recx" data-rec="${esc(it.dept)}">${esc(it.rec||"")}</div>
-    ${evs.length?`<div class="events mt-list">${withState(data,()=>evs.map(e=>mtEvHTML(agCardOf(it,e),false,AG.open.has(e.id),`<div class="md-lab md-rec">結論</div><div class="md-note md-e" data-ed="note" data-d="${esc(it.dept)}" data-ev="${esc(e.id)}" tabindex="0">${String(notes[e.id]||"").trim()?esc(notes[e.id]):agPh("點一下寫結論")}</div>`)).join(""))}</div>`:""}
+    ${cards}
     ${extra.map((y,j)=>`<div class="md-ex"><div class="md-ext md-e" data-ed="xt" data-d="${esc(it.dept)}" data-j="${j}" tabindex="0">${y.title?esc(y.title):agPh("臨時項目名稱")}</div><button type="button" class="icon md-x" data-md-xdel="${esc(it.dept)}" data-j="${j}" aria-label="刪除臨時項目">刪除</button><div class="md-note md-e" data-ed="xn" data-d="${esc(it.dept)}" data-j="${j}" tabindex="0">${String(y.note||"").trim()?esc(y.note):agPh("記錄")}</div></div>`).join("")}
     <button type="button" class="ghost add-row md-add" data-md-xadd="${esc(it.dept)}">+ 臨時項目</button>
-    <div class="md-send"><button type="button" class="icon" data-md-send="${esc(it.dept)}"${fsMode()&&deptSourceOf(it.dept)==="firestore"?"":" disabled"}>送到部門等待合併</button><span class="sub">${it.sentAt?`上次送出 ${esc(it.sentAt.slice(5,16))}（${it.sentN||0} 項）`:(fsMode()&&deptSourceOf(it.dept)==="firestore"?"":"這個部門還在舊資料，不能送")}</span></div></section>`;
+    ${empty?"":`<div class="md-send"><button type="button" class="icon" data-md-send="${esc(it.dept)}"${fsMode()&&deptSourceOf(it.dept)==="firestore"?"":" disabled"}>送到部門等待合併</button><span class="sub">${it.sentAt?`上次送出 ${esc(it.sentAt.slice(5,16))}（${it.sentN||0} 項）`:(fsMode()&&deptSourceOf(it.dept)==="firestore"?"":"這個部門還在舊資料，不能送")}</span></div>`}</section>`;
 }
 const agEd=(k,v,ph,cls="")=>`<span class="md-e${cls?" "+cls:""}" data-ed="${k}" tabindex="0">${v?esc(v):agPh(ph)}</span>`;
 function agDocHTML(){
-  const d=AG.doc,its=agItems(),prev=agPrev(d.date),proj=agProjects(),secs=its.filter(x=>agItemOf(x.dept)),org="南臺科技大學學生會",title=d.title||"行政會議";
+  const d=AG.doc,its=agItems(),prev=agPrev(d.date),proj=agProjects(),secs=d.items.map(i=>its.find(x=>x.dept===i.dept)).filter(Boolean),org="南臺科技大學學生會",title=d.title||"行政會議";
   const hd=`<header class="ag-hd"><span class="ag-stamp">機密文件</span><span class="ag-hdt"><b>${org}${d.term?" "+esc(d.term):""} ｜ ${esc(title)} 會議資料</b><span class="num">${esc(fmt(d.date))}</span></span></header>`;
   const ft=n=>`<footer class="ag-ft"><span class="ag-logo">${suLogoColor("南臺科大學生會")}</span><span class="ag-pn num">－ ${n} －</span></footer>`;
   const cover=`<section class="ag-sheet ag-cover"><div class="ag-cv-mid"><p class="ag-cv-org">－ ${org} ${agEd("term",d.term,"加上學年度學期")} －</p>
@@ -356,9 +365,9 @@ function agDocHTML(){
     <div class="ag-bar"><h4 class="ag-h2">壹、 主席致詞</h4>
     ${prev&&prev.items.length?`<section class="md-sec"><h5 class="md-h">上次決議追蹤<span class="md-chip">${esc(fmt(prev.date))}</span></h5>${prev.items.map(i=>`<p class="md-trk"><b>${esc(i.deptName)}</b>${esc(i.decision)}</p>`).join("")}</section>`:""}
     <h4 class="ag-h2">貳、 各部門工作報告</h4>
-    ${secs.map(x=>agSecHTML(agItemOf(x.dept),x)).join("")}
+    ${secs.map(x=>agSecHTML(agItemOf(x.dept))).join("")}
     ${proj.length?`<section class="md-sec"><h5 class="md-h">活動專案</h5>${proj.map(x=>`<p class="md-trk"><b>${esc(x.name)}</b>${esc(x.text||"")}</p>`).join("")}</section>`:""}
-    ${secs.length?"":`<p class="md-empty">還沒有部門報告。從左邊「加入部門報告」點一個部門，把它的週報放進文件。</p>`}</div>${ft(3)}</section>`;
+    ${secs.length?"":`<p class="md-empty">還在讀取各部門的資料…</p>`}</div>${ft(3)}</section>`;
   return cover+toc+body;
 }
 /* 編輯頁（2026-11-23 照 DievE 畫的排版）：最左窄欄＝會議與部門膠囊（點一個部門＝加進文件並選到那一段，已在文件裡的＝跳到那一段），中間白紙，
@@ -366,57 +375,65 @@ function agDocHTML(){
    點哪一塊哪一塊放大、另一塊縮小（#agRight 的 data-focus，flex-grow 平滑過渡）。左欄手機收成一列標題。 */
 const agTg=(label)=>`<button type="button" class="ag-tg" data-ag-tg><span class="ag-tgt">${label}</span><span class="ev-chev" aria-hidden="true">▾</span></button>`;
 function agLeftHTML(){
-  const its=agItems(),fresh=its.filter(x=>x.fresh&&x.w&&!agItemOf(x.dept)),td=today(),cur=AG.doc.date;
+  const td=today(),cur=AG.doc.date;
   const past=[...(state.agendas||[])].filter(a=>a.date!==td).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6);   /* 今天那場（存過也一樣）只由「今天」膠囊代表 */
   return agTg("會議與部門")+`<div class="ag-tb"><div class="ag-tbi">
     <span class="md-lab">會議</span><div class="wk-depts ag-past" id="agPast" role="tablist" aria-label="會議"><button type="button" class="wk-d" role="tab" data-md-pick="" aria-selected="${cur===td}">今天</button>${past.map(a=>`<button type="button" class="wk-d" role="tab" data-md-pick="${esc(a.date)}" aria-selected="${a.date===cur}">${esc(fmt(a.date).slice(5))}</button>`).join("")}</div>
-    <span class="md-lab">部門</span><div class="wk-depts ag-chips">${fresh.length>1?`<button type="button" class="wk-d" data-md-paste="*">全部本週的<span class="num">${fresh.length}</span></button>`:""}${its.map(x=>`<button type="button" class="wk-d${x.w?"":" none"}${agItemOf(x.dept)?" in-doc":""}" data-md-paste="${esc(x.dept)}" aria-pressed="${x.dept===AG.sel&&!!agItemOf(x.dept)}" title="${x.w?(x.fresh?"本週有週報":"最新週報 "+esc(fmt(x.w.date).slice(5))):"沒有週報"}">${x.fresh?'<i class="wk-new" aria-label="這週有新的"></i>':""}${esc(x.name)}</button>`).join("")}</div>
+    <span class="md-lab">部門順序（長按拖曳）</span><div class="wk-depts ag-chips">${AG.doc.items.map(it=>`<button type="button" class="wk-d${agEmpty(it)?" is-alert":""}" data-md-sel="${esc(it.dept)}" aria-pressed="${it.dept===AG.sel}" title="${agEmpty(it)?"還沒有報告事項":"長按拖曳可以換報告順序"}">${esc(it.deptName)}</button>`).join("")}</div>
   </div></div>`;
 }
 /* 右邊兩塊：標題旁寫現在是哪個部門，內容照選到的那一段畫 */
 function agNoteHTML(it){
-  if(!it)return `<p class="sub">點左邊的部門，把它放進文件；再點紙上的一段，這裡就能寫那一段的純文字記錄。</p>`;
-  const last=agItems().find(x=>x.dept===it.dept),data=mnData(it.dept),e=AG.card&&data?data.events.find(x=>x.id===AG.card&&!x.doneAt&&reportOn(x)):null;
-  if(e){   /* 點了紙上的某張報告卡：事項（名稱、說明）與結論兩欄 */
-    const c=agCardOf(it,e);
-    return `<label class="ag-fl">事項</label><input class="ag-rec ag-one" id="agCn" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="100" value="${esc(c.name)}" placeholder="事項名稱">
-      <textarea class="ag-rec" id="agCd" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="3000" rows="5" placeholder="事項的說明（只改文件裡的文字，不會改到部門的卡片）">${esc(c.desc||"")}</textarea>
-      <label class="ag-fl">結論</label><textarea class="ag-rec" id="agCc" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="1000" rows="4" placeholder="這一項的結論">${esc((it.notes||{})[e.id]||"")}</textarea>
+  if(!it)return `<p class="sub">點左邊的部門，或點中間文件裡的一段，這裡就能寫那一段的純文字記錄。</p>`;
+  const last=agItems().find(x=>x.dept===it.dept),e=AG.card?agEvs(it.dept).find(x=>x.id===AG.card):null;
+  if(e)return `<label class="ag-fl">「${esc(agCardOf(it,e).name)}」的結論</label><textarea class="ag-rec" id="agCc" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="1000" rows="6" placeholder="這一項的結論">${esc((it.notes||{})[e.id]||"")}</textarea>
       <div class="ag-btns"><button type="button" class="wk-d" data-md-cardback>回到${esc(it.deptName)}的文字備註</button></div>`;
-  }
   return `<textarea class="ag-rec" id="agRec" data-agd="${esc(it.dept)}" maxlength="2000" rows="6" placeholder="不想直接改卡片，就在這裡用文字記錄。會印在文件裡這個部門的下面（紅字「記錄」）。">${esc(it.rec||"")}</textarea>
-    <div class="ag-btns"><button type="button" class="wk-d" data-md-refresh${last&&last.w?"":" disabled"}>換成最新週報</button><button type="button" class="wk-d" data-md-clear${String(it.text||"").trim()?"":" disabled"}>清空週報文字</button><button type="button" class="wk-d" data-md-drop="${esc(it.dept)}">從文件移除${esc(it.deptName)}</button></div>`;
+    <div class="ag-btns"><button type="button" class="wk-d" data-md-refresh${last&&last.w?"":" disabled"}>換成最新週報</button><button type="button" class="wk-d" data-md-clear${String(it.text||"").trim()?"":" disabled"}>清空週報文字</button></div>`;
 }
-function agCardToolsHTML(it){
-  if(!it)return "";
-  const data=mnData(it.dept),evs=data?data.events.filter(e=>!e.doneAt&&reportOn(e)):[];
-  return evs.length?`<div class="ag-cards">${evs.map(e=>`<div class="ag-card"><b>${esc(e.name)}</b><button type="button" class="wk-d" data-md-pastecard="${esc(e.id)}" aria-label="把${esc(e.name)}貼進文件">貼進文件</button></div>`).join("")}${evs.length>1?`<button type="button" class="wk-d" data-md-pastecard="*">全部貼進文件</button>`:""}</div>`:`<p class="sub">${esc(it.deptName)}目前沒有標「要報告」的卡片。</p>`;
+/* 卡片編輯：只編輯文件裡點到的那一張（事項名稱、說明）；改的是文件上的文字，不會改到部門的卡片 */
+function agCardBodyHTML(it){
+  const e=it&&AG.card?agEvs(it.dept).find(x=>x.id===AG.card):null;
+  if(!e)return `<p class="sub">${it&&!agEvs(it.dept).length?`${esc(it.deptName)}沒有要報告的卡片。`:"點中間文件裡的某一項報告事項，這裡就只編輯那一張卡片。"}</p>`;
+  const c=agCardOf(it,e),st=evStatus(e);
+  return `<label class="ag-fl">事項名稱</label><input class="ag-rec ag-one" id="agCn" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="100" value="${esc(c.name)}" placeholder="事項名稱">
+    <label class="ag-fl">狀態</label><p class="ag-stt" data-st="${st}"><span class="live-dot" aria-hidden="true"></span>${EV_ST[st]}</p>
+    <label class="ag-fl">說明</label><textarea class="ag-rec" id="agCd" data-agd="${esc(it.dept)}" data-ev="${esc(e.id)}" maxlength="3000" rows="6" placeholder="事項的說明">${esc(c.desc||"")}</textarea>
+    <p class="sub">這裡改的是文件上的文字，不會改到部門的卡片。</p>`;
 }
 function agRenderTools(){
-  const l=$("#agLeft");if(l)l.innerHTML=agLeftHTML();
+  const l=$("#agLeft");if(l&&!l.querySelector(".is-drag"))l.innerHTML=agLeftHTML();
   const it=agItemOf(AG.sel)||AG.doc.items[0];AG.sel=it?it.dept:"";
-  const nm=it?esc(it.deptName):"";
   $("#agNoteD").textContent=it?it.deptName:"";$("#agCardD").textContent=it?it.deptName:"";
-  if(!document.activeElement||!document.activeElement.closest||!document.activeElement.closest("#agNoteBody"))$("#agNoteBody").innerHTML=agNoteHTML(it);   /* 正在打字就不重畫（游標才不會跳） */
-  $("#agCardTools").innerHTML=agCardToolsHTML(it);
+  const typing=b=>document.activeElement&&document.activeElement.closest&&document.activeElement.closest(b);   /* 正在打字就不重畫（游標才不會跳） */
+  if(!typing("#agNoteBody"))$("#agNoteBody").innerHTML=agNoteHTML(it);
+  if(!typing("#agCardBody"))$("#agCardBody").innerHTML=agCardBodyHTML(it);
 }
 function agSelect(dept,scroll){
   if(!dept)return;const same=dept===AG.sel;AG.sel=dept;if(!same)AG.card="";
   document.querySelectorAll("#agDoc .md-sec[data-md]").forEach(x=>x.classList.toggle("is-sel",x.dataset.md===dept));
-  if(!same){agRenderTools();if(MTS.sel!==dept){MTS.sel=dept;renderMeet()}}   /* 右下的「會議報告事項」跟著換部門 */
+  if(!same){agRenderTools();if(MTS.sel!==dept){MTS.sel=dept;renderMeet()}}   /* 下面的「會議報告事項」跟著換部門 */
   if(scroll){const el=$(`#agDoc [data-md="${CSS.escape(dept)}"]`);if(el)el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"})}
+}
+/* 點紙上的某一項：選到那一部門那一張，右邊「卡片編輯」放大；點紙上別處＝回到那個部門的文字備註 */
+function agPick(dept,id){
+  AG.sel=dept;AG.card=id||"";
+  document.querySelectorAll("#agDoc .md-sec[data-md]").forEach(x=>x.classList.toggle("is-sel",x.dataset.md===dept));
+  document.querySelectorAll("#agDoc [data-agc]").forEach(x=>x.classList.toggle("is-sel",!!id&&x.dataset.agc===id&&x.closest("[data-md]").dataset.md===dept));
+  agRenderTools();agFocus(id?"card":"note");
 }
 /* 右邊兩塊：點哪一塊哪一塊放大 */
 function agFocus(rb){const r=$("#agRight");if(r&&rb&&r.dataset.focus!==rb)r.dataset.focus=rb}
 /* 「會議」分頁裡的入口卡：一小張白紙縮圖（標題、日期時間地點、各部門第一行），整張可點，點了打開 #agOv */
 function agPeekHTML(){
   const d=AG.doc,when=[fmt(d.date),d.time,d.place].filter(Boolean).map(esc).join("　");
-  const rows=d.items.slice(0,4).map(i=>`<p><b>${esc(i.deptName)}</b>${esc(String(i.text||"").trim().split("\n")[0].slice(0,40))}</p>`).join("");
-  return `<span class="ag-pk-p"><span class="ag-pk-t">${esc(d.title||"行政會議")}</span><span class="ag-pk-m">${when}</span>${rows||'<span class="ag-pk-e">還沒有部門報告</span>'}</span><span class="ag-pk-s">${agSaved()?`已存　${esc((d.at||"").slice(5,16))}`:"草稿：還沒存"}・${d.items.length} 個部門</span>`;
+  const has=d.items.filter(i=>!agEmpty(i)),rows=has.slice(0,4).map(i=>{const e=agEvs(i.dept)[0];return `<p><b>${esc(i.deptName)}</b>${esc(e?agCardOf(i,e).name:String(i.text||i.rec||"").trim().split("\n")[0].slice(0,40))}</p>`}).join("");
+  return `<span class="ag-pk-p"><span class="ag-pk-t">${esc(d.title||"行政會議")}</span><span class="ag-pk-m">${when}</span>${rows||'<span class="ag-pk-e">還沒有部門報告</span>'}</span><span class="ag-pk-s">${agSaved()?`已存　${esc((d.at||"").slice(5,16))}`:"草稿：還沒存"}・${has.length} 個部門有報告</span>`;
 }
 function renderAgenda(){
   const e=$("#agEntry");if(!e||!$("#agOv"))return;e.hidden=!CFG.meeting;if(!CFG.meeting)return;
   if(!AG.doc)AG.doc=agDraftOf(today());
+  agFill();
   $("#agPeek").innerHTML=agPeekHTML();
   if($("#agOv").hidden)return;   /* 還沒打開文件頁：只更新入口縮圖 */
   if(AG.ed)return;   /* 就地編輯中不重畫（游標才不會跳） */
@@ -426,12 +443,10 @@ function renderAgenda(){
   $("#agSt").textContent=AG.busy?"儲存中…":agSaved()?`已存（${(AG.doc.at||"").slice(5,16)}${AG.doc.by?"　"+AG.doc.by:""}）；之後每改一處會自動存。`:"草稿：還沒存。點文字就地修改，按「儲存」存成這一天的議程。";
 }
 /* ---- 就地編輯 ---- */
-function agPaste(dept){
-  if(agItemOf(dept))return;
-  const x=agItems().find(i=>i.dept===dept);if(!x)return;
-  const order=(window.BOARD_DEPTS||[]).map(d=>d.id);
-  AG.doc.items.push({dept,deptName:x.name,weekDate:x.w?x.w.date:"",text:x.w?String(x.w.text):""});
-  AG.doc.items.sort((a,b)=>order.indexOf(a.dept)-order.indexOf(b.dept));AG.sel=dept;
+/* 預設把所有部門都放進文件（順序可以在左邊長按拖曳改）：有要報告的卡片就印卡片，什麼都沒有的整塊紅色警示；資料晚到的部門之後自動補上 */
+function agFill(){
+  const have=new Set(AG.doc.items.map(i=>i.dept));
+  agItems().forEach(x=>{if(!have.has(x.dept))AG.doc.items.push({dept:x.dept,deptName:x.name,weekDate:"",text:""})});
 }
 /* 每種欄位：目前的值、寫回、輸入元件（title／date／xt／dec 是單行，其餘多行） */
 const AGF={
@@ -488,7 +503,6 @@ async function agSave(a,okMsg,failMsg,denyMsg){
   }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?denyMsg:failMsg)}
   AG.busy=false;return false
 }
-document.addEventListener("toggle",e=>{const d=e.target;if(!d.matches||!d.matches("#agDoc .mt-ev"))return;if(d.open)AG.open.add(d.dataset.mtev);else AG.open.delete(d.dataset.mtev)},true);
 document.addEventListener("click",async e=>{
   const t=e.target;if(!t.closest)return;
   if(t.closest("#agPeek")){openAgenda();return}
@@ -499,19 +513,10 @@ document.addEventListener("click",async e=>{
   const rf=t.closest("[data-md-refresh]");if(rf&&!rf.disabled){if(!(await agLogin()))return;const it=agItemOf(AG.sel),x=agItems().find(i=>i.dept===AG.sel);if(!it||!x||!x.w)return;
     it.text=agCut(String(x.w.text),6000);it.weekDate=x.w.date;agChanged();renderAgenda();toast("已換成最新週報");return}
   const cl=t.closest("[data-md-clear]");if(cl&&!cl.disabled){if(!(await agLogin()))return;const it=agItemOf(AG.sel);if(!it)return;it.text="";agChanged();renderAgenda();return}
-  const pc=t.closest("[data-md-pastecard]");if(pc){if(!(await agLogin()))return;const it=agItemOf(AG.sel),data=it&&mnData(it.dept);if(!it||!data)return;
-    const all=data.events.filter(e=>!e.doneAt&&reportOn(e)),pick=pc.dataset.mdPastecard==="*"?all:all.filter(e=>e.id===pc.dataset.mdPastecard);if(!pick.length)return;
-    const add=pick.map(e=>[e.name,e.desc].filter(v=>String(v||"").trim()).join("\n")).join("\n\n");
-    it.text=agCut((String(it.text||"").trim()?String(it.text).trimEnd()+"\n\n":"")+add,6000);agChanged();renderAgenda();toast(pick.length>1?`已貼進 ${pick.length} 張卡片`:"已貼進文件");return}
-  if(t.closest("[data-md-goto]")&&!t.closest("[data-md-goto]").disabled){MTS.sel=AG.sel;renderMeet();const el=$("#meetEdPanel");if(el)el.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"start"});return}
-  const sc=t.closest("#agDoc [data-md]");if(sc)agSelect(sc.dataset.md);
-  if(t.closest("[data-md-cardback]")){AG.card="";agRenderTools();return}
+  const sc=t.closest("#agDoc [data-md]");if(sc){const it=t.closest("[data-agc]");if(it)agPick(sc.dataset.md,it.dataset.agc);else if(!t.closest("[data-ed],button"))agPick(sc.dataset.md,"")}
+  if(t.closest("[data-md-cardback]")){agPick(AG.sel,"");return}
   const rb=t.closest("#agRight [data-rb]");if(rb)agFocus(rb.dataset.rb);
-  const ps=t.closest("[data-md-paste]");if(ps){const dp=ps.dataset.mdPaste;
-    if(dp!=="*"&&agItemOf(dp)){agSelect(dp,true);return}   /* 已經在文件裡：選到那一段、捲過去 */
-    if(!(await agLogin()))return;
-    if(dp==="*")agItems().forEach(x=>{if(x.fresh&&x.w&&!agItemOf(x.dept))agPaste(x.dept)});else agPaste(dp);agChanged();renderAgenda();if(AG.sel){const d=AG.sel;AG.sel="";agSelect(d,true)}return}
-  const dr=t.closest("[data-md-drop]");if(dr){if(!(await agLogin()))return;AG.doc.items=AG.doc.items.filter(i=>i.dept!==dr.dataset.mdDrop);agChanged();renderAgenda();return}
+  const ps=t.closest("[data-md-sel]");if(ps){agSelect(ps.dataset.mdSel,true);return}   /* 部門膠囊：選到那一段、捲過去 */
   const sd=t.closest("[data-md-send]");if(sd&&!sd.disabled){if(!(await agLogin()))return;const it=agItemOf(sd.dataset.mdSend);if(!it)return;
     if(!agSaved()){toast("先按「儲存」，再送到部門");return}
     clearTimeout(AG.t);await agSaveDoc(true);sd.disabled=true;const n=await mpSend(it);if(n){it.sentAt=nowStr();it.sentN=n;agChanged()}renderAgenda();return}
@@ -549,22 +554,47 @@ document.addEventListener("input",async e=>{
 });
 document.addEventListener("focusin",e=>{const rb=e.target.closest&&e.target.closest("#agRight [data-rb]");if(rb)agFocus(rb.dataset.rb)});
 
-/* 左邊窄欄：滑鼠滾輪本來就能捲；滑鼠按住拖曳也能上下捲（拖超過 5px 就不算點擊） */
+/* 左邊窄欄：滑鼠滾輪本來就能捲；滑鼠按住拖曳也能上下捲（拖超過 5px 就不算點擊）。
+   部門膠囊長按 0.35 秒（手指或滑鼠）就浮起來，上下拖到想要的位置放開＝換議程裡的報告順序（紙上跟著換、存過的自動存）；長按前手指先動＝只是捲頁 */
+document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest("#agLeft [data-md-sel]"))e.preventDefault()});
 document.addEventListener("pointerdown",e=>{
-  const l=e.target.closest&&e.target.closest("#agLeft");if(!l||e.pointerType!=="mouse"||e.button||l.scrollHeight<=l.clientHeight)return;
-  const y0=e.clientY,s0=l.scrollTop;let drag=false;
-  const mv=m=>{if(!drag&&Math.abs(m.clientY-y0)>5)drag=true;if(drag)l.scrollTop=s0-(m.clientY-y0)};
-  const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up);if(drag)addEventListener("click",x=>{x.stopPropagation();x.preventDefault()},{capture:true,once:true})};
-  addEventListener("pointermove",mv);addEventListener("pointerup",up);
+  const l=e.target.closest&&e.target.closest("#agLeft");if(!l||e.button)return;
+  const pill=e.target.closest("[data-md-sel]"),mouse=e.pointerType==="mouse";
+  const y0=e.clientY,x0=e.clientX,s0=l.scrollTop,canScroll=mouse&&l.scrollHeight>l.clientHeight;
+  let mode="",timer=0,moved=false;
+  const chips=()=>[...l.querySelectorAll("[data-md-sel]")];
+  const tm=ev=>{if(mode==="drag")ev.preventDefault()};
+  const noclick=()=>addEventListener("click",x=>{x.stopPropagation();x.preventDefault()},{capture:true,once:true});
+  const place=m=>{   /* 浮起來的膠囊跟著指標；用排版位置（不受滑動動畫影響）算指標在第幾格，換格就把膠囊移過去（其他顆滑過去） */
+    const all=chips(),op=pill.offsetParent||l,h=pill.offsetHeight,top0=all[0].offsetTop,step=all.length>1?all[1].offsetTop-all[0].offsetTop:h+5;
+    const rel=m.clientY-op.getBoundingClientRect().top+(op.scrollTop||0),idx=Math.max(0,Math.min(all.length-1,Math.round((rel-top0-h/2)/step))),cur=all.indexOf(pill);
+    if(idx!==cur){const before=new Map(all.map(c=>[c,c.getBoundingClientRect().top])),ref=all[idx];
+      if(idx>cur)ref.after(pill);else ref.before(pill);
+      all.forEach(c=>{if(c===pill)return;const d=before.get(c)-c.getBoundingClientRect().top;if(d&&!reduceMotion())c.animate([{transform:`translateY(${d}px)`},{transform:"none"}],{duration:MO.fast,easing:MO.out})})}
+    pill.style.transform="";const r=pill.getBoundingClientRect();pill.style.transform=`translateY(${m.clientY-(r.top+r.height/2)}px)`;
+  };
+  const mv=m=>{
+    if(mode==="drag"){place(m);return}
+    if(Math.abs(m.clientY-y0)>(mouse?5:8)||Math.abs(m.clientX-x0)>8){
+      moved=true;clearTimeout(timer);
+      if(mode!=="scroll"){if(canScroll)mode="scroll";else{stop();return}}
+    }
+    if(mode==="scroll")l.scrollTop=s0-(m.clientY-y0);
+  };
+  const stop=()=>{clearTimeout(timer);removeEventListener("pointermove",mv);removeEventListener("pointerup",up);removeEventListener("pointercancel",up);document.removeEventListener("touchmove",tm)};
+  const up=()=>{
+    stop();
+    if(mode==="scroll"){noclick();return}
+    if(mode!=="drag")return;
+    noclick();pill.classList.remove("is-drag");pill.style.transform="";l.classList.remove("is-dragging");
+    const order=chips().map(c=>c.dataset.mdSel);
+    AG.doc.items.sort((a,b)=>order.indexOf(a.dept)-order.indexOf(b.dept));
+    agChanged();renderAgenda();
+  };
+  if(pill){timer=setTimeout(()=>{if(moved)return;mode="drag";pill.classList.add("is-drag");l.classList.add("is-dragging");if(navigator.vibrate)try{navigator.vibrate(12)}catch(_){}},350)}
+  else if(!canScroll)return;
+  addEventListener("pointermove",mv);addEventListener("pointerup",up);addEventListener("pointercancel",up);document.addEventListener("touchmove",tm,{passive:false});
 });
-/* 點紙上的某張報告卡：右下「卡片編輯」展開那一張（會議報告事項照選到的部門） */
-document.addEventListener("click",e=>{
-  const c=e.target.closest&&e.target.closest("#agDoc [data-mtev]");if(!c)return;
-  const id=c.dataset.mtev,sec=c.closest("[data-md]");MTS.open.add(id);
-  if(sec){AG.sel=sec.dataset.md;AG.card=id;document.querySelectorAll("#agDoc .md-sec[data-md]").forEach(x=>x.classList.toggle("is-sel",x===sec));agRenderTools();agFocus("note")}   /* 右邊「文字備註」切到那一項的事項與結論 */
-  setTimeout(()=>{renderMeet();const t=document.querySelector(`#agCardHost [data-mtev="${CSS.escape(id)}"]`);if(t){t.open=true;t.scrollIntoView({behavior:reduceMotion()?"auto":"smooth",block:"nearest"})}},0);
-});
-
 /* 單項報告事項的「事項」「結論」：右邊文字備註裡改，邊打邊存進議程（事項放 it.cards，結論放 it.notes），紙上稍後同步 */
 let agRedraw=0;
 document.addEventListener("input",async e=>{
