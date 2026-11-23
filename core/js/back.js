@@ -33,7 +33,7 @@ const Back=(()=>{
   /* 看板 → 各部門總覽：從總覽點進來的就用瀏覽器返回（保留總覽的捲動位置），否則直接開總覽（都有換頁動畫） */
   function home(){
     let fromHome=false;try{fromHome=!!document.referrer&&new URL(document.referrer).pathname.endsWith("/home.html")}catch(_){}
-    if(fromHome&&history.length>1&&!stack.length)history.back();else PageFx.leave("home.html");
+    if(fromHome&&history.length>1&&!stack.length)PageFx.leave(()=>history.back(),true);else PageFx.leave("home.html",true);   /* 兩種都先播「往下滑、淡掉」的返回離開，再換頁（以前 history.back() 直接切掉，主頁還沒好中間是空白） */
   }
   return {opened,closed,replace,home,up,depth,top};
 })();

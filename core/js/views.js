@@ -33,7 +33,7 @@ document.addEventListener("click",async e=>{
   if(!paneJob)return;   /* 沒有未完成的存檔：照一般連結（pagefx.js 的站內換頁）離開 */
   e.preventDefault();e.stopPropagation();if(homeLeaving)return;
   homeLeaving=true;try{await paneJob}catch(_){}homeLeaving=false;
-  if(!homeDeep())PageFx.leave(a.href);   /* 等的時候又打開了別層：不離開 */
+  if(!homeDeep())PageFx.leave(a.href,/\/home\.html$/.test(new URL(a.href).pathname));   /* 等的時候又打開了別層：不離開 */
 },true);
 function renderHero(){
   const home=$(".dhead .dh-home"),eye=$("#peekBtn"),nb=$("#notiBtn");if(!home)return;

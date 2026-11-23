@@ -40,7 +40,9 @@
    系統返回鍵回來（瀏覽紀錄的上一頁、沒走 bfcache）時 referrer 是這一頁當初的來源、不是剛才的部門：改看 sessionStorage「hm-dept」（home.js 進部門時記下，
    只在 back_forward 時用；新開 App 是新的 session，沒有這個值），放在 html[data-hm-back]，home.js 用它決定焦點與收回哪一張、開場不放（splash.js） */
 try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesByType("navigation")[0],k=n&&n.type==="back_forward"&&sessionStorage.getItem("hm-dept");if(k&&/^[a-z]+$/.test(k))h.dataset.hmBack=k;
-  if((h.dataset.hmBack||r&&new URL(r).origin===location.origin)&&(!n||n.type!=="reload")&&!matchMedia("(prefers-reduced-motion: reduce)").matches)h.classList.add("pfx-arrive")}catch(e){}</script>
+  if((h.dataset.hmBack||r&&new URL(r).origin===location.origin)&&(!n||n.type!=="reload")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){h.classList.add("pfx-arrive");h.setAttribute("data-pfx-quick","");
+    /* 回主頁的底板（home.js 的 hmCollapse 接手、收回那一張卡）：第一格就蓋滿畫面，不用等後面十幾支 script 跑完，中間不會是一片空白底色 */
+    var c=document.createElement("div");c.className="hm-fx hm-fx-pre";c.setAttribute("aria-hidden","true");c.style.cssText="left:0;top:0;width:100%;height:100%";h.appendChild(c)}}catch(e){}</script>
 </head>
 <body>
 <script src="core/js/splash.js"></script>
