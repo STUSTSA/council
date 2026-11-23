@@ -562,7 +562,7 @@ function renderNoti(){
   if(notiStack()){   /* 疊卡：張數沒變就不重畫（動作引擎正在寫 transform） */
     const cs=notiCards(),sig=cs.map(c=>c.k+c.n+c.sub).join("|");
     if(!(notiSig===sig&&notiWal&&notiWal.nav&&el.contains(notiWal.nav))){
-      if(!notiWal)notiWal=Wallet.make({onShow:i=>{notiFoc=i},onEnter:notiEnter});
+      if(!notiWal)notiWal=Wallet.make({onShow:i=>{notiFoc=i},onEnter:notiEnter,WU:102,STEP:0,BK:3});
       cancelAnimationFrame(notiWal.raf);notiWal.raf=0;
       el.innerHTML=notiStackHTML(cs);notiWal.bind(el.firstChild,notiFoc);notiSig=sig}
     return}
