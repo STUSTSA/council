@@ -117,7 +117,7 @@ async function fsGrantSet(want){
   try{
     const W=await storeWriteGet();
     await W.setMeetGrant(CFG.firebase,want?StoreMap.parseTaipei(today()).ms+864e5:null,mtWho()||"會長室");
-    try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("會長室看板",e)}
+    try{storeFsUse(await storeFsLoad(true))}catch(e){fsReadErr("會長室看板",e)}
     toast(want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");
   }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?"沒有權限，沒有切換":"切換失敗，請稍後再試")}
   grantBusy=false;render();
@@ -157,7 +157,7 @@ async function mtPushFs(dirty){
     const items=mtDiff(m);
     try{await W.saveMeeting(CFG.firebase,m.id,{src:m.fs.src,orig:m.fs.orig,state:m.base},m.data);rec.push(...items)}
     catch(e){console.error(e);fails.push(m.name+(MT_FS_ERR[e&&e.code]||""));continue}
-    try{const r=await storeDeptFull(m.id),d=normalize(r.data);Object.assign(m,{data:d,base:JSON.parse(JSON.stringify(d)),fs:{src:r.src,orig:r.orig},dirty:false})}
+    try{const r=await storeDeptFull(m.id,true),d=normalize(r.data);Object.assign(m,{data:d,base:JSON.parse(JSON.stringify(d)),fs:{src:r.src,orig:r.orig},dirty:false})}
     catch(e){fsReadErr("讀部門 "+m.id,e);m.base=JSON.parse(JSON.stringify(m.data));m.fs=null;m.dirty=false}   /* 已寫入但重新讀取失敗：先不能再改這個部門，重新整理後再改 */
   }
   render();toast(fails.length?`沒有寫回：${fails.join("、")}`:`已寫回 ${dirty.map(m=>m.name).join("、")}`);

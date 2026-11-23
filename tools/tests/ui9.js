@@ -21,12 +21,12 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
 (async()=>{const errs=[];
   /* ---------- K1 設定是部門內的一頁 ---------- */
   for(const w of [1300,412]){const touch=w<700,p=await fresh(w);
-    await p.evaluate(()=>{window.__dh=document.querySelector('.dhead');document.querySelector('#pageMain').scrollTop=400});
+    await p.evaluate(()=>{window.__dh=document.querySelector('.dhead');pageSc().scrollTop=400});
     await p.click('#setBtn');await p.waitForTimeout(900);
     const r=await p.evaluate(()=>{const h=document.querySelector('.dhead'),hr=h.getBoundingClientRect(),o=$('#setOv').getBoundingClientRect(),
       hit=document.elementFromPoint(hr.left+hr.width/2,hr.top+hr.height/2),home=document.elementFromPoint(...(r=>[r.left+r.width/2,r.top+r.height/2])($('.dh-home').getBoundingClientRect()));
       return {same:h===window.__dh,top:hr.top,hb:hr.bottom,ot:o.top,ob:o.bottom,ow:o.width,H:innerHeight,W:innerWidth,hit:!!hit&&!!hit.closest('.dhead'),home:!!home&&!!home.closest('.dh-home'),
-        ovf:getComputedStyle($('#pageMain')).overflowY,st:$('#pageMain').scrollTop}});
+        ovf:getComputedStyle(pageSc()).overflowY,st:pageSc().scrollTop}});
     ok(r.same&&r.top>=0&&r.hit&&r.home,`${w} 設定開著：部門標題列還在畫面上（top ${r.top.toFixed(0)}）、同一個節點、沒有被蓋住（首頁鍵點得到）`);
     ok(Math.abs(r.ot-r.hb)<1.5&&Math.abs(r.ob-r.H)<1.5&&Math.abs(r.ow-r.W)<1.5,`${w} 設定從標題列下緣（${r.hb.toFixed(0)}）蓋到底（${r.ot.toFixed(0)}–${r.ob.toFixed(0)}）`);
     ok(r.ovf==='hidden'&&r.st===0,`${w} 打開時頁面捲回頂端、底下的頁面不捲（${r.ovf} ${r.st}）`);
@@ -35,7 +35,7 @@ const fresh=async(w,sc='light')=>{const S=await c.setup(),touch=w<700,p=await S.
       ok(s.open&&Math.abs(s.t-s.hb)<1.5&&Math.abs(s.b-s.H)<1.5,`412 子頁也從標題列下緣開始（${s.t.toFixed(0)}／${s.hb.toFixed(0)}）`);
       await p.evaluate(()=>$('.dh-home').click());await p.waitForTimeout(900)}
     await p.click('#setBtn');await p.waitForTimeout(900);
-    const e=await p.evaluate(()=>({open:setOpen,hid:$('#setOv').hidden,ovf:getComputedStyle($('#pageMain')).overflowY,same:document.querySelector('.dhead')===window.__dh}));
+    const e=await p.evaluate(()=>({open:setOpen,hid:$('#setOv').hidden,ovf:getComputedStyle(pageSc()).overflowY,same:document.querySelector('.dhead')===window.__dh}));
     ok(!e.open&&e.hid&&e.ovf==='auto'&&e.same,`${w} 再按設定鍵關掉：頁面可以捲、標題列同一個節點`);
     errs.push(...p.errs);await p.__b.close()}
 
