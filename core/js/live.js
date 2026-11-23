@@ -294,6 +294,12 @@ function kpDel(ev,id){
   ev.blocks.splice(i,1);kpSync(ev);render();
   const p=ev.blocks[Math.max(0,i-1)];if(p)kpFocus(p.id);
 }
+/* 圓鈕選了文字／清單／時間後，新卡片先放好那一種的第一行，游標仍在名稱（整段選取，打字就換掉）；空白的第一行不算「填了內容」（kpCommit） */
+function kpSeed(kind){
+  const ev=kpEv();
+  if(ev){if(kind==="time")lvAddTime(ev);else if(ev.blocks.length<StoreMap.BLK_MAX)ev.blocks.push({id:uid("b"),text:"",check:kind==="check"?false:null,timeId:null});kpSync(ev);render()}
+  kpFocus("title",true);
+}
 /* 新增一個時間行：今天、現在的時刻（分鐘取 5 的倍數）；回傳時間標記 */
 function lvAddTime(ev){
   if(ev.blocks.length>=StoreMap.BLK_MAX){kpSay("bad",`最多 ${StoreMap.BLK_MAX} 行`);return null}
@@ -461,7 +467,7 @@ async function kpCommit(){
   if(!kpReady(ev))return false;
   const core=x=>JSON.stringify({...x,report:0,touched:0,touchedAt:0});
   const before=kp.before,was=before&&JSON.parse(before);
-  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.length&&!ev.times.length&&!(ev.links||[]).length&&!ev.issueId&&!(ev.staff||[]).length&&!ev.report){   /* 新增後什麼都沒填（名稱、內容、時間、連結、母議題、負責人、報告都沒動）：不留 */
+  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.some(b=>b.text)&&!ev.times.some(x=>x.label||x.place)&&!(ev.links||[]).length&&!ev.issueId&&!(ev.staff||[]).length&&!ev.report){   /* 新增後什麼都沒填（名稱、內容、時間、連結、母議題、負責人、報告都沒動）：不留 */
     const cur=lcCur(),g=cur&&!reduceMotion()?lcGhost(lcCard(cur[0])):null;
     morph(()=>{state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;kp=null;lvOpen=null;render()});
     if(g)g.animate([{opacity:1},{opacity:0,transform:"translateY(20px)"}],{duration:MO.base,easing:MO.in,fill:"forwards"}).onfinish=()=>g.remove();
