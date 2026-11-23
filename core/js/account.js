@@ -127,7 +127,7 @@ function acctSettingsInner(){
 const refreshSec=()=>setSec(`<button type="button" class="set-row" data-fb-refresh><span class="sr-ico">${ico("refresh","sr-spin")}</span><span class="sr-t">強制刷新</span></button>`);
 let acctRefreshing=false;
 async function acctRefresh(btn){
-  if(acctRefreshing)return;
+  if(acctRefreshing||!fsMode())return;
   if(editing||dirty){toast("有還沒儲存的修改，先儲存或取消再刷新");return}
   acctRefreshing=true;btn.setAttribute("aria-busy","true");const t=btn.querySelector(".sr-t");t.textContent="更新中…";
   try{
