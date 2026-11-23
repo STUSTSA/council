@@ -11,7 +11,6 @@ const p=await mk(412,860,'dark',true);
 await p.context().route(/127\.0\.0\.1:8300\/data-.*\.json/,r=>r.fulfill({status:404,body:''}));
 await p.evaluate(([o,r])=>{localStorage.setItem('workboard:ghtoken','T');localStorage.setItem('workboard:board-secretariat',JSON.stringify({id:'board-secretariat',issues:[],events:[],members:[],weeks:[],savedAt:'2000-01-01 00:00',sync:{owner:o,repo:r,branch:'main',path:'data-secretariat.json'}}))},API.split('/repos/')[1].split('/').slice(0,2).map(decodeURIComponent));await p.reload();await p.waitForTimeout(3500);await login(p);await p.waitForTimeout(800);
 await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
-const sec=d=>p.evaluate(d=>{const x=document.querySelector(`#agDoc [data-md=${d}]`);return x?{text:x.querySelector('[data-ed=text]').textContent}:null},d);
 /* 不進任何編輯模式，文件就直接看得到 */
 A(await p.evaluate(()=>/行政會議/.test(document.querySelector('#agDoc .md-title').textContent)&&document.querySelector('#agDoc .md-date').textContent.length>5&&!document.querySelector('#agDoc textarea,#agDoc input')),'一打開就看得到文件（標題、日期），沒有輸入框');
 A(await p.evaluate(()=>!document.querySelector('#agGo').disabled&&!document.querySelector('#agCopy').disabled),'預設就有各部門的報告：「儲存」「複製文字」可以按');
@@ -25,11 +24,8 @@ A(await p.evaluate(()=>document.querySelector('#agDoc [data-md=marketing]').text
 A(await p.evaluate(()=>!window.__xss&&!document.querySelector('#agDoc img')),'週報文字裡的 HTML 不會變成標籤');
 await p.click('#agLeft [data-md-sel=events]');await p.waitForTimeout(800);
 /* 就地編輯：點文字 → 輸入框 → 點別處收回 */
-await p.click('#agDoc [data-md=events] [data-ed=text]');await p.waitForTimeout(500);
-A(await p.evaluate(()=>!!document.querySelector('#agDoc [data-md=events] [data-ed=text] textarea')&&!document.querySelector('#agDoc [data-md=marketing] textarea')),'點一段文字：只有那一段變成輸入框，其他維持文件原貌');
-await p.fill('#agDoc [data-md=events] textarea','四、活動部\n        1. 改過的內容 <u id=uu>u</u>');
-await p.click('#agDoc .md-title');await p.waitForTimeout(500);
-A(await p.evaluate(()=>/改過的內容/.test(document.querySelector('#agDoc [data-md=events] [data-ed=text]').textContent)&&!document.querySelector('#agDoc textarea')&&!document.querySelector('#uu')),'點別處：收回成文字（改過、HTML 照字面）');
+await p.fill('#agTx','四、活動部\n        1. 改過的內容 <u id=uu>u</u>');await p.waitForTimeout(600);
+A(await p.evaluate(()=>/改過的內容/.test(agItemOf('events').text)&&!document.querySelector('#uu')&&!/改過的內容/.test(document.querySelector('#agDoc [data-md=events]').textContent)),'右邊「週報文字」：改了存進議程，文件上只放大標題、HTML 照字面');
 if(!await p.$('#agDoc .md-title input')){await p.click('#agDoc .md-title');await p.waitForTimeout(400)}
 await p.fill('#agDoc .md-title input','第十二次行政會議');await p.keyboard.press('Enter');await p.waitForTimeout(400);
 A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)),'名稱：點一下改、Enter 收回');
@@ -40,10 +36,10 @@ A(sc&&sc.agendas&&sc.agendas.length===1&&sc.agendas[0].date===T&&sc.agendas[0].t
 A(sc.agendas[0].items.find(i=>i.dept==='events').text.includes('改過的內容'),'改過的文字有存進去');
 A(!st.puts[API+'data-marketing.json'].agendas&&st.commits.every(m=>!/marketing/.test(m)),'沒有改動各部門的資料');
 /* 存過的：之後每改一處自動存 */
-await p.evaluate(()=>agSelect('events'));await p.click('#agRec');await p.fill('#agRec','自動存的記錄');await p.waitForTimeout(3500);
+await p.evaluate(()=>{closeAgenda(true);openAgenda('minutes');agSelect('events')});await p.waitForTimeout(800);await p.click('#agRec');await p.fill('#agRec','自動存的記錄');await p.waitForTimeout(3500);
 A(remote().agendas[0].items.find(i=>i.dept==='events').rec==='自動存的記錄','存過之後：改一處就自動存（不用再按儲存）');
 await p.reload();await p.waitForTimeout(3500);await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);await p.click('#agPeek');await p.waitForTimeout(900);
-A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&/自動存的記錄/.test(document.querySelector('#agDoc').textContent)),'重新整理後文件還在');
+A(await p.evaluate(()=>/第十二次/.test(document.querySelector('#agDoc .md-title').textContent)&&agItemOf('events').rec==='自動存的記錄'),'重新整理後文件還在');
 /* 長按部門膠囊拖到另一顆：換報告順序 */
 if(!await p.$eval('#agLeft',e=>e.classList.contains('is-open')))await p.click('#agLeft .ag-tg');await p.waitForTimeout(600);
 const bx=async d=>(await p.$('#agLeft [data-md-sel='+d+']')).boundingBox();
@@ -53,6 +49,10 @@ await p.mouse.move(bw.x+bw.width/2,bw.y+bw.height/2,{steps:8});await p.waitForTi
 A(await p.evaluate(()=>{const o=AG.doc.items.map(i=>i.dept);return o.indexOf('events')<o.indexOf('marketing')&&[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('events')<[...document.querySelectorAll('#agDoc .md-sec')].map(x=>x.dataset.md).indexOf('marketing')}),'長按拖曳膠囊：議程裡的報告順序換了、紙上跟著換');
 await p.waitForTimeout(3000);
 A(remote().agendas.length===1,'換順序後仍是同一天一份');
+await p.evaluate(()=>{closeAgenda(true);openAgenda('minutes')});await p.waitForTimeout(800);
+A(await p.evaluate(()=>document.querySelector('#agOv').dataset.mode==='minutes'&&!!document.querySelector('#agCardBody')&&/會議記錄/.test(document.querySelector('#agTitle').textContent)),'會議記錄：打開是會議記錄頁（有卡片編輯）');
+await p.evaluate(()=>{closeAgenda(true);openAgenda('agenda')});await p.waitForTimeout(800);
+A(await p.evaluate(()=>document.querySelector('#agOv').dataset.mode==='agenda'&&getComputedStyle(document.querySelector('.ag-cardbox')).display==='none'&&!!document.querySelector('#agTx')&&!document.querySelector('#agRec')),'會議資料：只有議程文字，沒有記錄與卡片編輯');
 await p.screenshot({path:'ag1_done.png'});
 {const e=p.errs.filter(x=>!x.startsWith('console:Failed to load resource'));A(!e.length,'沒有程式錯誤 '+JSON.stringify(e))};
 c.q='?d=secretariat';await b.close();process.exit(bad?1:0)})();
