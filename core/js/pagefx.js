@@ -70,6 +70,8 @@ const PageFx=(()=>{
   /* 疊層的高低（z-index；一般頁面＝0）：用來判斷是「疊層蓋上來」還是「疊層退開」 */
   const zOf=el=>{const z=parseInt(getComputedStyle(el).zIndex,10);return isNaN(z)?0:z};
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  /* 擋板：全螢幕、透明，蓋在疊層（z-index 38、39）之上、工具列（45）之下，工具列照常可按 */
+  const shield=()=>{const d=document.createElement("div");d.setAttribute("aria-hidden","true");d.style.cssText="position:fixed;inset:0;z-index:44;background:transparent;touch-action:none";document.body.append(d);return d};
   /* 換頁：from 往後退；退到 OVER 時呼叫 mid()（把新頁顯示出來、換捲動位置等），to 從後面浮上來；全部播完呼叫 done()（藏起舊頁等），再把兩頁的樣式還原。
      from 和 to 是同一個元素（例如每週概述：整個看板退後、換到每週概述、再浮上來）就等它退完才換、再浮上來 */
   async function swap(from,to,{mid,done}={}){
@@ -85,7 +87,8 @@ const PageFx=(()=>{
       owner.delete(from);live.delete(from);hold(to);M();await run(to,"in",my,COVER_IN,false,0,false,false,true);
     }else if(zf>zt){
       /* 疊層退開（關閉，返回）：疊層的區塊朝你翻走、疊層淡掉；播到 BACK_OVER 時底下那頁的區塊從被翻開的位置轉回來（底下那頁本身一直是不透明的） */
-      reset(to);M();await Promise.all([run(from,"out",my,FADE_IN,true),run(to,"in",my,0,true,Math.round(BOUT*BACK_OVER))]);
+      /* 退開的這段時間疊層是 pointer-events:none（run），手指點下去會穿到底下的卡片（即時回報膠囊）：放一層看不見的擋板接住點擊，退完再多留 0.15 秒（手機補送的點擊） */
+      const sh=shield();reset(to);M();await Promise.all([run(from,"out",my,FADE_IN,true),run(to,"in",my,0,true,Math.round(BOUT*BACK_OVER))]);setTimeout(()=>sh.remove(),150);
     }else{hold(to);const pOut=run(from,"out",my);await wait(OUT*OVER);M();await Promise.all([pOut,run(to,"in",my)])}
     /* 中途被打斷也一樣把該做的做完（顯示新頁、藏起舊頁），只是還在別次換頁手上的元素不還原樣式 */
     M();done&&done();
