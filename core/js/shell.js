@@ -60,7 +60,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <!-- 秘書處：會議資料入口（2026-11-23：「會議」分頁只有「點名」「會議資料」兩個區塊；點進會議資料才打開自己一個頁面 #agOv，文件預覽＋左右工具＋會議報告事項＋各部門週報都整合在那一頁，meeting.js 的 renderAgenda） -->
       <section class="panel follow-panel meet-panel ag-entry" id="agEntry" aria-labelledby="agH" hidden>
         <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">會議資料</h2><span class="ag-open-t">開啟文件 ›</span></div>
-        <button type="button" class="ag-peek" id="agPeek" aria-label="開啟行政會議資料"></button>
+        <div class="ag-peek" id="agPeek" role="button" tabindex="0" aria-label="開啟行政會議資料"></div>
       </section>
       <div class="ag-ov" id="agOv" role="dialog" aria-modal="true" aria-label="行政會議資料" hidden>
         <div class="anim-top" data-fx-keep><div class="anim-title"><b class="sec-h" data-en="AGENDA">行政會議資料</b></div><div class="anim-ctl"><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button><button type="button" id="agClose" aria-label="關閉行政會議資料">關閉</button></div></div>
@@ -174,7 +174,9 @@ function suLogoColor(label){
   const lay=document.querySelector(".layout");
   if(lay&&CFG.mergeDone){const g=lay.querySelector('.sgroup[data-sec="done"]'),l=lay.querySelector('.sgroup[data-sec="live"]');if(g&&l){while(g.firstChild)l.append(g.firstChild);g.remove()}}
   if(lay&&CFG.ext&&!lay.querySelector('.sgroup[data-sec="ext"]')){lay.insertAdjacentHTML("beforeend",'<div class="sgroup sgroup-ext" data-sec="ext"></div>');const x=lay.lastElementChild;
-    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel","#attPanel","#agEntry"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
+    ["#bkPanel","#docsPanel","#grantPanel","#followPanel","#actPanel"].forEach(q=>{const p=document.querySelector(q);if(p)x.append(p)});
+    const att=document.getElementById("attPanel"),ent=document.getElementById("agEntry");
+    if(att||ent){x.insertAdjacentHTML("beforeend",'<div class="ag-cols"></div>');const c=x.lastElementChild;[att,ent].forEach(p=>{if(p)c.append(p)})}   /* 「會議」分頁：點名、會議資料左右兩區（手機上下排） */
     const ov=document.getElementById("agOv"),more=document.getElementById("agMore");   /* 會議資料自己一頁：蓋在整個畫面上（不在分頁裡），會議報告事項與各部門週報也放進那一頁 */
     if(ov){document.body.append(ov);["#meetEdPanel","#wkPanel"].forEach(q=>{const p=document.querySelector(q);if(p&&more)more.append(p)})}}
   /* 關閉的區塊 */
