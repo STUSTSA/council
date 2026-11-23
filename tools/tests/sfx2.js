@@ -7,7 +7,8 @@
    4. 連續換頁 30 次：每次都有聲（節流 40ms 以外）、context 數沒有增加
    5. 真的進部門（換頁到 index.html，新的 context）→ 點分頁有聲 → 瀏覽器返回（可能是往返快取、也可能重新載入）→ 點主頁有聲
    6. resume 卡死：連點 40 次不丟例外、同時開著的 context 不超過上限；等 2 秒以上之後的下一次點擊重建一個新的就恢復有聲
-   7. 音效關閉：全程不建立 context
+   7. 只用滾輪：操作後 3 秒不點，context 被暫停、滾輪（不是手勢）照樣喚醒有聲；輸出裝置死掉（running 但 currentTime 不走）時滾輪／下一次操作重建後恢復有聲
+   8. 音效關閉：全程不建立 context
    失敗會印 FAIL 並以非 0 結束 */
 const {chromium}=require('playwright');
 const U='http://127.0.0.1:8300/';
@@ -16,9 +17,10 @@ const STUB=()=>{
   const L=window.__ac={made:0,live:0,starts:0,list:[],mode:'ok',errs:0};
   class AC{
     constructor(){if(L.live>=6){L.errs++;throw new DOMException('The number of hardware contexts provided (6) is greater than or equal to the maximum bound (6).','NotSupportedError')}
-      L.made++;L.live++;L.list.push(this);this.state='suspended';this.currentTime=0;this.sampleRate=44100;this.onstatechange=null;this.destination=this.n({});
+      L.made++;L.live++;L.list.push(this);this.state='suspended';this.t0=performance.now();this.sampleRate=44100;this.onstatechange=null;this.destination=this.n({});
       /* 在使用者操作裡建立的 context 會自己變 running（跟瀏覽器一樣是非同步） */
       if(L.mode==='ok')setTimeout(()=>this.set('running'),5)}
+    get currentTime(){return this.deadOut?(this.frozen=this.frozen??(performance.now()-this.t0)/1000):(performance.now()-this.t0)/1000}
     set(s){if(this.state==='closed')return;this.state=s;this.onstatechange&&this.onstatechange()}
     n(o){return Object.assign(o,{connect:x=>x,disconnect(){}})}
     prm(rec,key){return {value:0,setValueAtTime(v){return this},exponentialRampToValueAtTime(){return this},linearRampToValueAtTime(){return this}}}
@@ -27,7 +29,7 @@ const STUB=()=>{
     createBuffer(c,n){const d=new Float32Array(n);return {getChannelData:()=>d}}
     createBiquadFilter(){return this.n({type:'',frequency:this.prm(),Q:this.prm()})}
     createBufferSource(){return this.n({buffer:null,start(){}})}
-    createOscillator(){const o=this.n({type:'sine',stop(){}});o.frequency=this.prm();o.start=()=>{if(this.state==='running')L.starts++};return o}
+    createOscillator(){const o=this.n({type:'sine',stop(){}});o.frequency=this.prm();o.start=()=>{if(this.state==='running'&&!this.deadOut)L.starts++};return o}
     resume(){if(this.state==='closed')return Promise.reject(new Error('closed'));if(L.mode==='hang')return new Promise(()=>{});
       return new Promise(r=>setTimeout(()=>{this.set('running');r()},20))}
     close(){if(this.state!=='closed'){this.state='closed';L.live--}return Promise.resolve()}}
@@ -82,6 +84,17 @@ const sound=async(p,sel,ms=220)=>{const a=(await st(p)).starts;await p.click(sel
   await q.keyboard.press('Escape');await q.waitForTimeout(500);
   ok(await sound(q,'#hmPub',400),'5. 返回後再點一次還是有聲');
   /* 7 */
+  const w=await mk();await w.click('#hmPub');await w.waitForTimeout(300);await w.keyboard.press('Escape');await w.waitForTimeout(3300);
+  await w.evaluate(()=>window.__ac.list[0].set('suspended'));await w.mouse.move(195,400);
+  let a=(await st(w)).starts;await w.mouse.wheel(0,120);await w.waitForTimeout(500);
+  ok((await st(w)).starts>a,'7. context 被暫停後，只靠滾輪（不點）也能喚醒、有聲：'+JSON.stringify(await st(w)));
+  for(let i=0;i<25;i++){await w.mouse.wheel(0,120);await w.waitForTimeout(190)}
+  s=await st(w);ok(s.made===1&&s.errs===0,'7. 連續滾輪 25 格沒有重建、沒有例外：'+JSON.stringify(s));
+  await w.evaluate(()=>{window.__ac.list[0].deadOut=true});await w.waitForTimeout(1000);
+  await w.mouse.wheel(0,120);await w.waitForTimeout(1000);await w.mouse.wheel(0,120);await w.waitForTimeout(1000);
+  await w.click('#hmPub');await w.waitForTimeout(400);await w.keyboard.press('Escape');await w.waitForTimeout(500);
+  ok(await sound(w,'#hmPub',400)&&(await st(w)).made===2,'7. 輸出裝置死掉（running 但 currentTime 不走）：重建一個新的後點擊有聲：'+JSON.stringify(await st(w)));
+  /* 8 */
   const r=await mk({off:true});await r.click('#hmPub').catch(()=>{});await r.waitForTimeout(400);
-  ok((await st(r)).made===0,'7. 音效關閉：沒有建立 context');
+  ok((await st(r)).made===0,'8. 音效關閉：沒有建立 context');
   await b.close();console.log(fails?`${fails} 項失敗`:'全部通過');process.exit(fails?1:0)})();
