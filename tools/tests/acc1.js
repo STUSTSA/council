@@ -141,7 +141,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ok(tok2&&tok2!==tok1&&inv1.status==='revoked'&&inv2.status==='active'&&a1.ref===sha(tok2)&&a2.ref===sha(tok1),'重新產生：舊的撤銷、新的有效，兩筆稽核互相指向');
   await boss.click('.acct-qr [data-revoke]');ok((await dlg(boss))==='撤銷這張 QR','撤銷：先確認');await dlgAct(boss,'delete');
   ok(await until(async()=>(await read(`invitations/${sha(tok2)}`)).status==='revoked')&&!(await boss.$('.acct-qr')),'撤銷：邀請改成 revoked、QR 收起');
-  ok((await paneText(boss)).includes('已撤銷'),'邀請清單：列出已撤銷的邀請');
+  ok(/另有 \d+ 筆已過期或撤銷/.test(await paneText(boss)),'邀請清單：已撤銷、已過期的合成一行「另有 N 筆」');
   /* 再產生一張給 u1 掃（活動部編輯者） */
   /* 綁定信箱存成小寫（Google 回傳的信箱是小寫，規則用 == 比對） */
   await boss.click('[data-new]');await dlg(boss);await dlgSet(boss,{dept:'pr',role:'editor',email:'Someone@Example.TEST'});await dlgAct(boss,'ok');

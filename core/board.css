@@ -1195,7 +1195,7 @@ label.fld-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:
 .csel-opt[aria-selected="true"]{background:var(--acc);color:var(--acc-ink)}
 dialog#dlg:has(.csel.open){overflow:visible}
 /* 放在設定頁右側面板裡（.in-pane，非強制回應）：不是浮起來的視窗，而是面板本身的內容 */
-dialog#dlg.in-pane{position:static;width:auto;max-width:640px;margin:0;padding:0;background:none;box-shadow:none;border-radius:0;animation:paneFormIn var(--mo-slow) var(--mo-out) both;overflow:visible}   /* 換項目時：舊表單往右淡出（dialog.js），新表單從右邊滑入淡入，不用跳出視窗那種放大回彈 */
+dialog#dlg.in-pane{position:static;width:auto;max-width:640px;margin-inline:0;padding:0;background:none;box-shadow:none;border-radius:0;animation:paneFormIn var(--mo-slow) var(--mo-out) both;overflow:visible}   /* 換項目時：舊表單往右淡出（dialog.js），新表單從右邊滑入淡入，不用跳出視窗那種放大回彈 */
 /* 表單每一列錯開滑入：只補前段（backwards，等待的時候先藏著），播完就不留動畫值。
    留著（both／forwards）的話每一列都各自成一個疊層，前面一列展開的自製下拉（.csel-list）會被後面的列、標籤、按鈕蓋住、點不到（ui-10 B） */
 dialog#dlg.in-pane>form>*{animation:paneFormIn var(--mo-slow) var(--mo-out) backwards}
@@ -1625,7 +1625,7 @@ body.set-open #pageMain{overflow:hidden}
 .acct-rt>small{color:var(--muted);font-size:12.5px;font-weight:400;letter-spacing:0}
 .acct-person b{font-size:17px;font-weight:500;letter-spacing:.06em}
 .acct-person small,.acct-line small{color:var(--muted);font-size:12.5px}
-.acct-sub{margin:6px 4px 0;font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--muted)}   /* 人員頁「尚無權限的帳號」的小標（05） */
+.acct-sub{margin:18px 4px 0;font-size:13px;font-weight:500;letter-spacing:.08em;color:var(--muted)}   /* 人員頁「尚無權限的帳號」的小標（05） */
 /* 面板裡的一列（不是按鈕）：左邊文字、右邊小按鈕；一列一塊、留縫（.set-list） */
 .acct-line{display:flex;align-items:center;gap:10px;min-height:62px;padding:12px 20px;min-width:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-line>span{flex:1;min-width:0;display:grid;gap:2px}
@@ -1634,6 +1634,8 @@ body.set-open #pageMain{overflow:hidden}
 .acct-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .acct-acts .add-row{margin-top:0}
 .acct-new{justify-self:start}
+.acct-more{margin:0 4px;font-size:12.5px;color:var(--muted)}   /* 邀請清單底下「另有 N 筆已過期」 */
+.set-hub~dialog#dlg.in-pane{margin-top:26px}   /* 面板裡的表單（產生 QR 等）跟上面的清單拉開一個區塊的距離 */
 /* QR 卡片：QR 一律白底黑點（深色模式也是，掃描比較穩），到期後變淡、只剩「重新產生」 */
 .acct-qr{display:grid;justify-items:center;gap:8px;padding:22px 20px;border-radius:var(--r-lg);text-align:center;background:var(--blk);box-shadow:var(--blk-sh)}
 .acct-qr-img{width:min(240px,70vw);aspect-ratio:1;padding:14px;border-radius:var(--r-md);background:var(--lite);transition:opacity var(--mo-slow) var(--mo-out),filter var(--mo-slow) var(--mo-out)}
