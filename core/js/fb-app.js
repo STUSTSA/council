@@ -4,7 +4,7 @@
    只開 Google 一種登入方式（規則也只接受 google.com 且信箱已驗證）；登入狀態存在這台裝置（Firebase 預設的本機保存）。 */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import { setOff } from "./fs-cache.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, terminate, clearIndexedDbPersistence, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 import { getAuth, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 
 let fbs = null;
@@ -18,6 +18,7 @@ export function fb(cfg) {
      模擬器（測試）不開，讓測試每次都是乾淨的；不能用時（私密模式等）退回一般的 getFirestore */
   let db;
   if (!e) { try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); } catch (_) { db = null; } }
+  const persistent = !!db;
   db = db || getFirestore(app);
   const auth = getAuth(app);
   auth.languageCode = "zh-TW";
@@ -25,7 +26,17 @@ export function fb(cfg) {
     connectFirestoreEmulator(db, e.host, e.port, e.mockUserToken ? { mockUserToken: e.mockUserToken } : undefined);
     if (e.auth) connectAuthEmulator(auth, e.auth, { disableWarnings: true });
   }
-  return (fbs = { app, db, auth });
+  return (fbs = { app, db, auth, persistent });
 }
 /* 等登入狀態從這台裝置讀回來（重新整理後不會先被當成未登入） */
 export const authReady = cfg => fb(cfg).auth.authStateReady();
+/* 登出、換帳號：Firestore 自己的離線快取（IndexedDB）也要清掉，共用電腦時下一位離線也讀不到上一位的資料。
+   做法：終止連線→清掉持久化→呼叫端重新載入頁面（終止後的 Firestore 不能再用，各模組手上都拿著同一個 db）。
+   另一個分頁還開著時清不掉（Firebase 會拒絕），那也一樣要重新載入（連線已終止、不能再用）；模擬器沒開持久化，什麼都不做。
+   回傳 true＝連線已終止、呼叫端一定要重新載入頁面（不論有沒有清掉）；false＝什麼都沒動（沒開持久化、或 terminate 沒成功） */
+export async function wipePersistence() {
+  if (!fbs || fbs.persistent !== true) return false;
+  try { await terminate(fbs.db); } catch (_) { return false; }
+  try { await clearIndexedDbPersistence(fbs.db); } catch (_) { /* 另一個分頁開著等：清不掉也要重新載入，不能留一個已終止的 db */ }
+  return true;
+}

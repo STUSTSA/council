@@ -63,7 +63,7 @@ async function acctStart(){
     if(uid===acctUid){acct.user=u;return}
     const prevUid=acctUid;
     acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
-    if(prevUid&&typeof storeFsGet==="function")storeFsGet().then(fs=>fs.clearCache()).catch(()=>{});   /* 登出、換帳號：這台裝置上存的讀取結果（fs-cache.js）清掉，不留給下一個人 */
+    if(prevUid&&typeof storeFsGet==="function")storeFsGet().then(fs=>fs.clearCache()).then(w=>{if(w)location.reload()}).catch(()=>{});   /* 登出、換帳號：這台裝置上存的讀取結果（fs-cache.js）清掉，不留給下一個人 */
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
