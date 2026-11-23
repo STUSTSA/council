@@ -482,4 +482,4 @@ function closeAgenda(instant){
   if(instant===true||reduceMotion())return done();
   PageFx.swap(ov,pageUnder(ov),{done});
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#agOv")&&!$("#agOv").hidden&&!AG.ed&&!rptOpen&&!$("#dlg").open)closeAgenda()});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.id==="agPeek"){e.preventDefault();openAgenda();return}if(e.key==="Escape"&&$("#agOv")&&!$("#agOv").hidden&&!AG.ed&&!rptOpen&&!$("#dlg").open)closeAgenda()});
