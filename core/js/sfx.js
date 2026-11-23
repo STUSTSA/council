@@ -11,7 +11,7 @@
    不出聲的情況：音效關閉；第一次按下或按鍵之前；分頁在背景（document.hidden）；瀏覽器沒有 Web Audio；iPhone 靜音開關開著（Web Audio 跟著系統靜音）。
    減少動態（prefers-reduced-motion）不影響音效。 */
 const Sfx=(()=>{
-  let ctx=null,out=null,nz=null,pend=null,gestAt=-1e9,fired=false,down=null,waiting=[],stuck=false,lastBuild=-1e9;
+  let ctx=null,out=null,nz=null,pend=null,gestAt=-1e9,fired=false,down=null,waiting=[],stuck=false,dead=false,probeT=0,probeC=0,lastBuild=-1e9;
   const last={},now=()=>performance.now();
   const LEAD=.02;   /* 每個音往後排 20ms：剛啟動的音訊裝置頭幾毫秒常被吃掉，短音（約 0.1 秒）會整個聽不到 */
   const WAIT=1500,REBUILD=2000;   /* 等 resume 最久 1.5 秒（超過就不排，免得很晚才響）；重建 context 至少隔 2 秒 */
@@ -22,7 +22,7 @@ const Sfx=(()=>{
        不因為還原頁面就丟掉 context：以前 pageshow 丟掉重建、resume 等 300ms 沒回來也重建，慢的裝置每響一下就關一個開一個，
        累積到瀏覽器的上限（Chrome 約 6 個）後 new AudioContext 一直失敗＝整頁從此沒聲音。
      - 重建（retire）：只有 context 已經 closed，或「操作過卻 1.5 秒都 resume 不起來」又隔了 2 秒以上，才在下一次使用者操作裡關掉舊的、開一個新的。 */
-  function retire(){const c=ctx;ctx=out=nz=null;waiting=[];stuck=false;try{c&&c.state!=="closed"&&c.close&&c.close().catch(()=>{})}catch(_){}}
+  function retire(){const c=ctx;ctx=out=nz=null;waiting=[];stuck=false;dead=false;probeT=0;try{c&&c.state!=="closed"&&c.close&&c.close().catch(()=>{})}catch(_){}}
   function init(){
     if(ctx&&ctx.state==="closed")retire();
     if(ctx)return true;
@@ -64,10 +64,15 @@ const Sfx=(()=>{
   };
   /* 使用者操作或回到前景的當下：建立或喚醒 AudioContext（音效關閉時不建立）。
      卡住（上次操作等了 1.5 秒都沒跑起來）又隔了 2 秒以上：只在真的使用者操作裡（gesture）關掉舊的、重建一個新的 */
+  /* 輸出裝置死掉的偵測：state 是 running，但 currentTime 隔了 0.8 秒以上還是沒在走（電腦的音訊輸出睡著、藍牙耳機斷線、被別的程式搶走）。
+     這種 context 不會自己恢復，也不會丟任何事件；標成 dead，下一次使用者操作時重建 */
+  function probe(){const t=now(),c=ctx.currentTime;
+    if(probeT&&t-probeT>800){dead=c-probeC<.05;probeT=t;probeC=c}else if(!probeT){probeT=t;probeC=c}}
   function wake(gesture){
     if(!on()||(!gesture&&!ctx))return;   /* 沒有操作又還沒有 context：不建立 */
     try{
-      if(gesture&&stuck&&ctx&&ctx.state!=="running"&&now()-lastBuild>REBUILD){lastBuild=now();retire()}
+      if(ctx&&ctx.state==="running")probe();
+      if(gesture&&ctx&&((stuck&&ctx.state!=="running")||dead)&&now()-lastBuild>REBUILD){lastBuild=now();retire()}
       if(!init())return;
       if(ctx.state!=="running")ctx.resume().then(drain,()=>{});
     }catch(_){}
@@ -77,7 +82,6 @@ const Sfx=(()=>{
     const t=now(),fresh=t-gestAt<1000;
     if(ctx&&ctx.state==="closed")retire();
     if(!ctx&&!(fresh&&init()))return;   /* 還沒有操作過：不建立（剛在設定裡打開音效的那一下例外：操作後 1 秒內） */
-    if(ctx.state!=="running"&&!fresh)return;   /* 被系統暫停（背景、來電）又不是剛操作：不排進去，免得恢復時一起響 */
     fired=true;if(t-(last[k]||-1e9)<40)return;last[k]=t;
     const go=()=>{try{K[k]()}catch(_){}};
     if(ctx.state==="running"){go();return}
@@ -108,6 +112,9 @@ const Sfx=(()=>{
   const begin=()=>{gestAt=now();wake(true)};
   /* 切回前景、從返回／快取還原頁面：喚醒（沒有操作時瀏覽器可能拒絕，下一次操作的 begin 會再喚醒）；不丟掉 context */
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)wake(false)});addEventListener("pageshow",()=>wake(false));addEventListener("focus",()=>wake(false));
+  /* 滾輪、滑鼠移動不是「使用者啟用」手勢，但頁面操作過就有粘性啟用，resume() 照樣有效：電腦上只用滾輪的時候，context 被暫停或輸出裝置死掉也要能救回來（以前只有按下、按鍵才喚醒，滾輪響完後面就一路沒聲音）。
+     沒有 context（還沒操作過）不處理；100ms 節流 */
+  let wheelT=0;addEventListener("wheel",()=>{const t=now();if(!ctx||t-wheelT<100)return;wheelT=t;wake(true)},{capture:true,passive:true});
   addEventListener("pointerdown",e=>{fired=false;down={x:e.clientX,y:e.clientY};begin()},true);
   addEventListener("keydown",e=>{if(!e.repeat)fired=false;down=null;begin()},true);
   addEventListener("pointerup",begin,true);addEventListener("touchend",begin,true);   /* 觸控：瀏覽器把放開當成「使用者操作」，在這裡才能喚醒 */
