@@ -549,7 +549,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
 /* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
-.wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
+.wrap:has(#liveMD.wide) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + var(--dtop-x));padding-right:0}   /* 寬螢幕一進即時回報就是窄的（不是點卡片才縮），右邊不留內距：不蓋到右邊詳情卡的陰影 */
 #liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
 #liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
 #liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
@@ -612,6 +612,15 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* ===== 部門專用分頁（dept/config.js 的 ext：會長室「會長室」、秘書處「會議」；shell.js 把面板搬進 .sgroup-ext） =====
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
 .sgroup-ext>.panel,.ag-cols>.panel{margin:0}
+/* 會長室「會長室」分頁在電腦版（1000px 以上）：兩欄排，不再整條滿寬疊到底。
+   左欄＝預約、文件、秘書處會議開關（都矮）；右欄＝追蹤（高，跨左欄三列）；手機與 1000px 以下維持單欄 */
+@media (min-width:1000px){
+  .sgroup-ext:has(#followPanel){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;column-gap:16px}
+  .sgroup-ext>#bkPanel,.sgroup-ext>#docsPanel,.sgroup-ext>#grantPanel{grid-column:1}
+  .sgroup-ext>#followPanel{grid-column:2;grid-row:1/span 3}
+  .sgroup-ext #follows{grid-template-columns:minmax(0,1fr)}
+}
+}
 /* 秘書處「會議」分頁：點名、會議資料左右兩區（641px 以上），手機上下排 */
 .ag-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 @media (min-width:641px){.ag-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -655,53 +664,6 @@ a.doc-pill:active{scale:.96}
 .follow-panel .add-row{margin-top:12px}
 @media (max-width:640px){
   .fw{padding:12px 14px 14px}
-}
-
-/* ===== 各部門編輯量（會長室，activity.js） =====
-   細線平滑曲線（每個部門一條，部門色）；沒有格子，只有兩條淡橫線與每天一條淡直線；今天的日期粗體；
-   游標＝文字色細直線＋曲線上的小點＋文字色底的小標籤（跟甘特圖註記同一種實心膠囊） */
-.act-panel[hidden]{display:none}
-.ac-info{margin:-4px 0 10px}
-.ac-info b{color:var(--ink);font-weight:500}
-.ac-info .num{color:var(--ink)}
-.ac-err{color:var(--red)}
-.ac-chart{position:relative;min-height:120px;padding-top:58px;touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.ac-msg{margin:0;padding:24px 0}
-.ac-svg{display:block;width:100%;height:auto;overflow:visible;cursor:crosshair}
-.ac-grid,.ac-day{stroke:var(--hair);stroke-width:1}
-.ac-day{stroke-dasharray:2 4}
-.ac-base{stroke:var(--ink);stroke-width:1}
-.ac-yl{fill:var(--muted);font:11px "Jost",sans-serif;text-anchor:end}
-.ac-xl{fill:var(--muted);font:11.5px "Jost","Noto Sans TC",sans-serif;letter-spacing:.04em}
-.ac-xl.is-today{fill:var(--ink);font-weight:600}
-.ac-line{fill:none;stroke:var(--c);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;transition:opacity var(--mo-base) var(--mo-out)}
-.ac-line.zero{opacity:.35}
-.ac-line.dim{opacity:.12}
-.ac-cur:not(.on){display:none}   /* SVG 不吃 hidden 屬性，用 class 開關 */
-.ac-cur line{stroke:var(--ink);stroke-width:1}
-.ac-cur circle{fill:var(--bg);stroke:var(--c);stroke-width:2;transition:opacity var(--mo-fast) var(--mo-out)}
-.ac-cur circle.dim{opacity:0}
-/* 小標籤：在圖的上方（padding-top 留的空間），左右跟著游標、不超出區塊 */
-.ac-tip{position:absolute;left:0;top:0;display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;max-width:min(100%,360px);padding:7px 12px 5px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12px;line-height:1.5;pointer-events:none;box-shadow:0 8px 20px rgba(0,0,0,.18)/* 例外：陰影黑 */}
-.ac-tip[hidden]{display:none}
-.ac-tip b{font-weight:500;letter-spacing:.04em;margin-right:2px}
-.ac-tip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.ac-tip i{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px var(--bg)}
-.ac-tip em{font-style:normal;font-weight:500}
-.ac-none{opacity:.7}
-/* 圖例：每個部門一顆小膠囊（色點＋名稱＋這週總數）；點了只看那個部門 */
-.ac-legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
-.ac-k{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px 2px;font-size:12.5px;border-color:var(--hair);transition:opacity var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out),color var(--mo-base) var(--mo-out),transform .22s var(--ease)}
-.ac-k i{width:8px;height:8px;border-radius:50%;background:var(--c)}
-.ac-k .num{color:var(--muted)}
-.ac-k.zero{color:var(--muted)}
-.ac-k.dim{opacity:.45}
-.ac-k.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.ac-k.on .num{color:inherit;opacity:.7}
-@media (max-width:640px){
-  .ac-chart{padding-top:64px}
-  .ac-xl{font-size:10px;letter-spacing:0}
-  .ac-k{min-height:28px;padding:3px 10px 1px;font-size:12px}
 }
 
 /* ===== 會議報告事項（秘書處，meeting.js） =====

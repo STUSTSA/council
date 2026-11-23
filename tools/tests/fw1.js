@@ -289,15 +289,6 @@ const until=async(fn,ms=10000)=>{const t0=Date.now();for(;;){const v=await fn();
     await su2.evaluate(()=>{const F=window.BoardFirestore;F.__vp=F.versionsPage;F.versionsPage=async()=>{throw Object.assign(new Error('The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/demo-x/firestore/indexes?create_composite=Q9b'),{code:'failed-precondition'})}});
     const r=await logText(su2);await su2.evaluate(()=>{const F=window.BoardFirestore;F.versionsPage=F.__vp;delete F.__vp});su2.off('console',h);
     ok(r.msg==='讀取失敗'&&!/https?:|index|demo-x/.test(r.msg+r.t)&&cons.some(x=>x.includes('Firestore 讀取失敗（編輯紀錄）')&&x.includes('requires an index')),`編輯紀錄讀取失敗：畫面只寫「${r.msg}」、原始錯誤進 console（${cons.length} 筆）`);}
-  /* 會長室（firestore 模式）的各部門編輯量：權益部＝不是匯入的版本＋稽核紀錄；還在 GitHub、沒有設定 repo 的部門＝讀不到（—） */
-  let want=0;await admin(async d=>{want=(await d.collectionGroup('versions').where('deptId','==',DEPT).get()).docs.filter(x=>!x.data().imported).length
-    +(await d.collection('auditLogs').get()).docs.map(x=>x.data()).filter(a=>a.col==='deptSettings'&&a.action==='update'&&a.docId===DEPT||a.col==='cards'&&a.action==='purge'&&a.before.deptId===DEPT||['issues','weeks','labels'].includes(a.col)&&a.action==='delete'&&a.before.deptId===DEPT).length});   /* 02D D-d：議題、週報、標籤的刪除紀錄也算 */
-  const actOf=async p=>{await p.evaluate(()=>actLoad(true));await until(()=>p.evaluate(()=>ACT.rows&&!ACT.busy));
-    return p.evaluate(()=>({rows:Object.fromEntries(ACT.rows.map(r=>[r.id,r.fail?'—':r.sum])),leg:(document.querySelector('[data-ack="rights"] .num')||{}).textContent}))};
-  const ps=await open('president',[DEPT,'president']);await signIn(ps,'su2');await until(async()=>!(await ui(ps)).locked);
-  {const a=await actOf(ps);ok(a.rows.rights===want&&want>10&&a.rows.president===0&&a.rows.events==='—',`會長室（總管理員）：權益部 ${a.rows.rights} 項（版本＋稽核紀錄 ${want}）、會長室 0、還在 GitHub 的部門 —`);}
-  const pe=await open('president',[DEPT,'president']);const peUid=await signIn(pe,'pe');await setRole(peUid,{president:'editor'});await until(async()=>!(await ui(pe)).locked);
-  {const a=await actOf(pe);ok(a.rows.rights==='—'&&a.leg==='—'&&a.rows.president===0,`會長室（會長室編輯者）：讀不到權益部的版本歷史（—）、會長室 0（${JSON.stringify(a.rows)}）`);}
 
   /* ---------- 8. 文件 ID 與欄位帶 HTML（02D 審查 P0）：繞過規則塞進去的文件不顯示、欄位值都經過跳脫，總管理員打開看板不會執行 ---------- */
   {const BAD=`${DEPT}__x" onmouseover="window.__xss=1" data-x="`,TSN=TS.now();
