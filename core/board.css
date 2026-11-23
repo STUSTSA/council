@@ -1624,6 +1624,7 @@ body.set-open #pageMain{overflow:hidden}
 .acct-line button.icon{flex:0 0 auto}
 .acct-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .acct-acts .add-row{margin-top:0}
+.acct-acts .add-row.danger{color:var(--warn)}
 .acct-new{justify-self:start}
 .acct-more{margin:0 4px;font-size:12.5px;color:var(--muted)}   /* 邀請清單底下「另有 N 筆已過期」 */
 .set-hub~dialog#dlg.in-pane{margin-top:26px}   /* 面板裡的表單（產生 QR 等）跟上面的清單拉開一個區塊的距離 */

@@ -315,9 +315,10 @@ function peoplePanel(){
           <div class="set-list">${Object.entries(r.depts).map(([d,v])=>`<div class="acct-line"><span>${esc(deptNameOf(d))}・${esc(roleT(v,d))}</span>
             <button type="button" class="icon" data-swap="${esc(d)}">改成${v==="admin"?"編輯者":roleT("admin",d)}</button><button type="button" class="icon danger" data-rm="${esc(d)}">撤銷</button></div>`).join("")}
             <div class="acct-line"><span>總管理員</span>${self?`<small>自己</small>`:`<button type="button" class="icon${r.super?" danger":""}" data-super>${r.super?"取消":"授予"}</button>`}</div></div>
-          <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button></div>`;
+          <div class="acct-acts"><button type="button" class="add-row" data-add>+ 部門</button><button type="button" class="add-row" data-hist>權限歷史</button>${self?"":`<button type="button" class="add-row danger" data-remove>移除帳號</button>`}</div>`;
         return}
-      const list=roles.slice().sort((a,b)=>(b.super-a.super)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
+      /* 被撤光、也沒有 users 文件的（移除帳號後留下的空角色文件，稽核要留著）不列出；對方再登入會重新出現在下面「尚無權限」 */
+      const list=roles.filter(r=>r.super||Object.keys(r.depts).length||users.some(x=>x.uid===r.uid)).sort((a,b)=>(b.super-a.super)||nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
       /* 05：登入過、還沒有任何角色文件的帳號也列出來（點進去就能指派部門與角色）；有 roles 文件的（含被撤光的）在上面那一區 */
       const none=users.filter(x=>!roles.some(r=>r.uid===x.uid)).sort((a,b)=>nameOf(a.uid).localeCompare(nameOf(b.uid),"zh-Hant"));
       p.html=p.head()+`<div class="set-list">${list.map(r=>`<button type="button" class="set-row acct-row" data-who="${esc(r.uid)}"><span class="acct-rt"><b>${esc(nameOf(r.uid))}</b><small>${esc(mail(r.uid))}</small><span class="acct-chips">${roleChips(r)}</span></span>${SR_CHEV}</button>`).join("")||`<p class="set-p acct-empty">沒有人</p>`}</div>
@@ -337,6 +338,9 @@ function peoplePanel(){
       if(b.dataset.rm){const d=b.dataset.rm;
         const v=await ask(`撤銷 ${nm} 的${deptNameOf(d)}編輯權限`,[],{danger:"撤銷",note:"撤銷後仍可閱讀看板"});if(v!=="delete")return;
         await write(who,r=>{const x={...r.depts};delete x[d];return {...r,depts:x}},"revoke","已撤銷");return}
+      if(b.hasAttribute("data-remove")){if(who===acct.user.uid)return;
+        const v=await ask(`移除 ${nm} 的帳號`,[],{danger:"移除",note:`帳號：${mail(who)||"（沒有信箱紀錄）"}。會撤掉他所有權限，並從人員名單刪除；他寫過的卡片與紀錄會保留。對方再用 Google 登入會重新出現。`});if(v!=="delete")return;
+        if(await acctTry(()=>A.accountRemove(who),"已移除")){who=null;if(p.alive){await load();draw()}}return}
       if(b.hasAttribute("data-super")){const on=!!(roles.find(x=>x.uid===who)||{}).super;
         const v=await ask(on?`取消 ${nm} 的總管理員`:`授予 ${nm} 總管理員`,[],{danger:on?"取消":"授予"});if(v!=="delete")return;
         await write(who,r=>({...r,super:!on}),on?"revoke":"manual",on?"已取消":"已授予");return}

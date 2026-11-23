@@ -296,6 +296,21 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
       ok(await until(async()=>await prRole()==='editor'),'04 人員：改回編輯者不用確認');
     }else ok(false,`04 人員：u2 應該是公關部編輯者（現在是 ${await prRole()}）`);
   }
+  /* 移除帳號（總管理員）：確認對話框、撤光角色＋刪 users／profiles、人員清單不再列出；自己沒有這個按鈕 */
+  {await boss.click('.dh-home').catch(()=>{});await boss.waitForTimeout(300);
+    if(!(await boss.$(`[data-who="${u2Uid}"]`))){await boss.click('#setOv [data-set="council"]').catch(()=>{});await boss.waitForTimeout(500);await hub(boss,'people')}
+    await boss.click(`[data-who="${bossUid}"]`);await boss.waitForTimeout(300);
+    ok(!(await boss.$('[data-remove]')),'移除帳號：自己沒有按鈕');
+    await boss.click('.dh-home');await boss.waitForTimeout(300);await boss.click(`[data-who="${u2Uid}"]`);await boss.waitForTimeout(400);
+    await boss.screenshot({path:path.join(process.env.SHOT_DIR||'/tmp','acct-remove.png')});
+    await boss.click('[data-remove]');ok((await dlg(boss)).includes('移除 u2 同學 的帳號'),'移除帳號：先確認，寫出對象');
+    await dlgAct(boss,'delete');
+    ok(await until(async()=>!(await read(`users/${u2Uid}`))&&!(await read(`profiles/${u2Uid}`))),'移除帳號：users 與 profiles 已刪除');
+    const rr=await read(`roles/${u2Uid}`);
+    ok(rr&&!Object.keys(rr.depts).length&&!rr.super&&rr.lastVia==='revoke'&&rr.lastRef==='remove','移除帳號：角色撤光（稽核留著，lastRef remove）');
+    ok(await until(async()=>!(await boss.$(`[data-who="${u2Uid}"]`))),'移除帳號：人員清單不再列出');
+    ok(await until(async()=>(await meText(u2)).includes('唯讀')),'移除帳號：對方畫面即時變唯讀');
+  }
   /* 登出 */
   await meText(gen);await gen.click('[data-hub="out"]');   /* 帳號頁在第 2 段已經打開（meText），再點那一列會收起 */
   ok(await until(async()=>(await setText(gen)).includes('用 Google 登入')),'登出：設定頁回到「用 Google 登入」');
