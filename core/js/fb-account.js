@@ -405,9 +405,65 @@ async function auditChain(col, id) {
   return { rev, missing };
 }
 
+/* ---------- 專案權限（跟部門申請分開）：申請 projectRequests/{自己的 UID}，核准同一批寫 projectGrants/{UID}＝active；
+   只讓人改活動部的專案（issues），不改 roles。只有活動部部長或總管理員能審（規則 projDecider） ---------- */
+const plainPReq = s => { const d = s.data(); return { id: s.id, uid: d.uid, note: d.note || "", status: d.status, rev: d.rev, createdAt: ms(d.createdAt) }; };
+async function projectMine() { const s = await getDoc(ref("projectRequests", uid())); return s.exists() ? plainPReq(s) : null; }
+/* 自己的專案授權，即時監聽（撤銷時畫面立刻變回唯讀）。沒登入或讀不到＝false */
+function onProjectGrant(cb) {
+  const me = uid();
+  if (!me) { cb(false); return () => {}; }
+  return onSnapshot(ref("projectGrants", me), s => cb(s.exists() && s.data().active === true), () => cb(false));
+}
+async function projectRequestCreate(note) {
+  const me = uid(), r = ref("projectRequests", me), cur = await getDoc(r);
+  if (cur.exists() && cur.data().status === "pending") throw fail("pending");
+  const rev = cur.exists() ? cur.data().rev + 1 : 1, b = writeBatch(db);
+  b.set(r, { uid: me, note: String(note || "").slice(0, 200), status: "pending", rev, createdAt: NOW(), updatedAt: NOW(), updatedBy: me });
+  b.set(auditRef("projectRequests", me, rev), audit("projectRequests", me, rev, "request", cur.exists() ? { status: cur.data().status } : {}, { status: "pending" }));
+  await b.commit();
+}
+async function projectPending() { return (await getDocs(query(collection(db, "projectRequests"), where("status", "==", "pending")))).docs.map(plainPReq).sort((a, b) => a.createdAt - b.createdAt); }
+async function projectHolders() { return (await getDocs(query(collection(db, "projectGrants"), where("active", "==", true)))).docs.map(s => ({ uid: s.id, rev: s.data().rev })); }
+/* to＝cancelled（本人撤回）｜rejected（活動部部長、總管理員）；seen＝畫面上那一版的 rev，不同＝清單讀出來後被改過 */
+async function projectDecide(id, to, seen) {
+  await runTransaction(db, async tx => {
+    const s = await tx.get(ref("projectRequests", id));
+    if (!s.exists() || s.data().status !== "pending") throw fail("inactive");
+    if (seen != null && s.data().rev !== seen) throw fail("changed");
+    const rev = s.data().rev + 1, w = { status: to, rev, updatedAt: NOW(), updatedBy: uid() };
+    if (to === "rejected") Object.assign(w, { decidedBy: uid(), decidedAt: NOW() });
+    tx.update(ref("projectRequests", id), w);
+    tx.set(auditRef("projectRequests", id, rev), audit("projectRequests", id, rev, to === "rejected" ? "reject" : "cancel", { status: "pending" }, { status: to }));
+  });
+}
+async function projectApprove(id, seen) {
+  if (seen == null) throw fail("changed");
+  await runTransaction(db, async tx => {
+    const s = await tx.get(ref("projectRequests", id)), g = await tx.get(ref("projectGrants", id));
+    if (!s.exists() || s.data().status !== "pending") throw fail("inactive");
+    if (s.data().rev !== seen) throw fail("changed");
+    const qrev = s.data().rev + 1, grev = g.exists() ? g.data().rev + 1 : 1;
+    tx.update(ref("projectRequests", id), { status: "approved", decidedBy: uid(), decidedAt: NOW(), rev: qrev, updatedAt: NOW(), updatedBy: uid() });
+    tx.set(auditRef("projectRequests", id, qrev), audit("projectRequests", id, qrev, "approve", { status: "pending" }, { status: "approved" }));
+    tx.set(ref("projectGrants", id), { uid: id, active: true, rev: grev, updatedAt: NOW(), updatedBy: uid() });
+    tx.set(auditRef("projectGrants", id, grev), audit("projectGrants", id, grev, "approve", {}, {}, id));
+  });
+}
+async function projectRevoke(target) {
+  await runTransaction(db, async tx => {
+    const g = await tx.get(ref("projectGrants", target));
+    if (!g.exists() || g.data().active !== true) throw fail("inactive");
+    const rev = g.data().rev + 1;
+    tx.set(ref("projectGrants", target), { uid: target, active: false, rev, updatedAt: NOW(), updatedBy: uid() });
+    tx.set(auditRef("projectGrants", target, rev), audit("projectGrants", target, rev, "revoke", {}, {}, target));
+  });
+}
+
 const api = { init, onUser, ensured, signIn, signOut, onRoles, setName, profiles, legacyList, roster, rosterFull, rosterSelf, rosterSync, deptRemove,
   inviteCreate, inviteRevoke, inviteRegen, inviteList, invitePreview, inviteRedeem, inviteWatch,
   rolesList, usersList, roleWrite, requestCreate, requestsMine, requestsPending, requestsDept, requestDecide, requestApprove,
+  projectMine, onProjectGrant, projectRequestCreate, projectPending, projectHolders, projectDecide, projectApprove, projectRevoke,
   auditList, auditChain, serverNow: () => serverNow() };
 window.BoardAccount = api;
 dispatchEvent(new Event("board-account-ready"));

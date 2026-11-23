@@ -316,6 +316,27 @@ async function setMeetGrant(cfg, until, by) {
     }, { maxAttempts: 3 });
   } catch (e) { throw e && e.code ? e : fail("error"); }
 }
+/* 會長室的「收藏」（2026-11-23）：會長在別的部門看板按收藏＝把那一項加進（或拿掉）會長室的追蹤清單（deptSettings/president 的 follows，規則本來就允許會長室管理員與總管理員改；
+   不新增欄位、不改規則）。一筆 {id, dept, kind, ref（新資料庫的文件 ID）}；同一個部門同一個 ref 只留一筆。rev +1＋同一批稽核紀錄 */
+async function setFavorite(cfg, f) {
+  await authReady(cfg);
+  const fx = fb(cfg);
+  db = fx.db; me = fx.auth.currentUser && fx.auth.currentUser.uid;
+  if (!me) throw fail("permission-denied");
+  const ref = M().nid(f.dept, f.ref);
+  try {
+    await runTransaction(db, async tx => {
+      const r = doc(db, "deptSettings", "president"), s = await tx.get(r);
+      if (!s.exists()) throw fail("permission-denied");
+      const cur = Array.isArray(s.data().follows) ? s.data().follows : [], rev = (s.data().rev || 0) + 1;
+      const has = cur.some(x => x && x.dept === f.dept && x.ref === ref);
+      if (!!f.on === has) return;
+      const follows = f.on ? cur.concat([{ id: "f" + rand(6), dept: f.dept, kind: f.kind, ref }]) : cur.filter(x => !(x && x.dept === f.dept && x.ref === ref));
+      tx.update(r, { follows, rev, ...stamp() });
+      tx.set(doc(db, "auditLogs", `deptSettings_president_${rev}`), { col: "deptSettings", docId: "president", rev, action: "update", actor: me, at: serverTimestamp(), before: {}, after: { fields: ["follows"] }, ref: "" });
+    }, { maxAttempts: 3 });
+  } catch (e) { throw e && e.code ? e : fail("error"); }
+}
 /* 會議紀錄（規則 meetingMinutes：秘書處與總管理員）：一天一份 meetingMinutes/{日期}，items＝那一天的會議（state.minutes 裡日期相同的，跟遷移的寫法一樣） */
 async function saveMinutes(cfg, date, items) {
   await authReady(cfg);
@@ -366,5 +387,5 @@ async function run(units) {
   return { batches: committed };
 }
 
-window.BoardStoreWrite = { saveDept, saveMeeting, setMeetGrant, saveMinutes, saveAgenda };
+window.BoardStoreWrite = { saveDept, saveMeeting, setMeetGrant, setFavorite, saveMinutes, saveAgenda };
 dispatchEvent(new Event("board-store-write-ready"));
