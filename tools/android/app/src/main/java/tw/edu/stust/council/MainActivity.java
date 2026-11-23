@@ -91,6 +91,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);   /* WebView 預設要使用者手勢才讓 AudioContext 發聲；介面音效（core/js/sfx.js）在觸控按下的當下就會喚醒，不設的話觸控的 pointerdown 不算手勢、頭一下會沒聲 */
+        s.setTextZoom(100);   /* WebView 預設照系統「字型大小」放大文字；網頁的版面是用固定 px 排的，系統字型一變（或換裝置）設定列的字就跟著忽大忽小，固定 100% */
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
         CookieManager.getInstance().setAcceptCookie(true);
