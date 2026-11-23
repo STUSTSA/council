@@ -319,8 +319,43 @@ document.addEventListener("keydown",e=>{
   if(k&&i>=0){e.preventDefault();os[Math.max(0,Math.min(os.length-1,i+k))].focus()}
 },true);
 /* 這一頁的內容：今日／明日、清點區、行事曆 */
+/* 手機（640px 以下）：通知頁＝四張疊卡（今日、明日、清點、行事曆），跟完成紀錄的週疊卡同一個元件與動作引擎（core/js/wallet.js；.hm-wal／.hm-wc）：
+   拖、甩、點露出的一條叫到焦點；點焦點卡進內容（今日＝今日層、明日＝行事曆選到明天、清點、行事曆＝各自一頁，有返回）。電腦版照舊（今日明日卡、清點、行事曆一頁排開）。 */
+const NOTIPH=matchMedia("(max-width:640px)");
+let notiWal=null,notiSig="",notiFoc=0;
+const notiStack=()=>NOTIPH.matches&&!NOTI.view;
+function notiCards(){
+  const list=notiMine(),t=today(),t2=addDays(t,1),cnt=d=>list.filter(x=>covers(x,d)).length,wd=d=>`週${WD[pd(d).getDay()]}`;
+  return [{k:"today",en:"TODAY",nm:"今日",sub:`${fmt(t)} ${wd(t)}`,n:cnt(t)},
+    {k:"tomorrow",en:"TOMORROW",nm:"明日",sub:`${fmt(t2)} ${wd(t2)}`,n:cnt(t2)},
+    {k:"tally",en:"CHECKLIST",nm:"清點",sub:"逾期與待辦",n:notiTodoItems().length},
+    {k:"cal",en:"CALENDAR",nm:"行事曆",sub:`${NOTI.month.slice(0,4)} 年 ${+NOTI.month.slice(5)} 月`,n:list.filter(x=>x.date.slice(0,7)===NOTI.month).length}];
+}
+function notiStackHTML(cs){
+  return `<nav class="hm-wal wks-wal noti-wal" id="notiWal" data-own-gesture aria-label="通知">${cs.map((c,i)=>`<button type="button" class="hm-wc" data-i="${i}" data-k="${c.k}" tabindex="-1" aria-label="${esc(c.nm)}，${esc(c.sub)}，${c.n} 件"><span class="hm-tt"><i class="hm-en">${c.en}</i><b class="hm-nm">${c.nm}</b><span class="wks-r num">${esc(c.sub)}</span></span><b class="hm-n num">${c.n}</b></button>`).join("")}</nav>`;
+}
+function notiWalOff(){if(notiWal){cancelAnimationFrame(notiWal.raf);notiWal.raf=0;notiWal.d=null}notiSig=""}
+/* 進內容／回疊卡：view＝null（疊卡）、"tally"、"cal"；返回走瀏覽紀錄（跟完成紀錄的週頁一樣） */
+function notiViewShow(v){
+  if(v===NOTI.view)return;const was=NOTI.view;NOTI.view=v;
+  if(v&&!was)Back.opened("notiview",()=>notiViewShow(null));else if(!v&&was)Back.closed("notiview");
+  renderNoti();const sc=pageSc();if(sc)sc.scrollTop=0;
+  if(typeof pvIn==="function"&&$("#notiPage"))pvIn($("#notiPage"));
+}
+function notiEnter(i){
+  const k=(notiCards()[i]||{}).k;
+  if(k==="today"){const c=$("#notiWal .hm-wc.on")||$("#notiWal .hm-wc");setTimeout(()=>{if(notiOpen)openToday(c)},0)}
+  else if(k==="tomorrow"){const d=addDays(today(),1),m=d.slice(0,7);if(m!==NOTI.month){NOTI.month=m;calLoad(NOTI)}calDay(NOTI,d);notiViewShow("cal")}
+  else if(k==="tally")notiViewShow("tally");
+  else if(k==="cal")notiViewShow("cal");
+}
+NOTIPH.addEventListener("change",()=>{if(NOTI.view){NOTI.view=null;Back.closed("notiview")}notiWalOff();renderNoti()});
 function notiInner(){
   const list=notiMine(),t=today();
+  if(NOTIPH.matches){
+    if(NOTI.view==="tally")return `<div class="noti-l">${tallyHTML()||'<p class="cal-none">沒有待清點的項目</p>'}</div>`;
+    if(NOTI.view==="cal")return `<div class="noti-r">${calHTML(NOTI)}</div>`;
+  }
   return `<div class="noti-l"><div class="noti-days">${dayCardHTML(t,"今日","today",list)}${dayCardHTML(addDays(t,1),"明日","",list)}</div>
     ${tallyHTML()}</div>
     <div class="noti-r">${calHTML(NOTI)}</div>`;
@@ -527,6 +562,14 @@ let notiAuto=false;try{notiAuto=new URLSearchParams(location.search).get("noti")
 function notiAutoGo(){if(!notiAuto||notiOpen||deptRO()||!loggedIn())return;notiAuto=false;NOTI.mode="pres";openNoti()}
 function renderNoti(){
   const el=$("#notiPage");if(!el||!notiOpen)return;
+  if(notiStack()){   /* 疊卡：張數沒變就不重畫（動作引擎正在寫 transform） */
+    const cs=notiCards(),sig=cs.map(c=>c.k+c.n+c.sub).join("|");
+    if(!(notiSig===sig&&notiWal&&notiWal.nav&&el.contains(notiWal.nav))){
+      if(!notiWal)notiWal=Wallet.make({onShow:i=>{notiFoc=i},onEnter:notiEnter});
+      cancelAnimationFrame(notiWal.raf);notiWal.raf=0;
+      el.innerHTML=notiStackHTML(cs);notiWal.bind(el.firstChild,notiFoc);notiSig=sig}
+    return}
+  notiWalOff();
   const sw=calSwapPrep(el);morphTo(el,notiInner());calAfter(NOTI,el,sw);   /* 原位更新（morph.js）：卡片堆、月曆沒變的節點留著 */
   tlBind();
 }
@@ -541,7 +584,7 @@ async function openNoti(){
   /* 設定開著（ui-09 起設定開著時標題列的通知鈕按得到）：把設定那一筆瀏覽紀錄直接換成通知頁，不先退一筆再推一筆（跟 nav.js 設定鍵那條同一個做法；ui-09 審查） */
   if(setOpen){Back.replace("settings","noti",i=>closeNoti(i));closeSettings(true)}
   if(HS.q)hsClear();
-  notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false});calStale();calLoad(NOTI);
+  notiOpen=true;Object.assign(NOTI,{month:today().slice(0,7),day:today(),pop:false,view:null});notiWalOff();notiFoc=0;calStale();calLoad(NOTI);
   Back.layers.noti();$("#notiBtn").setAttribute("aria-pressed","true");
   hsBar();renderTabbar();renderNoti();
   secSwap(curSec,"noti",1);
@@ -549,7 +592,7 @@ async function openNoti(){
 /* 關掉：回到原分頁；to＝工具列按的那個分頁（nav.js 的 tabGo）。instant＝直接換（系統返回鍵已經播過動畫、開設定頁、權限變了） */
 function closeNoti(instant,to){
   if(!notiOpen)return;if(!instant)Sfx.play("back");   /* 從工具列換分頁（to）時換頁音先響，這裡不會蓋過 */
-  if(todayOpen)closeToday(true);notiOpen=false;NOTI.pop=false;tlUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
+  if(todayOpen)closeToday(true);if(NOTI.view){NOTI.view=null;Back.closed("notiview")}notiOpen=false;NOTI.pop=false;tlUndo=null;Back.closed("noti");$("#notiBtn").setAttribute("aria-pressed","false");
   if(to&&SECS.includes(to))curSec=to;
   hsBar();renderTabbar();secSwap("noti",curSec,-1,instant===true);
 }
