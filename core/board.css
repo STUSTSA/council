@@ -344,6 +344,9 @@ input.lc-title:focus{outline:none}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
+/* 收藏鈕（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；跟「報告」鈕同一個尺寸，收藏後實心 */
+.fav-btn{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
+.fav-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
 .lc-meta .ev-st,.lc-tag{height:26px;padding:2px 12px 0;border-radius:999px;line-height:1}
