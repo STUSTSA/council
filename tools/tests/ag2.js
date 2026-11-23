@@ -15,7 +15,8 @@ await p.click('#tabbar [data-tab=ext]');await p.waitForTimeout(1500);
 const T2=T;
 A(await p.evaluate(()=>/上次決議追蹤/.test(document.querySelector('#agDoc').textContent)&&/貼文延到下週/.test(document.querySelector('#agDoc').textContent)&&!/活動部/.test(document.querySelector('#agDoc .md-sec').textContent)),'文件最前面列上次決議，沒有決議的部門不列');
 A(await p.evaluate(()=>!document.querySelector('#xx')),'決議文字裡的 HTML 不會變成標籤');
-await p.click('#agDoc [data-md-paste=marketing]');await p.waitForTimeout(1500);
+await p.click('#agLeft .ag-tg');await p.waitForTimeout(500);
+await p.click('#agLeft [data-md-paste=marketing]');await p.waitForTimeout(1500);
 A(await p.evaluate(()=>!!document.querySelector('#agDoc [data-md=marketing] [data-mtev=e1]')&&!document.querySelector('#zz')),'該部門要報告的卡片列在段落裡（名稱的 HTML 不變標籤）');
 await p.click('#agDoc [data-mtev=e1] summary');await p.waitForTimeout(500);
 A(await p.evaluate(()=>/每週三貼文/.test(document.querySelector('#agDoc [data-mtev=e1] .ev-body').textContent)),'點開是完整卡片（說明在裡面）');
@@ -26,6 +27,9 @@ await p.click('#agDoc [data-ed=xn]');await p.fill('#agDoc [data-ed=xn] textarea'
 await p.click('#agDoc [data-md=marketing] [data-ed=dec]');await p.fill('#agDoc [data-ed=dec] input','本週決議：照原案 <i id=yz>斜</i>');await p.keyboard.press('Enter');await p.waitForTimeout(400);
 await p.screenshot({path:'ag2_dec.png'});
 A(await p.evaluate(()=>!document.querySelector('#yy')&&!document.querySelector('#uu')&&!document.querySelector('#yz')&&/結論：照原案/.test(document.querySelector('#agDoc [data-ed=note]').textContent)),'結論、臨時項目、決議：就地編輯、HTML 照字面');
+if(await p.$('#agRight .ag-tg')&&!(await p.$eval('#agRight',e=>e.classList.contains('is-open')))&&await p.$eval('#agRight .ag-tg',e=>getComputedStyle(e).pointerEvents!=='none')){await p.click('#agRight .ag-tg');await p.waitForTimeout(500)}
+await p.click('#agRight [data-md-pastecard=e1]');await p.waitForTimeout(600);
+A(await p.evaluate(()=>{const t=document.querySelector('#agDoc [data-md=marketing] [data-ed=text]').textContent;return /每週三貼文/.test(t)&&!document.querySelector('#zz')}),'右欄「貼進文件」：卡片名稱與說明接到那一段的文字後面（HTML 照字面）');
 await p.click('#agGo');await p.waitForTimeout(3500);
 let ag=remote().agendas;const nw=ag.find(a=>a.date===T);const it=nw&&nw.items.find(i=>i.dept==='marketing');
 A(ag.length===2&&it&&it.notes.e1.startsWith('結論：照原案')&&it.extra.length===1&&it.extra[0].title.startsWith('臨時動議')&&it.extra[0].note==='下週討論'&&it.decision.startsWith('本週決議'),'儲存：結論、臨時項目、決議都在那份議程：'+JSON.stringify(it));
