@@ -88,6 +88,38 @@ if(CFG.follow){
   setInterval(refresh,3e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
 }
 
+/* ---------- 收藏（2026-11-23，DievE）：會長在別的部門看板（即時回報、完成紀錄、進度）按「收藏」＝加進會長室的「追蹤」清單 ----------
+   存在 deptSettings/president 的 follows（跟「+ 追蹤項目」同一份；store-write.js 的 setFavorite，規則本來就允許會長室管理員與總管理員）。
+   只有會長室管理員與總管理員、在「不是會長室」的部門看板、會長室已在新資料庫時才有這顆鈕；收藏的會出現在會長室「追蹤」（含進度與最後更新），在那裡也能移除 */
+const FAV={keys:null,busy:false,loading:false};
+const favOk=()=>CFG.deptId!=="president"&&deptSourceOf("president")==="firestore"&&!!(acct.user&&(acctSuper()||acctDepts().president==="admin"));
+const favKey=(dept,ref)=>dept+"|"+ref;
+function favLoad(){
+  if(FAV.keys||FAV.loading||!favOk())return;
+  FAV.loading=true;
+  fwLoad("president").then(c=>{FAV.loading=false;if(c.data){FAV.keys=new Set((c.data.follows||[]).map(f=>favKey(f.dept,f.ref)));render()}}).catch(()=>{FAV.loading=false});
+}
+/* kind：live 即時回報／issue 進度／done 完成紀錄；id：卡片或議題的 ID。還沒讀到會長室的清單時鈕先停用 */
+function favBtnHTML(kind,id){
+  if(!favOk())return "";
+  favLoad();
+  const on=!!FAV.keys&&FAV.keys.has(favKey(CFG.deptId,id));
+  return `<button type="button" class="fav-btn" data-fav="${esc(id)}" data-favk="${esc(kind)}" aria-pressed="${on}"${FAV.keys&&!FAV.busy?"":" disabled"}>${on?"已收藏":"收藏"}</button>`;
+}
+document.addEventListener("click",async e=>{
+  const b=e.target.closest&&e.target.closest("[data-fav]");if(!b||!favOk()||!FAV.keys||FAV.busy)return;
+  const id=b.dataset.fav,on=b.getAttribute("aria-pressed")!=="true";
+  FAV.busy=true;render();
+  try{
+    const W=await storeWriteGet();
+    await W.setFavorite(CFG.firebase,{dept:CFG.deptId,kind:b.dataset.favk,ref:id,on});
+    FAV.keys[on?"add":"delete"](favKey(CFG.deptId,id));fwCache.delete("president");
+    if(window.BoardFirestore&&BoardFirestore.dropCache)BoardFirestore.dropCache();
+    toast(on?"已收藏，會長室的追蹤看得到":"已取消收藏");
+  }catch(err){toast(err&&err.code==="permission-denied"?"沒有權限收藏（需要會長室的部長或總管理員）":"收藏失敗，請再試一次")}
+  FAV.busy=false;render();
+});
+
 /* ---------- 會長室：文件（2026-11-06 使用者：會長平常有些文件要放在這裡開啟比較方便看） ----------
    state.docs[]＝{id,name,url}。平常是一排膠囊按鈕（點了用新分頁打開）；按這區的「編輯」後每個按鈕旁邊有修改、上下移、刪除，下面「+ 新增文件」。
    新增、修改用對話框（名稱、網址；沒寫 http 的自動補 https://），按這張卡片的「儲存」才上傳。網址存在公開的資料檔，任何人都看得到 */
