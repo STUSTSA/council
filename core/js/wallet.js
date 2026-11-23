@@ -56,11 +56,11 @@ const Pile=(()=>{
   const on=()=>matchMedia("(max-width:640px)").matches&&!reduceMotion();
   function put(el,ty,s){const k=ty.toFixed(1)+"|"+s.toFixed(3);if(el._pk===k)return;el._pk=k;
     if(s===1){el.style.translate=el.style.scale=""}else{el.style.translate=`0 ${ty.toFixed(1)}px`;el.style.scale=s.toFixed(3)}}
-  /* 量一次（卡片張數、尺寸、固定區高度變了才重量；ResizeObserver 把 dirty 打開）：固定區下緣（--dtop-h）、每張卡在捲動內容裡的位置與高度。
+  /* 量一次（卡片張數、尺寸、固定區高度變了才重量；ResizeObserver 把 dirty 打開）：每張卡在捲動內容裡的位置與高度。
      捲動中只讀 scrollTop，不量任何東西（offsetTop 含 sticky 的位移，不能用，所以照排版順序累加高度與間距） */
   function measure(sc){
     dirty=false;hosts=[...sc.querySelectorAll(HOST)].filter(g=>g.offsetHeight);
-    PT=(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--dtop-h"))||0)+PAD;
+    PT=PAD;   /* 標題列與搜尋列在捲動層外面，釘在捲動層上緣往下 PAD */
     sc.style.setProperty("--pile-top",PT+"px");
     const st=sc.scrollTop,t0=sc.getBoundingClientRect().top;
     hosts.forEach(g=>{
@@ -78,9 +78,9 @@ const Pile=(()=>{
         if(d<=0)put(el,0,1);else{const r=d/(h+12);put(el,-PEEK*Math.min(r,LAY-1),1-STEP*Math.min(r,LAY))}})})
   }
   const tick=sc=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>run(sc))};
-  document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.matches&&t.matches(".page"))tick(t)},{capture:true,passive:true});
-  const redo=()=>{dirty=true;document.querySelectorAll(".page").forEach(tick)};
+  document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.id==="wrapSc")tick(t)},{capture:true,passive:true});
+  const redo=()=>{dirty=true;tick(document.getElementById("wrapSc"))};
   addEventListener("resize",redo);
-  if(window.ResizeObserver){ro=new ResizeObserver(redo);["dTop","dsRow"].forEach(id=>{const e=document.getElementById(id);if(e)ro.observe(e)})}
+  if(window.ResizeObserver)ro=new ResizeObserver(redo);
   return {run};
 })();

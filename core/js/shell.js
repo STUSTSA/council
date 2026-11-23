@@ -24,6 +24,8 @@ const SHELL_HTML=`<div class="pager" id="pager">
       <!-- 通知與行事曆頁的搜尋列（notify.js；「搜尋事件」）：跟上面那條同一個元件、同一個位置，只在通知頁顯示（search.js 的 hsBar 切換） -->
       <label class="dsearch" id="dSearchCal" hidden><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="calBarQ" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="calHRes"><button type="button" class="ds-x" id="calBarX" aria-label="清除搜尋" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>
       </div>
+      <!-- 手機只有這一層捲動（board.css「手機固定頂部」）：標題列與搜尋列在它上面不動，只有下面的資訊自己捲、拖、回彈；電腦版這兩層是 display:contents，等於沒有 -->
+      <div class="wrap-sc" id="wrapSc"><div class="wrap-in" id="wrapIn">
       <div class="dres" id="boardRes" role="region" aria-label="搜尋結果" data-flip="sres" hidden></div>
 
       <!-- 會長室：會長預約（06，booking.js）：同學看「可預約時段」與「我的預約」，會長室管理員與總管理員看待審申請、已核准的預約、開放時段；所有人都看得到這張卡（沒登入、還沒啟用也寫明原因） -->
@@ -133,6 +135,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
         <!-- 通知與行事曆（DESIGN-next 第九節）：標題列的通知鈕進到這一頁（不是工具列的分頁，鏡片留在原分頁）；內容由 notify.js 的 renderNoti 畫 -->
         <div class="sgroup sg-noti" data-sec="noti" id="notiPage" role="region" aria-label="通知與行事曆"></div>
       </div>
+      </div></div>
     </div>
   </div>
 

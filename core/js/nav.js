@@ -273,7 +273,7 @@ async function openSettings(){
   if(setOpen)return;
   if(!loggedIn()&&remRead())await remLogin();   /* 這台裝置記住了身分：直接進去，不顯示鎖頭 */
   const from=pageUnder(ov);PageFx.settle(ov);
-  const pm=$("#pageMain");if(pm)pm.scrollTop=0;setTopSync();   /* 設定是部門內的一頁：標題列留在畫面上（捲回頂端），設定從標題列下緣開始蓋 */
+  const pm=$("#pageMain"),ws=$("#wrapSc");if(pm)pm.scrollTop=0;if(ws)ws.scrollTop=0;setTopSync();   /* 設定是部門內的一頁：標題列留在畫面上（捲回頂端），設定從標題列下緣開始蓋 */
   setOpen=true;ov.getAnimations().forEach(a=>a.cancel());ov.hidden=false;Back.layers.settings();   /* 關閉動畫還沒播完又打開：先停掉 */document.body.classList.add("set-open");renderSettings();renderTabbar();
   PageFx.swap(from,ov);   /* 換頁動畫：底下那頁往後退、設定從後面浮上來 */
 }
@@ -464,7 +464,7 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- 拉到底的回彈（iPhone 本來就有，就不重複） ---------- */
-function elastic(sc,inner){
+function elastic(sc,inner,skip){
   if(IS_IOS||!sc||!inner||sc._elastic)return;sc._elastic=true;
   let off=0,acc=0,tm=0,y0=null,x0=0,axis="",base=0,anim=null;
   const set=v=>{off=v;inner.style.transform=v?`translate3d(0,${v.toFixed(1)}px,0)`:""};
@@ -472,10 +472,10 @@ function elastic(sc,inner){
   const back=()=>{if(!off)return;const from=off;set(0);if(reduceMotion())return;anim&&anim.cancel();anim=inner.animate([{transform:`translate3d(0,${from}px,0)`},{transform:"translate3d(0,0,0)"}],{duration:620,easing:"cubic-bezier(.16,1.35,.4,1)"})};
   const atTop=()=>sc.scrollTop<=0,atBot=()=>sc.scrollTop+sc.clientHeight>=sc.scrollHeight-1;
   sc.addEventListener("wheel",e=>{
-    if(e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||e.target.closest("[data-own-gesture]"))return;   /* 自己用滾輪／拖曳的區塊（完成紀錄的週方塊列、週卡堆）：頁面不跟著回彈，不然每滾一格整頁抖一下 */
+    if((skip&&skip())||e.ctrlKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||e.target.closest("[data-own-gesture]"))return;   /* 自己用滾輪／拖曳的區塊（完成紀錄的週方塊列、週卡堆）：頁面不跟著回彈，不然每滾一格整頁抖一下 */
     if((e.deltaY<0&&atTop())||(e.deltaY>0&&atBot())){anim&&anim.cancel();acc=Math.max(-260,Math.min(260,acc-e.deltaY*.45));set(rub(acc));clearTimeout(tm);tm=setTimeout(()=>{acc=0;back()},120)}
   },{passive:true});
-  sc.addEventListener("touchstart",e=>{if(e.touches.length!==1||e.target.closest("[data-own-gesture]")){y0=null;return}y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
+  sc.addEventListener("touchstart",e=>{if((skip&&skip())||e.touches.length!==1||e.target.closest("[data-own-gesture]")){y0=null;return}y0=e.touches[0].clientY;x0=e.touches[0].clientX;axis="";base=null},{passive:true});
   sc.addEventListener("touchmove",e=>{
     if(y0===null)return;
     if(document.documentElement.classList.contains("ev-drag-on")){if(off)set(0);return}   /* 膠囊拖到角落（live.js）時手指的上下移動是拖曳，不是拉頁面：不回彈，不然整頁會被拉走、頁面多出一個疊層把完成／刪除角落蓋住 */
@@ -489,4 +489,5 @@ function elastic(sc,inner){
   const up=()=>{y0=null;base=null;back()};
   sc.addEventListener("touchend",up);sc.addEventListener("touchcancel",up);
 }
-elastic($("#pageMain"),document.querySelector("#pageMain .wrap"));
+elastic($("#pageMain"),document.querySelector("#pageMain .wrap"),()=>PHONE_MQ.matches);   /* 手機整頁不捲動，回彈交給下面的資訊區 */
+elastic($("#wrapSc"),$("#wrapIn"),()=>!PHONE_MQ.matches);
