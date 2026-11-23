@@ -32,7 +32,7 @@ const inAppBrowser=()=>!window.CouncilApp&&/\bLine\/|FBAN|FBAV|FB_IAB|Instagram|
 
 /* ---------- 登入狀態 ----------
    acct.user＝{uid,email,name}｜null；acct.roles＝自己的 roles 文件（即時監聽，角色被改或撤掉時畫面立刻跟著變）。 */
-const acct={ready:false,user:null,roles:null,err:"",names:{}};
+const acct={ready:false,user:null,roles:null,proj:false,err:"",names:{}};
 let acctMod=null,acctRolesOff=null,acctUid=undefined;
 function acctLoad(){
   if(!acctMod)acctMod=storeModLoad("fb-account.js","board-account-ready","BoardAccount").then(A=>A.init(CFG.firebase));   /* 載入方式同 store.js */
@@ -47,7 +47,7 @@ let acctCanW="",acctNameEd=false;   /* acctNameEd：帳號頁的名稱正在就�
 function acctChanged(){
   if(typeof renderSettings==="function")renderSettings();
   if(typeof hubNow!=="undefined"&&hubNow&&!hubNow.inFlow&&!acctNameEd)hubNow.draw();   /* 帳號頁最上面的名稱、角色跟著即時變（角色被改或撤掉時） */
-  const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
+  const w=`${acct.user&&acct.user.uid}|${fsWriter()}|${fsAdmin()}|${fsDelOk()}|${acctSuper()}|${fsProj()}`;if(w!==acctCanW){acctCanW=w;if(fsMode()&&typeof render==="function")render();
     if(fsMode()&&CFG.follow&&typeof actLoad==="function")actLoad(true)}   /* 會長室的各部門編輯量：讀得到哪些部門跟著登入與角色變（activity.js） */
 }
 /* 登入狀態與第一次的角色都讀到了（boot.js 等它再決定要不要提示唯讀） */
@@ -62,13 +62,15 @@ async function acctStart(){
     if(!u)acctKnownOk();
     if(uid===acctUid){acct.user=u;return}
     const prevUid=acctUid;
-    acctUid=uid;acct.user=u;acct.roles=null;acct.ready=true;
+    acctUid=uid;acct.user=u;acct.roles=null;acct.proj=false;acct.ready=true;
     if(prevUid&&typeof storeFsGet==="function")storeFsGet().then(fs=>fs.clearCache()).then(w=>{if(w)location.reload()}).catch(()=>{});   /* 登出、換帳號：這台裝置上存的讀取結果（fs-cache.js）清掉，不留給下一個人 */
     if(acctRolesOff){acctRolesOff();acctRolesOff=null}
     if(!first)acctCloseAdmin();   /* 登出、換帳號：已讀到的人員、紀錄這些資料不能留在畫面上 */
     if(!first&&typeof fwCache!=="undefined"){fwCache.clear();if(typeof MT!=="undefined")MT.at=0}   /* 02D D-b：別的部門讀到的內容跟著登入身分（新資料庫的部門要登入才讀得到），換身分就重讀 */
     /* 先等 users／profiles 補建完（這時 Firestore 已經換成這個帳號的憑證）再監聽角色、讀名稱 */
-    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;acctRolesOff=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;acctMyDept(r);A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()});return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
+    if(u)A.ensured().then(()=>{if(acctUid!==uid)return;const offR=A.onRoles(r=>{if(acctUid!==uid)return;const was=acctSuper();acct.roles=r;acctMyDept(r);A.rosterSelf(r).catch(()=>{});if(was&&!acctSuper())acctCloseAdmin();acctChanged();acctKnownOk()}),
+      offP=A.onProjectGrant(g=>{if(acctUid!==uid)return;acct.proj=g;acctChanged()});   /* 專案權限：撤銷時畫面立刻變回唯讀 */
+      acctRolesOff=()=>{offR();offP()};return A.profiles().then(m=>{acct.names=m;acctChanged()})}).catch(()=>{});
     acctChanged();
     if(!first&&fsMode())acctReload();   /* 登入、登出、換帳號：重新讀這個部門（boot.js 第一次讀之前已經等過登入狀態；凍結中的部門照舊讀資料檔） */
     if(joinToken())joinFlow();   /* 沒登入時 joinFlow 先要求登入 */
@@ -196,6 +198,10 @@ async function acctHub(){
   const A=await acctLoad();
   let mine=[];try{mine=await A.requestsMine()}catch(_){}
   const pend=()=>mine.filter(q=>q.status==="pending");
+  /* 專案權限（跟部門申請分開）：自己的申請；沒有活動部的角色、還沒有專案權限才顯示申請 */
+  let pm=null;try{pm=await A.projectMine()}catch(_){}
+  const pmPend=()=>pm&&pm.status==="pending";
+  const projAsk=!acctSuper()&&!acctDepts().events&&!acct.proj;
   const head=()=>{const u=acct.user;if(!u)return "";
     return `<div class="acct-me"><div class="acct-person"><b class="md-e acct-name" role="button" tabindex="0" data-acct-name aria-label="名稱，點一下修改">${esc(acct.names[u.uid]||u.name||u.email||"")}${ico("edit","solo")}</b><small>${esc(u.email||"")}</small></div><span class="acct-chips">${roleChips(acct.roles||{})}</span></div>${waitNote()}`};
   /* 06 等待頁：還沒有任何編輯權限的人，帳號頁最上面說明目前的狀態（有待審的申請＝等部長或總管理員審核；沒有＝請申請） */
@@ -205,6 +211,11 @@ async function acctHub(){
     ...(fsWriter()?[{k:"members",ic:"people",t:"部門成員",flow:()=>membersPanel()}]:[]),   /* 05：這個部門有編輯權限的人看得到名單；部長多了邀請、撤銷與審核申請 */
     {k:"req",ic:"doc",t:"申請加入部門",flow:async()=>{if(await acctRequest(pend()))mine=await A.requestsMine().catch(()=>mine)}},
     /* 自己送出、還沒審的申請：名稱寫「部門・角色（待審）」，點了確認後撤回 */
+    ...(projAsk&&!pmPend()?[{k:"preq",ic:"flag",t:"申請專案權限",flow:async()=>{if(await projectRequest())pm=await A.projectMine().catch(()=>pm)}}]:[]),
+    ...(projAsk&&pmPend()?[{k:"prq",ic:"history",t:"專案權限（等待活動部審核）",
+      act:async()=>{const v=await ask("撤回專案權限的申請",[],{danger:"撤回"});if(v!=="delete")return;
+        if(await acctTry(()=>A.projectDecide(pm.id,"cancelled",pm.rev),"已撤回"))pm=await A.projectMine().catch(()=>pm)}}]:[]),
+    ...(acctSuper()||acctDepts().events==="admin"?[{k:"pjudge",ic:"people",t:"專案權限審核",flow:()=>projectPanel()}]:[]),
     ...pend().map(q=>({k:"rq-"+q.id,ic:"history",t:`${deptNameOf(q.deptId)}・${rankT(q)}（等待審核）`,
       act:async()=>{const v=await ask(`撤回 ${deptNameOf(q.deptId)}・${rankT(q)} 的申請`,[],{danger:"撤回"});if(v!=="delete")return;
         if(await acctTry(()=>A.requestDecide(q.id,"cancelled",q.rev),"已撤回"))mine=await A.requestsMine().catch(()=>mine)}})),
@@ -238,6 +249,35 @@ async function acctRequest(pending=[]){
     {validate:o=>acctDepts()[o.dept]===(o.rank==="minister"?"admin":"editor")?"已經是這個角色":pending.some(q=>q.deptId===o.dept)?acctErr({code:"pending"}):""});
   if(!v)return false;
   return acctTry(()=>A.requestCreate({deptId:v.dept,rank:v.rank,note:v.note}),"已送出申請");
+}
+
+/* 專案權限：只能改活動部的專案（進度頁），由活動部部長或總管理員審核；跟申請加入部門是兩件事 */
+async function projectRequest(){
+  const A=await acctLoad();
+  const v=await ask("申請專案權限",[{name:"note",label:"備註（想參與哪個專案）",ph:""}],{});
+  if(!v)return false;
+  return acctTry(()=>A.projectRequestCreate(v.note),"已送出，等待活動部審核");
+}
+/* 專案權限審核（活動部部長、總管理員）：待審的申請核准或拒絕；已有專案權限的人可以撤銷 */
+function projectPanel(){
+  return acctPanel("專案權限審核",async p=>{
+    const A=await acctLoad();
+    let reqs=[],held=[];
+    const load=async()=>{[reqs,held]=await Promise.all([A.projectPending(),A.projectHolders()]);acct.names=await A.profiles().catch(()=>acct.names)};
+    const draw=()=>{if(!p.alive)return;
+      p.html=p.head()+(reqs.length?`<b class="acct-sub">待審的申請（${reqs.length}）</b><div class="set-list">${reqs.map(q=>`<div class="acct-line acct-req"><span><b>${esc(nameOf(q.uid))}</b><small>${hm(q.createdAt)}${q.note?` · ${esc(q.note)}`:""}</small></span>${q.uid!==acct.user.uid?`<button type="button" class="icon" data-pok="${esc(q.id)}">核准</button><button type="button" class="icon danger" data-pno="${esc(q.id)}">拒絕</button>`:""}</div>`).join("")}</div>`:`<p class="set-p acct-empty">沒有待審的申請</p>`)
+        +(held.length?`<b class="acct-sub">有專案權限的人</b><div class="set-list">${held.map(x=>`<div class="acct-line"><span><b>${esc(nameOf(x.uid))}</b><small>可以編輯活動部的專案</small></span><button type="button" class="icon danger" data-prm="${esc(x.uid)}">撤銷</button></div>`).join("")}</div>`:"")};
+    p.box.addEventListener("click",async e=>{
+      const b=e.target.closest("button");if(!b)return;
+      const q=reqs.find(x=>x.id===(b.dataset.pok||b.dataset.pno));
+      if(b.dataset.pok&&q){const v=await ask(`核准 ${nameOf(q.uid)} 的專案權限`,[],{danger:"核准",note:"可以新增、修改活動部的專案，不能改其他內容"});if(v!=="delete")return;await acctTry(()=>A.projectApprove(q.id,q.rev),"已核准")}
+      else if(b.dataset.pno&&q){const v=await ask("拒絕這筆申請",[],{danger:"拒絕"});if(v!=="delete")return;await acctTry(()=>A.projectDecide(q.id,"rejected",q.rev),"已拒絕")}
+      else if(b.dataset.prm){const u=b.dataset.prm,v=await ask(`撤銷 ${nameOf(u)} 的專案權限`,[],{danger:"撤銷"});if(v!=="delete")return;await acctTry(()=>A.projectRevoke(u),"已撤銷")}
+      else return;
+      if(p.alive){await load();draw()}
+    });
+    await load();draw();
+  });
 }
 
 /* ---------- 系統管理（總管理員）：人員、QR 邀請、申請、紀錄、匯入、匯出全部資料、儲存空間用量 ---------- */
