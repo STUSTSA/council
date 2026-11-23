@@ -59,7 +59,7 @@ const SHELL_HTML=`<div class="pager" id="pager">
       </section>
       <!-- 秘書處：行政會議資料（2026-11-21，meeting.js 的 renderAgenda）：中間是白紙文件預覽、要改的地方點一下就地編輯；左邊切換會議與加入部門報告、右邊是目前那一段的工具 -->
       <section class="panel follow-panel meet-panel ag-panel" id="agPanel" aria-labelledby="agH" hidden>
-        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="primary" id="agGo">儲存</button></div>
+        <div class="panel-head"><h2 class="sec-h" id="agH" data-en="AGENDA">行政會議資料</h2><button type="button" class="icon" id="agCopy">複製文字</button><button type="button" class="icon" id="agDrive" hidden>存到雲端</button><button type="button" class="primary" id="agGo">儲存</button></div>
         <div class="ag-wrap">
           <aside class="ag-tools ag-left" id="agLeft" aria-label="會議與部門報告"></aside>
           <div class="ag-center"><article class="md-doc ag-paper" id="agDoc" spellcheck="false"></article></div>

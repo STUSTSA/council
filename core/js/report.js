@@ -284,10 +284,10 @@ function openReport(from,to,doc){
   closeReport(true);rptRange={from,to};rptDoc=doc||null;const L=doc?doc.label:"工作報告";
   document.body.insertAdjacentHTML("beforeend",`<div class="rpt-ov" id="rptOv" role="dialog" aria-modal="true" aria-label="${L}預覽">
     <div class="anim-top rpt-bar" data-fx-keep><div class="anim-title"><b class="sec-h" data-en="${esc(doc?doc.k:"REPORT")}">${esc(L)}預覽</b><span class="rpt-pages num" id="rptPages" aria-live="polite"></span></div>
-      <div class="anim-ctl"><button type="button" id="rptAdd">＋ 章節</button><button type="button" class="primary" id="rptPrint">${ico("download")}存成 PDF</button><button type="button" id="rptClose" aria-label="關閉${L}">${ico("close")}關閉</button></div></div>
+      <div class="anim-ctl"><button type="button" id="rptAdd">＋ 章節</button>${doc&&driveReady()?`<button type="button" id="rptDrive">${ico("upload")}存到雲端</button>`:""}<button type="button" class="primary" id="rptPrint">${ico("download")}存成 PDF</button><button type="button" id="rptClose" aria-label="關閉${L}">${ico("close")}關閉</button></div></div>
     <div class="rpt-scroll"><div class="rpt-fit"><article class="rpt-paper" spellcheck="false">${doc?doc.html:rptHTML(rptData(from,to))}</article></div></div></div>`);
   const ov=$("#rptOv");rptOpen=true;document.body.classList.add("rpt-open");
-  $("#rptClose").onclick=()=>closeReport();Back.layers.report();$("#rptPrint").onclick=rptPrint;$("#rptAdd").onclick=rptAdd;
+  $("#rptClose").onclick=()=>closeReport();Back.layers.report();$("#rptPrint").onclick=rptPrint;$("#rptAdd").onclick=rptAdd;{const d=$("#rptDrive");if(d)d.onclick=rptDrive}
   rptBind(ov);rptDock(ov);rptFit();rptSync();
   ov._ro=new ResizeObserver(()=>rptFit());ov._ro.observe(ov.querySelector(".rpt-paper"));   /* 內容長高、變矮時，縮小後的外框跟著改高度 */
   /* 實際斷頁：打字、加減圖塊、圖片載入、視窗大小改變、字型載入後都重算（rptPaginate） */
@@ -470,6 +470,13 @@ function rptAfterPrint(){
   ev.forEach(t=>addEventListener(t,back,true));
 }
 addEventListener("beforeprint",rptPrintPrep);   /* 用瀏覽器選單（Ctrl+P）列印也一樣 */
+/* 把預覽的紙（含你在預覽裡改的字）存成雲端的 Google 文件；只有會議類的預覽有這個鍵 */
+function rptDrive(){
+  const a=$("#rptOv .rpt-paper");if(!a||!rptDoc)return;const c=a.cloneNode(true);
+  c.querySelectorAll("[contenteditable],[data-fx-keep]").forEach(x=>{x.removeAttribute("contenteditable");x.removeAttribute("data-fx-keep")});
+  c.querySelectorAll("button,svg,script,style").forEach(x=>x.remove());
+  driveSave(rptDoc.file,driveHTML(rptDoc.file,c.innerHTML));
+}
 function rptPrint(){
   const t=document.title,r=rptRange||{from:"",to:""};
   document.title=rptDoc?rptDoc.file:`${CFG.dept.name||""}工作報告_${r.from.replaceAll("-","")}-${r.to.replaceAll("-","")}`;

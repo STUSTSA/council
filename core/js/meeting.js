@@ -365,7 +365,7 @@ function renderAgenda(){
   if(AG.ed)return;   /* 就地編輯中不重畫（游標才不會跳） */
   const y=$("#agDoc"),top=y.scrollTop;y.innerHTML=agDocHTML();y.scrollTop=top;agRenderTools();
   const ok=AG.doc.items.some(agKeep);
-  $("#agGo").disabled=AG.busy||!ok;$("#agCopy").disabled=!ok;
+  $("#agGo").disabled=AG.busy||!ok;$("#agCopy").disabled=!ok;{const d=$("#agDrive");d.hidden=!driveReady();d.disabled=!ok}
   $("#agSt").textContent=AG.busy?"儲存中…":agSaved()?`已存（${(AG.doc.at||"").slice(5,16)}${AG.doc.by?"　"+AG.doc.by:""}）；之後每改一處會自動存。`:"草稿：還沒存。點文字就地修改，按「儲存」存成這一天的議程。";
 }
 /* ---- 就地編輯 ---- */
@@ -452,6 +452,7 @@ document.addEventListener("click",async e=>{
     const it=agItemOf(xa.dataset.mdXadd);if(!it)return;it.extra=it.extra||[];if(it.extra.length>=20){toast("臨時項目最多 20 個");return}
     it.extra.push({id:uid("x"),title:"",note:""});renderAgenda();agChanged();const r=$(`#agDoc [data-md="${xa.dataset.mdXadd}"] .md-ext:last-of-type`)||[...document.querySelectorAll(`#agDoc [data-md="${xa.dataset.mdXadd}"] [data-ed=xt]`)].pop();if(r)agEditStart(r);return}
   const xd=t.closest("[data-md-xdel]");if(xd){if(!(await agLogin()))return;const it=agItemOf(xd.dataset.mdXdel);if(it&&it.extra)it.extra.splice(+xd.dataset.j,1);agChanged();renderAgenda();return}
+  if(t.closest("#agDrive")){const d=t.closest("#agDrive");if(d.disabled)return;const n=`行政會議資料_${AG.doc.date.replaceAll("-","")}`;driveSave(n,driveText(n,agDocText(AG.doc)));return}
   if(t.closest("#agCopy")){navigator.clipboard.writeText(agDocText(AG.doc)).then(()=>toast("已複製議程與會議紀錄"),()=>toast("複製失敗"));return}
   if(t.closest("#agGo")){clearTimeout(AG.t);agSaveDoc(false);return}
   const ed=t.closest("[data-ed]");if(ed&&!t.closest("summary"))agEditStart(ed);
