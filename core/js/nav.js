@@ -491,3 +491,5 @@ function elastic(sc,inner,skip){
 }
 elastic($("#pageMain"),document.querySelector("#pageMain .wrap"),()=>PHONE_MQ.matches);   /* 手機整頁不捲動，回彈交給下面的資訊區 */
 elastic($("#wrapSc"),$("#wrapIn"),()=>!PHONE_MQ.matches);
+{const ws=$("#wrapSc"),wp=document.querySelector("#pageMain .wrap");   /* 手機：資訊區捲離最上面才顯示搜尋列下緣的淡出 */
+  if(ws&&wp)ws.addEventListener("scroll",()=>wp.classList.toggle("sc-run",ws.scrollTop>2),{passive:true})}

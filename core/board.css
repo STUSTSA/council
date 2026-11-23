@@ -135,6 +135,8 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
   :is(.dtop,.dsrow){position:relative;top:auto;flex:none}   /* 不再黏住：它們本來就在捲動層外面（桌面的 sticky 規則在上面） */
   .wrap-sc{--wsx-l:max(14px,var(--sa-left));--wsx-r:max(14px,var(--sa-right));display:block;flex:1;min-height:0;margin:0 calc(-1 * var(--wsx-r)) 0 calc(-1 * var(--wsx-l));padding:0 var(--wsx-r) calc(20px + var(--bar-in) + var(--fab-in) + var(--sa-bottom)) var(--wsx-l);overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:none}
   .wrap-sc::-webkit-scrollbar{display:none}
+  .dsrow::after{opacity:0;transition:opacity var(--mo-base) var(--mo-out)}   /* 淡出只在資訊區捲過之後才出現（nav.js 加 .sc-run）：停在最上面時不蓋到第一張卡的上緣與陰影 */
+  .wrap.sc-run .dsrow::after{opacity:1}
   body.set-open .wrap-sc{overflow-y:hidden}   /* 設定開著：底下的資訊區不捲（桌面是 body.set-open #pageMain） */
   .wrap-in{display:block}
 }
