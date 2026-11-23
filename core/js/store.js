@@ -37,11 +37,11 @@ let storePreDone=false;
 function storePreload(){
   if(storePreDone||!(CFG.firebase&&CFG.firebase.projectId)||!BOARD_DEPTS.some(d=>d.source==="firestore"))return;
   storePreDone=true;
-  [...["firebase-app","firebase-firestore","firebase-auth"].map(f=>FB_SDK+f+".js"),...["fb-app","store-firestore","fb-account"].map(f=>"core/js/"+f+".js")]
+  [...["firebase-app","firebase-firestore","firebase-auth"].map(f=>FB_SDK+f+".js"),...["fb-app","fs-cache","store-firestore","fb-account"].map(f=>"core/js/"+f+".js")]
     .forEach(u=>{const l=document.createElement("link");l.rel="modulepreload";l.href=u;document.head.append(l)});
 }
 let storeFsPre=null;   /* 看板頁提早讀的第一份資料（boot.js 開始讀時拿走，只用一次；之後的重新讀取照常重讀） */
-function storeFsLoad(){if(storeFsPre){const p=storeFsPre;storeFsPre=null;return p}return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId))}
+function storeFsLoad(force){if(storeFsPre&&!force){const p=storeFsPre;storeFsPre=null;return p}storeFsPre=null;return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId,force))}   /* force＝一定重讀（寫入之後、寫入前的衝突檢查、手動重新載入）；其他情況期限內用這台裝置上存的（fs-cache.js） */
 if(document.getElementById("state")&&fsMode()&&location.protocol!=="file:"&&CFG.firebase&&CFG.firebase.projectId){   /* 只有看板頁（index.html 有 #state）、而且這個部門讀新資料庫 */
   storePreload();
   storeFsPre=storeFsGet().then(fs=>fs.loadDept(CFG.firebase,CFG.deptId));storeFsPre.catch(()=>{});   /* 失敗也要等 boot.js 拿去處理，這裡只是避免「沒人接的錯誤」警告 */
@@ -49,9 +49,9 @@ if(document.getElementById("state")&&fsMode()&&location.protocol!=="file:"&&CFG.
 /* 02D D-b：跨部門讀取（會長室追蹤、秘書處讀各部門、讀秘書處學年設定、行事曆的「會長室」「其他」）跟著那個部門的資料來源：
    firestore 的部門讀新資料庫（跟它自己的看板同一組查詢；要登入才讀得到＝permission-denied），github／frozen 的部門照舊讀資料檔（呼叫端）。
    回傳 schemaVersion 13 格式的部門資料（還沒 normalize） */
-function storeDeptFull(id){   /* {data, src, orig}：秘書處的會議編輯要留著 src／orig 才能寫回（meeting.js） */
+function storeDeptFull(id,force){   /* {data, src, orig}：秘書處的會議編輯要留著 src／orig 才能寫回（meeting.js） */
   if(!(CFG.firebase&&CFG.firebase.projectId))return Promise.reject(Object.assign(new Error("firebase"),{code:"unavailable"}));
-  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id));
+  return storeFsGet().then(fs=>fs.loadDept(CFG.firebase,id,force));
 }
 const storeDeptData=id=>storeDeptFull(id).then(r=>r.data);
 /* ui-06：行事曆的「活動」「會議」（scope 是 all-activity／all-meeting 的時間事件）。只有新資料庫有 scope：
@@ -100,7 +100,7 @@ async function fsPersist(msg,o={}){
     if(!o.quiet){toast(m);setTimeout(()=>fsFailAsk(m),0)}
     return false;
   }
-  try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("儲存後重新讀取",e);storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
+  try{storeFsUse(await storeFsLoad(true))}catch(e){fsReadErr("儲存後重新讀取",e);storeFsBase=null}   /* 已寫入但重新讀取失敗：先唯讀，重新整理後再編輯 */
   fsBusy=false;render();if(!o.quiet)toast(msg||"已儲存");return true;
 }
 /* 補寫：e.draft＝這次要存的畫面資料（完成這一段換過 ID 的時間標記用新的 ID，重試不會再建一份）、e.intended＝這次要寫的文件。
@@ -109,7 +109,7 @@ async function fsFinish(W,e,opt){
   const prev=storeFsBase,only=e.intended,draft=e.draft;
   state=draft;
   for(let i=0;i<3;i++){
-    let r;try{r=await storeFsLoad()}catch(_){return Object.assign(e,{part:true})}   /* 讀不到：比對基準不變，提示後由使用者重新載入 */
+    let r;try{r=await storeFsLoad(true)}catch(_){return Object.assign(e,{part:true})}   /* 讀不到：比對基準不變，提示後由使用者重新載入 */
     storeFsBase={src:r.src,orig:r.orig,state:JSON.parse(JSON.stringify(normalize(r.data)))};
     try{await W.saveDept(CFG.firebase,CFG.deptId,storeFsBase,state,{...opt,only,prev:prev.src});return null}
     catch(e2){
@@ -137,6 +137,6 @@ function fsHold(prev,paths){
 async function fsFailAsk(m){
   if(await ask("儲存失敗",[],{danger:"重新載入",note:m})!=="delete")return;
   editing=false;cardEdit="";dirty=false;evFld=null;ifFld=null;
-  try{storeFsUse(await storeFsLoad())}catch(e){fsReadErr("重新載入",e);storeFsBase=null;toast("讀取失敗，請重新整理")}
+  try{storeFsUse(await storeFsLoad(true))}catch(e){fsReadErr("重新載入",e);storeFsBase=null;toast("讀取失敗，請重新整理")}
   render();
 }

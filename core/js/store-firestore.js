@@ -4,15 +4,24 @@
    cfg＝dept/config.js 的 BOARD_BASE.firebase（網頁設定，不是機密）。
    回傳 {data（schemaVersion 13 的部門資料）, src（每份文件 {id, ...時間值換成 __ts}）, orig（原始文件，寫入時沿用沒改的欄位，時間戳記保留微秒）}。 */
 import { fb, authReady } from "./fb-app.js";
+import { cached, drop, stats } from "./fs-cache.js";
 import { doc, getDoc, getDocs, collection, collectionGroup, query, where, orderBy, limitToLast, endBefore, Timestamp }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
 const plain = v => window.StoreMap.plain(v);                 /* Timestamp → {__ts}（store-map.js） */
-const one = async (ref, o) => { const s = await getDoc(ref); if (!s.exists()) return null; if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; };
-const many = async (q, o) => (await getDocs(q)).docs.map(s => { if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; });
+/* 讀取量（2026-11-23，Spark 每日 5 萬次）：部門資料、版本歷史、行事曆事件讀過就存在這台裝置（fs-cache.js），
+   在期限內重新整理、進出部門都不再連線讀。寫入之後與寫入前的衝突檢查傳 force＝一定重讀。stats.docs＝這個分頁實際讀了幾份文件（量測用）。 */
+const TTL_PRES = 2 * 60e3, /* 會長室含「開放秘書處會議編輯」的授權，要比較即時 */ TTL_DEPT = 10 * 60e3, TTL_HIST = 5 * 60e3, TTL_EVENTS = 10 * 60e3;
+const uidOf = cfg => (fb(cfg).auth.currentUser || {}).uid || "anon";
+const T = Timestamp;
+const one = async (ref, o) => { const s = await getDoc(ref); stats.docs += 1; if (!s.exists()) return null; if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; };
+const many = async (q, o) => (await getDocs(q).then(r => { stats.docs += Math.max(1, r.docs.length); return r; })).docs.map(s => { if (o) o[s.id] = s.data(); return { id: s.id, ...plain(s.data()) }; });
 
-async function loadDept(cfg, dept) {
+async function loadDept(cfg, dept, force) {
   await authReady(cfg);
+  return cached(`${uidOf(cfg)}|dept|${dept}`, dept === "president" ? TTL_PRES : TTL_DEPT, () => loadDeptNet(cfg, dept), T, force);
+}
+async function loadDeptNet(cfg, dept) {
   const d = fb(cfg).db, by = c => where("deptId", "==", dept);
   const orig = { settings: {}, cards: {}, issues: {}, weeks: {}, labels: {}, events: {} };
   const [settings, org, grant, cards, issues, weeks, labels, events, legacy, minutes] = await Promise.all([
@@ -37,19 +46,26 @@ async function loadDept(cfg, dept) {
 const verRow = s => { const v = s.data(); return { kind: "ver", t: v.at ? v.at.toMillis() : 0, by: v.by || "", version: v.version, title: v.title || "", deptId: v.deptId, imported: v.imported === true }; };
 async function versionsSince(cfg, dept, since) {
   await authReady(cfg);
-  const qs = await getDocs(query(collectionGroup(fb(cfg).db, "versions"), where("deptId", "==", dept), where("at", ">=", Timestamp.fromMillis(since)), orderBy("at")));
-  return qs.docs.map(verRow);
+  return cached(`${uidOf(cfg)}|ver|${dept}|${since}`, TTL_HIST, async () => {
+    const qs = await getDocs(query(collectionGroup(fb(cfg).db, "versions"), where("deptId", "==", dept), where("at", ">=", Timestamp.fromMillis(since)), orderBy("at")));
+    stats.docs += Math.max(1, qs.docs.length);
+    return qs.docs.map(verRow);
+  });
 }
 /* 一頁（由新往舊）：cursor＝上一頁最舊的那一筆（同一個時間的不會漏掉） */
 async function versionsPage(cfg, dept, cursor, n) {
   await authReady(cfg);
   const qs = await getDocs(query(collectionGroup(fb(cfg).db, "versions"), where("deptId", "==", dept), orderBy("at"), ...(cursor ? [endBefore(cursor)] : []), limitToLast(n)));
+  stats.docs += Math.max(1, qs.docs.length);
   return { rows: qs.docs.map(verRow), cursor: qs.docs[0] || cursor, more: qs.docs.length === n };
 }
 async function auditSince(cfg, since) {
   await authReady(cfg);
+  return cached(`${uidOf(cfg)}|audit|${since}`, TTL_HIST, async () => {
   const qs = await getDocs(query(collection(fb(cfg).db, "auditLogs"), where("at", ">=", Timestamp.fromMillis(since)), orderBy("at")));
+  stats.docs += Math.max(1, qs.docs.length);
   return qs.docs.map(s => { const a = s.data(); return { kind: "audit", id: s.id, t: a.at ? a.at.toMillis() : 0, by: a.actor || "", col: a.col, docId: a.docId, action: a.action, before: a.before || {}, after: a.after || {} }; });
+  });
 }
 
 /* ui-06：行事曆「活動」「會議」與主頁的全會行事曆：scope 是 all-activity／all-meeting 的時間事件（索引 Q13：scope＋start）。
@@ -61,8 +77,10 @@ async function eventsByScope(cfg, scope, from, to, o = {}) {
   const { db, auth } = fb(cfg);
   if (!auth.currentUser) throw Object.assign(new Error("login required"), { code: "permission-denied" });
   const range = [where("start", ">=", Timestamp.fromMillis(from)), where("start", "<", Timestamp.fromMillis(to)), orderBy("start")];
-  return many(query(collection(db, "events"), where("scope", "==", scope), ...range));
+  return cached(`${auth.currentUser.uid}|scope|${scope}|${from}|${to}`, TTL_EVENTS, () => many(query(collection(db, "events"), where("scope", "==", scope), ...range)), T);
 }
+/* 登出、換帳號：這台裝置上存的讀取結果全部清掉（不留給下一個人） */
+const clearCache = () => drop("");
 
-window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope };
+window.BoardFirestore = { loadDept, versionsSince, versionsPage, auditSince, eventsByScope, clearCache, stats };
 dispatchEvent(new Event("board-firestore-ready"));
