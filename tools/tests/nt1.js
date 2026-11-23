@@ -27,7 +27,9 @@ for(const [w,h,sc,tc] of [[1300,900,'dark',false],[412,860,'light',true]]){const
  say(/^[A-Z]{3}$/.test(po[0])&&po[1]>=2&&po[2]>=2,`${w} poster ${po}`);
  await p.screenshot({path:`nt1_${w}.png`});
  /* 卡片：點明日＝行事曆選到那一天，下面的清單是那一天 */
- if(ph){await p.evaluate(()=>notiViewShow(null));await p.waitForTimeout(700);await p.evaluate(()=>notiEnter(1));await p.waitForTimeout(900)}else await p.click('#notiPage .nd-card:not(.today)');await p.waitForTimeout(900);
+ if(ph){await p.evaluate(()=>notiViewShow(null));await p.waitForTimeout(700);await p.evaluate(()=>notiEnter(1));await p.waitForTimeout(1300);
+  const tm=await p.evaluate(()=>[todayOpen,document.querySelector('#todayOv .td-lab b')?.textContent,document.querySelectorAll('#todayOv .td-row').length]);say(tm[0]&&tm[1]==='明日'&&tm[2]===2,`${w} 明日卡片＝跟今日同一種展開層 ${tm}`);
+  await p.evaluate(()=>closeToday(true));await p.waitForTimeout(700);await p.evaluate(()=>{const d=addDays(today(),1);calDay(NOTI,d);notiViewShow('cal')});await p.waitForTimeout(900)}else await p.click('#notiPage .nd-card:not(.today)');await p.waitForTimeout(900);
  const od=await p.evaluate(()=>[NOTI.day===addDays(today(),1),document.querySelectorAll('.cal-list .cal-ev').length,$('.pc-d.sel')?.dataset.calday===NOTI.day]);
  say(od[0]&&od[1]===2&&od[2],`${w} open day ${od}`);
  /* 今日卡片：點了放大成全螢幕的「今日」層（本來就要做） */
