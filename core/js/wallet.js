@@ -43,3 +43,35 @@ const Wallet=(()=>{
   }
   return {make,WH,WU,WG};
 })();
+
+/* 捲動縮疊（手機）：原本的手指捲動不變，清單項目（即時回報的膠囊 .cp、設定的列 .set-row）捲到上方固定區下面時不被切掉，
+   而是停在固定區下緣、縮小疊起來——跟完成紀錄的週疊卡同一個視覺：新的在前面、舊的縮小（每層 .05，最多三層）露一條在上面。
+   只寫 translate／scale／z-index（獨立屬性，不碰 transform，拖曳排序、點開成全螢幕、原位更新照舊）；不碰樣式與點擊。
+   捲動容器：.page（即時回報頁）、.set-scroll、.set-sub-body（設定）；固定區下緣＝#dsRow（沒有就 #dTop）的底，設定層沒有固定區就用容器自己的上緣。
+   拖曳排序中（html.ev-drag-on）、減少動態、桌面寬度一律不套用並還原。 */
+const Pile=(()=>{
+  const SC=".page,.set-scroll,.set-sub-body",IT=".cp,.set-row",LAY=3,PEEK=7,STEP=.05,GAP=10,PAD=14;
+  let raf=0;
+  const on=()=>matchMedia("(max-width:640px)").matches&&!reduceMotion()&&!document.documentElement.classList.contains("ev-drag-on");
+  function clear(el){if(el._pl){el._pl=0;el._ty=0;el._s=1;el.style.translate=el.style.scale=""}}
+  function run(sc){
+    const its=[...sc.querySelectorAll(IT)];if(!its.length)return;
+    if(!on()){its.forEach(el=>{clear(el);el.style.zIndex=""});return}
+    const sr=sc.getBoundingClientRect();let edge=sr.top;
+    if(sc.matches(".page")){const b=document.getElementById("dsRow")||document.getElementById("dTop");if(b&&b.offsetHeight)edge=Math.max(edge,b.getBoundingClientRect().bottom)}
+    const P=edge+PAD;
+    const m=its.map(el=>{const r=el.getBoundingClientRect(),h=el.offsetHeight,s=el._s||1;   /* 量到的位置先扣掉自己加上去的位移與縮放，才是排版的原位 */
+      return {el,h,nat:r.top-(el._ty||0)-h*(1-s)/2}});
+    let any=false;
+    m.forEach(({el,h,nat},i)=>{
+      const d=P-nat;
+      if(d<=0||el.classList.contains("drag")){clear(el);return}
+      any=true;const r=d/(h+GAP),ty=d-PEEK*Math.min(r,LAY-1),s=1-STEP*Math.min(r,LAY);
+      el._pl=1;el._ty=ty;el._s=s;el.style.translate=`0 ${ty.toFixed(1)}px`;el.style.scale=s.toFixed(4)});
+    m.forEach(({el},i)=>{el.style.zIndex=any?String(i+1):""});   /* 後面的在前面：滑進來的新項目蓋過已經疊起來的 */
+  }
+  const tick=sc=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>run(sc))};
+  document.addEventListener("scroll",e=>{const t=e.target;if(t&&t.matches&&t.matches(SC))tick(t)},{capture:true,passive:true});
+  addEventListener("resize",()=>document.querySelectorAll(SC).forEach(run));
+  return {run};
+})();

@@ -1591,7 +1591,7 @@ body.set-open #pageMain{overflow:hidden}
 .set-inner{max-width:720px;margin:0 auto;grid-template-columns:minmax(0,1fr);padding:max(14px,var(--sh-pad)) 0 calc(32px + var(--bar-in) + var(--sa-bottom));display:grid;gap:10px}   /* 列與列、塊與塊的間距一律 10px（跟 .set-list 同一個值；2026-11-22 使用者：每個之間間距一樣）；上緣至少留柔光陰影的外擴距離 */
 /* 清單：一列一塊（.set-list 本身沒有底色，只負責留縫）；被指到、按下、桌面選到的那一列（aria-current）色塊加深一點，不換材質 */
 .set-list{display:grid;gap:10px}
-.set-row{width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
+.set-row{position:relative;width:100%;display:flex;justify-content:flex-start;align-items:center;gap:14px;min-height:62px;padding:12px 20px;border:0;border-radius:var(--r-md);text-align:left;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:15.5px;transition:background-color .2s;white-space:normal}   /* 按鈕預設不換行；名稱長時換行，不撐寬整頁 */
 .set-row:hover{transform:none;box-shadow:var(--blk-sh);background:color-mix(in srgb,var(--ink) 6%,var(--blk))}
 .set-row:active,.set-row[aria-current="true"]{transform:none;background:color-mix(in srgb,var(--ink) 11%,var(--blk))}
 .set-row[aria-current="true"] .sr-chev{color:var(--ink)}
