@@ -29,13 +29,13 @@ const Back=(()=>{
   function sync(){if(typeof homeSync==="function")homeSync()}
   /* 標題列的「上一頁」：關掉最上面那一層（跟系統返回鍵同一套關法，各層自己的關閉動畫；沒有層了回傳 false） */
   function up(){const t=stack[stack.length-1];if(!t)return false;t.close(false);return true}
-  const depth=()=>stack.length,top=()=>stack.length?stack[stack.length-1].name:"";
+  const depth=()=>stack.length,has=n=>stack.some(x=>x.name===n),top=()=>stack.length?stack[stack.length-1].name:"";
   /* 看板 → 各部門總覽：從總覽點進來的就用瀏覽器返回（保留總覽的捲動位置），否則直接開總覽（都有換頁動畫） */
   function home(){
     let fromHome=false;try{fromHome=!!document.referrer&&new URL(document.referrer).pathname.endsWith("/home.html")}catch(_){}
     if(fromHome&&history.length>1&&!stack.length)PageFx.leave(()=>history.back(),true);else PageFx.leave("home.html",true);   /* 兩種都先播「往下滑、淡掉」的返回離開，再換頁（以前 history.back() 直接切掉，主頁還沒好中間是空白） */
   }
-  return {opened,closed,replace,home,up,depth,top};
+  return {opened,closed,replace,home,up,depth,top,has};
 })();
 /* 換頁動畫（pagefx.js）的「底下那一頁」：最上面還開著的全畫面層（skip 以外），沒有就是看板本身（#pager，含每週概述） */
 function pageUnder(skip){for(const s of ["#rptOv","#logOv:not(.in-pane)","#setOv","#agOv"]){const el=document.querySelector(s);if(el&&el!==skip&&!el.hidden)return el}return $("#pager")}
