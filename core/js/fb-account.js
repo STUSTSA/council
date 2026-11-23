@@ -4,6 +4,7 @@
    - QR 權杖只在產生它的畫面記憶體裡；資料庫只存 SHA-256。權杖不寫進 localStorage、不印到 console。
    畫面（account.js）只呼叫 window.BoardAccount，錯誤一律回傳代碼（不是 Firebase 原始訊息）。 */
 import { fb } from "./fb-app.js";
+import { cached, drop } from "./fs-cache.js";
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signInWithCredential, GoogleAuthProvider, signOut as fbSignOut }
   from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import { doc, getDoc, getDocs, setDoc, collection, query, where, orderBy, limit, startAfter, onSnapshot, runTransaction, writeBatch,
@@ -77,6 +78,8 @@ const photoOf = u => typeof u === "string" && u.length <= 500 && /^https:\/\/[!-
 async function ensureUser(fresh) {
   const u = auth.currentUser;
   if (!u) return;
+  const flag = "board-ensured:" + u.uid;   /* 補建過就記在這台裝置：之後重新整理不必每次讀 users／profiles 兩份（讀取量） */
+  try { if (!fresh && localStorage.getItem(flag)) return; } catch (_) { /* 沒有儲存區就照常讀 */ }
   const [us, ps] = await Promise.all([getDoc(ref("users", u.uid)), getDoc(ref("profiles", u.uid))]);
   const b = writeBatch(db);
   let n = 0;
@@ -87,6 +90,7 @@ async function ensureUser(fresh) {
     b.set(ref("profiles", u.uid), { displayName: name, photoURL: photoOf(u.photoURL), updatedAt: NOW() }); n++;
   }
   if (n) await b.commit();
+  try { localStorage.setItem(flag, "1"); } catch (_) { /* 沒關係 */ }
 }
 /* 監聽自己的 roles。剛登入的那一刻 Firestore 可能還拿著舊的（未登入）憑證，第一次監聽會被拒：同一個帳號還登入著就隔一下重試 */
 function onRoles(cb) {
@@ -109,13 +113,16 @@ async function setName(name) {
   const b = writeBatch(db);
   b.set(ref("profiles", uid()), { displayName: v, photoURL: photoOf(cur.photoURL), updatedAt: NOW() });
   await b.commit();
+  await drop(`${uid()}|profiles`);
 }
 
 /* ---------- 名稱與舊身分（L1，登入就能讀） ---------- */
-async function profiles() {
-  const m = {};
-  (await getDocs(collection(db, "profiles"))).forEach(s => { m[s.id] = s.data().displayName || ""; });
-  return m;
+async function profiles() {   /* 全部使用者的名稱（人數 × 1 次讀取）：十分鐘內用這台裝置上存的，改自己的名稱時作廢 */
+  return cached(`${uid()}|profiles`, 10 * 60e3, async () => {
+    const m = {};
+    (await getDocs(collection(db, "profiles"))).forEach(s => { m[s.id] = s.data().displayName || ""; });
+    return m;
+  }, Timestamp);
 }
 async function legacyList() { return (await getDocs(collection(db, "legacyIdentities"))).docs.map(s => ({ id: s.id, ...s.data() })); }
 
