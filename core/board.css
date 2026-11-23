@@ -1332,7 +1332,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .fab-menu[hidden]{display:none}
 .fab-scrim{position:fixed;inset:0;z-index:47;background:color-mix(in srgb,var(--bg) 72%,transparent);will-change:opacity}
 .fab-opts{position:fixed;right:var(--fab-r);bottom:calc(var(--fab-b) + 74px);z-index:48;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
-.fab-opt{display:flex;align-items:center;gap:12px;min-height:0;height:52px;padding:0 24px 0 20px;border:0;border-radius:999px;background:var(--pop);color:var(--ink);font-size:15px;letter-spacing:.06em;box-shadow:0 12px 28px -10px var(--stack-sh);will-change:transform,opacity}   /* 只位移＋淡入（不縮放、不回彈）：縮放會讓字在動畫結束時重新點陣化而閃；常駐合成層，結束時字不換層 */
+.fab-opt{display:flex;align-items:center;gap:12px;min-height:0;height:52px;padding:0 24px 0 20px;border:1px solid var(--hair);border-radius:999px;background:var(--pop);color:var(--ink);font-size:15px;letter-spacing:.06em;will-change:transform,opacity}   /* 沒有陰影（平面材質＋一圈 1px --hair）：三顆的大範圍陰影會互相重疊，各自錯開淡入時陰影一層層冒出來而閃 */
 .fab-opt .ico{width:22px;height:22px;stroke-width:1.9}
 .fab-opt:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 /* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
