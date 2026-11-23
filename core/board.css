@@ -344,9 +344,13 @@ input.lc-title:focus{outline:none}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
-/* 收藏鈕（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；跟「報告」鈕同一個尺寸，收藏後實心 */
-.fav-btn{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
+/* 收藏鈕＝書籤圖示（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；
+   圓鈕 38px、圖示 22px、文字色外框（比一般次要鈕明顯）；收藏後整個填滿成實心 */
+.fav-btn{flex:none;display:inline-grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);background:transparent;transition:background-color .2s,color .2s,scale .3s var(--mo-spring)}
+.fav-btn .ico{width:22px;height:22px}
+.fav-btn:active{scale:.92}
 .fav-btn[aria-pressed="true"]{background:var(--ink);box-shadow:none;color:var(--bg)}
+.fav-btn[aria-pressed="true"] .ico path{fill:currentColor}
 .lc-rp{font-size:12.5px;color:var(--late);letter-spacing:.1em}
 .lc-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0 14px;font-size:12.5px;color:var(--muted)}
 .lc-meta .ev-st,.lc-tag{height:26px;padding:2px 12px 0;border-radius:999px;line-height:1}

@@ -104,7 +104,7 @@ function favBtnHTML(kind,id){
   if(!favOk())return "";
   favLoad();
   const on=!!FAV.keys&&FAV.keys.has(favKey(CFG.deptId,id));
-  return `<button type="button" class="fav-btn" data-fav="${esc(id)}" data-favk="${esc(kind)}" aria-pressed="${on}"${FAV.keys&&!FAV.busy?"":" disabled"}>${on?"已收藏":"收藏"}</button>`;
+  return `<button type="button" class="fav-btn" data-fav="${esc(id)}" data-favk="${esc(kind)}" aria-pressed="${on}" aria-label="${on?"取消收藏":"收藏"}" title="${on?"已收藏（點一下取消）":"收藏到會長室追蹤"}"${FAV.keys&&!FAV.busy?"":" disabled"}>${ico("bookmark","solo")}</button>`;
 }
 document.addEventListener("click",async e=>{
   const b=e.target.closest&&e.target.closest("[data-fav]");if(!b||!favOk()||!FAV.keys||FAV.busy)return;

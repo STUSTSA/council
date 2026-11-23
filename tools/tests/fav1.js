@@ -72,13 +72,15 @@ const XSS='<img src=x onerror="window.__xss=1">';
   await openFirst(gu);ok(!(await hasBtn(gu)),'沒登入：沒有「收藏」鈕');
   await pp.evaluate(()=>{state.events.length&&(lvOpen=state.events[0].id);render()});ok(!(await hasBtn(pp)),'會長室自己的看板：沒有「收藏」鈕（那裡用「+ 追蹤項目」）');
   const before=await read('deptSettings/president');
+  if(process.env.SHOTS)await pa.locator('.lc').first().screenshot({path:process.env.SHOTS+'/fav_off.png'});
   await pa.click('.lc [data-fav]');
   await until(async()=>((await read('deptSettings/president')).follows||[]).some(f=>f.ref===`${D}__${id}`),8000);
   const a1=await read('deptSettings/president');const hit=(a1.follows||[]).filter(f=>f.ref===`${D}__${id}`);
   ok(hit.length===1&&hit[0].dept===D&&hit[0].kind==='live'&&a1.rev===before.rev+1,`按收藏：follows 多一筆（kind ${hit[0]&&hit[0].kind}）、rev ${before.rev}→${a1.rev}`);
   ok(!!(await read(`auditLogs/deptSettings_president_${a1.rev}`)),'有稽核紀錄');
   await until(()=>pa.evaluate(()=>document.querySelector('.lc [data-fav]')?.getAttribute('aria-pressed')==='true'));
-  ok(await pa.evaluate(()=>document.querySelector('.lc [data-fav]').textContent==='已收藏'),'鈕變成「已收藏」');
+  ok(await pa.evaluate(()=>document.querySelector('.lc [data-fav]').getAttribute('aria-label')==='取消收藏'),'鈕變成實心（已收藏）');
+  if(process.env.SHOTS){await pa.waitForTimeout(500);await pa.locator('.lc').first().screenshot({path:process.env.SHOTS+'/fav_on.png'})}
   await pp.reload();await pp.waitForFunction(()=>typeof state!=='undefined'&&document.querySelector('#events'),null,{timeout:15000});await pp.waitForTimeout(2500);
   ok(await pp.evaluate(id=>!!document.querySelector('#follows [data-fw]')&&state.follows.some(f=>f.dept==='rights'&&f.ref===id),id),'會長室的追蹤清單有收藏的那一項');
   await pa.click('.lc [data-fav]');
