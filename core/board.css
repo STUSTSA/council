@@ -611,6 +611,16 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* ===== 部門專用分頁（dept/config.js 的 ext：會長室「會長室」、秘書處「會議」；shell.js 把面板搬進 .sgroup-ext） =====
    面板之間的間距交給 .sgroup 的 gap，面板自己不留下邊距 */
 .sgroup-ext>.panel,.ag-cols>.panel{margin:0}
+/* 會長室「會長室」分頁在電腦版（1000px 以上）：兩欄排，不再整條滿寬疊到底。
+   左欄＝預約、文件、秘書處會議開關（都矮）；右欄＝追蹤（高，跨左欄三列）；各部門編輯量滿寬放最下面。手機與 1000px 以下維持單欄 */
+@media (min-width:1000px){
+  .sgroup-ext:has(#followPanel){grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;column-gap:16px}
+  .sgroup-ext>#bkPanel,.sgroup-ext>#docsPanel,.sgroup-ext>#grantPanel{grid-column:1}
+  .sgroup-ext>#followPanel{grid-column:2;grid-row:1/span 3}
+  .sgroup-ext>#actPanel{grid-column:1/-1}
+  .sgroup-ext #follows{grid-template-columns:minmax(0,1fr)}
+}
+}
 /* 秘書處「會議」分頁：點名、會議資料左右兩區（641px 以上），手機上下排 */
 .ag-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 @media (min-width:641px){.ag-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
