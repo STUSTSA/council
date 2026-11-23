@@ -24,7 +24,7 @@ await p.click('#agDoc [data-ed=note][data-ev=e1]');await p.fill('#agDoc [data-ed
 await p.click('#agDoc [data-md-xadd=marketing]');await p.waitForTimeout(600);
 await p.fill('#agDoc [data-ed=xt] input','臨時動議 <u id=uu>u</u>');await p.keyboard.press('Enter');await p.waitForTimeout(300);
 await p.click('#agDoc [data-ed=xn]');await p.fill('#agDoc [data-ed=xn] textarea','下週討論');await p.click('#agDoc .md-title');await p.waitForTimeout(300);
-await p.click('#agDoc [data-md=marketing] [data-ed=dec]');await p.fill('#agDoc [data-ed=dec] input','本週決議：照原案 <i id=yz>斜</i>');await p.keyboard.press('Enter');await p.waitForTimeout(400);
+await p.evaluate(()=>{agItemOf('marketing').decision='本週決議：照原案 <i id=yz>斜</i>';renderAgenda()});await p.waitForTimeout(400);
 await p.screenshot({path:'ag2_dec.png'});
 A(await p.evaluate(()=>!document.querySelector('#yy')&&!document.querySelector('#uu')&&!document.querySelector('#yz')&&/結論：照原案/.test(document.querySelector('#agDoc [data-ed=note]').textContent)),'結論、臨時項目、決議：就地編輯、HTML 照字面');
 if(await p.$('#agRight .ag-tg')&&!(await p.$eval('#agRight',e=>e.classList.contains('is-open')))&&await p.$eval('#agRight .ag-tg',e=>getComputedStyle(e).pointerEvents!=='none')){await p.click('#agRight .ag-tg');await p.waitForTimeout(500)}

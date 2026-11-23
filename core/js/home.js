@@ -31,7 +31,9 @@
 
   /* ---------- 部門標誌：讀 SVG 檔，放進色塊裡（同一個檔案只讀一次） ---------- */
   const svgLoad=id=>H.svg[id]||(H.svg[id]=PageFx.svg(deptLogo(id)));   /* 讀檔、解析在 pagefx.js（看板開頁的底板也用） */
-  function logosFill(){stage.querySelectorAll(".hm-lg[data-lg]").forEach(h=>{if(h.firstChild)return;svgLoad(h.dataset.lg).then(s=>{if(s&&!h.firstChild)h.append(s.cloneNode(true))})})}
+  function logosFill(){stage.querySelectorAll(".hm-lg[data-lg]").forEach(h=>{if(h.firstChild)return;
+    const now=PageFx.svgNow(deptLogo(h.dataset.lg));if(now){h.append(now);return}   /* 記下來的標誌同步放進去：第一次畫就有，不用等讀檔 */
+    svgLoad(h.dataset.lg).then(s=>{if(s&&!h.firstChild)h.append(s.cloneNode(true))})})}
 
   /* ---------- 進行中的張數：進主頁時讀一次 ----------
      資料檔（github、frozen 的部門）＝網站上的 data*.json，跟看板開頁讀的同一個檔（cache:no-cache，沒變就是 304）；
@@ -181,11 +183,15 @@
   }
   /* 回主頁：整個畫面收回原本那一張（桌面焦點色塊、手機焦點卡；跟進去時的鋪滿倒著做），收到最後兩成淡掉。
      底板開頁第一格就蓋好（回來的那一刻不閃出主頁），跟著主頁浮上來（PageFx.onArrive）才開始收 */
+  const preGone=()=>{const x=document.querySelector(".hm-fx-pre");if(x)x.remove()};   /* 開頭放的底板沒人接手（不是從部門回來、找不到那一張）就拿掉，不讓它一直蓋著 */
   function hmCollapse(){
-    if(reduceMotion())return;
-    const t=H.mode==="wal"?WAL.els[H.i]:stage.querySelector(".hm-tile.on");if(!t)return;
-    const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*(r.width/t.offsetWidth)||18,o=fxEl("hm-fx",r,rad),c=cover(r,rad);
-    o.style.transform=c;document.documentElement.append(o);
+    if(reduceMotion()){preGone();return}
+    const t=H.mode==="wal"?WAL.els[H.i]:stage.querySelector(".hm-tile.on");if(!t){preGone();return}
+    const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*(r.width/t.offsetWidth)||18,c=cover(r,rad);
+    /* home.html 開頭已經放好蓋滿畫面的底板（.hm-fx-pre）：直接接手（改成色塊的位置與圓角，變形算出來跟蓋滿一樣，看不出換手）；沒有（從快取回來）才新做 */
+    let o=document.querySelector(".hm-fx-pre");
+    if(o){o.classList.remove("hm-fx-pre");o.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${rad}px`}else{o=fxEl("hm-fx",r,rad);document.documentElement.append(o)}
+    o.style.transform=c;
     PageFx.onArrive(()=>{dockMove(true);const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
       o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:640,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
   }
@@ -426,6 +432,6 @@
   paint();hmCounts();
   setTimeout(()=>(window.requestIdleCallback||setTimeout)(storePreload),2500);   /* 開場與主頁動畫都過了、閒下來才提前下載 Firebase 模組（進部門時才下載會多等好幾趟網路來回；下載一次之後瀏覽器會留著） */
   swReg(D.map(d=>deptLogo(d.id)));   /* 安裝成 App、離線打開：主頁也註冊 Service Worker，並把主頁用到的檔案與九個部門標誌收進離線備份（util.js） */
-  if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();
+  if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();else preGone();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */
 })();

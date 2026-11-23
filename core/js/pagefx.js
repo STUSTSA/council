@@ -99,9 +99,11 @@ const PageFx=(()=>{
      到達：從站內換頁過來的（head 裡的小程式先加上 html.pfx-arrive，CSS 讓 body 先透明，不會閃一下），整頁從後面浮上來；
      從上一頁快取回來（bfcache）也一樣。重新整理、從外面進來不放（看板有開場動畫）。
      瀏覽器的返回鍵沒辦法在離開前先播動畫，只有新頁浮上來那一半。 */
-  function leave(href){
-    if(RM()){location.href=href;return}
-    const my=++tok;owner.set(document.body,my);run(document.body,"out",my).then(()=>{if(owner.get(document.body)===my)location.href=href});
+  /* href 是字串＝換到那個網址；是函式＝播完離開動畫後呼叫它（例如 history.back()）。back＝播「返回」的離開（整頁往下滑並淡掉），看板回主頁用 */
+  function leave(href,back=false){
+    const go=()=>{if(typeof href==="function")href();else location.href=href};
+    if(RM()){go();return}
+    const my=++tok;owner.set(document.body,my);run(document.body,"out",my,FADE_IN,back).then(()=>{if(owner.get(document.body)===my)go()});
   }
   /* 到達：等整頁載入完、再等兩格（看板第一次畫完、字型就位）才開始浮上來，動畫期間主執行緒比較閒，不會一頓一頓；
      區塊由下往上滑入（2026-11-06 第四版） */
@@ -109,8 +111,14 @@ const PageFx=(()=>{
      桌面（tile）＝色塊鋪滿的底板（--blk）加部門標誌；手機（flip）＝翻過來的部門底板（--bg）加部門標誌。蓋在 <html> 下（body 還是透明的時候也看得到） */
   /* 部門標誌放進頁面（不用 <img>）：秘書處的白色零件（.dg-w）才吃得到 board.css「部門標誌」段的填色，交接前後同色、深色時沒有白塊。
      讀 SVG 檔、解析成這一頁的 <svg>（不是 svg 就給 null）；主頁色塊（home.js）也用這一個 */
-  const svg=u=>fetch(u).then(r=>r.ok?r.text():"").then(t=>{const s=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
-    if(!s||s.nodeName!=="svg")return null;const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");return n}).catch(()=>null);
+  /* 標誌的文字記在 sessionStorage（pfx-svg:網址）：從部門回主頁時卡片上的標誌第一格就畫得出來，不用等一輪網路（以前慢半拍才冒出來）。
+     svgNow＝只讀記下來的、同步（沒有就回 null）；svg＝先看記下來的，沒有才去讀檔。SessionStorage 不能用時就照舊讀檔 */
+  const SVK="pfx-svg:";
+  const svgParse=t=>{try{const s=new DOMParser().parseFromString(t,"image/svg+xml").documentElement;
+    if(!s||s.nodeName!=="svg")return null;const n=document.importNode(s,true);n.setAttribute("aria-hidden","true");n.setAttribute("focusable","false");return n}catch(_){return null}};
+  const svgNow=u=>{let t=null;try{t=sessionStorage.getItem(SVK+u)}catch(_){}return t?svgParse(t):null};
+  const svg=u=>{const hit=svgNow(u);if(hit)return Promise.resolve(hit);
+    return fetch(u).then(r=>r.ok?r.text():"").then(t=>{const n=svgParse(t);if(n){try{sessionStorage.setItem(SVK+u,t)}catch(_){}}return n}).catch(()=>null)};
   let cover=null;const arriveFns=[];
   /* 到達時要等的事（boot.js 登記：第一次資料讀回來並畫完第一屏、字型就位）。底板蓋著、一直等到全部好了（最多 GATE_MAX）才開始收，
      不再只看畫面格數：資料慢的時候格數很穩、底板卻收掉，就會看到還沒有資料的空畫面。超過上限也照樣平順收起，不卡住 */
@@ -127,7 +135,9 @@ const PageFx=(()=>{
     /* 2026-11-06 使用者：進部門後整個介面卡一下。看板剛載入時要畫第一次畫面、讀雲端、套秘書處的學年（又重畫一次），
        翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 5 格都在 22ms 內畫完才開始，最多等 1.6 秒；
        等的這段時間整頁還是透明（底色），看不到半成品 */
-    const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=5||now-t0>1600)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
+    /* quick（html[data-pfx-quick]，主頁 home.html 設）：回主頁沒有資料要等，連 load（字型、圖）都不等，連續 3 格穩就收、最多 0.45 秒，免得蓋著底板乾等 */
+    const quick=h.hasAttribute("data-pfx-quick"),NEED=quick?3:5,MAXW=quick?450:1600;
+    const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=NEED||now-t0>MAXW)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
     const start=()=>ready().then(()=>calm(()=>{
       const my=++tok,c=cover,flip=c&&c.dataset.k==="flip";cover=null;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
       /* 主頁過場的底板：桌面＝淡出並略放大，區塊照常浮上來；手機＝標誌淡出，區塊不規則浮現 */
@@ -137,18 +147,18 @@ const PageFx=(()=>{
       run(document.body,"in",my,FADE_IN,false,0,true,flip).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
     }));
     let go=false;const once=()=>{if(!go){go=true;start()}};
-    if(document.readyState==="complete")once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 載入本身最多等 0.9 秒；資料的等待由 gate（上面）負責 */
+    if(document.readyState==="complete"||quick)once();else{addEventListener("load",once,{once:true});setTimeout(once,900)}   /* 載入本身最多等 0.9 秒；資料的等待由 gate（上面）負責 */
   }
   const inSite=a=>{try{const u=new URL(a.href,location.href);return u.origin===location.origin&&(/\.html?$/.test(u.pathname)||u.pathname.endsWith("/"))&&!a.target&&!a.hasAttribute("download")}catch(_){return false}};
   document.addEventListener("click",e=>{
     if(e.defaultPrevented||e.button||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
     const a=e.target.closest&&e.target.closest("a[href]");if(!a||!inSite(a))return;
     const u=new URL(a.href,location.href);if(u.pathname===location.pathname&&u.search===location.search)return;
-    e.preventDefault();leave(u.href);
+    e.preventDefault();leave(u.href,/\/home\.html$/.test(u.pathname));   /* 往主頁＝返回的離開（整頁往下滑並淡掉） */
   });
   addEventListener("pageshow",e=>{if(e.persisted){reset(document.body);document.documentElement.classList.add("pfx-arrive");arrive()}});
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",arrive);else arrive();
   /* 跨頁到達開始浮上來的那一刻呼叫 f（沒有要浮上來就馬上呼叫）：主頁從部門回來時，收回色塊的動畫跟著這一刻開始 */
   function onArrive(f){if(document.documentElement.classList.contains("pfx-arrive"))arriveFns.push(f);else f()}
-  return {swap,settle,leave,hold,reset,onArrive,svg,gate};
+  return {swap,settle,leave,hold,reset,onArrive,svg,svgNow,gate};
 })();

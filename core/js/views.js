@@ -33,7 +33,7 @@ document.addEventListener("click",async e=>{
   if(!paneJob)return;   /* 沒有未完成的存檔：照一般連結（pagefx.js 的站內換頁）離開 */
   e.preventDefault();e.stopPropagation();if(homeLeaving)return;
   homeLeaving=true;try{await paneJob}catch(_){}homeLeaving=false;
-  if(!homeDeep())PageFx.leave(a.href);   /* 等的時候又打開了別層：不離開 */
+  if(!homeDeep())PageFx.leave(a.href,/\/home\.html$/.test(new URL(a.href).pathname));   /* 等的時候又打開了別層：不離開 */
 },true);
 function renderHero(){
   const home=$(".dhead .dh-home"),eye=$("#peekBtn"),nb=$("#notiBtn");if(!home)return;
@@ -47,7 +47,7 @@ function renderHero(){
   notiAutoGo();   /* 網址帶 ?noti=pres 時等到可以開就打開（notify.js） */
   if(notiOpen&&deptRO())closeNoti(true);   /* 通知與行事曆那一頁開著時變成唯讀（唯讀檢視、權限被撤）：直接回原分頁（notify.js） */
   if(setOpen&&roView)closeSettings(true);   /* 設定開著時按眼睛鈕（ui-09 起設定是部門內的一頁，標題列按得到）：唯讀檢視沒有設定鍵，設定直接收起（面板裡改到一半的照離開處理） */
-  hsBar();   /* 搜尋列（search.js）：只在即時回報、進度、完成紀錄三頁 */
+  hsBar();   /* 搜尋列（search.js）：每個分頁都有 */
   weekDotSync();
 }
 

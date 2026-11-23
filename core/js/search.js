@@ -1,4 +1,4 @@
-/* 核心｜部門內搜尋列（DESIGN-next 第六節「部門內」；標題列下面、高 50 的膠囊，只在即時回報、進度、完成紀錄三頁）
+/* 核心｜部門內搜尋列（DESIGN-next 第六節「部門內」；標題列下面、高 50 的膠囊，每個分頁都有，含會長室、秘書處自己的分頁）
    - 找這個單位的：即時回報（名稱、逐行內容、負責人、地點）、完成紀錄（即時回報同上；結案的議題看名稱、說明）、議題（名稱、說明、處理紀錄）。不跨部門。
    - 有輸入時看板內容（.layout）換成分區的結果清單（#boardRes）：即時回報、完成紀錄、議題各一區，每區標題寫件數；符合的字加底色。
      打字時結果原位更新（morph.js 的 morphTo），沒變的列留著，新的由下浮現。
@@ -27,8 +27,8 @@ function hsIndex(ql){
   return [["live","LIVE","即時回報",live],["done","ARCHIVE","完成紀錄",done],["issue",ISS==="專案"?"PROJECTS":"ISSUES",ISS,issue]].filter(([k])=>secTab(secOf(k==="issue"?"progress":k)));
 }
 const hsHL=(s,q)=>{const t=String(s||"");const i=t.toLowerCase().indexOf(q.toLowerCase());return i<0||!q?esc(t):esc(t.slice(0,i))+`<mark>${esc(t.slice(i,i+q.length))}</mark>`+esc(t.slice(i+q.length))};
-/* 搜尋列只在三頁出現（會長室、秘書處自己的分頁沒有）；不在那三頁時順便清掉 */
-const hsHere=()=>curSec!=="ext"&&!notiOpen;   /* 通知與行事曆那一頁也沒有搜尋列（notify.js） */
+/* 搜尋列在所有分頁都有（通知與行事曆那頁換成「搜尋事件」）；不顯示時順便清掉 */
+const hsHere=()=>!notiOpen;   /* 通知與行事曆那一頁換成「搜尋事件」（notify.js）；會長室、秘書處自己的分頁也有同一條，搜的範圍一樣是這個單位的即時回報、完成紀錄、議題 */
 function hsBar(){const bar=$("#dSearch");if(!bar)return;const on=hsHere();bar.hidden=!on;if(!on&&HS.q)hsClear();
   const cb=$("#dSearchCal");if(cb){cb.hidden=!notiOpen;if(notiOpen)calBarSync()}}   /* 通知與行事曆那一頁：同一個位置換成「搜尋事件」（notify.js） */
 /* 有沒有在搜尋：看板內容（.layout）換成結果清單。換的時候新的一塊一塊由下浮上來 */

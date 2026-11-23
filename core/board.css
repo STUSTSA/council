@@ -2430,8 +2430,9 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 /* ===== 行政會議資料（meeting.js 的 renderAgenda；2026-11-23 第四版：白紙文件預覽＋左右工具，跟工作報告預覽同一個感覺） =====
    「會議」分頁只有「點名」「會議資料」兩個區塊：會議資料是入口卡（.ag-entry／.ag-peek，一張白紙縮圖），點了打開自己一頁（#agOv，外殼樣式跟工作報告預覽 .rpt-ov 同一條規則），頁裡有文件預覽與左右工具、下面是會議報告事項與各部門週報（.ag-more）。
    頁首列：「複製文字」「存到雲端」「儲存」「關閉」。三欄（.ag-wrap）：左 .ag-left（切換會議、加入部門報告）、中 .ag-paper（白紙，配色變數跟工作報告的白紙同一組，見「工作報告」段）、右 .ag-right（目前選到那一段的工具）；
-   左右欄捲動時固定在畫面上（sticky）。要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回。
-   手機（1000px 以下）：單欄，左右工具收成兩列可展開的標題（.ag-tg，grid-template-rows 0fr↔1fr 展開），白紙在下面。 */
+   編輯頁排版照 DievE 畫的：最左窄欄（.ag-left：會議與部門膠囊）、中間白紙（.ag-center／.ag-paper）、右邊上下兩塊（.ag-right 裡的 .ag-rb：文字備註、卡片編輯）；三欄各自捲動，高度跟視窗。
+   右邊兩塊平常 1:5，點哪一塊哪一塊放大（#agRight 的 data-focus，flex-grow 過渡）。要改的地方（.md-e）平常看起來就是文字，滑過淡底色提示、點了就地變輸入框（.md-in），點別處／Enter／Esc 收回。
+   手機（1000px 以下）：單欄，左欄收成一列可展開的標題（.ag-tg，grid-template-rows 0fr↔1fr 展開），白紙在中間、右邊兩塊在白紙下面，不放大縮小。 */
 #agDrive[hidden]{display:none}   /* 還沒設定雲端硬碟時藏起來（.icon 的 display 會蓋過 hidden 屬性） */
 .ag-entry .panel-head{margin-bottom:10px}
 .ag-open-t{font-size:13px;color:var(--muted)}
@@ -2446,43 +2447,95 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .ag-pk-e{font-size:12.5px;color:var(--muted)}
 .ag-pk-s{font-size:12px;color:var(--muted)}
 .ag-more{display:grid;gap:14px;max-width:1100px;margin:28px auto 0}
-.ag-wrap{display:grid;grid-template-columns:minmax(190px,230px) minmax(0,1fr) minmax(220px,270px);gap:20px;align-items:start}
-.ag-center{min-width:0}
-.ag-paper{max-width:210mm;margin:0 auto;box-sizing:border-box;min-height:min(297mm,75vh);padding:clamp(22px,6.667%,14mm);border-radius:4px;background:var(--blk);color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑，同工作報告白紙 */;--blk2:#f1f1f4}
-.ag-tools{position:sticky;top:12px;max-height:calc(100dvh - 120px - var(--sa-top) - var(--sa-bottom));overflow:auto;border-radius:16px;padding:12px 14px;box-shadow:inset 0 0 0 1px var(--hair)}
-.ag-tg{display:flex;width:100%;align-items:center;margin-bottom:10px;pointer-events:none;gap:8px;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
-.ag-left .ag-tg,.ag-tg .ev-chev{display:none}   /* 電腦版：右邊的標題只當標題（寫目前是哪個部門），左邊不需要標題、也不能收合 */
-.ag-tgs{font-weight:400;color:var(--muted)}
+.ag-wrap{display:grid;grid-template-columns:minmax(112px,150px) minmax(0,1fr) minmax(0,1fr);gap:16px;height:max(520px,calc(100dvh - 150px - var(--sa-top)));margin-bottom:8px}
+.ag-center{min-width:0;min-height:0;overflow:auto;padding:10px 16px 24px}
+.ag-paper{max-width:210mm;margin:0 auto;display:grid;gap:28px;color:var(--ink);--blk2:#f1f1f4;font-family:"Noto Serif TC","Source Han Serif TC","Songti TC","PMingLiU","MingLiU",serif}   /* 紙上的字用襯線體（範例資料的樣子；系統字，不另外載入） */
+.ag-sheet{position:relative;box-sizing:border-box;min-height:min(297mm,92vh);padding:clamp(18px,6.667%,14mm) clamp(18px,6.667%,14mm) 64px;border-radius:4px;background:var(--blk);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑，同工作報告白紙 */}
+.ag-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 22px;font-size:12px}
+.ag-stamp{flex:none;padding:1px 6px;border:1.5px solid var(--prog-lo);color:var(--prog-lo);font-size:11.5px;line-height:1.5}
+.ag-hdt{display:grid;justify-items:end;text-align:right;gap:1px}
+.ag-hdt .num{font-family:inherit;color:var(--muted)}
+.ag-ft{position:absolute;left:clamp(18px,6.667%,14mm);right:clamp(18px,6.667%,14mm);bottom:18px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.ag-logo{position:absolute;left:0;bottom:0;display:block;width:96px;height:28px}
+.ag-logo svg{width:100%;height:100%}
+.ag-cover{display:flex;flex-direction:column;justify-content:center;aspect-ratio:210/297;min-height:0}
+.ag-cv-mid{margin:auto 0;display:grid;gap:10px;text-align:left}
+.ag-cv-org{margin:0;text-align:center;font-size:14px;letter-spacing:.06em}
+.ag-cv-h{margin:6px 0 4px;text-align:center;font-size:clamp(20px,4vw,28px);font-weight:700;letter-spacing:.08em}
+.ag-cv-mid hr,.ag-toc hr{width:100%;border:0;border-top:1.5px solid var(--ink);margin:6px 0 12px}
+.ag-cv-f{margin:0;padding-left:clamp(8px,6%,48px);font-size:15px;line-height:1.9}
+.ag-cv-f b{font-weight:700}
+.ag-cv-f .md-date{font-size:inherit;color:inherit;margin:0 0 0 4px;padding:2px 6px}
+.ag-cv-f .md-e{padding:2px 6px}
+.ag-cv-h .md-title{display:inline-block;margin:0;font-size:inherit;font-weight:inherit;letter-spacing:inherit;padding:0 8px}
+.ag-cv-h .md-in{width:min(14em,100%);font-size:inherit;font-weight:inherit;text-align:center}
+.ag-toc{aspect-ratio:210/297;min-height:0}
+.ag-toc-h,.ag-h1{margin:0 0 8px;font-size:22px;font-weight:700;letter-spacing:.12em}
+.ag-toc-h{margin-top:28px}
+.ag-toc-i{display:flex;justify-content:space-between;gap:12px;margin:18px 0 4px;font-size:16px}
+.ag-toc-i span,.ag-toc-s{font-size:13px;color:var(--muted)}
+.ag-toc-s{margin:2px 0 2px 2em;color:var(--ink)}
+.ag-h1{margin-top:6px}
+.ag-intro{margin:6px 0 20px;font-size:14px;line-height:1.9;text-align:justify}
+.ag-bar{border-left:2px solid var(--ink);padding-left:clamp(14px,4%,28px);margin-bottom:24px}
+.ag-h2{margin:10px 0 12px;font-size:16px;font-weight:700;letter-spacing:.06em}
+.md-rec{color:var(--prog-lo)}
+.ag-paper .md-note{color:var(--prog-lo)}
+.ag-paper .md-in{color:var(--ink)}
+.ag-paper :is(.add-row,.md-send,.md-x){font-family:"Jost","Noto Sans TC",sans-serif}
+
+.ag-tools{min-height:0;overflow:auto;border-radius:16px;padding:12px 10px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ag-tg{display:none;width:100%;align-items:center;gap:8px;padding:0;border:0;background:none;color:var(--ink);font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .ag-tg .ev-chev{margin-left:auto}
 .ag-tb{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--mo-base) var(--mo-out)}
 .ag-tbi{min-height:0}
 .ag-tbi>.md-lab:first-child{margin-top:0}
-.ag-tools .wk-depts{flex-direction:column;align-items:stretch;margin-bottom:6px}
-.ag-tools .wk-d{justify-content:space-between}
+.ag-tools .wk-depts{flex-direction:column;align-items:stretch;gap:5px;margin-bottom:6px}
+.ag-tools .wk-d{justify-content:flex-start;min-height:30px;padding:3px 10px 2px;font-size:12.5px;overflow-wrap:anywhere}
+.ag-chips .wk-d.in-doc{border-color:var(--ink)}
+.ag-chips .wk-d[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .ag-n{margin-left:6px}
-.ag-btns{display:grid;gap:6px;margin-bottom:6px}
+.ag-right{display:flex;flex-direction:column;gap:12px;min-height:0}
+.ag-rb{display:flex;flex-direction:column;min-height:56px;flex:1 1 0;overflow:hidden;border-radius:16px;padding:10px 14px;box-shadow:inset 0 0 0 1px var(--hair);cursor:pointer;transition:flex-grow var(--mo-slow) var(--mo-out),box-shadow var(--mo-base) var(--mo-out)}
+.ag-right[data-focus="note"]>.ag-note,.ag-right[data-focus="card"]>.ag-cardbox{flex-grow:5;cursor:auto;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.ag-rh{display:flex;align-items:baseline;gap:8px;flex:none;margin:0 0 8px;font-size:14px;font-weight:700}
+.ag-rd{font-weight:400;font-size:12.5px;color:var(--muted)}
+.ag-rbi{flex:1;min-height:0;overflow:auto;transition:opacity var(--mo-base) var(--mo-out)}
+.ag-right[data-focus="note"]>.ag-cardbox .ag-rbi,.ag-right[data-focus="card"]>.ag-note .ag-rbi{opacity:0;pointer-events:none}   /* 縮小的那一塊只露標題 */
+.ag-fl{display:block;margin:8px 0 4px;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.ag-fl:first-child{margin-top:0}
+.ag-rec{display:block;width:100%;box-sizing:border-box;resize:none;min-height:96px;padding:8px 10px;border-radius:12px;border:1px solid var(--hair);background:transparent;color:var(--ink);font:inherit;font-size:14px;line-height:1.7}
+.ag-rec.ag-one{min-height:0;margin-bottom:6px}
+#agRec{min-height:max(96px,calc(100% - 118px))}
+.ag-btns{display:grid;gap:6px;margin:8px 0 6px}
 .ag-btns .wk-d{justify-content:center}
 .ag-btns .wk-d:disabled{opacity:.45;cursor:default}
-.ag-cards{display:grid;gap:6px;margin-bottom:6px}
-.ag-card{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--hair)}
+.ag-cards{display:grid;gap:6px;margin-bottom:10px}
+.ag-card{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:12px;box-shadow:inset 0 0 0 1px var(--hair)}
 .ag-card b{font-size:13.5px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
-.ag-card .wk-d{justify-content:center}
-.ag-tools .sub{margin:6px 0 0;font-size:12px;line-height:1.6}
+.ag-card .wk-d{flex:none;justify-content:center}
+.ag-rb .sub{margin:6px 0 0;font-size:12px;line-height:1.6}
+.ag-cardbox .meet-edit{padding:0;background:none;box-shadow:none}   /* 搬進來的「會議報告事項」：沒有自己的卡片底板 */
+.md-recx{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 8px;font-size:14px;line-height:1.7;color:var(--prog-lo)}
+.md-recx:empty{display:none}
+.md-sec.is-alert{padding:12px 14px 6px;border-radius:8px;border-top-color:transparent;background:color-mix(in srgb,var(--prog-lo) 9%,var(--blk));box-shadow:inset 0 0 0 1.5px var(--prog-lo)}   /* 沒有報告事項的部門：整塊紅色警示 */
+.md-alert{margin:0 0 6px;font-size:13px;font-weight:700;line-height:1.6;color:var(--prog-lo)}
+.md-recx::before{content:"記錄：";font-weight:700}
 .md-empty{margin:24px 0;text-align:center;color:var(--muted);font-size:14px}
 @media (max-width:999px){
-  .ag-wrap{grid-template-columns:minmax(0,1fr);gap:10px}
-  .ag-left{order:1}.ag-right{order:2}.ag-center{order:3}
-  .ag-tools{position:static;max-height:none;overflow:visible}
-  .ag-tg{pointer-events:auto;margin-bottom:0;min-height:28px}
-  .ag-left .ag-tg,.ag-tg .ev-chev{display:flex}
+  .ag-wrap{grid-template-columns:minmax(0,1fr);gap:10px;height:auto}
+  .ag-left{order:1}.ag-center{order:2;overflow:visible;padding:0}.ag-right{order:3}
+  .ag-tools{overflow:visible}
+  .ag-tg{display:flex;min-height:28px}
   .ag-tools:not(.is-open) .ag-tb{grid-template-rows:0fr}
   .ag-tbi{overflow:hidden}
   .ag-tools.is-open .ag-tbi{padding-top:10px}
   .ag-tools.is-open .ev-chev{transform:rotate(180deg)}
+  .ag-rb{flex:none;overflow:visible;cursor:auto}
+  .ag-rbi{flex:none;overflow:visible}
+  .ag-right[data-focus]>.ag-rb .ag-rbi{opacity:1;pointer-events:auto}
 }
-.md-doc{display:grid;gap:4px}
 .md-title{margin:0;font-size:20px;font-weight:600;letter-spacing:.02em}
-.md-meta{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0 0 10px}
 .md-date{font-size:13px;color:var(--muted);padding:2px 8px;margin:0 -8px}
 .md-sec{position:relative;border-top:1px solid var(--hair);padding:12px 0 6px}
 .md-sec::before{content:"";position:absolute;left:calc(-1 * clamp(10px,3vw,16px));top:14px;bottom:8px;width:3px;border-radius:2px;background:var(--ink);opacity:0;transition:opacity var(--mo-base) var(--mo-out)}   /* 右邊工具現在對著哪一段 */
@@ -2496,7 +2549,7 @@ body.no-live .sgroup[data-sec="live"],body.no-timeline.no-cards .sgroup[data-sec
 .md-e:hover,.md-e:focus-visible{background:var(--blk2);outline:0}
 .md-e.is-ed,.md-e.is-ed:hover{background:transparent}
 .md-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.75;padding:4px 6px;margin:0 -6px 8px}
-.md-note,.md-dec .md-e{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;padding:4px 8px;margin:0 -8px}
+.md-note{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.7;padding:4px 8px;margin:0 -8px}
 .md-ph{color:var(--muted)}
 .md-lab{display:block;margin:10px 0 2px;font-size:12px;color:var(--muted);letter-spacing:.06em}
 .md-ex{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;margin-top:10px}
