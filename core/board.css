@@ -549,7 +549,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 :is(#liveMD,#doneMD).split{display:grid;grid-template-columns:clamp(240px,34%,320px) minmax(0,1fr);gap:18px;align-items:start}
 :is(#liveMD,#doneMD).split .cps{grid-template-columns:minmax(0,1fr)}   /* 左欄的膠囊排成一欄 */
 /* 即時回報分欄時：搜尋列縮到跟左欄一樣寬（靠左對齊），右邊的詳情卡往上延伸到搜尋列那一行（--rise 由 live.js 的 lvRise 量），詳情卡黏在標題列下面（--dhd-h），可編輯的卡片多出約 100px 高 */
-.wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + 2 * var(--dtop-x))}
+.wrap:has(#liveMD.wide) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + var(--dtop-x));padding-right:0}   /* 寬螢幕一進即時回報就是窄的（不是點卡片才縮），右邊不留內距：不蓋到右邊詳情卡的陰影 */
 #liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
 #liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
 #liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
@@ -1337,9 +1337,9 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .fab.open .ico{transform:rotate(135deg)}
 .fab:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 .fab-menu[hidden]{display:none}
-.fab-scrim{position:fixed;inset:0;z-index:47;background:color-mix(in srgb,var(--bg) 72%,transparent)}
+.fab-scrim{position:fixed;inset:0;z-index:47;background:color-mix(in srgb,var(--bg) 72%,transparent);will-change:opacity}
 .fab-opts{position:fixed;right:var(--fab-r);bottom:calc(var(--fab-b) + 74px);z-index:48;display:flex;flex-direction:column;align-items:flex-end;gap:12px}
-.fab-opt{display:flex;align-items:center;gap:12px;min-height:0;height:52px;padding:0 24px 0 20px;border:0;border-radius:999px;background:var(--pop);color:var(--ink);font-size:15px;letter-spacing:.06em;box-shadow:0 12px 28px -10px var(--stack-sh)}
+.fab-opt{display:flex;align-items:center;gap:12px;min-height:0;height:52px;padding:0 24px 0 20px;border:0;border-radius:999px;background:var(--pop);color:var(--ink);font-size:15px;letter-spacing:.06em;box-shadow:0 12px 28px -10px var(--stack-sh);will-change:transform,opacity}   /* 只位移＋淡入（不縮放、不回彈）：縮放會讓字在動畫結束時重新點陣化而閃；常駐合成層，結束時字不換層 */
 .fab-opt .ico{width:22px;height:22px;stroke-width:1.9}
 .fab-opt:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 /* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
