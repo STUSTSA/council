@@ -53,7 +53,7 @@ await p.click('#addFollow');await p.waitForTimeout(400);await p.click('#dlgForm 
 await p.click('#dlgForm .csel:nth-of-type(2) .csel-btn').catch(()=>{});
 const cs=await p.$$('#dlgForm .csel');await (await cs[1].$('.csel-btn')).click();await p.click('#dlgForm .csel.open .csel-opt[data-v=issue]');await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(1200);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(800);
 await p.click('#addFollow');await p.waitForTimeout(400);await p.click('#dlgForm .csel-btn');await p.click('#dlgForm .csel.open .csel-opt[data-v=rights]');const cs2=await p.$$('#dlgForm .csel');await (await cs2[1].$('.csel-btn')).click();await p.click('#dlgForm .csel.open .csel-opt[data-v=week]');await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(1200);await p.click('#dlgForm [data-act=ok]');await p.waitForTimeout(800);
-const fl=await p.evaluate(()=>[...document.querySelectorAll('#follows .fw')].map(f=>f.querySelector('.fw-top').textContent.replace(/\s+/g,' ')+' | '+f.querySelector('.fw-t').textContent));console.log('follows',fl);
+const fl=await p.evaluate(()=>[...document.querySelectorAll('#follows .fw')].map(f=>f.querySelector('.cp-d').textContent+' | '+f.querySelector('.cp b').textContent));console.log('follows',fl);
 await p.click('#followPanel [data-edsave]');await p.waitForTimeout(2500);console.log('pres saved',commits[0]);
 const pf=(files['data-president.json']||{}).follows||[];A(fl.length===3&&pf.length===3&&['finance:live','rights:issue','rights:week'].every(k=>pf.some(f=>f.dept+':'+f.kind===k))&&/^data-president\.json :: /.test(commits[0]||''),'president follows three kinds and saves');
 await p.screenshot({path:'m2_pres.png'});console.log('pres errs',p.errs);A(!p.errs.length,'president errors');

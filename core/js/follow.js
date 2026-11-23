@@ -27,38 +27,46 @@ function fwOptions(d,kind){
   if(kind==="week")return [["latest","（永遠顯示最新一份）"],...[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)).map(w=>[w.id,`${fmt(w.date)} 的週報`])];
   return [];
 }
-/* 一筆追蹤的內容（找不到時說明原因） */
+/* 一筆追蹤的內容（找不到時說明原因）→ {title, st（燈號顏色：ok／go／stall／done）, meta（標籤列的 HTML）, body（內容）, gone}
+   外觀跟即時回報、進度同一套：左邊膠囊（.cp）、右邊詳情用 .lc 外框（唯讀；逐行內容用即時回報的 lcLinesHTML） */
 function fwBody(f,d){
-  const miss=t=>({title:t,html:`<p class="sub">原本追蹤的項目已經被刪除或搬走。</p>`,gone:true});
+  const miss=t=>({title:t,st:"stall",meta:"",body:`<p class="sub">原本追蹤的項目已經被刪除或搬走。</p>`,gone:true});
+  const when=s=>s?`<span class="num">${esc(fmt(s).slice(5))}${String(s).length>10?" "+esc(String(s).slice(11,16)):""}</span>`:"";
   if(f.kind==="live"||(f.kind==="done"&&d.events.some(e=>e.id===f.ref))){
     const e=d.events.find(x=>x.id===f.ref);if(!e)return miss("（找不到）");
-    const st=e.doneAt?"":evStatus(e);
-    return {title:evName(e),dot:st||"done",html:`<p class="fw-meta">${e.doneAt?`已完成 ${esc(fmt(e.doneAt))}`:EV_ST[st]}${e.round>1&&!e.doneAt?` · 第 ${e.round} 段`:""}${e.touchedAt?` · 最後更新 ${esc(fmt(e.touchedAt).slice(5))}`:""}</p>${e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:""}`};
+    const st=e.doneAt?"done":evStatus(e);
+    return {title:evName(e),st,meta:`<span class="ev-st">${e.doneAt?"完成":EV_ST[st]}</span>${e.round>1&&!e.doneAt?`<span class="lc-tag">第 ${e.round} 段</span>`:""}${when(e.doneAt||e.touchedAt)}`,
+      body:(e.blocks&&e.blocks.length)||(e.times&&e.times.length)?lcLinesHTML(e,false,true):e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:`<p class="ln-empty">沒有說明</p>`};
   }
   if(f.kind==="issue"||f.kind==="done"){
     const i=d.issues.find(x=>x.id===f.ref);if(!i)return miss("（找不到）");
     const mk=sortedMarkers(i)[0];
-    return {title:i.title,dot:i.doneAt?"done":"issue",html:`<p class="fw-meta">${i.doneAt?`已結案 ${esc(fmt(i.doneAt))}`:`${esc(i.tags[i.cur]||"")}${i.tags[i.cur]?" · ":""}${schedLabel(i)}`}</p>
-      ${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?esc(fmt(mk.date).slice(5))+" ":""}${esc(mk.text)}</p>`:""}`};
+    return {title:i.title,st:i.doneAt?"done":"go",meta:`${i.doneAt?`<span class="ev-st">已結案</span>${when(i.doneAt)}`:`${i.tags[i.cur]?`<span class="ev-st">${esc(i.tags[i.cur])}</span>`:""}<span>${esc(schedLabel(i))}</span>`}`,
+      body:`${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?esc(fmt(mk.date).slice(5))+" ":""}${esc(mk.text)}</p>`:""}`};
   }
   if(f.kind==="week"){
     const ws=[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)),w=f.ref==="latest"?ws[0]:ws.find(x=>x.id===f.ref);
-    if(!w)return f.ref==="latest"?{title:"最新週報",html:`<p class="sub">這個部門還沒有週報。</p>`}:miss("（找不到）");
-    return {title:`${fmt(w.date)} 的週報${f.ref==="latest"?"（最新）":""}`,dot:"week",html:`<pre class="fw-week">${esc(w.text||"")}</pre>`};
+    if(!w)return f.ref==="latest"?{title:"最新週報",st:"stall",meta:"",body:`<p class="sub">這個部門還沒有週報。</p>`}:miss("（找不到）");
+    return {title:`${fmt(w.date)} 的週報${f.ref==="latest"?"（最新）":""}`,st:"go",meta:`<span class="ev-st">週報</span>`,body:`<pre class="fw-week">${esc(w.text||"")}</pre>`};
   }
   return miss("（不支援的類別）");
 }
+/* 追蹤清單：左邊一欄膠囊、右邊選到的那一筆詳情（手機上下排）；選到哪一筆記在 FW_SEL（重新整理回到第一筆） */
+let FW_SEL="";
 function renderFollows(){
   const panel=$("#followPanel");if(!panel)return;
   panel.hidden=!CFG.follow;if(!CFG.follow)return;
   const fs=state.follows||[];
-  $("#follows").innerHTML=fs.map(f=>{
+  if(!fs.some(f=>f.id===FW_SEL))FW_SEL=fs[0]?fs[0].id:"";
+  const rows=fs.map(f=>{
     const dp=fwDept(f.dept),c=fwCache.get(f.dept);
-    const b=!c?{title:"讀取中…",html:""}:c.data?fwBody(f,c.data):{title:"（讀不到）",html:`<p class="sub">${esc(c.err)}</p>`};
-    return `<article class="fw${b.gone?" gone":""}" data-fw="${esc(f.id)}" data-dot="${esc(b.dot)}">
-      <div class="fw-top"><span class="tag sm">${esc(dp?dp.name:f.dept)}</span><span class="fw-k">${FW_KIND[f.kind]||""}</span>${dp?`<a class="fw-open" href="?d=${encodeURIComponent(dp.id)}" target="_blank" rel="noopener">開啟看板 →</a>`:""}<button type="button" class="icon danger edit-only" data-fwdel aria-label="不再追蹤">移除</button></div>
-      <h3 class="fw-t">${esc(b.title)}</h3>${b.html}</article>`}).join("")
-    ||`<p class="empty">還沒有追蹤任何項目。登入後按這區的「編輯」→「+ 追蹤項目」，選部門和要看的即時回報、進度、完成紀錄或週報。</p>`;
+    const b=!c?{title:"讀取中…",st:"stall",meta:"",body:""}:c.data?fwBody(f,c.data):{title:"（讀不到）",st:"stall",meta:"",body:`<p class="sub">${esc(c.err)}</p>`,gone:true};
+    return {f,dp,b,on:f.id===FW_SEL};
+  });
+  $("#follows").innerHTML=rows.length?`<div class="fw-split"><div class="cps">${rows.map(({f,dp,b,on})=>`<article class="fw${b.gone?" gone":""}" data-fw="${esc(f.id)}"><button type="button" class="cp${on?" sel":""}" data-fwcp="${esc(f.id)}" data-st="${esc(b.st)}"${on?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(b.title)}</b><span class="cp-d">${esc(dp?dp.name:f.dept)}</span></button></article>`).join("")}</div>
+    <div class="fw-pane">${rows.map(({f,dp,b,on})=>`<article class="lc ro fw-lc" data-st="${esc(b.st)}" data-fwd="${esc(f.id)}"${on?"":" hidden"}><div class="lc-in"><div class="lc-head"><span class="live-dot" aria-hidden="true"></span><b class="lc-title">${esc(b.title)}</b>${dp?`<a class="fw-open" href="?d=${encodeURIComponent(dp.id)}" target="_blank" rel="noopener">開啟${esc(dp.name)}看板 →</a>`:""}<button type="button" class="icon danger edit-only" data-fwdel>移除</button></div>
+      <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:f.dept)}</span><span class="lc-tag">${esc(FW_KIND[f.kind]||"")}</span>${b.meta}</div><div class="lc-body">${b.body}</div></div></article>`).join("")}</div></div>`
+    :`<p class="empty">還沒有追蹤任何項目。到其他部門的看板按「收藏」，或登入後按這區的「編輯」→「+ 追蹤項目」。</p>`;
   /* 需要的部門資料還沒讀過就去讀，讀完再畫一次 */
   const need=[...new Set(fs.map(f=>f.dept))].filter(id=>!fwCache.has(id));
   if(need.length)Promise.all(need.map(id=>fwLoad(id))).then(renderFollows);
@@ -80,8 +88,10 @@ async function addFollow(){
 document.addEventListener("click",async e=>{
   const t=e.target;if(!t.closest)return;
   if(t.closest("#addFollow")){if(secEd("follow"))await addFollow();return}
+  const cp=t.closest("[data-fwcp]");
+  if(cp){FW_SEL=cp.dataset.fwcp;renderFollows();if(!matchMedia("(min-width:1000px)").matches){const d=document.querySelector(".fw-pane");d&&d.scrollIntoView({behavior:"smooth",block:"start"})}return}
   const del=t.closest("[data-fwdel]");
-  if(del&&secEd("follow")){const id=del.closest("[data-fw]").dataset.fw;state.follows=state.follows.filter(f=>f.id!==id);changed();return}
+  if(del&&secEd("follow")){const id=del.closest("[data-fwd]").dataset.fwd;state.follows=state.follows.filter(f=>f.id!==id);changed();return}
 });
 if(CFG.follow){
   const refresh=()=>{fwCache.clear();renderFollows()};
