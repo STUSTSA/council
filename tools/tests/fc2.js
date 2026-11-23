@@ -8,4 +8,5 @@ assert(/if \(!e\) \{ try \{ db = initializeFirestore/.test(app), '模擬器不�
 assert(/fbs\.persistent !== true\) return false/.test(app), '沒開持久化就不動');
 assert(/clearCache = async \(\) => \{ await drop\(""\); return wipePersistence\(\)/.test(st), 'clearCache 兩種快取都清');
 assert(/prevUid&&[^\n]*clearCache\(\)\)\.then\(w=>\{if\(w\)location\.reload\(\)\}\)/.test(acc), '登出／換帳號清完重新載入');
+assert(/try \{ await terminate\(fbs\.db\); \} catch \(_\) \{ return false; \}\s*try \{ await clearIndexedDbPersistence\(fbs\.db\); \} catch \(_\) \{[^}]*\}\s*return true;/.test(app), 'terminate 成功後不論 clear 成敗都回傳 true（呼叫端重新載入）');
 console.log('fc2 通過');
