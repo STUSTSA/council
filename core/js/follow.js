@@ -38,41 +38,6 @@ function favItems(){
   need.forEach(id=>{if(fwBusy.has(id))return;fwBusy.add(id);fwLoad(id).finally(()=>{fwBusy.delete(id);favRedraw()})});
   return out;
 }
-/* 一筆追蹤的內容（找不到時說明原因）→ {title, st, meta（標籤列）, body}；會長室點收藏的膠囊時在原位展開的唯讀詳情，用 .lc 外框（逐行內容用即時回報的 lcLinesHTML） */
-function favBody(f,d){
-  const miss=t=>({title:t,st:"stall",meta:"",body:`<p class="sub">原本追蹤的項目已經被刪除或搬走。</p>`,gone:true});
-  const when=s=>s?`<span class="num">${esc(fmt(s).slice(5))}${String(s).length>10?" "+esc(String(s).slice(11,16)):""}</span>`:"";
-  if(f.kind==="live"||(f.kind==="done"&&d.events.some(e=>e.id===f.ref))){
-    const e=d.events.find(x=>x.id===f.ref);if(!e)return miss("（找不到）");
-    const st=e.doneAt?"done":evStatus(e);
-    return {title:evName(e),st,meta:`<span class="ev-st">${e.doneAt?"完成":EV_ST[st]}</span>${e.round>1&&!e.doneAt?`<span class="lc-tag">第 ${e.round} 段</span>`:""}${when(e.doneAt||e.touchedAt)}`,
-      body:(e.blocks&&e.blocks.length)||(e.times&&e.times.length)?lcLinesHTML(e,false,true):e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:`<p class="ln-empty">沒有說明</p>`};
-  }
-  if(f.kind==="issue"||f.kind==="done"){
-    const i=d.issues.find(x=>x.id===f.ref);if(!i)return miss("（找不到）");
-    const mk=sortedMarkers(i)[0];
-    return {title:i.title,st:i.doneAt?"done":"go",meta:`${i.doneAt?`<span class="ev-st">已結案</span>${when(i.doneAt)}`:`${i.tags[i.cur]?`<span class="ev-st">${esc(i.tags[i.cur])}</span>`:""}<span>${esc(schedLabel(i))}</span>`}`,
-      body:`${hasDates(i)?`<div class="fw-bar">${ticksHTML(48,0,100,(pd(today())-pd(i.start))/Math.max(1,pd(i.end)-pd(i.start))*100)}</div>`:""}${i.note?`<p class="fw-text">${esc(i.note)}</p>`:""}${mk?`<p class="sub fw-mk">${mk.date?esc(fmt(mk.date).slice(5))+" ":""}${esc(mk.text)}</p>`:""}`};
-  }
-  if(f.kind==="week"){
-    const ws=[...d.weeks].sort((a,b)=>b.date.localeCompare(a.date)),w=f.ref==="latest"?ws[0]:ws.find(x=>x.id===f.ref);
-    if(!w)return f.ref==="latest"?{title:"最新週報",st:"stall",meta:"",body:`<p class="sub">這個部門還沒有週報。</p>`}:miss("（找不到）");
-    return {title:`${fmt(w.date)} 的週報${f.ref==="latest"?"（最新）":""}`,st:"go",meta:`<span class="ev-st">週報</span>`,body:`<pre class="fw-week">${esc(w.text||"")}</pre>`};
-  }
-  return miss("（不支援的類別）");
-}
-/* 收藏的膠囊點一下在原位展開唯讀詳情（再點收起）；不開別的頁面 */
-let FAV_OPEN="";
-function favDetHTML(dept,kind,ref){
-  const c=fwCache.get(dept);if(!c||!c.data)return "";
-  const b=favBody({dept,kind,ref},c.data),dp=fwDept(dept);
-  return `<article class="lc ro fav-lc" data-st="${esc(b.st)}"><div class="lc-in"><div class="lc-head"><span class="live-dot" aria-hidden="true"></span><b class="lc-title">${esc(b.title)}</b></div>
-    <div class="lc-meta"><span class="lc-tag">${esc(dp?dp.name:dept)}</span>${b.meta}</div><div class="lc-body">${b.body}</div></div></article>`;
-}
-document.addEventListener("click",e=>{
-  const b=e.target.closest&&e.target.closest("[data-favopen]");if(!b)return;
-  FAV_OPEN=FAV_OPEN===b.dataset.favopen?"":b.dataset.favopen;favRedraw();
-});
 if(CFG.follow){
   const refresh=()=>{[...new Set((state.follows||[]).map(f=>f.dept))].forEach(id=>fwLoad(id,true).then(favRedraw))};   /* 重新讀、讀到再換，不先清空（不會閃） */
   setInterval(refresh,3e5);document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});

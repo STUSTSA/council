@@ -668,8 +668,7 @@ a.doc-pill:active{scale:.96}
 .docs-panel[hidden]{display:none}
 
 /* ===== 會長收藏（follow.js 的 favItems；live.js、views.js 把它們放進會長室自己的即時回報與甘特圖） =====
-   即時回報清單裡是普通膠囊（.cp）：名稱右邊寫部門、點一下在原位展開唯讀詳情；甘特圖裡是普通的一列，名稱底下寫「部門 · 期間」，唯讀 */
-.fav-lc{grid-column:1/-1;min-height:0}   /* 點收藏的膠囊在原位展開唯讀詳情：佔滿一整列 */
+   即時回報清單裡是普通膠囊（.cp）：在「收藏」小標（.cps-h）底下，名稱右邊寫部門，點了跟自己的卡片一樣打開、但唯讀（live.js 的 lcFavHTML）；甘特圖裡是普通的一列，名稱底下寫「部門 · 期間」，唯讀 */
 .g-fav .g-fav-t{font-weight:500}
 
 /* ===== 會議報告事項（秘書處，meeting.js） =====
@@ -806,7 +805,7 @@ a.doc-pill:active{scale:.96}
 .g-axis{position:relative;height:44px}
 .g-axis span{position:absolute;top:5px;font-size:12px;color:var(--muted);transform:translateX(5px);white-space:nowrap}
 .g-track{position:relative;height:58px}
-/* ---- 細刻度（views.js 的 ticksHTML；會長室追蹤 .fw-bar、工作報告的期間甘特圖 .rg-bar 用。看板的甘特圖從 ui-12 起改用滑桿式時程條，見「滑桿式時程條」小節）----
+/* ---- 細刻度（views.js 的 ticksHTML；工作報告的期間甘特圖 .rg-bar 用。看板的甘特圖從 ui-12 起改用滑桿式時程條，見「滑桿式時程條」小節）----
    一排細直線排滿整條：期間外＝淡色短、期間內已過＝深色長、期間內還沒到＝灰色中、今天那一根＝綠色最高 */
 .tk{display:flex;align-items:flex-end;justify-content:space-between;height:100%}   /* 每根固定 2px 粗、平均分散（畫面再寬也是細線，不會變成方塊） */
 .tk i{flex:0 0 2px;height:30%;border-radius:1px;background:var(--hair)}
