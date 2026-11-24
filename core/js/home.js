@@ -212,6 +212,7 @@
      內網／本機網域（IP、localhost、單段名、.local 等）兩步都不要，直接首字母。
      自訂圖示（2026-11-23，DievE）：每個連結可選一個線條圖示取代網站圖示／首字母；存在同一筆 {u,n,i}（i＝LK_ICOS 裡的圖示名，沒有＝自動）。
      編輯中點連結＝在它上方浮出圖示選單（#hmIcoPick，自動＋LK_ICOS），選了就換、再點同一個或點外面、Esc 關閉；不認得的 i 讀回來當沒有。
+     入口要找得到（2026-11-24，DievE：看不到自選圖示在哪）：編輯中、有連結時下排上方浮一行提示（#hmLkHint「點連結可以換圖示」，選單開著時收起，hintSync）；剛加入的連結直接打開它的圖示選單。
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半（手機才畫；桌面是分開的圓鈕，ui-12）各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
@@ -326,6 +327,7 @@
     dkIn.classList.remove("sc");if(dkIn.scrollWidth>dkIn.clientWidth+1)dkIn.classList.add("sc");
     /* 放不下時盡量捲到最後（輸入框、「+」都看得到），但 show 那一個（返回鍵、剛加的連結）不能捲出左邊 */
     if(show){const n=DKN.get(show);if(n&&dkIn.classList.contains("sc"))dkIn.scrollLeft=Math.min(n.offsetLeft-8,dkIn.scrollWidth-dkIn.clientWidth)}
+    hintSync();
     if(!R)return;
     /* 底板兩半：中線不動，各自從原本的邊滑到新的邊 */
     const pr=dk.getBoundingClientRect(),dx=(pr.width-w0)/2;
@@ -352,18 +354,25 @@
     const u=lkUrl(ui.value);if(!u){nope(ui);ui.focus({preventScroll:true});return}
     if(lkSync()&&LK.list.length>=LK_MAX){dkPaint(true);return}   /* 別的分頁加滿了：只換成最新的清單（輸入框收起） */
     if(LK.list.length>=LK_MAX)return;
-    const x={u,n:lkCut(ni.value),k:lkKey()};LK.list.push(x);lkWrite();
+    const x={u,n:lkCut(ni.value),i:"",k:lkKey()};   /* i 要給空字串（跟 lkRead 讀回來的一樣）：少了它 lkSync 會把這筆當成別筆、換掉代號，剛加的連結就選不了圖示 */LK.list.push(x);lkWrite();
     ui.value="";ni.value="";ui.removeAttribute("aria-invalid");
     dkPaint(true,x.k);
     const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
+    ipOpen(DKN.get(x.k));   /* 剛加的連結直接讓人選圖示（不選也沒關係：點別處或繼續打字就收起） */
   }
   function lkDel(k){
     lkSync();const i=LK.list.findIndex(x=>x.k===k);if(i>=0){LK.list.splice(i,1);lkWrite()}dkPaint(true);   /* 別的分頁已經刪掉同一個：只換成最新的清單 */
     const f=$id("hmLkU");(f&&dkIn.contains(f)?f:DKN.get("back")).focus({preventScroll:true});
   }
   /* 圖示選單（編輯中點連結）：浮在那顆圓鈕上方、左右夾在畫面內；選了就換並存，再點同一顆或點外面或 Esc 關閉 */
-  let ip=null,ipK=null;
-  function ipClose(){if(!ip)return;ipK=null;ip.classList.remove("on");ip.inert=true}
+  let ip=null,ipK=null,hint=null;
+  /* 提示（#hmLkHint，放在下排裡、浮在它上方）：編輯中、有連結、圖示選單沒開時才出現 */
+  function hintSync(){
+    const on=LK.ed&&LK.list.length>0&&!ipK;if(!on&&!hint)return;
+    if(!hint){hint=document.createElement("div");hint.className="hm-lkh";hint.id="hmLkHint";hint.setAttribute("role","status");hint.textContent="點連結可以換圖示";dk.append(hint);hint.offsetWidth}
+    hint.classList.toggle("on",on);
+  }
+  function ipClose(){if(!ip||!ipK)return;ipK=null;ip.classList.remove("on");ip.inert=true;hintSync()}
   function ipOpen(w){
     const k=w.dataset.k,x=LK.list.find(l=>l.k===k);if(!x)return;
     if(ipK===k){ipClose();return}
@@ -375,8 +384,8 @@
     ip.querySelectorAll(".hm-ipb").forEach(b=>b.classList.toggle("sel",b.dataset.i===(x.i||"")));
     const r=w.getBoundingClientRect(),pw=ip.offsetWidth,ph=ip.offsetHeight,vw=document.documentElement.clientWidth;
     const L=Math.max(8,Math.min(vw-pw-8,r.left+r.width/2-pw/2));
-    ip.style.transform=`translate(${L.toFixed(1)}px,${Math.max(8,r.top-ph-12).toFixed(1)}px)`;
-    ip.classList.add("on");
+    ip.style.transform=`translate(${L.toFixed(1)}px,${Math.max(8,r.top+r.height/2-w.offsetHeight/2-ph-12).toFixed(1)}px)`;   /* 用中心點減半高：剛加入的連結還在彈出動畫（縮放）中，量到的上緣會偏低 */
+    ip.classList.add("on");hintSync();
   }
   function lkSetIcon(k,i){
     lkSync();const x=LK.list.find(l=>l.k===k);ipClose();if(!x||x.i===i)return;
