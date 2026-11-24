@@ -49,7 +49,7 @@ async function mpMerge(id){
 }
 async function mpSkip(id){
   if(MP.busy)return;MP.busy=true;renderProposals(true);
-  try{await (await mpMod()).resolve(CFG.firebase,id,"dismissed");MP.list=MP.list.filter(x=>x.id!==id);toast("已略過")}catch(e){console.error(e);toast(mpErr(e))}
+  try{await busyRun(async()=>(await mpMod()).resolve(CFG.firebase,id,"dismissed"));MP.list=MP.list.filter(x=>x.id!==id);toast("已略過")}catch(e){console.error(e);toast(mpErr(e))}
   MP.busy=false;renderProposals(true);
 }
 document.addEventListener("click",e=>{
@@ -67,7 +67,7 @@ async function mpSend(it){
     if(note)rows.push({id:rid(x.id),deptId:it.dept,cardId:null,kind:"new",title:title||"臨時項目",note:note.slice(0,1000),meetingDate:date})});
   if(!rows.length){toast("還沒有結論可以送");return 0}
   try{
-    const r=await (await mpMod()).send(CFG.firebase,rows),n=r.created+r.updated;
+    const r=await busyRun(async()=>(await mpMod()).send(CFG.firebase,rows),"送出中…"),n=r.created+r.updated;
     toast(`已送出 ${n} 項到${it.deptName}，等部門合併${r.skipped?`（另有 ${r.skipped} 項部門已處理過，沒有更新）`:""}`);return n;
   }catch(e){console.error(e);toast(mpErr(e));return 0}
 }

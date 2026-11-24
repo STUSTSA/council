@@ -33,6 +33,35 @@ const clamp=(v,a=0,b=100)=>Math.min(b,Math.max(a,v));
 /* 關掉動態（prefers-reduced-motion）時直接跳到結果 */
 const reduceMotion=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
 const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2000)};
+/* ===== 處理中（防呆，2026-11-24）：會寫入資料、要等的動作一律包在 busyRun 裡 =====
+   一開始就蓋一層透明的擋住點按與鍵盤（不能連按、不能在寫到一半時改別的）；超過 BUSY_SHOW 還沒好才淡入遮罩與「處理中…」膠囊（很快就好的不閃）；
+   超過 BUSY_LONG 還沒好：改寫「還在處理…」並出現「先關掉」（只收起這一層，動作繼續；沒連上網路時寫入可能一直等，不能把人鎖死）。
+   完成或失敗的回饋由呼叫端照舊用 toast；可以巢狀（計數），最外層結束才收。用 popover 放到最上層（蓋過剛關或還開著的對話框），不支援時靠 z-index。
+   樣式在 board.css「處理中」段 */
+const BUSY_SHOW=350,BUSY_LONG=12000,Busy={n:0,el:null,t:0,t2:0};
+function busyKey(e){if(Busy.n&&!(Busy.el&&Busy.el.contains(e.target))){e.preventDefault();e.stopPropagation()}}
+function busyOff(){clearTimeout(Busy.t);clearTimeout(Busy.t2);removeEventListener("keydown",busyKey,true);
+  const el=Busy.el;if(!el)return;el.classList.remove("on","show","long");try{el.hidePopover&&el.hidePopover()}catch(_){}}
+function busyOn(label){
+  let el=Busy.el;
+  if(!el){el=Busy.el=document.createElement("div");el.className="busy";el.id="busy";el.setAttribute("role","status");
+    try{el.popover="manual"}catch(_){}
+    el.innerHTML=`<div class="busy-pill"><i class="busy-spin" aria-hidden="true"></i><b class="busy-t"></b><button type="button" class="icon busy-x">先關掉</button></div>`;
+    el.querySelector(".busy-x").addEventListener("click",()=>{Busy.n=0;busyOff()})}
+  const t=el.querySelector(".busy-t");t.textContent=label;
+  if(Busy.n++)return;
+  let host=document.body;try{host=document.querySelector("dialog:modal")||host}catch(_){}   /* 強制對話框開著時，外面的東西都點不到也擋不住：放進對話框裡 */
+  if(el.parentNode!==host)host.appendChild(el);
+  el.classList.add("on");try{el.showPopover&&el.showPopover()}catch(_){}
+  if(document.activeElement&&document.activeElement!==document.body&&document.activeElement.blur)document.activeElement.blur();
+  addEventListener("keydown",busyKey,true);
+  Busy.t=setTimeout(()=>el.classList.add("show"),BUSY_SHOW);
+  Busy.t2=setTimeout(()=>{t.textContent="還在處理，網路可能比較慢…";el.classList.add("show","long")},BUSY_LONG);
+}
+async function busyRun(fn,label="處理中…"){
+  busyOn(label);
+  try{return await fn()}finally{if(Busy.n>0&&!--Busy.n)busyOff()}
+}
 const hasDates=i=>!!(i.start&&i.end);
 /* 時程：議題設定的期間（開始日～結束日）到某天為止已經過了幾 %；沒有日期＝null（未排程） */
 const issueSpan=i=>{if(!hasDates(i))return null;let s=i.start,e=i.end;if(e<s)[s,e]=[e,s];return [s,e]};

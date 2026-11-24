@@ -77,7 +77,7 @@ function atParse(txt){
 }
 async function atRun(fn,okMsg){
   if(AT.busy)return;AT.busy=true;renderAttendance(true);
-  try{await fn();if(okMsg)toast(okMsg)}catch(e){console.error(e);toast(AT_ERR[e&&e.code]||"沒有成功，請稍後再試")}
+  try{await busyRun(fn);if(okMsg)toast(okMsg)}catch(e){console.error(e);toast(AT_ERR[e&&e.code]||"沒有成功，請稍後再試")}
   AT.busy=false;await atLoad();
 }
 async function atImport(){

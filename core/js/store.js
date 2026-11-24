@@ -84,7 +84,8 @@ const FS_ERR={conflict:"資料剛被別人改過，沒有儲存","permission-den
 const FS_PART={conflict:"部分修改已寫入；有的資料剛被別人改過，那部分沒有儲存（還在畫面上）","permission-denied":"部分修改已寫入；其餘沒有權限、沒有儲存（還在畫面上）",
   unavailable:"部分修改已寫入；其餘因為沒有連上網路沒有儲存（還在畫面上）"};
 /* o.quiet（03 原位編輯器）：成功、失敗都不跳提示與對話框，失敗原因放在 fsLastErr（畫面在卡片上顯示儲存回饋） */
-async function fsPersist(msg,o={}){
+const fsPersist=(msg,o={})=>o.quiet?fsPersistRun(msg,o):busyRun(()=>fsPersistRun(msg,o),"儲存中…");   /* 原位編輯器（quiet）在卡片上有自己的儲存回饋，不蓋「處理中」 */
+async function fsPersistRun(msg,o={}){
   fsLastErr="";
   if(fsBusy){if(!o.quiet)toast("儲存中，請稍候");fsLastErr="儲存中";return false}
   if(!storeFsBase){if(!o.quiet)toast(STORE_NOTE.firestore);fsLastErr="只能檢視";return false}
