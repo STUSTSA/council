@@ -18,7 +18,7 @@ const fsDelOk=()=>!fsMode()||fsAdmin();
 /* 專案權限（跟部門角色分開，projectGrants；活動部部長或總管理員核准）：只在活動部、只能改「專案」分頁（議題），其他分頁照舊唯讀；規則 projectEditor 把關 */
 const fsProj=()=>fsMode()&&!!storeFsBase&&CFG.deptId==="events"&&!!(typeof acct!=="undefined"&&acct.user&&acct.proj)&&!fsWriter();
 const storeLocked=()=>storeSource()!=="github"&&!fsWriter()&&!fsProj();
-const boardLocked=()=>!!state.locked||storeLocked()||(fsProj()&&typeof curSec!=="undefined"&&curSec!=="progress");   /* 看板唯讀：定型版（state.locked）、凍結、或 firestore 模式沒有編輯權限（專案權限只有「專案」分頁能改） */
+const boardLocked=()=>!!state.locked||storeLocked()||(typeof projCur!=="undefined"&&!!(projCur()||{}).doneAt)||(fsProj()&&typeof curSec!=="undefined"&&curSec!=="progress");   /* 看板唯讀：定型版（state.locked）、凍結、或 firestore 模式沒有編輯權限（專案權限只有「專案」分頁能改）、或是已結案專案的專案頁（render.js 的 projCur） */
 const STORE_NOTE={frozen:"這個部門正在搬到新資料庫，暫停編輯。",firestore:"這個部門已搬到新資料庫，目前只能檢視。"};
 /* Firestore 模式：第一次用到才載入橋接模組（type=module，SDK 從 gstatic 載入）；回傳 {data（schemaVersion 13 格式）, src, orig}（store-firestore.js） */
 let storeFsMod=null;

@@ -27,7 +27,7 @@ const lvVer=ev=>{if(!fsMode()||!storeFsBase)return 0;const c=(storeFsBase.src.ca
 function tmLate(t){if(!t||!t.start)return false;const d=new Date(),now=`${today()}T${pad(d.getHours())}:${pad(d.getMinutes())}`,sd=t.start.slice(0,10),ed=(t.end||"").slice(0,10);
   return (ed||sd)<today()||(!ed&&sd===today()&&t.start.length>10&&t.start<now)}
 /* 會議要報告：ev.report 為真的排在上面（細線隔開），上一張／下一張照畫面順序 */
-const liveOrder=()=>{const a=state.events.filter(ev=>!ev.doneAt);return[...a.filter(reportOn),...a.filter(e=>!reportOn(e))]};
+const liveOrder=()=>{const a=state.events.filter(ev=>!ev.doneAt&&inProj(ev));return[...a.filter(reportOn),...a.filter(e=>!reportOn(e))]};
 
 /* ===== 畫面 ===== */
 /* 一顆膠囊（高 54）：燈號、名稱、右邊紅字「報告」。o.sel＝寬螢幕右邊打開的那張（細框）；o.away＝全螢幕卡片從這顆長出去（位置留著、看不到） */
@@ -488,7 +488,7 @@ async function kpCommit(){
   if(!kpReady(ev))return false;
   const core=x=>JSON.stringify({...x,report:0,touched:0,touchedAt:0});
   const before=kp.before,was=before&&JSON.parse(before);
-  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.some(b=>b.text)&&!ev.times.some(x=>x.label||x.place)&&!(ev.links||[]).length&&!ev.issueId&&!(ev.staff||[]).length&&!ev.report){   /* 新增後什麼都沒填（名稱、內容、時間、連結、母議題、負責人、報告都沒動）：不留 */
+  if(!was&&ev.name==="新的即時回報"&&!ev.blocks.some(b=>b.text)&&!ev.times.some(x=>x.label||x.place)&&!(ev.links||[]).length&&(!ev.issueId||ev.issueId===(projCur()||{}).id)&&!(ev.staff||[]).length&&!ev.report){   /* 新增後什麼都沒填（名稱、內容、時間、連結、母議題、負責人、報告都沒動）：不留 */
     const cur=lcCur(),g=cur&&!reduceMotion()?lcGhost(lcCard(cur[0])):null;
     morph(()=>{state=normalize(JSON.parse(snapshot));editing=false;cardEdit="";dirty=false;kp=null;lvOpen=null;render()});
     if(g)g.animate([{opacity:1},{opacity:0,transform:"translateY(20px)"}],{duration:MO.base,easing:MO.in,fill:"forwards"}).onfinish=()=>g.remove();

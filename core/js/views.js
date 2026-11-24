@@ -1,6 +1,15 @@
 /* 核心｜各區塊畫面：頁首、週報、甘特圖、議題卡片、即時回報、完成紀錄 */
+/* 專案頁的標題列（DESIGN-next 第八節「專案看板最上面有抬頭：日期、總召、倒數」）：名稱＝專案名稱；上面的小標＝PROJECT、日期、倒數（D−N 還有 N 天、D+N 過了 N 天，
+   以結束日為準、沒有就開始日）、專員的名字（讀得到才放）。都用 textContent 放。不是專案頁時不動（部門名、英文小標由 shell.js 放好） */
+function projHead(){
+  const p=projCur();if(!p)return;const nm=$("#dhName"),en=$("#dhEn"),d=p.end||p.start||"";
+  const n=d?Math.round((pd(d.slice(0,10))-pd(today()))/864e5):null,who=(p.staff||[]).map(staffName).filter(x=>x&&x!==STAFF_GONE)[0]||"";
+  document.title=p.title||CFG.dept.name;if(nm&&nm.textContent!==p.title)nm.textContent=p.title||"";
+  const t=["PROJECT",...(d?[`${+d.slice(5,7)}/${+d.slice(8,10)}`,p.doneAt?"已結案":n===0?"D-DAY":n>0?`D−${n}`:`D+${-n}`]:[]),...(who?[who]:[])].join("　");
+  if(en&&en.textContent!==t){en.textContent=t;en.hidden=false}
+}
 function renderHeader(){
-  document.title=CFG.dept.name;renderHero();
+  document.title=CFG.dept.name;renderHero();projHead();
   $("#saveInfo").textContent=readOnly()?`更新於 ${fmt(state.savedAt)||"—"}`
     :fsMode()?"":(state.savedAt?`上次儲存 ${state.savedAt}${state.savedBy?`（${state.savedBy}）`:""}`:"尚未儲存")+(cloudOn()?` · ${({ok:"雲端已同步",empty:"雲端尚無資料，儲存後建立",offline:"離線中",limited:"GitHub 讀取次數暫時用完",error:"雲端讀取失敗"})[cloud.status]||"連線雲端中…"}${cloudOn()&&!ghToken()&&loggedIn()?" · 這台裝置沒有連上雲端，儲存只會留在這台裝置":""}`:"")+(localOK?"":" · 這個瀏覽器無法本機保存，請用「匯出備份」");
   offlinePill();notiBadge();if(notiOpen)renderNoti();
@@ -397,7 +406,7 @@ function evFieldsHTML(ev,lim){
    寬螢幕在右邊、其他全螢幕。完成的即時回報：狀態「完成」、負責人、完成日、逐行內容唯讀、編輯次數；結案的議題：完成日、期間、階段、處理紀錄、連結。
    有權限的人卡片最下面「編輯」＝原本的逐欄編輯（doneFieldsHTML；議題的「取消結案」、即時回報的「移回即時回報」照舊在編輯中，位置不變）。 */
 function doneItems(){
-  const ev=state.events.filter(e=>e.doneAt).map(e=>({id:e.id,k:"e",o:e,d:e.doneAt||"",title:evName(e)}));
+  const ev=state.events.filter(e=>e.doneAt&&inProj(e)).map(e=>({id:e.id,k:"e",o:e,d:e.doneAt||"",title:evName(e)}));
   return doneIssues().map(i=>({id:i.id,k:"i",o:i,d:i.doneAt||"",title:i.title})).concat(ev).sort((a,b)=>b.d.localeCompare(a.d));
 }
 const doneLink=l=>`<a class="lnk" href="${esc(safeUrl(l.url))}" target="_blank" rel="noopener">${esc(l.name)}</a>`;

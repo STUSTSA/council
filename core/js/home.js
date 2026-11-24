@@ -7,12 +7,12 @@
    - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（進你的部門看板、打開行事曆的會長室模式（沒記到部門時到會長室頁））、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「部門／專案」切換（2026-11-24，上排中間的分段切換 #hmSeg）：專案＝活動部「專案」分頁裡還沒結案的專案（資料是活動部的議題，對外公開、沒登入也讀；
      切到「專案」才讀、讀過 2 分鐘內不重讀）。專案卡片跟部門色塊是同一個元件（桌面一排、手機卡片堆、同一套焦點與進場動作），
-     內容換成：目前階段（小字）、專案名稱、開始日期（大數字，有結束日的後面接小字）；點焦點那張＝進活動部看板的「專案」分頁。
+     內容換成：目前階段（小字）、專案名稱、開始日期（大數字，有結束日的後面接小字）；點焦點那張＝進這個專案自己的專案頁（index.html?d=events&proj=ID，config.js 的 PROJ_ID）；從專案頁回來停在「專案」這一排。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
   const D=[...(window.BOARD_DEPTS||[])].sort((a,b)=>(b.id==="president")-(a.id==="president")||(b.id==="secretariat")-(a.id==="secretariat"));   /* 會長室、秘書處排最前面，其他照設定檔 */
   const PHONE=matchMedia("(max-width:640px)"),$id=id=>document.getElementById(id);
-  const href=d=>`index.html?d=${encodeURIComponent(d.id)}${d.pid?"&tab=progress":""}`;
+  const href=d=>`index.html?d=${encodeURIComponent(d.id)}${d.pid?"&proj="+encodeURIComponent(d.pid):""}`;   /* 專案＝活動部看板的專案頁（config.js 的 PROJ_ID） */
   const EN=id=>DEPT_EN[id]||"";
   const stage=$id("hmStage");
   /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（FROM）：
@@ -129,7 +129,10 @@
     H.i=Math.max(0,Math.min(L.length-1,H.keep[v]));paint();
     if(!reduceMotion())stage.animate([{transform:`translateX(${v==="proj"?36:-36}px)`,opacity:0},{transform:"none",opacity:1}],{duration:MO.base,easing:MO.out});
   }
-  {const sg=$id("hmSeg");if(sg){if(PJ_DEPT){sg.hidden=false;new LiquidSeg(sg,{onPick:k=>setView(k)})}}}
+  let hmSeg=null;{const sg=$id("hmSeg");if(sg&&PJ_DEPT){sg.hidden=false;hmSeg=new LiquidSeg(sg,{onPick:k=>setView(k)})}}
+  /* 從專案頁回來：回到「專案」那一排（進去時記在 sessionStorage「hm-view」）；專案要重讀，這一次不播收回那一張的動作 */
+  const backToProj=()=>{let v="";try{v=sessionStorage.getItem("hm-view")||"";sessionStorage.removeItem("hm-view")}catch(_){}
+    if(v!=="proj"||!hmSeg||FROM<0||D[FROM].id!=="events")return false;hmSeg.set("proj",true);setView("proj");return true};
   addEventListener("resize",()=>{if(H.mode==="rail")ringTo(false)});
   if(document.fonts)document.fonts.ready.then(()=>{if(H.mode==="rail")ringTo(false)});
 
@@ -155,7 +158,7 @@
   function hmWarm(){try{storePreload();const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c)c.postMessage({type:"warm"})}catch(_){}}
   function hmEnter(i){
     const d=L[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
-    try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
+    try{sessionStorage.setItem("hm-dept",d.id);sessionStorage.setItem("hm-view",H.view)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     hmWarm();   /* 過場動畫播的這一秒不浪費：看板的檔案與 Firebase 模組同時開始準備（動畫與換頁的時間都不變） */
     if(reduceMotion()){location.href=u;return}
     H.busy=true;const go=()=>{try{sessionStorage.setItem("pfx-burst",JSON.stringify({d:d.id,k}))}catch(_){}location.href=u};
@@ -502,6 +505,6 @@
   paint();hmCounts();
   setTimeout(()=>(window.requestIdleCallback||setTimeout)(storePreload),2500);   /* 開場與主頁動畫都過了、閒下來才提前下載 Firebase 模組（進部門時才下載會多等好幾趟網路來回；下載一次之後瀏覽器會留著） */
   swReg(D.map(d=>deptLogo(d.id)));   /* 安裝成 App、離線打開：主頁也註冊 Service Worker，並把主頁用到的檔案與九個部門標誌收進離線備份（util.js） */
-  if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();else preGone();
+  if(backToProj())preGone();else if(FROM>=0&&document.documentElement.classList.contains("pfx-arrive"))hmCollapse();else preGone();
   splashOut(null,null,$id("hmMe").querySelector(".su-emb"));   /* 開場播完（字型好了、至少 0.6 秒）才收：兩個小人縮到左上角的標誌上（core/js/splash.js） */
 })();

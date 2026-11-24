@@ -40,7 +40,7 @@ document.addEventListener("click",async e=>{
   if(t.closest("[data-fabx]")){fabClose();return}
   if(t.closest("#addEvent")&&!editing&&canEdit()){fabOn?fabClose():fabOpen();return}
   const fa=t.closest("[data-fabadd]");
-  if(fa&&!editing&&canEdit()){const kind=fa.dataset.fabadd;fabClose(true);const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[]};
+  if(fa&&!editing&&canEdit()){const kind=fa.dataset.fabadd;fabClose(true);const ev={id:uid("e"),name:"新的即時回報",desc:"",blocks:[],createdAt:today(),staff:[],links:[],times:[],round:1,touched:[],...(projCur()?{issueId:PROJ_ID}:{})};   /* 專案頁：新卡片掛在這個專案底下 */
     if(await startEdit("e:"+ev.id,()=>{evTouch(ev);state.events.push(ev);lcSet("live",ev.id);dirty=true})){lcOpened("live");kpSeed(kind)}return}
   /* 「+ 議題」：加一個議題、換到它的詳情，游標直接在名稱上（整段選取，打字就換掉；沒有對話框）；沒命名就點外面／Esc＝不留（inmCommit） */
   if(t.closest("#addIssue")&&!editing){const it={id:uid("i"),title:"新"+ISS,tags:[...CFG.stageTags],cur:0,start:"",end:"",doneAt:null,markers:[],links:[]};
