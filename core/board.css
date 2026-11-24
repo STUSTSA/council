@@ -1411,9 +1411,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-clock{font-size:28px;font-weight:300;letter-spacing:.02em;line-height:1}
 .hm-round{display:grid;place-items:center;flex:none;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink)}
 .hm-round .ico{width:22px;height:22px}
-.hm-seg{flex:none}   /* 部門／專案切換：上排中間（兩邊各一個 .hm-sp）；外觀是共用的 .lseg */
-@media (max-width:640px){.hm-seg.lseg>[data-k]{padding-inline:11px}}   /* 手機上排放標誌、切換、時間、設定四樣：切換的左右內距收一點 */
-@media (max-width:380px){.hm .hm-top{gap:6px}}   /* 360 寬的手機：上排間距再收，四樣才放得下 */
+.hm-seg{flex:none}   /* 部門／專案切換：上排中間（桌面兩邊各一個 .hm-sp；手機不顯示時間、改成三欄格線對畫面正中央置中，見下面手機那段）；外觀是共用的 .lseg */
 .hm-seg[hidden]{display:none}
 .hm-n small{margin-left:.3em;font-size:.48em;font-weight:400;color:var(--muted)}   /* 專案卡片：開始日期後面接結束日期 */
 .hm-none{margin:auto;padding:40px 0;color:var(--muted);font-size:14px;letter-spacing:.06em;text-align:center}   /* 「專案」是空的、讀取中、讀不到 */
@@ -1539,11 +1537,13 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
 .hm-ly .look{padding:22px;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh)}
 @media (max-width:640px){
   .hm{--hm-pl:max(16px,var(--sa-left));--hm-pr:max(16px,var(--sa-right));--hm-dot:44px;--hm-gap:10px;--hm-fill:var(--bg);display:flex;flex-direction:column;padding:calc(16px + var(--sa-top)) var(--hm-pr) 0 var(--hm-pl)}
-  .hm-top{gap:10px}
-  .hm-me{height:48px}
+  /* 手機上排：不顯示時間；左右兩欄等寬（1fr），切換才會落在畫面正中央（標誌與設定鈕寬度不同，用 flex 兩邊撐開會偏） */
+  .hm-top{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px}
+  .hm-sp,.hm-clock{display:none}
+  .hm-me{grid-column:1;justify-self:start;height:48px}
   .hm-su{height:28px}
-  .hm-clock{font-size:22px}
-  .hm-round{width:48px;height:48px}
+  .hm-seg{grid-column:2}
+  .hm-round{grid-column:3;justify-self:end;width:48px;height:48px}
   .hm-stage{flex:1}
 }
 
