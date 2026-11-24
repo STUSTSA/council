@@ -116,6 +116,7 @@ function fabSync(){
   const on=secTab("live")&&curSec==="live"&&!notiOpen&&canEdit()&&!editing&&!HS.mode&&!liveCardOpen();
   if(!on&&fabOn)fabClose(true);
   Anim.toggle(fb,on);
+  tourSync(on);   /* 新手引導（tour.js）：圓鈕能出現＝可以引導 */
   /* 內容底部的留白看「圓鈕可能出現」（可編輯的單位、即時回報分頁），不看這一刻有沒有出現：打開卡片、搜尋、唯讀檢視時不跳動（board.css 基礎段的 --fab-in） */
   document.body.classList.toggle("fab-room",secTab("live")&&curSec==="live"&&deptCan());
 }
@@ -232,6 +233,8 @@ const devRow=()=>devForget()?setRow("device","device","這台裝置"):setRow("de
 const devSec=()=>devShow()?setSec(devRow()):"";
 /* 「外觀」：所有情況都是設定清單最後一列，點進去是合併頁（SET_HUBS.look；主題、深淺色、音效） */
 const lookSec=()=>setSec(setRow("look","theme","外觀"));
+/* 「重看新手引導」：只給能編輯的人（引導教的是完成、刪除、編輯卡片）；按了關掉設定、回即時回報從頭再看一次（tour.js 的 tourReplay）。沒有下一層，所以沒有箭頭 */
+const tourSec=()=>setSec(`<button type="button" class="set-row" data-tour-replay><span class="sr-ico">${ico("eye","solo")}</span><b class="sr-t">重看新手引導</b></button>`);
 /* 設定清單（2026-11-06 整理）：不寫小標題，用間距分成幾塊；同類的功能合成一列（點了進合併頁，見下面 SET_HUBS），部長用不到的不列。
    登入前只有鎖頭（每週報告在完成紀錄的週頁裡，本來就公開看） */
 function settingsInner(){
@@ -247,7 +250,7 @@ function settingsInner(){
       (termOwn()?setRow("term","calendar","學年與開學日"):""))+
     setSec(setRow("backup","download","備份")+
       devRow())+
-    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+lookSec();
+    (siteAdmin()?setSec(setRow("site","cloud","網站管理")):"")+tourSec()+lookSec();
 }
 /* 設定是部門內的一頁（DESIGN-next 第六節「部門內」、第十二節；ui-09）：部門標題列（同一個節點，data-fx-keep）留在畫面上，設定清單、桌面右側面板、手機子頁都從標題列下緣開始蓋。
    打開時頁面捲回頂端（跟換分頁一樣，render.js 的 secSwap），底下的頁面鎖住不捲（board.css body.set-open）；--set-top＝標題列下緣，視窗大小變了重量 */

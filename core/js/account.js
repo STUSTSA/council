@@ -121,6 +121,7 @@ function acctSettingsInner(){
     +(acctSuper()?setSec(setRow("council","flag","系統管理")):"")
     +devSec()   /* 03 F4：有東西可以做（安裝、加入主畫面）才出現（nav.js） */
     +refreshSec()
+    +(fsWriter()?tourSec():"")   /* 重看新手引導（nav.js、tour.js）：只給能編輯的人 */
     +lookSec();   /* 外觀：獨立一列放最後（2026-11-22 起不再接在帳號頁下面） */
 }
 /* 強制刷新（2026-11-23）：平常用這台裝置存的讀取結果（fs-cache.js）省讀取量；趕資料（催交、開會前）按一下就作廢本裝置的快取、立刻重讀目前這個部門。
