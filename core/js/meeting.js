@@ -115,9 +115,11 @@ async function fsGrantSet(want){
   if(grantBusy||fsRole()!=="super")return;grantBusy=true;
   const sw=$("#grantSw");sw.classList.toggle("on",want);
   try{
-    const W=await storeWriteGet();
-    await W.setMeetGrant(CFG.firebase,want?StoreMap.parseTaipei(today()).ms+864e5:null,mtWho()||"會長室");
-    try{storeFsUse(await storeFsLoad(true))}catch(e){fsReadErr("會長室看板",e)}
+    await busyRun(async()=>{
+      const W=await storeWriteGet();
+      await W.setMeetGrant(CFG.firebase,want?StoreMap.parseTaipei(today()).ms+864e5:null,mtWho()||"會長室");
+      try{storeFsUse(await storeFsLoad(true))}catch(e){fsReadErr("會長室看板",e)}
+    });
     toast(want?"已開放秘書處今天的會議編輯":"已關閉秘書處的會議編輯");
   }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?"沒有權限，沒有切換":"切換失敗，請稍後再試")}
   grantBusy=false;render();
@@ -148,7 +150,8 @@ async function mtPushAll(){
 /* firestore 模式的寫回（2026-11-20）：跟 GitHub 模式同一個流程——寫回前再讀一次會長室的授權、逐部門寫、成功的記進今天的會議紀錄。
    每個部門用 saveMeeting 寫（只寫規則允許秘書處改的欄位）；寫完重新讀那個部門。失敗的部門畫面上的修改留著（跟 GitHub 模式一樣，重新整理再改） */
 const MT_FS_ERR={conflict:"（對方剛存過，請重新整理再改）","permission-denied":"（沒有權限，或會長室的授權已經關閉）","meeting-field":"（有會議裡不能改的欄位）",unavailable:"（沒有連上網路）",badtime:"（時間格式不正確）"};
-async function mtPushFs(dirty){
+const mtPushFs=dirty=>busyRun(()=>mtPushFsRun(dirty),"寫回中…");
+async function mtPushFsRun(dirty){
   const pr=await fwLoad("president",true),g=pr&&pr.data&&pr.data.meetGrant;
   if(!g||g.date!==today()){dirty.forEach(m=>{m.data=JSON.parse(JSON.stringify(m.base));m.dirty=false});render();toast("會長室的授權已經關閉或過期，其他部門的修改沒有寫回");return}
   const W=await storeWriteGet(),fails=[],rec=[];
@@ -515,7 +518,8 @@ async function agSave(a,okMsg,failMsg,denyMsg){
   AG.busy=true;
   const put=()=>{state.agendas=(state.agendas||[]).filter(x=>x.date!==a.date).concat(JSON.parse(JSON.stringify(a)))};
   try{
-    if(fsMode()){const W=await storeWriteGet();await W.saveAgenda(CFG.firebase,a.date,a);put();render();if(okMsg)toast(okMsg)}
+    if(fsMode()){const put1=async()=>{const W=await storeWriteGet();await W.saveAgenda(CFG.firebase,a.date,a)};await (okMsg?busyRun(put1,"儲存中…"):put1());put();   /* 自動存（沒有 okMsg）不蓋「處理中」，狀態寫在 #agSt */
+      render();if(okMsg)toast(okMsg)}
     else await settingSave(put,okMsg);
     AG.busy=false;return true
   }catch(e){console.error(e);toast(e&&e.code==="permission-denied"?denyMsg:failMsg)}

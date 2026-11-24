@@ -102,7 +102,7 @@ function renderBooking(force){
 }
 async function bkRun(fn,okMsg){
   if(BK.busy)return;BK.busy=true;renderBooking(true);
-  try{await fn();if(okMsg)toast(okMsg)}catch(e){console.error(e);toast(BK_ERR[e&&e.code]||"沒有成功，請稍後再試")}
+  try{await busyRun(fn);if(okMsg)toast(okMsg)}catch(e){console.error(e);toast(BK_ERR[e&&e.code]||"沒有成功，請稍後再試")}
   BK.busy=false;await bkLoad();
 }
 async function bkAddWindow(){

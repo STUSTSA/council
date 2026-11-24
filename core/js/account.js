@@ -185,13 +185,15 @@ function acctPanel(title,draw){
     p.end=()=>{if(!alive)return;p.sub(false);alive=false;dlgPaneCancel();timers.forEach(clearInterval);ends.forEach(f=>{try{f()}catch(_){}});
       acctPanels.splice(acctPanels.indexOf(p),1);box.remove();if(prev&&prev.alive)prev.box.hidden=false;
       if(depth)Back.closed("acct"+depth);acctPanelSync();res()};
+    box.innerHTML=`${panelHead(title)}<p class="set-p acct-empty" role="status">讀取中…</p>`;   /* 第一次畫出來之前（讀名單、申請要等）：先放標題與「讀取中…」，不留一片空白 */
     acctPanels.push(p);acctPanelSync();
     if(depth)Back.opened("acct"+depth,()=>p.end());
     Promise.resolve().then(()=>draw(p)).catch(err=>{console.error(err);if(alive)box.insertAdjacentHTML("beforeend",`<p class="acct-err" role="alert">讀取失敗</p>`)});
   });
 }
 const acctErr=e=>({"permission-denied":"沒有權限","inactive":"已經處理過了","same":"已經是這個角色","pending":"這個部門已經有一筆待審的申請","changed":"這筆申請剛被改過，請再看一次","unavailable":"沒有連上網路，稍後再試","failed-precondition":"資料剛被別人改過，請再試一次","aborted":"資料剛被別人改過，請再試一次"}[e&&e.code]||`失敗（${(e&&e.code)||"error"}）`);
-async function acctTry(fn,ok){try{await fn();if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
+/* 帳號相關的寫入一律經過這裡：處理中防呆（busyRun）＋成功、失敗的提示 */
+async function acctTry(fn,ok){try{await busyRun(fn);if(ok)toast(ok);return true}catch(e){toast(acctErr(e));return false}}
 
 /* ---------- 帳號（自己）：最上面一張個人卡（名稱可就地改、信箱、角色）；申請編輯權限、我的申請、登出（外觀在設定清單自己一列，nav.js 的 SET_HUBS.look） ---------- */
 async function acctHub(){
@@ -399,8 +401,8 @@ function membersPanel(){
     p.box.addEventListener("click",async e=>{
       const b=e.target.closest("button");if(!b||busy)return;busy=true;
       try{
-        if(b.hasAttribute("data-new")){try{cur=await A.inviteCreate({deptId:dept,role:"editor"});watch()}catch(err){toast(acctErr(err))}}
-        else if(b.hasAttribute("data-regen")&&cur){try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}}
+        if(b.hasAttribute("data-new")){try{cur=await busyRun(()=>A.inviteCreate({deptId:dept,role:"editor"}));watch()}catch(err){toast(acctErr(err))}}
+        else if(b.hasAttribute("data-regen")&&cur){try{cur=await busyRun(()=>A.inviteRegen(cur.h));watch()}catch(err){toast(acctErr(err))}}
         else if(b.hasAttribute("data-revoke")&&cur){const v=await ask("撤銷這張 QR",[],{danger:"撤銷"});if(v!=="delete")return;
           const h=cur.h;if(await acctTry(()=>A.inviteRevoke(h),"已撤銷")){cur=null;watch()}}
         else if(b.dataset.rok||b.dataset.rno){
@@ -573,9 +575,9 @@ function invitePanel(){
             {name:"email",label:"綁定信箱（選填）",type:"email",value:""}],
             {validate:o=>o.email&&!/^[^\s@]+@[^\s@]+$/.test(o.email)?"信箱格式不對":""});
           if(!v)return;   /* 取消（含離開面板）：沒有變動，不重讀 */
-          try{cur=await A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email});watch()}catch(err){toast(acctErr(err))}
+          try{cur=await busyRun(()=>A.inviteCreate({deptId:v.dept,role:v.role,boundEmail:v.email}));watch()}catch(err){toast(acctErr(err))}
         }else if(b.hasAttribute("data-regen")&&cur){
-          try{cur=await A.inviteRegen(cur.h);watch()}catch(err){toast(acctErr(err))}
+          try{cur=await busyRun(()=>A.inviteRegen(cur.h));watch()}catch(err){toast(acctErr(err))}
         }else if(b.dataset.revoke){
           const h=b.dataset.revoke,v=await ask("撤銷這張 QR",[],{danger:"撤銷"});if(v!=="delete")return;
           if(await acctTry(()=>A.inviteRevoke(h),"已撤銷")&&cur&&cur.h===h){cur=null;watch()}
@@ -700,7 +702,7 @@ async function joinFlow(){
     if(!v){joinClear();return}
     for(;;){
       try{
-        const r=await A.inviteRedeem(token);joinClear();
+        const r=await busyRun(()=>A.inviteRedeem(token));joinClear();
         toast(`已加入${deptNameOf(r.deptId)}（${roleT(r.role,r.deptId)}）`);
         if(r.deptId!==CFG.deptId)setTimeout(()=>{location.href=`${location.pathname}?d=${encodeURIComponent(r.deptId)}`},900);
         return;
