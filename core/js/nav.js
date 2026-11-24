@@ -114,7 +114,7 @@ function renderTabbar(){
 /* ---------- 新增即時回報的浮動圓鈕（DESIGN-next 第六節「部門內」） ----------
    右下角 60 的圓鈕（主要動作色、加號）；手機在工具列上方。只在即時回報分頁、可以編輯（不是唯讀、不是唯讀檢視）、沒有卡片在編輯或打開、沒有在搜尋時出現。
    id 沿用 #addEvent：點了做原本「+ 新增即時回報」的同一件事（events.js 的主點擊監聽）。設定、通知疊層蓋在它上面（z-index 比疊層低） */
-const liveCardOpen=()=>!!lvOpen||(CFG.mergeDone&&!!dnOpen);   /* 即時回報的卡片打開（live.js）；會長室、秘書處併進來的完成紀錄打開也算 */
+const liveCardOpen=()=>!!lvOpen||!!fvOpen||(CFG.mergeDone&&!!dnOpen);   /* 即時回報的卡片打開（live.js）；會長室、秘書處併進來的完成紀錄、會長收藏的卡片打開也算 */
 function fabSync(){
   let fb=$("#addEvent");
   if(!fb){document.body.insertAdjacentHTML("beforeend",`<button type="button" class="fab" id="addEvent" aria-label="新增即時回報" aria-haspopup="menu" aria-expanded="false" hidden>${ico("plus","solo")}</button>`);fb=$("#addEvent")}
