@@ -5,22 +5,26 @@
    - 色塊內容：英文小標、部門名、部門標誌（dept/icons/dept-代號.svg 放進頁面裡，零件才能動；被選到時小人做一次動作，board.css「部門標誌」段）、
      進行中的即時回報張數（進主頁時讀一次，見 hmCounts）。
    - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（進你的部門看板、打開行事曆的會長室模式（沒記到部門時到會長室頁））、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
-   - 「專案」：資料裡沒有專案這種單位（模擬頁把它當成跟部門同級），這一步不放部門／專案切換。
+   - 「部門／專案」切換（2026-11-24，上排中間的分段切換 #hmSeg）：專案＝活動部「專案」分頁裡還沒結案的專案（資料是活動部的議題，對外公開、沒登入也讀；
+     切到「專案」才讀、讀過 2 分鐘內不重讀）。專案卡片跟部門色塊是同一個元件（桌面一排、手機卡片堆、同一套焦點與進場動作），
+     內容換成：目前階段（小字）、專案名稱、開始日期（大數字，有結束日的後面接小字）；點焦點那張＝進活動部看板的「專案」分頁。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
   const D=[...(window.BOARD_DEPTS||[])].sort((a,b)=>(b.id==="president")-(a.id==="president")||(b.id==="secretariat")-(a.id==="secretariat"));   /* 會長室、秘書處排最前面，其他照設定檔 */
   const PHONE=matchMedia("(max-width:640px)"),$id=id=>document.getElementById(id);
-  const href=d=>`index.html?d=${encodeURIComponent(d.id)}`;
+  const href=d=>`index.html?d=${encodeURIComponent(d.id)}${d.pid?"&tab=progress":""}`;
   const EN=id=>DEPT_EN[id]||"";
   const stage=$id("hmStage");
   /* 焦點：預設是權益部（網址沒有 ?d 的看板）；從某個部門回來時是那個部門（FROM）：
      系統返回鍵回來（back_forward）看 home.html 開頭放的 html[data-hm-back]（sessionStorage「hm-dept」，進部門時記下，只接受部門清單裡有的），
      其他從看板換頁過來的看 referrer 的 ?d */
-  const H={i:Math.max(0,D.findIndex(d=>d.id==="rights")),cnt:{},svg:{},mode:""};
+  const H={i:Math.max(0,D.findIndex(d=>d.id==="rights")),cnt:{},svg:{},mode:"",view:"dept",keep:{dept:0,proj:0}};
+  let L=D;   /* 目前畫在色塊上的清單：部門（D），或活動專案（PJ.items，見「部門／專案切換」） */
   const hmFrom=()=>{const b=document.documentElement.dataset.hmBack,bi=b?D.findIndex(d=>d.id===b):-1;if(bi>=0)return bi;
     try{const r=document.referrer&&new URL(document.referrer);if(!r||r.origin!==location.origin||!/\/(index\.html)?$/.test(r.pathname))return -1;const id=r.searchParams.get("d")||"rights";return D.findIndex(d=>d.id===id)}catch(_){return -1}};
   const FROM=hmFrom();if(FROM>=0)H.i=FROM;
-  const tileIn=(d,i)=>`<span class="hm-tt"><i class="hm-en">${esc(EN(d.id))}</i><b class="hm-nm">${esc(d.name)}</b></span><span class="hm-lg" data-lg="${esc(d.id)}" aria-hidden="true"></span><span class="hm-n num" data-n="${esc(d.id)}" hidden></span>`;
+  const tileIn=(d,i)=>d.pid?`<span class="hm-tt"><i class="hm-en">${esc(d.tag)}</i><b class="hm-nm">${esc(d.name)}</b></span>${d.date?`<span class="hm-n num">${esc(d.date)}${d.end?`<small>–${esc(d.end)}</small>`:""}</span>`:""}`
+    :`<span class="hm-tt"><i class="hm-en">${esc(EN(d.id))}</i><b class="hm-nm">${esc(d.name)}</b></span><span class="hm-lg" data-lg="${esc(d.id)}" aria-hidden="true"></span><span class="hm-n num" data-n="${esc(d.id)}" hidden></span>`;
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
   $id("hmMe").innerHTML=suLogoH("hm-su");
@@ -47,7 +51,7 @@
 
   /* ---------- 桌面：一排橫向色塊 ---------- */
   function railHTML(){
-    return `<nav class="hm-rail" id="hmRail" aria-label="部門">${D.map((d,i)=>`<a class="hm-tile${i===H.i?" on":""}" data-i="${i}" href="${href(d)}" tabindex="${i===H.i?0:-1}"${i===H.i?' aria-current="true"':""}>${tileIn(d,i)}</a>`).join("")}<i class="hm-ring" id="hmRing" aria-hidden="true"></i></nav>`;
+    return `<nav class="hm-rail" id="hmRail" aria-label="${H.view==="proj"?"專案":"部門"}">${L.map((d,i)=>`<a class="hm-tile${i===H.i?" on":""}" data-i="${i}" href="${href(d)}" tabindex="${i===H.i?0:-1}"${i===H.i?' aria-current="true"':""}>${tileIn(d,i)}</a>`).join("")}<i class="hm-ring" id="hmRing" aria-hidden="true"></i></nav>`;
   }
   /* 焦點框：大小固定（每張色塊一樣大，只在版面改變時量），換焦點時只用 transform 滑過去 */
   function ringTo(anim){
@@ -60,7 +64,7 @@
   }
   /* 換焦點：原地換 class，不重畫（重畫會讓放大、焦點框都變成直接跳）；超過兩端＝頂一下再彈回（拉過頭的回彈） */
   function setFoc(i,how){
-    const want=i;i=Math.max(0,Math.min(D.length-1,i));
+    if(!L.length)return;const want=i;i=Math.max(0,Math.min(L.length-1,i));
     if(!(H.mode==="wal"&&WAL.lock)&&i!==(H.mode==="wal"?WAL.f:H.i)){Sfx.play(how==="wheel"?"roll":"move");WAL.snd=false}   /* 音效：點、方向鍵＝移動焦點，滾輪一格＝滾動；WAL.snd＝手指拖、甩出去的期間，卡片堆每過一張響一次滾動（walDraw） */
     if(H.mode==="wal"){if(WAL.lock)return;if(i===WAL.f&&want!==i){WAL.v+=want<i?-2.6:2.6;WAL.run();return}WAL.f=i;WAL.run();if(how==="key")WAL.focus(i);return}
     if(i===H.i){if(want!==i)bump(want<i?-1:1);return}
@@ -90,16 +94,42 @@
   /* ---------- 手機：錢包式卡片堆（DESIGN-next 第六節） ----------
      動作引擎在 core/js/wallet.js（完成紀錄的週卡片共用同一份）；這裡只決定畫什麼（部門）與點了焦點卡要做什麼（進入部門）。 */
   const WAL=Wallet.make({onShow:rf=>{H.i=rf},onEnter:i=>hmEnter(i)});
-  function walHTML(){return `<nav class="hm-wal" id="hmWal" aria-label="部門">${D.map((d,i)=>`<a class="hm-wc" data-i="${i}" href="${href(d)}" tabindex="-1">${tileIn(d,i)}</a>`).join("")}</nav>`}
+  function walHTML(){return `<nav class="hm-wal" id="hmWal" aria-label="${H.view==="proj"?"專案":"部門"}">${L.map((d,i)=>`<a class="hm-wc" data-i="${i}" href="${href(d)}" tabindex="-1">${tileIn(d,i)}</a>`).join("")}</nav>`}
   /* ---------- 畫面：桌面／手機各自一套，跨過 640px 時重畫 ---------- */
   function paint(){
     const m=PHONE.matches?"wal":"rail";H.mode=m;
     cancelAnimationFrame(WAL.raf);WAL.raf=0;WAL.d=null;
+    if(!L.length){H.mode="";stage.innerHTML=`<p class="hm-none">${esc(PJ.st==="err"?"讀不到專案，稍後再試":PJ.st==="ok"?"目前沒有進行中的專案":"讀取中…")}</p>`;return}   /* 只有「專案」會是空的 */
     if(m==="rail"){stage.innerHTML=railHTML();railBind();ringTo(false);const on=stage.querySelector(".hm-tile.on");if(on)on.scrollIntoView({inline:"center",block:"nearest"})}
     else{stage.innerHTML=walHTML();WAL.bind($id("hmWal"),H.i)}
     logosFill();countsPaint();
   }
   PHONE.addEventListener("change",paint);
+
+  /* ---------- 部門／專案切換（上排中間的分段切換；鏡片是 anim.js 的 LiquidSeg） ----------
+     專案＝活動部還沒結案的議題（活動部的進度頁叫「專案」，config.js 的 ISS），照開始日期排、沒填日期的排最後。
+     活動部在新資料庫＝讀 issues（store.js 的 storeDeptIssues，公開讀取）；還在資料檔＝讀網站上的 data-events.json（跟 hmCounts 同一個檔）。
+     換檢視：兩邊各記自己的焦點；新的一排從切換的方向滑進來（只動 transform／opacity，關掉動態時直接換） */
+  const PJ={st:"",items:[],at:0},PJ_DEPT=D.find(d=>d.id==="events");
+  const pjDay=s=>/^\d{4}-\d\d-\d\d/.test(s||"")?`${+s.slice(5,7)}/${+s.slice(8,10)}`:"";
+  const pjItems=is=>(Array.isArray(is)?is:[]).filter(i=>i&&!i.doneAt).sort((a,b)=>String(a.start||"9").localeCompare(String(b.start||"9")))
+    .map(i=>{const tg=Array.isArray(i.tags)?i.tags[+i.cur||0]:"",e=pjDay(i.end);
+      return {id:"events",pid:String(i.id),name:String(i.title||"（未命名）"),tag:typeof tg==="string"&&tg?tg:"活動部",date:pjDay(i.start),end:e&&String(i.end).slice(0,10)>String(i.start).slice(0,10)?e:""}});
+  function pjLoad(){
+    if(PJ.st==="loading"||PJ.st==="ok"&&Date.now()-PJ.at<12e4)return;
+    const had=PJ.st==="ok";PJ.st=had?"ok":"loading";
+    const p=PJ_DEPT.source==="firestore"?storeDeptIssues("events",{open:true}):fetch(PJ_DEPT.path,{cache:"no-cache"}).then(r=>r.ok?r.json():Promise.reject(new Error("http"))).then(j=>j.issues);
+    Promise.resolve(p).then(is=>{PJ.items=pjItems(is);PJ.st="ok";PJ.at=Date.now()},e=>{if(!had){PJ.st="err";console.warn("主頁專案讀取失敗",e)}})
+      .then(()=>{if(H.view!=="proj"||H.busy)return;L=PJ.items;H.i=Math.max(0,Math.min(L.length-1,H.i));paint()});
+  }
+  function setView(v){
+    if(v===H.view||H.busy)return;lkEdit(false);tipHide();
+    H.keep[H.view]=H.mode==="wal"?WAL.f:H.i;H.view=v;
+    if(v==="proj"){L=PJ.items;pjLoad()}else L=D;
+    H.i=Math.max(0,Math.min(L.length-1,H.keep[v]));paint();
+    if(!reduceMotion())stage.animate([{transform:`translateX(${v==="proj"?36:-36}px)`,opacity:0},{transform:"none",opacity:1}],{duration:MO.base,easing:MO.out});
+  }
+  {const sg=$id("hmSeg");if(sg){if(PJ_DEPT){sg.hidden=false;new LiquidSeg(sg,{onPick:k=>setView(k)})}}}
   addEventListener("resize",()=>{if(H.mode==="rail")ringTo(false)});
   if(document.fonts)document.fonts.ready.then(()=>{if(H.mode==="rail")ringTo(false)});
 
@@ -124,7 +154,7 @@
      並提前下載 Firebase 模組（store.js 的 storePreload）。沒有 Service Worker、不支援時什麼都不做，進部門照舊 */
   function hmWarm(){try{storePreload();const c=navigator.serviceWorker&&navigator.serviceWorker.controller;if(c)c.postMessage({type:"warm"})}catch(_){}}
   function hmEnter(i){
-    const d=D[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
+    const d=L[i];if(!d||H.busy)return;lkEdit(false);tipHide();const u=href(d),k=H.mode==="wal"?"flip":"tile";Sfx.play("enter");
     try{sessionStorage.setItem("hm-dept",d.id)}catch(_){}   /* 系統返回鍵回主頁（沒走 bfcache）時用來找回焦點（home.html 開頭） */
     hmWarm();   /* 過場動畫播的這一秒不浪費：看板的檔案與 Firebase 模組同時開始準備（動畫與換頁的時間都不變） */
     if(reduceMotion()){location.href=u;return}
