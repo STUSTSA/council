@@ -198,7 +198,9 @@ function slAnim(bar,from){
 
 /* stack marker labels into lanes so many markers never overlap */
 const LH=22;
-function layoutTrack(tr){
+/* 一條時程的排版分三段：量（這個函式本身）→ 寫位置（回傳的函式）→ 甘特圖再量一次列高、寫名稱對齊（再回傳的兩層函式）。
+   分段是為了很多條一起排時（layoutTracks）先全部量完再全部寫：一條一條「量了又寫」，每一條都逼瀏覽器重新排版一次，甘特圖列數一多換分頁就卡 */
+function trackPlan(tr){
   const isG=tr.classList.contains("g-track"),W=tr.clientWidth;if(!W||!tr.querySelector(".g-bar,.c-bar"))return;   /* 未排程的甘特列沒有條 */
   /* 滑桿式時程條：把手比條上下各高出 ov（CSS 的 --sl-ov，議題詳情與甘特圖的緊湊尺寸不同）；議題詳情的名稱與百分比移到條上方時再多 lift，註記都往上讓 */
   const sl=tr.querySelector(".sl"),lift=sl&&!isG?slFit(sl):0,ov=sl?cssNum(parseFloat(getComputedStyle(sl).getPropertyValue("--sl-ov")),0):0;
@@ -215,6 +217,7 @@ function layoutTrack(tr){
   const nUp=lanes.up.length,nDown=lanes.down.length;
   const barTop=(isG?6:8)+nUp*LH+(nUp?6:(isG?2:18))+(isG?0:dotH+gap-10)+ov+lift;   /* 議題詳情多留長條的高度；甘特圖沒有註記的列只留把手高出的部分 */
   const below=barTop+barH+ov+(isG?6:20),top0=barTop-ov-lift;   /* top0：條（含把手、上方的名稱）的頂端 */
+  return ()=>{
   tr.querySelector(isG?".g-bar":".c-bar").style.top=barTop+"px";
   tr.querySelectorAll(".tick").forEach(t=>t.style.top=(barTop+barH+ov+3)+"px");
   info.forEach(({m,lbl,side,k,quiet})=>{
@@ -225,13 +228,16 @@ function layoutTrack(tr){
     if(isG&&quiet){stem.style.top=(barTop-9)+"px";stem.style.height="7px"}   /* 甘特圖不是最新一筆的註記：條上方 7px 的短線 */
   });
   tr.style.height=(nDown?below+nDown*LH+4:below+(isG?0:4))+"px";
-  if(isG){const row=tr.parentElement,H=tr.offsetHeight,pt=Math.max(0,2*(barTop+barH/2)-H-8);row.style.setProperty("--g-pt",pt+"px");row.style.setProperty("--g-pb","0px")}   /* 甘特圖：名稱對齊條的中線（board.css .g-name） */
+  if(isG)return ()=>{const row=tr.parentElement,H=tr.offsetHeight,pt=Math.max(0,2*(barTop+barH/2)-H-8);return ()=>{row.style.setProperty("--g-pt",pt+"px");row.style.setProperty("--g-pb","0px")}};   /* 甘特圖：名稱對齊條的中線（board.css .g-name） */
+  };
 }
+function layoutTracks(trs){let fs=trs.map(trackPlan).filter(Boolean);while(fs.length)fs=fs.map(f=>f()).filter(Boolean)}
+const layoutTrack=tr=>layoutTracks([tr]);
 /* 甘特圖的「今天」膠囊：甘特圖可以左右滑，膠囊貼著可見範圍的邊時往內收（--tt），不被切掉；左邊讓開固定的名稱欄 */
 function fitTodayTag(){const g=$("#gantt"),t=g&&g.querySelector(".today-tag");if(!t)return;
   t.style.setProperty("--tt","0px");const gr=g.getBoundingClientRect(),r=t.getBoundingClientRect(),nm=g.querySelector(".g-name")?.getBoundingClientRect().width||0;
   const dx=r.right>gr.right-6?gr.right-6-r.right:r.left<gr.left+nm+4?gr.left+nm+4-r.left:0;t.style.setProperty("--tt",dx+"px")}
-const layoutAll=()=>{document.querySelectorAll(".c-track,.g-track").forEach(layoutTrack);fitTodayTag()};
+const layoutAll=()=>{layoutTracks([...document.querySelectorAll(".c-track,.g-track")]);fitTodayTag()};
 document.addEventListener("DOMContentLoaded",()=>$("#gantt")?.addEventListener("scroll",fitTodayTag,{passive:true}),{once:true});
 let _rz;window.addEventListener("resize",()=>{clearTimeout(_rz);_rz=setTimeout(layoutAll,120)});
 document.fonts?.ready.then(layoutAll);
