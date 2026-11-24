@@ -23,6 +23,8 @@ ICONS.pin='<path d="M12 20.1s6-5.3 6-10.2a6 6 0 0 0-12 0c0 4.9 6 10.2 6 10.2z"/>
 ICONS.box='<rect x="4.8" y="4.8" width="14.4" height="14.4" rx="4"/><path d="M8.6 12.3l2.4 2.4 4.4-4.9"/>';
 /* 2026-11-17 新介面：行事曆月份鈕的往下箭頭 */
 ICONS.down='<path d="M7 9.5l5 5 5-5"/>';
+/* 設定「使用說明」列：圓圈問號 */
+ICONS.help='<circle cx="12" cy="12" r="8.2"/><path d="M9.5 9.7a2.6 2.6 0 1 1 3.9 2.2c-.9.5-1.4 1.1-1.4 2"/><path d="M12 16.9v.2"/>';
 ICONS.link='<path d="M10.2 13.8a3.8 3.8 0 0 0 5.4 0l2.9-2.9a3.8 3.8 0 0 0-5.4-5.4l-1 1"/><path d="M13.8 10.2a3.8 3.8 0 0 0-5.4 0l-2.9 2.9a3.8 3.8 0 0 0 5.4 5.4l1-1"/>';
 const ico=(n,mod="")=>`<svg class="ico ${mod}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]||""}</svg>`;
 const icoHost=t=>t&&t.closest&&t.closest("button,a,.tab,.tb-gear");

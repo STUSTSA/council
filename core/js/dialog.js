@@ -8,7 +8,7 @@ const PANEL_EN={"工作報告":"REPORT","匯出工作報告":"REPORT","編輯紀
   "身分與專員":"MEMBERS","人員":"MEMBERS","標籤":"TAGS","學年與開學日":"TERM","學年":"ACADEMIC YEAR","開學日":"TERM START","備份":"BACKUP",
   "這台裝置":"DEVICE","外觀":"APPEARANCE","網站管理":"SITE ADMIN","雲端同步設定（GitHub）":"CLOUD SYNC",
   "帳號":"ACCOUNT","部門成員":"DEPT MEMBERS","系統管理":"SYSTEM ADMIN","名稱":"NAME","申請編輯權限":"REQUEST ACCESS","匯入":"IMPORT","QR 邀請":"QR INVITE","申請":"REQUESTS",
-  "紀錄":"AUDIT LOG","權限歷史":"ROLE HISTORY"};
+  "使用說明":"GUIDE","紀錄":"AUDIT LOG","權限歷史":"ROLE HISTORY"};
 const panelEn=t=>PANEL_EN[t]||PANEL_EN[String(t).split("・")[0]]||"";
 /* 面板標題：<b class="sec-h" data-en="英文">中文</b>（標題文字一律在這裡跳脫） */
 const panelHead=t=>{const en=panelEn(t);return `<b class="sec-h"${en?` data-en="${esc(en)}"`:""}>${esc(t)}</b>`};
