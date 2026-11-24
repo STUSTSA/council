@@ -20,12 +20,13 @@ const gdBoard=n=>`<div class="gd-view" data-key="board">${gdBar("即時回報",{
 const GUIDE=[
   /* 1 即時回報卡片：新增、編輯、完成、刪除 */
   {k:"live",ic:"live",t:"即時回報卡片",
-    steps:["新增：按右下角的 ＋，選文字、清單或時間，幫卡片取名。","編輯：點卡片的內容直接改，按上一頁或點外面就存好。","完成：長按卡片拖到右上角，卡片移到完成紀錄。","刪除：長按卡片拖到左上角，確認後永久刪除。"],
+    steps:["新增：按右下角的 ＋，選文字、清單或時間，幫卡片取名。","編輯：點卡片的內容直接改，按上一頁或點外面就存好。","完成：打開卡片按「完成」，或長按卡片拖到右上角，卡片移到完成紀錄。","刪除：打開卡片按「刪除」，或長按卡片拖到左上角，確認後永久刪除。"],
     init:()=>({cards:[{id:"a",name:"社團博覽會場地",note:"已送出場地申請",st:"ok"},{id:"b",name:"校車時刻調整",note:"等總務處回覆",st:"stall"},{id:"c",name:"期中問卷",note:"",st:"ok"}],open:"",fab:false,ask:"",seq:0,snap:"",msg:"",did:{}}),
     html(s){
       const c=s.cards.find(x=>x.id===s.open),q=s.cards.find(x=>x.id===s.ask);
       if(c)return `<div class="gd-view gd-card" data-key="card"><div class="gd-bar"><button type="button" class="gd-ib" data-gd="close" aria-label="上一頁">${ico("back","solo")}</button><input class="gd-name" data-gdin="name" value="${esc(c.name)}" maxlength="30" placeholder="名稱" aria-label="名稱" autocomplete="off"></div>
-        <textarea class="gd-note" data-gdin="note" rows="5" maxlength="200" placeholder="寫下進度" aria-label="內容">${esc(c.note)}</textarea>${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+        <textarea class="gd-note" data-gdin="note" rows="5" maxlength="200" placeholder="寫下進度" aria-label="內容">${esc(c.note)}</textarea>
+        ${c.fresh?"":`<div class="gd-acts gd-end" data-key="ca"><button type="button" class="icon" data-gd="c-ok">完成</button><button type="button" class="icon danger" data-gd="c-del">刪除</button></div>`}${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
       return `<div class="gd-view" data-key="list">${gdBar("即時回報")}<i class="gd-zone gd-zdel" aria-hidden="true">刪除</i><i class="gd-zone gd-zok" aria-hidden="true">完成</i>
         <div class="gd-cps">${s.cards.map(x=>`<button type="button" class="gd-cp" data-gd="open" data-key="${esc(x.id)}" data-st="${esc(x.st)}"><i class="gd-dot"></i><b>${esc(x.name)}</b></button>`).join("")}</div>
         ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}
@@ -43,6 +44,8 @@ const GUIDE=[
         if(c.fresh){c.fresh=false;s.did.add=true;s.msg="已儲存"}else if(c.name+"\n"+c.note!==s.snap){s.did.edit=true;s.msg="已儲存"}
         s.open="";
       }
+      else if(a==="c-ok"&&c){s.cards=s.cards.filter(x=>x!==c);s.open="";s.did.ok=true;s.msg="已移到完成紀錄"}   /* 卡片上的「完成」「刪除」鈕：跟拖到角落同一個結果 */
+      else if(a==="c-del"&&c){s.open="";s.ask=c.id}
       else if(a==="drop-ok"){s.cards=s.cards.filter(x=>x.id!==id);s.did.ok=true;s.msg="已移到完成紀錄"}
       else if(a==="drop-del")s.ask=id;
       else if(a==="ask-no")s.ask="";
@@ -56,10 +59,44 @@ const GUIDE=[
         return y>96?"":x>b.width*.62?"drop-ok":x<b.width*.38?"drop-del":""},
       to(a,el,box){const r=el.getBoundingClientRect(),b=box.getBoundingClientRect(),cx=r.left+r.width/2-b.left,cy=r.top+r.height/2-b.top;return [(a==="drop-ok"?b.width*.8:b.width*.2)-cx,52-cy]},
       out:(a,dx,dy)=>a==="drop-ok"?`translate(${dx+40}px,${dy-30}px) scale(.2)`:""},
-    tasks:[["按右下角的 ＋ 選一種，幫新卡片取名，再按左上的上一頁",s=>s.did.add],["點一張卡片改一下內容，再按上一頁",s=>s.did.edit],["長按一張卡片，拖到右上角的「完成」",s=>s.did.ok],["長按一張卡片，拖到左上角的「刪除」",s=>s.did.del]],
+    tasks:[["按右下角的 ＋ 選一種，幫新卡片取名，再按左上的上一頁",s=>s.did.add],["點一張卡片改一下內容，再按上一頁",s=>s.did.edit],["把一張卡片完成：點開按「完成」，或長按拖到右上角",s=>s.did.ok],["把一張卡片刪除：點開按「刪除」，或長按拖到左上角",s=>s.did.del]],
     demo:[{do:"tap",on:"[data-gd=fab]",say:"按右下角的 ＋ 新增"},{do:"tap",on:"[data-k=text]",say:"選要先放哪一種內容"},{do:"type",on:"[data-gdin=name]",text:"迎新茶會",say:"幫卡片取名"},{do:"tap",on:"[data-gd=close]",say:"按上一頁就存好"},
       {do:"tap",on:".gd-cp:nth-child(3)",say:"點卡片就能編輯"},{do:"type",on:"[data-gdin=note]",text:"，已排上議程",say:"直接改內容"},{do:"tap",on:"[data-gd=close]",say:"按上一頁就存好"},
-      {do:"drag",on:".gd-cp:nth-child(2)",to:"drop-ok",say:"長按拖到右上角＝完成"},{do:"drag",on:".gd-cp:nth-child(2)",to:"drop-del",say:"長按拖到左上角＝刪除"},{do:"tap",on:"[data-gd=ask-yes]",say:"確認後才會刪除"}]},
+      {do:"tap",on:".gd-cp:nth-child(4)",say:"點開卡片"},{do:"tap",on:"[data-gd=c-ok]",say:"按「完成」，移到完成紀錄"},
+      {do:"drag",on:".gd-cp:nth-child(2)",to:"drop-ok",say:"也可以長按拖到右上角＝完成"},{do:"drag",on:".gd-cp:nth-child(2)",to:"drop-del",say:"長按拖到左上角＝刪除"},{do:"tap",on:"[data-gd=ask-yes]",say:"確認後才會刪除"}]},
+
+  /* 2 進度（活動部叫專案）：新增、看詳情、改階段 */
+  {k:"prog",ic:"progress",t:"進度與專案",
+    steps:["進度放要追好幾週的長期目標（議題），例如爭取一項政策、籌備一場活動；當天的小事放即時回報。","新增：到「進度」分頁按「＋ 議題」，取名、填起訖日期，時程條就會照日期往前走。","點一列看詳情；按「編輯」可以改階段與目前進度，改完按「完成」。","活動部的這一頁叫「專案」，一個活動一個專案，用法一樣；填了日期的專案會出現在行事曆的「活動」。"],
+    stages:["收案","處理中","待回覆","結案"],
+    init:()=>({view:"gantt",issues:[{id:"i1",title:"宿舍門禁時間",pct:62,stage:1,note:"已送提案給學務處"},{id:"i2",title:"校園飲水機汰換",pct:28,stage:2,note:"等總務處報價"}],open:"",edit:false,seq:0,msg:"",did:{}}),
+    html(s){
+      const x=s.issues.find(i=>i.id===s.open);
+      if(!x)return `<div class="gd-view" data-key="gantt"><div class="gd-bar"><b>進度</b><button type="button" class="primary gd-new" data-gd="new">${ico("plus","solo")}議題</button></div>
+        <div class="gd-rows">${s.issues.map(i=>`<button type="button" class="gd-row" data-gd="open" data-key="${esc(i.id)}"><b>${esc(i.title)}</b><span class="gd-track"><i style="width:${+i.pct}%"></i></span></button>`).join("")}</div>
+        ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+      return `<div class="gd-view gd-card" data-key="issue"><div class="gd-bar"><button type="button" class="gd-ib" data-gd="close" aria-label="上一頁">${ico("back","solo")}</button>
+          ${x.fresh?`<input class="gd-name" data-gdin="title" value="${esc(x.title)}" maxlength="30" placeholder="議題名稱" aria-label="議題名稱" autocomplete="off">`:`<b>${esc(x.title)}</b><button type="button" class="icon" data-gd="edit">${s.edit?"完成":"編輯"}</button>`}</div>
+        <small class="gd-sub num">${gdMD(-20)} – ${gdMD(70)}・時程 ${+x.pct}%</small>
+        <div class="gd-stages${s.edit?" ed":""}">${this.stages.map((t,n)=>`<button type="button" class="gd-st${n===x.stage?" on":""}" data-gd="stage" data-n="${n}">${t}</button>`).join("")}</div>
+        <span class="gd-track big"><i style="width:${+x.pct}%"></i></span>
+        ${s.edit?`<textarea class="gd-note" data-gdin="note" rows="3" maxlength="200" placeholder="目前進度" aria-label="目前進度">${esc(x.note)}</textarea>`:`<p class="gd-box"><small>目前進度</small>${esc(x.note)||"還沒寫"}</p>`}
+        ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+    },
+    act(s,a,el){
+      const x=s.issues.find(i=>i.id===s.open);s.msg="";
+      if(a==="new"){const n={id:"n"+(++s.seq),title:"",pct:0,stage:0,note:"",fresh:true};s.issues.push(n);s.open=n.id;s.edit=false;return "title"}
+      else if(a==="open"){s.open=el.dataset.key;s.edit=false;s.did.open=true}
+      else if(a==="close"&&x){
+        if(x.fresh){if(!x.title.trim()){s.issues=s.issues.filter(i=>i!==x);s.open="";return}x.fresh=false;s.did.add=true;s.msg="已新增"}
+        s.open="";s.edit=false}
+      else if(a==="edit"&&x){if(s.edit&&s.snap!==x.stage+x.note){s.did.edit=true;s.msg="已儲存"}s.snap=x.stage+x.note;s.edit=!s.edit}
+      else if(a==="stage"&&x&&s.edit)x.stage=+el.dataset.n;
+    },
+    input(s,k,v){const x=s.issues.find(i=>i.id===s.open);if(x&&(k==="title"||k==="note"))x[k]=v},
+    tasks:[["按「＋ 議題」，取個名字，再按左上的上一頁",s=>s.did.add],["點一列，看它的詳情",s=>s.did.open],["按「編輯」，換一個階段，再按「完成」",s=>s.did.edit]],
+    demo:[{do:"tap",on:"[data-gd=new]",say:"按「＋ 議題」新增"},{do:"type",on:"[data-gdin=title]",text:"學餐價格調查",say:"取個名字"},{do:"tap",on:"[data-gd=close]",say:"按上一頁就存好"},
+      {do:"tap",on:".gd-row:nth-child(1)",say:"點一列看詳情"},{do:"tap",on:"[data-gd=edit]",say:"按「編輯」"},{do:"tap",on:".gd-st:nth-child(3)",say:"換階段"},{do:"tap",on:"[data-gd=edit]",say:"改完按「完成」"}]},
 
   /* 3 通知裡看過期的事：清點區的卡片堆，右滑完成、左滑改期 */
   {k:"overdue",ic:"bell",t:"看過期的事",
@@ -110,6 +147,74 @@ const GUIDE=[
     },
     tasks:[["按右上角的鈴鐺",s=>s.did.bell],["點「今日」那張卡片",s=>s.did.open],["看完按右上角的關閉",s=>s.did.shut]],
     demo:[{do:"tap",on:"[data-gd=bell]",say:"按右上角的鈴鐺"},{do:"tap",on:"[data-gd=today]",say:"點「今日」卡片"},{do:"wait",ms:2200,say:"今天要做的事照時間排好"},{do:"tap",on:"[data-gd=shut]",say:"看完按關閉"}]},
+
+  /* 5 完成紀錄：記了什麼、怎麼看 */
+  {k:"done",ic:"done",t:"完成紀錄",
+    steps:["完成紀錄是自動記的：即時回報按完成、議題結案，就會搬到這裡，不用另外登記。","按下面第三個分頁進完成紀錄，一週一張卡。","點一週，看那一週完成了哪些事；再點一項看當時的內容。","記下來的有：名稱、完成時間、當時寫的內容與負責的人。"],
+    init:()=>({view:"board",open:"",did:{}}),
+    items:()=>[["d1","迎新茶會",gdMD(-1),"場地、餐點都確認完成"],["d2","校車時刻調整",gdMD(-2),"總務處同意加開一班"],["d3","宿舍門禁時間（議題結案）",gdMD(-4),"門禁延後到 12 點"]],
+    tabs:on=>`<div class="gd-tabs">${[["live","即時回報"],["progress","進度"],["done","完成紀錄"]].map(([ic,t])=>`<button type="button" class="gd-tab${ic===on?" on":""}"${ic==="done"?' data-gd="tab"':""} aria-label="${t}">${ico(ic,"solo")}</button>`).join("")}</div>`,
+    html(s){
+      if(s.view==="board")return `<div class="gd-view" data-key="board">${gdBar("即時回報")}${gdCps(GD_BOARD)}${this.tabs("live")}</div>`;
+      if(s.view==="weeks")return `<div class="gd-view" data-key="weeks">${gdBar("完成紀錄")}<div class="gd-ncs gd-wks">${[["本週",0,3],["上週",-7,5],["兩週前",-14,2]].map(([t,d,n],i)=>
+        `<${i?"span":'button type="button" data-gd="week"'} class="gd-nc"><small>${gdMD(d-6)} – ${gdMD(d)}</small><b>${t}</b><span class="num">${n}</span></${i?"span":"button"}>`).join("")}</div>${this.tabs("done")}</div>`;
+      return `<div class="gd-view" data-key="week">${gdBar("本週",{back:true})}<div class="gd-cps">${this.items().map(([id,t,d,note])=>
+        `<button type="button" class="gd-cp gd-dn${s.open===id?" open":""}" data-gd="item" data-key="${id}"><b>${esc(t)}</b><small class="num">${esc(d)}</small>${s.open===id?`<span class="gd-dnote" data-key="n${id}">${esc(note)}</span>`:""}</button>`).join("")}</div></div>`;
+    },
+    act(s,a,el){
+      if(a==="tab"){s.view="weeks";s.did.tab=true}
+      else if(a==="week"){s.view="week";s.did.week=true}
+      else if(a==="back"){s.view="weeks";s.open=""}
+      else if(a==="item"){s.open=s.open===el.dataset.key?"":el.dataset.key;s.did.item=true}
+    },
+    tasks:[["按下面第三個分頁（完成紀錄）",s=>s.did.tab],["點「本週」那張卡",s=>s.did.week],["點一項，看當時記了什麼",s=>s.did.item]],
+    demo:[{do:"tap",on:"[data-gd=tab]",say:"按第三個分頁"},{do:"tap",on:"[data-gd=week]",say:"一週一張卡，點本週"},{do:"tap",on:".gd-dn:nth-child(1)",say:"點一項看當時的內容"},{do:"tap",on:".gd-dn:nth-child(3)",say:"議題結案也記在這裡"}]},
+
+  /* 6 每週報告：在完成紀錄的本週裡按「生成」 */
+  {k:"weekly",ic:"doc",t:"產生每週報告",
+    steps:["到完成紀錄點「本週」，最上面就是「每週報告」。","按「生成」，自動列出兩段：標了「報告」的即時回報、這七天完成的事。","點開報告可以看全文，按「複製」貼到別處，也可以再編輯。","週五起本週還沒有報告時，完成紀錄的分頁鈕會亮一顆紅點提醒。"],
+    init:()=>({has:false,open:false,msg:"",did:{}}),
+    text:()=>["權益部","（一）週例行政工作回報","說 明：本週行政工作相關執行狀況如下：","1. 社團博覽會場地","2. 期中問卷","（二）完成事項","1. 迎新茶會","2. 校車時刻調整"],
+    html(s){
+      return `<div class="gd-view" data-key="week">${gdBar("本週")}
+        ${s.has?`<button type="button" class="gd-rep${s.open?" open":""}" data-gd="rep" data-key="rep"><b>每週報告</b><small class="num">${gdMD(0)}</small>${s.open?`<span class="gd-rtext" data-key="rt">${this.text().map(t=>`<span>${esc(t)}</span>`).join("")}</span>`:""}</button>
+          ${s.open?`<div class="gd-acts" data-key="ra"><button type="button" class="icon" data-gd="copy">複製</button></div>`:""}`
+          :`<p class="gd-box" data-key="none"><small>每週報告</small>這週還沒有報告</p><div class="gd-acts" data-key="gen"><button type="button" class="icon" data-gd="gen">生成</button></div>`}
+        ${s.open?"":gdCps([["迎新茶會","done"],["校車時刻調整","done"]])}
+        ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+    },
+    act(s,a){
+      s.msg="";
+      if(a==="gen"){s.has=true;s.did.gen=true;s.msg="已生成本週報告"}
+      else if(a==="rep"){s.open=!s.open;if(s.open)s.did.open=true}
+      else if(a==="copy"){s.did.copy=true;s.msg="已複製（練習不會真的複製）"}
+    },
+    tasks:[["按「生成」",s=>s.did.gen],["點開「每週報告」看全文",s=>s.did.open],["按「複製」",s=>s.did.copy]],
+    demo:[{do:"tap",on:"[data-gd=gen]",say:"按「生成」"},{do:"tap",on:"[data-gd=rep]",say:"點開看全文"},{do:"wait",ms:1800,say:"報告事項＋這七天完成的事"},{do:"tap",on:"[data-gd=copy]",say:"按「複製」貼到別處"}]},
+
+  /* 7 工作報告：設定 → 工作報告 → 選期間 → 預覽 → 存成 PDF */
+  {k:"report",ic:"download",t:"產生工作報告",
+    steps:["到設定按「工作報告」（要有這個部門的編輯權限才有這一列）。","選期間的開始與結束，預設是開學日到今天。","出現白紙預覽：封面、目錄、各章都自動排好，紙上的字可以直接改，「＋ 章節」可以加一章。","按「存成 PDF」，在列印畫面選「另存為 PDF」。預覽裡改的字不會存回看板。"],
+    init:()=>({view:"set",msg:"",did:{}}),
+    html(s){
+      if(s.view==="set")return `<div class="gd-view" data-key="set">${gdBar("設定")}<div class="gd-cps">${[["doc","工作報告",1],["history","編輯紀錄"],["people","帳號"],["theme","外觀"]].map(([ic,t,hot])=>
+        `<${hot?'button type="button" data-gd="rpt"':"span"} class="gd-cp gd-srow">${ico(ic,"solo")}<b>${t}</b></${hot?"button":"span"}>`).join("")}</div></div>`;
+      if(s.view==="form")return `<div class="gd-view" data-key="form">${gdBar("匯出工作報告",{back:true})}<p class="gd-box"><small>期間開始</small><span class="num">${gdMD(-75)}</span></p><p class="gd-box"><small>期間結束</small><span class="num">${gdMD(0)}</span></p>
+        <div class="gd-acts gd-end"><button type="button" class="primary" data-gd="go">確定</button></div></div>`;
+      return `<div class="gd-view" data-key="paper"><div class="gd-bar"><button type="button" class="gd-ib" data-gd="back" aria-label="關閉">${ico("close","solo")}</button><b>預覽</b><button type="button" class="icon" data-gd="chap">＋ 章節</button><button type="button" class="primary icon" data-gd="pdf">存成 PDF</button></div>
+        <div class="gd-paper"><small>STUDENT RIGHTS</small><b>權益部 工作報告</b><span class="num">${gdMD(-75)} – ${gdMD(0)}</span><i></i><span>一、本期摘要</span><span>二、議題處理情形</span><span>三、工作檢討與下期規劃</span>${s.did.chap?`<span data-key="c4">四、新的章節</span>`:""}</div>
+        ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+    },
+    act(s,a){
+      s.msg="";
+      if(a==="rpt"){s.view="form";s.did.rpt=true}
+      else if(a==="go"){s.view="paper";s.did.go=true}
+      else if(a==="back")s.view=s.view==="paper"?"form":"set";
+      else if(a==="chap"){s.did.chap=true;s.msg="加了一章"}
+      else if(a==="pdf"){s.did.pdf=true;s.msg="真的看板會開列印，選「另存為 PDF」"}
+    },
+    tasks:[["在設定裡按「工作報告」",s=>s.did.rpt],["期間不用改，按「確定」",s=>s.did.go],["按「存成 PDF」",s=>s.did.pdf]],
+    demo:[{do:"tap",on:"[data-gd=rpt]",say:"設定裡按「工作報告」"},{do:"tap",on:"[data-gd=go]",say:"選好期間按「確定」"},{do:"wait",ms:1500,say:"白紙預覽，字可以直接改"},{do:"tap",on:"[data-gd=chap]",say:"「＋ 章節」加一章"},{do:"tap",on:"[data-gd=pdf]",say:"按「存成 PDF」"}]},
 ];
 
 function guideOpen(){
