@@ -1678,6 +1678,93 @@ body.set-open #pageMain{overflow:hidden}
 .imp-big .acct-log-b small{color:var(--red)}
 @media (max-width:520px){.imp-tbl th,.imp-tbl td{padding:9px 10px}}
 
+/* ===== 使用說明（guide.js；設定 →「使用說明」，DESIGN.md「設定頁」） =====
+   外框沿用 .set-hub、.set-list、.set-row、.dev-steps（步驟）。這一段只有教學頁自己的東西：
+   .gd-stage＝縮小的示範畫面（假的看板，示範與練習共用），裡面的 .gd-view 是一個畫面、.gd-finger 是示範時的手指；
+   .gd-tip＝目前示範到哪一步／練習第幾題；寬面板（1200px 以上）畫面在左、文字在右。
+   畫面裡的小元件（膠囊、圓鈕、卡片堆、今日層）是照真的元件縮小重畫的，不共用真元件的 class，真元件改版不會被這裡牽動 */
+.gd-hub{max-width:860px}
+.gd-lesson{display:grid;gap:14px;min-width:0}
+.gd-side{display:grid;gap:14px;align-content:start;min-width:0}
+@media (min-width:1200px){.gd-lesson{grid-template-columns:380px minmax(0,1fr);column-gap:28px}.gd-lesson>.sec-h{grid-column:1/-1}}
+.gd-stage{position:relative;width:min(100%,380px);height:440px;border:1px solid var(--hair);border-radius:28px;background:var(--bg);overflow:hidden;font-size:14px;line-height:1.5;-webkit-user-select:none;user-select:none}
+.gd-auto .gd-in{pointer-events:none}   /* 示範中：畫面由程式操作，使用者點不到 */
+.gd-in{position:absolute;inset:0}
+.gd-view{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;padding:14px;animation:gdIn var(--mo-base) var(--mo-out) both}
+.gd-bar{display:flex;align-items:center;gap:10px;min-height:40px}
+.gd-bar>b{flex:1;min-width:0;font-size:17px;font-weight:700;letter-spacing:.08em}
+.gd-ib{position:relative;flex:none;width:40px;height:40px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);font-size:19px}
+.gd-n{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--red);color:var(--lite);font-size:11px;line-height:18px;text-align:center}
+/* 膠囊（即時回報）：長按拖到角落；拖著的那顆浮起來，兩個角落（左上刪除、右上完成）才出現 */
+.gd-cps{display:grid;gap:8px}
+.gd-cp{display:flex;align-items:center;justify-content:flex-start;gap:10px;height:46px;min-height:0;padding:0 16px;border:0;border-radius:999px;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:14.5px;text-align:left;animation:gdIn var(--mo-base) var(--mo-out) both}
+.gd-cp[data-gd]{touch-action:none;-webkit-touch-callout:none}
+.gd-cp b{flex:1;min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gd-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.gd-cp[data-st="stall"] .gd-dot{background:var(--red)}
+.gd-cp.gd-drag{position:relative;z-index:3;box-shadow:0 12px 26px -8px var(--stack-sh)}
+.gd-zone{position:absolute;top:10px;z-index:2;display:grid;place-items:center;width:84px;height:84px;border-radius:50%;font-style:normal;font-size:13px;letter-spacing:.1em;opacity:0;scale:.6;pointer-events:none;transition:opacity var(--mo-base),scale var(--mo-base) var(--mo-spring)}
+.gd-zdel{left:10px;background:var(--red);color:var(--lite)}
+.gd-zok{right:10px;background:var(--ok);color:var(--ok-ink)}
+.gd-dragging .gd-zone{opacity:1;scale:1}
+/* 右下圓鈕與展開的三個選項 */
+.gd-fab{position:absolute;right:14px;bottom:14px;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);font-size:22px;box-shadow:0 10px 22px -8px var(--stack-sh);transition:rotate var(--mo-base) var(--mo-spring)}
+.gd-fab.on{rotate:45deg}
+.gd-fabopts{position:absolute;right:14px;bottom:76px;display:grid;gap:8px;justify-items:end}
+.gd-fo{gap:10px;height:44px;min-height:0;padding:0 18px 0 14px;background:var(--pop);font-size:14px;letter-spacing:.06em;animation:gdIn var(--mo-base) var(--mo-spring) both}
+.gd-fo .ico{font-size:18px}
+/* 打開的卡片：名稱＋內容 */
+.gd-card{background:var(--blk)}
+.gd-card .gd-ib{background:var(--blk2);box-shadow:none}
+.gd-name{flex:1;min-width:0;padding:6px 8px;background:none;font-size:17px;font-weight:700;letter-spacing:.04em}
+.gd-note{flex:1;min-height:0;resize:none}
+/* 畫面裡的小提示（已儲存、已完成）與刪除確認 */
+.gd-msg{position:absolute;left:14px;bottom:20px;max-width:calc(100% - 94px);margin:0;padding:6px 14px;border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:12.5px;pointer-events:none;animation:gdIn var(--mo-base) var(--mo-out) both}
+.gd-ask{position:absolute;inset:0;z-index:4;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 72%,transparent);animation:gdFade var(--mo-base) both}
+.gd-ask>div{display:grid;gap:14px;width:min(84%,280px);padding:20px;border-radius:var(--r-lg);background:var(--pop);box-shadow:var(--pop-sh)}
+.gd-ask p{display:flex;justify-content:flex-end;gap:8px;margin:0}
+/* 通知頁的四張卡：要點的那一張是按鈕，其他三張淡掉 */
+.gd-ncs{flex:1;min-height:0;display:grid;grid-template-rows:1.5fr 1fr 1fr 1fr;gap:8px}
+.gd-nc{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:start;justify-content:stretch;justify-items:start;gap:0 8px;min-height:0;padding:12px 16px;border:0;border-radius:var(--r-lg);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-align:left}
+span.gd-nc{opacity:.45}
+.gd-nc small{grid-column:1/-1;font-family:"Jost",sans-serif;font-size:9.5px;letter-spacing:.22em;color:var(--muted)}
+.gd-nc b{font-size:16px;font-weight:700;letter-spacing:.08em}
+.gd-nc .num{align-self:end;font-size:22px;font-weight:300;line-height:1.1}
+/* 清點：已過期的卡片堆（最上面一張可左右滑；後面兩張縮小露出一點） */
+.gd-late{color:var(--red);font-size:12px;letter-spacing:.14em}
+.gd-pile{position:relative;flex:1;min-height:0;margin:0 6px 22px}
+.gd-pc{position:absolute;inset:0;display:grid;align-content:center;gap:6px;padding:22px;border:1px solid var(--hair);border-radius:24px;background:var(--blk);box-shadow:var(--blk-sh);translate:0 calc(var(--i)*11px);scale:calc(1 - var(--i)*.05);transition:translate var(--mo-slow) var(--mo-out),scale var(--mo-slow) var(--mo-out);animation:gdFade var(--mo-base) both}
+.gd-pc.top{touch-action:pan-y;cursor:grab}
+.gd-pc small{color:var(--red);font-size:15px}
+.gd-pc b{font-size:19px;font-weight:700;line-height:1.35}
+.gd-pc span{color:var(--muted);font-size:13px}
+.gd-pbtns{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12.5px}
+.gd-pbtns~.gd-msg{position:static;max-width:none;align-self:start}
+.gd-none{margin:auto;color:var(--muted)}
+/* 今日層：跟真的今日層同色（--pri 底、--pri-ink 字），從卡片的位置放大出來 */
+.gd-today{gap:2px;padding:18px 20px;background:var(--pri);color:var(--pri-ink);transform-origin:50% 24%;animation:gdPop var(--mo-slow) var(--mo-spring) both}
+.gd-today .gd-ib{position:absolute;top:14px;right:14px;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;box-shadow:none}
+.gd-big{font-size:54px;font-weight:200;line-height:1}
+.gd-today>b{font-size:17px;letter-spacing:.1em}
+.gd-today>small{opacity:.7;font-size:12.5px}
+.gd-today h4{display:flex;align-items:center;margin:16px 0 4px;font-size:13.5px;letter-spacing:.14em}
+.gd-today h4 .num{margin-left:auto;padding:0 8px;border:1px solid color-mix(in srgb,currentColor 40%,transparent);border-radius:999px;font-size:12px;font-weight:400;line-height:18px}
+.gd-today ol{list-style:none;margin:0;padding:0}
+.gd-today li{display:grid;grid-template-columns:4.6em minmax(0,1fr);gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);animation:gdIn var(--mo-slow) var(--mo-out) both;animation-delay:calc(.18s + var(--i)*.05s)}
+.gd-today li b{display:block;font-weight:500}
+.gd-today li small{opacity:.7;font-size:12px}
+/* 示範的手指（位置由 guide.js 用 transform 動畫帶） */
+.gd-finger{position:absolute;left:-17px;top:-17px;z-index:6;width:34px;height:34px;border:2px solid color-mix(in srgb,var(--ink) 55%,transparent);border-radius:50%;background:color-mix(in srgb,var(--ink) 24%,transparent);pointer-events:none}
+.gd-finger[hidden]{display:none}
+/* 畫面下面：目前這一步、按鈕 */
+.gd-tip{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;min-height:1.6em;margin:0;font-size:15px}
+.gd-tip b{color:var(--muted);font-size:12px;font-weight:500;letter-spacing:.14em}
+.gd-acts{display:flex;flex-wrap:wrap;gap:10px}
+@keyframes gdIn{from{opacity:0;transform:translateY(10px)}}
+@keyframes gdFade{from{opacity:0}}
+@keyframes gdPop{from{opacity:0;transform:scale(.72)}}
+@media (prefers-reduced-motion:reduce){.gd-view,.gd-cp,.gd-fo,.gd-msg,.gd-ask,.gd-pc,.gd-today,.gd-today li{animation:none}.gd-zone,.gd-fab,.gd-pc{transition:none}}
+
 /* ===== 外觀（設定 → 帳號 → 外觀；沒有帳號頁時是設定清單的「外觀」。nav.js 的 lookHTML，設定存取在 theme.js） =====
    淺色／深色＝液態分段切換（.lseg，樣式在「液態分段切換」段）；主題按鈕一格一格，每顆帶自己的 data-pal，
    所以按鈕裡的 --bg、--blk、--pri、--acc、--ink、--hair 是那一組主題的顏色（三顆圓＝色塊、主要動作、選中）；選到的加粗框；最下面音效開關（.sw，樣式在「秘書處會議編輯的授權」段） */
