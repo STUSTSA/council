@@ -53,6 +53,9 @@ try{var h=document.documentElement,r=document.referrer,n=performance.getEntriesB
   <header class="hm-top">
     <span class="hm-me" id="hmMe"></span>
     <span class="hm-sp"></span>
+    <!-- 部門／專案切換（home.js 的 setView；沒有活動部時不顯示） -->
+    <div class="hm-seg lseg glass" id="hmSeg" role="tablist" aria-label="主頁顯示" hidden><span class="lseg-lens" aria-hidden="true"></span><button type="button" role="tab" data-k="dept" aria-selected="true">部門</button><button type="button" role="tab" data-k="proj" aria-selected="false">專案</button></div>
+    <span class="hm-sp"></span>
     <span class="hm-clock num" id="hmClock"></span>
     <button type="button" class="hm-round" id="hmSet" aria-label="外觀主題"></button>
   </header>
