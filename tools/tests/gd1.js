@@ -44,6 +44,11 @@ for(const [name,w,h,touch] of [['m',412,880,true],['d',1366,768,false]]){
   ok(await p.locator('.gd-in .gd-cp').count()===2&&(await tip(p)).includes('練習完成'),name+' 確認後刪除，四題做完：'+await tip(p));
   await p.screenshot({path:`${OUT}/${name}_live_done.png`});
   await p.click('[data-gdreset]');await p.waitForTimeout(400);
+  await p.click('.gd-in .gd-cp >> nth=0');await p.waitForTimeout(400);await p.click('.gd-in [data-gd=c-ok]');await p.waitForTimeout(500);
+  ok(await p.locator('.gd-in .gd-cp').count()===2,name+' 卡片上的「完成」鈕也能完成');
+  await p.click('.gd-in .gd-cp >> nth=0');await p.waitForTimeout(400);await p.click('.gd-in [data-gd=c-del]');await p.waitForTimeout(500);
+  ok(await p.locator('.gd-in .gd-ask').count()===1,name+' 卡片上的「刪除」鈕先確認');
+  await p.click('.gd-in [data-gd=ask-no]');await p.waitForTimeout(300);await p.click('[data-gdreset]');await p.waitForTimeout(400);
   ok(await p.locator('.gd-in .gd-cp').count()===3&&(await tip(p)).includes('練習 1／4'),name+' 重來回到原本三張');
   await p.goBack();await p.waitForTimeout(700);
   ok(await p.locator(host+' [data-gdl]').count()===7,name+' 上一頁回到教學清單');

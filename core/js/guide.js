@@ -20,12 +20,13 @@ const gdBoard=n=>`<div class="gd-view" data-key="board">${gdBar("即時回報",{
 const GUIDE=[
   /* 1 即時回報卡片：新增、編輯、完成、刪除 */
   {k:"live",ic:"live",t:"即時回報卡片",
-    steps:["新增：按右下角的 ＋，選文字、清單或時間，幫卡片取名。","編輯：點卡片的內容直接改，按上一頁或點外面就存好。","完成：長按卡片拖到右上角，卡片移到完成紀錄。","刪除：長按卡片拖到左上角，確認後永久刪除。"],
+    steps:["新增：按右下角的 ＋，選文字、清單或時間，幫卡片取名。","編輯：點卡片的內容直接改，按上一頁或點外面就存好。","完成：打開卡片按「完成」，或長按卡片拖到右上角，卡片移到完成紀錄。","刪除：打開卡片按「刪除」，或長按卡片拖到左上角，確認後永久刪除。"],
     init:()=>({cards:[{id:"a",name:"社團博覽會場地",note:"已送出場地申請",st:"ok"},{id:"b",name:"校車時刻調整",note:"等總務處回覆",st:"stall"},{id:"c",name:"期中問卷",note:"",st:"ok"}],open:"",fab:false,ask:"",seq:0,snap:"",msg:"",did:{}}),
     html(s){
       const c=s.cards.find(x=>x.id===s.open),q=s.cards.find(x=>x.id===s.ask);
       if(c)return `<div class="gd-view gd-card" data-key="card"><div class="gd-bar"><button type="button" class="gd-ib" data-gd="close" aria-label="上一頁">${ico("back","solo")}</button><input class="gd-name" data-gdin="name" value="${esc(c.name)}" maxlength="30" placeholder="名稱" aria-label="名稱" autocomplete="off"></div>
-        <textarea class="gd-note" data-gdin="note" rows="5" maxlength="200" placeholder="寫下進度" aria-label="內容">${esc(c.note)}</textarea>${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
+        <textarea class="gd-note" data-gdin="note" rows="5" maxlength="200" placeholder="寫下進度" aria-label="內容">${esc(c.note)}</textarea>
+        ${c.fresh?"":`<div class="gd-acts gd-end" data-key="ca"><button type="button" class="icon" data-gd="c-ok">完成</button><button type="button" class="icon danger" data-gd="c-del">刪除</button></div>`}${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}</div>`;
       return `<div class="gd-view" data-key="list">${gdBar("即時回報")}<i class="gd-zone gd-zdel" aria-hidden="true">刪除</i><i class="gd-zone gd-zok" aria-hidden="true">完成</i>
         <div class="gd-cps">${s.cards.map(x=>`<button type="button" class="gd-cp" data-gd="open" data-key="${esc(x.id)}" data-st="${esc(x.st)}"><i class="gd-dot"></i><b>${esc(x.name)}</b></button>`).join("")}</div>
         ${s.msg?`<p class="gd-msg" data-key="msg">${esc(s.msg)}</p>`:""}
@@ -43,6 +44,8 @@ const GUIDE=[
         if(c.fresh){c.fresh=false;s.did.add=true;s.msg="已儲存"}else if(c.name+"\n"+c.note!==s.snap){s.did.edit=true;s.msg="已儲存"}
         s.open="";
       }
+      else if(a==="c-ok"&&c){s.cards=s.cards.filter(x=>x!==c);s.open="";s.did.ok=true;s.msg="已移到完成紀錄"}   /* 卡片上的「完成」「刪除」鈕：跟拖到角落同一個結果 */
+      else if(a==="c-del"&&c){s.open="";s.ask=c.id}
       else if(a==="drop-ok"){s.cards=s.cards.filter(x=>x.id!==id);s.did.ok=true;s.msg="已移到完成紀錄"}
       else if(a==="drop-del")s.ask=id;
       else if(a==="ask-no")s.ask="";
@@ -56,10 +59,11 @@ const GUIDE=[
         return y>96?"":x>b.width*.62?"drop-ok":x<b.width*.38?"drop-del":""},
       to(a,el,box){const r=el.getBoundingClientRect(),b=box.getBoundingClientRect(),cx=r.left+r.width/2-b.left,cy=r.top+r.height/2-b.top;return [(a==="drop-ok"?b.width*.8:b.width*.2)-cx,52-cy]},
       out:(a,dx,dy)=>a==="drop-ok"?`translate(${dx+40}px,${dy-30}px) scale(.2)`:""},
-    tasks:[["按右下角的 ＋ 選一種，幫新卡片取名，再按左上的上一頁",s=>s.did.add],["點一張卡片改一下內容，再按上一頁",s=>s.did.edit],["長按一張卡片，拖到右上角的「完成」",s=>s.did.ok],["長按一張卡片，拖到左上角的「刪除」",s=>s.did.del]],
+    tasks:[["按右下角的 ＋ 選一種，幫新卡片取名，再按左上的上一頁",s=>s.did.add],["點一張卡片改一下內容，再按上一頁",s=>s.did.edit],["把一張卡片完成：點開按「完成」，或長按拖到右上角",s=>s.did.ok],["把一張卡片刪除：點開按「刪除」，或長按拖到左上角",s=>s.did.del]],
     demo:[{do:"tap",on:"[data-gd=fab]",say:"按右下角的 ＋ 新增"},{do:"tap",on:"[data-k=text]",say:"選要先放哪一種內容"},{do:"type",on:"[data-gdin=name]",text:"迎新茶會",say:"幫卡片取名"},{do:"tap",on:"[data-gd=close]",say:"按上一頁就存好"},
       {do:"tap",on:".gd-cp:nth-child(3)",say:"點卡片就能編輯"},{do:"type",on:"[data-gdin=note]",text:"，已排上議程",say:"直接改內容"},{do:"tap",on:"[data-gd=close]",say:"按上一頁就存好"},
-      {do:"drag",on:".gd-cp:nth-child(2)",to:"drop-ok",say:"長按拖到右上角＝完成"},{do:"drag",on:".gd-cp:nth-child(2)",to:"drop-del",say:"長按拖到左上角＝刪除"},{do:"tap",on:"[data-gd=ask-yes]",say:"確認後才會刪除"}]},
+      {do:"tap",on:".gd-cp:nth-child(4)",say:"點開卡片"},{do:"tap",on:"[data-gd=c-ok]",say:"按「完成」，移到完成紀錄"},
+      {do:"drag",on:".gd-cp:nth-child(2)",to:"drop-ok",say:"也可以長按拖到右上角＝完成"},{do:"drag",on:".gd-cp:nth-child(2)",to:"drop-del",say:"長按拖到左上角＝刪除"},{do:"tap",on:"[data-gd=ask-yes]",say:"確認後才會刪除"}]},
 
   /* 2 進度（活動部叫專案）：新增、看詳情、改階段 */
   {k:"prog",ic:"progress",t:"進度與專案",
