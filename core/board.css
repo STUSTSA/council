@@ -347,6 +347,12 @@ input.lc-title:focus{outline:none}
 .lc-tri:disabled{opacity:.3;pointer-events:none}
 .lc-rep{flex:none;height:30px;min-height:30px;padding:0 16px;border:0;box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--muted);font-size:13px;line-height:1}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
+/* 完成、刪除鈕（live.js lcLiveHTML：沒在編輯、有權限時；跟拖到右上角、左上角同一條流程）：同「報告」鈕的尺寸，完成＝綠框、刪除＝紅字細框 */
+.lc-act{flex:none;height:30px;min-height:30px;padding:0 14px;border:0;font-size:13px;line-height:1;transition:background-color var(--mo-fast) var(--mo-out),color var(--mo-fast) var(--mo-out)}
+.lc-act.ok{box-shadow:inset 0 0 0 1.5px var(--ok)}
+.lc-act.ok:hover{background:var(--ok);color:var(--ok-ink)}
+.lc-act.del{box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--late)}
+.lc-act.del:hover{background:var(--late);box-shadow:none;color:var(--lite)}
 /* 收藏鈕＝書籤圖示（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；
    圓鈕 38px、圖示 22px、文字色外框（比一般次要鈕明顯）；收藏後整個填滿成實心 */
 .fav-btn{flex:none;display:inline-grid;place-items:center;width:38px;height:38px;min-height:38px;padding:0;border:0;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink);background:transparent;transition:background-color .2s,color .2s,scale .3s var(--mo-spring)}
@@ -1320,11 +1326,35 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
   .tb-lens{left:6px;top:0;width:50px;height:44px}
 }
 
+/* ===== 即時回報新手引導（tour.js；DievE 2026-11-24）=====
+   第一次用的人才出現，看完或按「略過」記在這台裝置。沒有卡片時：＋鈕跳動（.tour-pulse）加旁邊一句話（.tour-fab）；
+   有卡片時：#tour 氣泡在第一張卡片下面（位置由 tour.js 量，放不下就在上面）依序三步——①②拖曳用的角落 .lz 亮著、卡片往那邊示範，③把那張卡片框起來（.tour-hl）。
+   氣泡是主要動作色的實心圓角塊（跟＋鈕同色），層級 35：比設定、通知疊層（37、38）低，比＋鈕（36）低；＋鈕的選單打開（.fab.open）時提示藏起來 */
+.tour{position:fixed;z-index:35;width:min(300px,calc(100vw - 32px));padding:14px 16px 12px;border-radius:20px;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh);font-size:14px;line-height:1.5}
+.tour[hidden],.tour-fab[hidden]{display:none}
+.tour::before{content:"";position:absolute;width:14px;height:14px;background:var(--pri);transform:rotate(45deg);border-radius:3px}
+.tour-t{margin:0}
+.tour-bar{display:flex;align-items:center;gap:6px;margin-top:10px}
+.tour-n{flex:1;font-size:12px;opacity:.6;letter-spacing:.1em}
+.tour-skip,.tour-go{flex:none;height:32px;min-height:32px;padding:0 14px;border:0;border-radius:999px;font-size:13px;line-height:1;color:inherit}
+.tour-skip{background:none;opacity:.75}
+.tour-go{background:var(--pri-ink);color:var(--pri)}
+.tour[data-at="b"]::before{top:-6px;left:30px}
+.tour[data-at="t"]::before{bottom:-6px;left:30px}
+.tour-fab{width:auto;max-width:210px;padding:10px 16px;right:calc(var(--fab-r) + 74px);bottom:calc(var(--fab-b) + 11px);border-radius:18px;font-size:14px}
+.tour-fab::before{top:calc(50% - 7px);right:-5px}
+.fab.open + .tour-fab{display:none}
+.tour-hl{outline:3px solid var(--acc);outline-offset:3px}
+.fab.tour-pulse{animation:tourPulse 1.6s ease-in-out infinite}
+@keyframes tourPulse{0%,100%{transform:scale(1);box-shadow:0 12px 28px -8px var(--stack-sh),0 0 0 0 color-mix(in srgb,var(--pri) 35%,transparent)}50%{transform:scale(1.1);box-shadow:0 12px 28px -8px var(--stack-sh),0 0 0 14px color-mix(in srgb,var(--pri) 0%,transparent)}}
+@media (prefers-reduced-motion:reduce){.fab.tour-pulse{animation:none}}
+@media print{.tour{display:none}}
+
 /* ===== 新增即時回報的浮動圓鈕與展開選項（nav.js 的 fabSync／fabOpen；DESIGN-next 第六節「部門內」） =====
    右下角 60 的圓鈕：主要動作色（--pri／--pri-ink）、加號、浮在內容上面所以帶柔和陰影；手機在工具列上方。
    平常 z-index 在設定、通知疊層（37、38）下面：疊層打開時被蓋住；出現、消失的動畫是 anim.js 的 Anim.toggle（pop）。
    按下展開三個選項（.fab-menu：背景淡暗 .fab-scrim＋往上排的膠囊 .fab-opt，Keep 的做法）：展開時圓鈕（.open）與選項疊在背景上面（連工具列 45 也一起暗掉），加號轉成 ×；動畫在 nav.js（WAAPI），減少動態時不播 */
-.fab,.fab-menu{--fab-r:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px));--fab-b:calc(32px + var(--sa-bottom))}
+.fab,.fab-menu,.tour-fab{--fab-r:calc(max(16px,var(--sa-right)) + clamp(0px,3vw,40px));--fab-b:calc(32px + var(--sa-bottom))}
 .fab{position:fixed;right:var(--fab-r);bottom:var(--fab-b);z-index:36;display:grid;place-items:center;width:60px;height:60px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--pri);color:var(--pri-ink);box-shadow:0 12px 28px -8px var(--stack-sh)}
 .fab[hidden]{display:none}
 @media print{.fab,.fab-menu{display:none}}
@@ -1340,7 +1370,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .fab-opt:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 /* 900px 以下：在工具列上方，跟設定鍵中心對齊（工具列置中、寬＝畫面寬減 24 最寬 480，設定鍵 62 在最右邊；圓鈕 60，所以右緣比設定鍵往內 1px） */
 @media (max-width:899px){
-  .fab,.fab-menu{--fab-r:calc(max(12px,(100vw - 480px) / 2) + 1px);--fab-b:calc(106px + var(--sa-bottom))}
+  .fab,.fab-menu,.tour-fab{--fab-r:calc(max(12px,(100vw - 480px) / 2) + 1px);--fab-b:calc(106px + var(--sa-bottom))}
 }
 
 /* ===== 主頁（home.html，core/js/home.js；DESIGN-next 第六節「主頁」） =====

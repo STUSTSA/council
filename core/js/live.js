@@ -116,7 +116,7 @@ function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id
 function lcLiveHTML(ev,o){
   const done=o.k==="done",ro=done||!canEdit()&&!cardEd("e",ev.id),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
   const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(done?evName(ev):ev.name)}</b>`;   /* 完成紀錄：跟膠囊一樣帶段次（evName） */
-  const fav=favBtnHTML(done?"done":"live",ev.id),rep=fav+(done?"":ro?(reportOn(ev)?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${reportOn(ev)}">報告</button>`);
+  const fav=favBtnHTML(done?"done":"live",ev.id),rep=fav+(done?"":ro?(reportOn(ev)?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${reportOn(ev)}">報告</button>`)+(!done&&!ro&&!ed?`<button type="button" class="lc-act ok" data-lcdone>完成</button><button type="button" class="lc-act del" data-lcdel>刪除</button>`:"");   /* 完成、刪除：看得見的按鈕（不只靠拖到角落）；編輯中收起，免得跟「點外面存檔」搶 */
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
   const body=o.body!=null?o.body:view==="staff"?lcStaffHTML(ev):view==="time"?lcTimeHTML(ev):view==="place"?lcPlaceHTML(ev):lcLinesHTML(ev,ed,ro);
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
@@ -570,6 +570,8 @@ document.addEventListener("click",async e=>{
   if(card.dataset.lc!=="live"||card.classList.contains("ro"))return;
   const id=card.dataset.ev,ev=state.events.find(x=>x.id===id);if(!ev)return;
   const rep=t.closest("[data-evrep]");if(rep){lvReport(ev,rep);return}
+  if(t.closest("[data-lcdone]")){if(!editing&&canEdit())lvComplete(ev,document.querySelector(`#events .cp[data-cp="${CSS.escape(id)}"]`),null);return}   /* 卡片上的「完成」「刪除」鈕：跟拖到右上角、左上角同一條流程 */
+  if(t.closest("[data-lcdel]")){if(!editing&&canEdit())lvDelete(ev);return}
   if(editing&&kp&&kp.id===id){lvEdClick(t,ev);return}
   if(editing||!canEdit())return;
   /* 檢視中：點名稱、一行、核取框（同時切換勾選）、「沒有說明」、工具列、母議題＝原位進入編輯 */
@@ -672,15 +674,15 @@ async function lvDelete(ev){
 }
 /* 完成（沿用原本的結案：state done、doneAt）：膠囊被吸進右上角，角落鼓一下，其餘滑上來補位；同時放慶祝 */
 function lvComplete(ev,el,s){
-  const [,z]=lvZone(),rm=reduceMotion();
-  if(!rm){const r=el.getBoundingClientRect(),tx=innerWidth-64-(r.left+r.width/2),ty=64-(r.top+r.height/2);
-    z.classList.add("show","hot");z.animate([{transform:"scale(1.2)",opacity:1},{transform:"scale(1.55)",opacity:1,offset:.45},{transform:"scale(1)",opacity:0}],{duration:820,easing:MO.out}).onfinish=()=>z.classList.remove("show","hot");
-    el.animate([{transform:el.style.transform,opacity:1},{transform:`translate(${s.dx+tx*.6}px,${s.dy+ty*.6}px) rotate(${s.tilt+14}deg) scale(.6)`,opacity:1,offset:.55},{transform:`translate(${s.dx+tx}px,${s.dy+ty}px) rotate(${s.tilt+30}deg) scale(.12)`,opacity:0}],{duration:440,easing:"cubic-bezier(.5,0,.6,1)",fill:"forwards"})}
+  const [,z]=lvZone(),rm=reduceMotion();s=s||{dx:0,dy:0,tilt:0};   /* 沒有 s、el 可能沒有＝按卡片上的「完成」鈕（不是拖過來的）：從原位飛 */
+  if(!rm){z.classList.add("show","hot");z.animate([{transform:"scale(1.2)",opacity:1},{transform:"scale(1.55)",opacity:1,offset:.45},{transform:"scale(1)",opacity:0}],{duration:820,easing:MO.out}).onfinish=()=>z.classList.remove("show","hot");
+    if(el){const r=el.getBoundingClientRect(),tx=innerWidth-64-(r.left+r.width/2),ty=64-(r.top+r.height/2);
+    el.animate([{transform:el.style.transform||"none",opacity:1},{transform:`translate(${s.dx+tx*.6}px,${s.dy+ty*.6}px) rotate(${s.tilt+14}deg) scale(.6)`,opacity:1,offset:.55},{transform:`translate(${s.dx+tx}px,${s.dy+ty}px) rotate(${s.tilt+30}deg) scale(.12)`,opacity:0}],{duration:440,easing:"cubic-bezier(.5,0,.6,1)",fill:"forwards"})}}
   lvCelebrate();
-  setTimeout(async()=>{el.style.visibility="hidden";document.documentElement.classList.remove("ev-drag-on");
+  setTimeout(async()=>{if(el)el.style.visibility="hidden";document.documentElement.classList.remove("ev-drag-on");
     if(lvOpen===ev.id){lcSet("live",null);lcGone()}
     const ok=await settingSave(()=>{ev.doneAt=today();evTouch(ev);syncLink(ev)},parentOf(ev)?`已結案，並記錄到「${parentOf(ev).title}」`:"已結案，移到完成紀錄");
-    if(ok===false){el.style.visibility="";el.classList.remove("drag");el.getAnimations().forEach(a=>a.cancel());el.style.transform="";el.style.backgroundColor=""}},rm?0:300);
+    if(ok===false&&el){el.style.visibility="";el.classList.remove("drag");el.getAnimations().forEach(a=>a.cancel());el.style.transform="";el.style.backgroundColor=""}},rm?0:300);
 }
 /* 完成的慶祝（約兩秒、不擋操作）：右上角漫開一圈光暈（規格明寫的例外）、彩帶從那一角噴出再落下、一段上行的音（設定的音效開關）。減少動態時只有聲音 */
 function lvCelebrate(){
