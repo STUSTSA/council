@@ -187,13 +187,14 @@
   function tileExpand(t,then){
     if(!t){then();return}
     const r=t.getBoundingClientRect(),rad=parseFloat(getComputedStyle(t).borderRadius)*r.width/t.offsetWidth||18,o=fxEl("hm-fx",r,rad);
-    const lg=t.querySelector(".hm-lg svg"),lr=lg&&lg.getBoundingClientRect(),E={duration:MO.slow,easing:MO.out,fill:"forwards"};
+    const lg=t.querySelector(".hm-lg svg"),lr=lg&&lg.getBoundingClientRect(),E={duration:MO.base,easing:MO.out,fill:"forwards"};   /* 2026-11-24 縮短：鋪滿 0.46 → 0.28 秒（樣子不變） */
     document.body.append(o);
     let l=null;if(lg&&lr.width){l=fxEl("hm-fxl",lr);l.append(lg.cloneNode(true));document.body.append(l);l.animate([{transform:"none"},{transform:lgTf(lr,lgEnd())}],E)}
     o.animate([{transform:"none"},{transform:cover(r,rad)}],E).finished.then(then,then);
   }
-  /* 手機：其他卡片先縮一下再各自帶偏移與旋轉往上下彈開（460ms），主頁其餘東西淡出 → 被點的卡片整張翻面、邊翻邊鋪滿
-     （前半 230ms 卡片分身轉到側面，後半 430ms 畫面大小的底板帶部門標誌從側面轉正；延遲 200ms 起跑；側面那一瞬間換手，看不出來）。
+  /* 手機：其他卡片先縮一下再各自帶偏移與旋轉往上下彈開（280ms），主頁其餘東西淡出 → 被點的卡片整張翻面、邊翻邊鋪滿
+     （前半 130ms 卡片分身轉到側面，後半 250ms 畫面大小的底板帶部門標誌從側面轉正；延遲 60ms 起跑；側面那一瞬間換手，看不出來）。
+     2026-11-24 縮短（DievE：進部門、進專案頁等太久）：動作與曲線不變，整段 0.86 → 0.44 秒。
      底板一開始就是最終大小（縮小來放），標誌不會糊、也不用非等比縮放 */
   function walFlip(el,then){
     if(!el){then();return}
@@ -201,15 +202,15 @@
     const W=innerWidth,Hh=innerHeight,r=el.getBoundingClientRect(),R=x=>(Math.random()*2-1)*x;
     WAL.els.forEach(o=>{if(o===el)return;const b=o.getBoundingClientRect(),up=b.top<r.top,base=o.style.transform||"none",op=getComputedStyle(o).opacity;
       o.animate([{transform:base,opacity:op},{offset:.22,transform:`translate(0,${up?10:-10}px) `+base,opacity:op},{transform:`translate(${R(110).toFixed(0)}px,${((up?-1:1)*(Hh*.6+Math.random()*140)).toFixed(0)}px) rotate(${R(16).toFixed(1)}deg) `+base,opacity:0}],
-        {duration:460,delay:Math.min(90,Math.abs(b.top-r.top)*.18),easing:"cubic-bezier(.4,0,.75,.5)",fill:"forwards"})});
+        {duration:280,delay:Math.min(50,Math.abs(b.top-r.top)*.1),easing:"cubic-bezier(.4,0,.75,.5)",fill:"forwards"})});
     document.querySelectorAll(".hm-top").forEach(x=>{const cs=getComputedStyle(x).transform,B=cs&&cs!=="none"?" "+cs:"";
-      x.animate([{opacity:1,transform:"translate(0,0)"+B},{opacity:0,transform:`translate(${R(26).toFixed(0)}px,${(-14+R(16)).toFixed(0)}px) scale(.94)`+B}],{duration:300,delay:Math.random()*90,easing:MO.in,fill:"forwards"})});
+      x.animate([{opacity:1,transform:"translate(0,0)"+B},{opacity:0,transform:`translate(${R(26).toFixed(0)}px,${(-14+R(16)).toFixed(0)}px) scale(.94)`+B}],{duration:200,delay:Math.random()*50,easing:MO.in,fill:"forwards"})});
     const w=document.createElement("div"),ff=el.cloneNode(true),fb=document.createElement("div"),lg=el.querySelector(".hm-lg svg");
     w.className="hm-flw";w.setAttribute("aria-hidden","true");fb.className="hm-fb";ff.className="hm-wc hm-ff";ff.removeAttribute("aria-current");ff.removeAttribute("href");
     ff.style.cssText=`left:${r.left}px;top:${r.top}px;right:auto;width:${r.width}px;height:${r.height}px;transform:none;opacity:1;z-index:auto`;
     if(lg){const c=lg.cloneNode(true),e=lgEnd();c.setAttribute("class","dg hm-fbl");c.style.cssText=`left:${e.left}px;top:${e.top}px;width:${e.width}px;height:${e.height}px`;fb.append(c)}
     w.append(ff,fb);document.body.append(w);el.style.visibility="hidden";
-    const dx=r.left+r.width/2-W/2,dy=r.top+r.height/2-Hh/2,sm=1.22,s0=r.width*sm/W,T0=200,T1=230,T2=430;
+    const dx=r.left+r.width/2-W/2,dy=r.top+r.height/2-Hh/2,sm=1.22,s0=r.width*sm/W,T0=60,T1=130,T2=250;
     ff.animate([{transform:"rotateY(0deg) scale(1)"},{transform:`translate(${(-dx*.3).toFixed(1)}px,${(-dy*.3).toFixed(1)}px) rotateY(90deg) scale(${sm})`}],{duration:T1,delay:T0,easing:"cubic-bezier(.5,0,.9,.55)",fill:"forwards"});
     fb.animate([{transform:`translate(${(dx*.7).toFixed(1)}px,${(dy*.7).toFixed(1)}px) rotateY(-90deg) scale(${s0.toFixed(3)})`},{transform:"none"}],{duration:T2,delay:T0+T1,easing:"cubic-bezier(.16,.84,.3,1.05)",fill:"both"})
       .finished.then(then,then);
@@ -226,7 +227,7 @@
     if(o){o.classList.remove("hm-fx-pre");o.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${rad}px`}else{o=fxEl("hm-fx",r,rad);document.documentElement.append(o)}
     o.style.transform=c;
     PageFx.onArrive(()=>{dockMove(true);const r2=t.getBoundingClientRect(),dx=r2.left-r.left,dy=r2.top-r.top,end=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)`;
-      o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:640,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
+      o.animate([{transform:c,opacity:1},{transform:end,opacity:1,offset:.82},{transform:end,opacity:0}],{duration:400,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"forwards"}).finished.catch(()=>{}).then(()=>o.remove())});
   }
   /* 從看板按返回回到快取的這一頁（bfcache）：把進部門時留下的狀態清掉（分身、飛走的卡片、淡掉的東西），再收回那一張 */
   addEventListener("pageshow",e=>{
