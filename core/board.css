@@ -1100,12 +1100,10 @@ a.link:active{transform:scale(.96)}
 
 /* ===== 區塊切換（工具列的分頁：即時回報、進度、完成紀錄、部門自己的分頁） ===== */
 .sgroup{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-content:start;min-width:0}
-/* 一次只顯示一區（手機、桌面都一樣；DESIGN-next 第一節）。換分頁時舊的那一區留成一層（.sg-out，render.js 的 setSection）：
+/* 一次只顯示一區（手機、桌面都一樣；DESIGN-next 第一節）。桌面換分頁時舊的那一區留成一層（.sg-out，render.js 的 secSwap；手機不留，只動新的那一頁）：
    原地絕對定位（top／left／width 由程式寫）、不能點，退出去之後拿掉 */
 .sgroup:not(.cur){display:none}
 .sgroup.sg-out{display:grid;position:absolute;pointer-events:none}
-/* 手機換分頁：兩頁並排滑動（render.js 的 secSwap）。.layout 左右各多留 16px（＝頁面內距）才裁切，滑出畫面邊緣前不被內容寬度切掉 */
-.layout.sg-slide{overflow-x:clip;overflow-clip-margin:16px}
 @media print{.sgroup:not(.cur){display:grid}}   /* 列印照舊印全部區塊（依序往下排） */
 
 /* ===== 開頁進場畫面（學生會）：2026-11-06 起樣式在 core/splash.css（看板與總覽頁共用） ===== */
@@ -1287,7 +1285,7 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 
 /* ===== 底部工具列（手機）／左側細欄（桌面 900px 以上） =====
    材質是平面色塊 .glass（--blk），浮在內容上面：一圈 1px --hair 細線＋陰影（--stack-sh）；鏡片是主要動作的實心膠囊（--pri），鏡片底下那一格（.lit，nav.js 每格判斷）的圖示用 --pri-ink。
-   按鈕機制照 Convx（見 nav.js 開頭），手機與桌面同一套。JS 每一格寫入：--ts 分頁內容放大（--hp／--hx／--hy 是以前按下白光用的，現在沒有用到）；
+   按鈕機制照 Convx（見 nav.js 開頭），手機與桌面同一套。JS 寫入：--ts 分頁內容放大（值有變才寫）；
    整條列的放大與偏移、鏡片與設定鍵的形變用 inline 的 scale／transform（這兩個屬性在這段不設 transition，避免跟彈簧打架） */
 .tabbar{--tb-ink:var(--ink);--tb-muted:var(--muted);position:fixed;left:50%;bottom:calc(14px + var(--sa-bottom));z-index:45;display:flex;align-items:center;gap:10px;transform:translateX(-50%);transition:opacity .35s}
 .tb-main{display:flex;padding:6px;border-radius:999px;touch-action:none}
