@@ -1757,6 +1757,46 @@ span.gd-nc{opacity:.45}
 .gd-today li{display:grid;grid-template-columns:4.6em minmax(0,1fr);gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);animation:gdIn var(--mo-slow) var(--mo-out) both;animation-delay:calc(.18s + var(--i)*.05s)}
 .gd-today li b{display:block;font-weight:500}
 .gd-today li small{opacity:.7;font-size:12px}
+/* 進度：甘特圖的列（名稱＋時程條）、「＋ 議題」、議題詳情（階段膠囊、目前進度） */
+.gd-new{gap:6px;height:38px;min-height:0;padding:0 16px 0 12px;font-size:14px}
+.gd-new .ico{font-size:17px}
+.gd-rows{display:grid;gap:8px}
+.gd-row{display:grid;grid-template-columns:8.5em minmax(0,1fr);align-items:center;justify-content:stretch;gap:12px;height:52px;min-height:0;padding:0 16px;border:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);font-size:13.5px;text-align:left;animation:gdIn var(--mo-base) var(--mo-out) both}
+.gd-row b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gd-track{display:block;height:14px;border-radius:5px;background:var(--rest);overflow:hidden}
+.gd-track i{display:block;height:100%;border-radius:5px 2px 2px 5px;background:var(--prog-hi)}
+.gd-track.big{flex:none;height:22px;border-radius:8px}
+.gd-sub{color:var(--muted);font-size:12.5px}
+.gd-stages{display:flex;flex-wrap:wrap;gap:6px}
+.gd-st{height:28px;min-height:0;padding:0 12px;border-color:transparent;color:var(--muted);font-size:12.5px;pointer-events:none}
+.gd-st.on{background:var(--ink);color:var(--bg)}
+.gd-stages.ed .gd-st{border-color:var(--hair);pointer-events:auto}
+.gd-box{display:grid;gap:2px;margin:0;padding:10px 14px;border-radius:var(--r-md);background:var(--blk);font-size:14px}
+.gd-card .gd-box{background:var(--blk2)}
+.gd-box small{color:var(--muted);font-size:11.5px;letter-spacing:.1em}
+/* 完成紀錄：底部三個分頁（只有第三個能點）、週卡、空心綠框的完成膠囊（點了展開當時的內容） */
+.gd-tabs{position:absolute;left:50%;bottom:12px;translate:-50% 0;display:flex;gap:4px;padding:5px;border:1px solid var(--hair);border-radius:999px;background:var(--blk);box-shadow:0 10px 22px -10px var(--stack-sh)}
+.gd-tab{width:52px;height:36px;min-height:0;padding:0;border:0;font-size:18px;pointer-events:none}
+.gd-tab[data-gd]{pointer-events:auto}
+.gd-tab.on{background:var(--pri);color:var(--pri-ink)}
+.gd-wks{flex:0 1 290px;grid-template-rows:1.3fr 1fr 1fr}
+.gd-dn{flex-wrap:wrap;row-gap:4px;height:auto;min-height:46px;padding-block:10px;border-radius:23px;background:none;box-shadow:inset 0 0 0 1.5px var(--done);color:var(--done)}
+.gd-dn small{color:var(--muted);font-size:12px}
+.gd-dn.open{background:var(--blk2);box-shadow:none;color:var(--ink)}
+.gd-dnote{flex:0 0 100%;font-size:13px;white-space:normal;animation:gdIn var(--mo-base) var(--mo-out) both}
+/* 每週報告卡（點了展開全文） */
+.gd-rep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;justify-content:stretch;justify-items:start;gap:6px 10px;min-height:52px;padding:12px 16px;border:0;border-radius:var(--r-md);background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink);text-align:left;white-space:normal}
+.gd-rep small{color:var(--muted);font-size:12px}
+.gd-rtext{grid-column:1/-1;display:grid;gap:1px;font-size:12.5px;line-height:1.6;animation:gdIn var(--mo-base) var(--mo-out) both}
+/* 工作報告：設定清單（只有「工作報告」能點）、期間、白紙預覽（紙的顏色在「工作報告」段的白紙例外那一條） */
+.gd-srow{gap:12px;border-radius:var(--r-md)}
+.gd-srow .ico{font-size:18px}
+span.gd-srow{opacity:.45}
+.gd-end{justify-content:flex-end;margin-top:auto}
+.gd-paper{flex:1;min-height:0;display:grid;align-content:start;gap:6px;margin:0 18px 4px;padding:26px 22px;border-radius:4px;background:var(--blk);box-shadow:var(--pop-sh);color:var(--ink);font-size:12.5px;animation:gdIn var(--mo-base) var(--mo-out) both}
+.gd-paper small{font-family:"Jost",sans-serif;font-size:9px;letter-spacing:.22em;color:var(--muted)}
+.gd-paper b{font-size:17px}
+.gd-paper i{height:1px;margin:8px 0;background:var(--hair)}
 /* 示範的手指（位置由 guide.js 用 transform 動畫帶） */
 .gd-finger{position:absolute;left:-17px;top:-17px;z-index:6;width:34px;height:34px;border:2px solid color-mix(in srgb,var(--ink) 55%,transparent);border-radius:50%;background:color-mix(in srgb,var(--ink) 24%,transparent);pointer-events:none}
 .gd-finger[hidden]{display:none}
@@ -1767,7 +1807,7 @@ span.gd-nc{opacity:.45}
 @keyframes gdIn{from{opacity:0;transform:translateY(10px)}}
 @keyframes gdFade{from{opacity:0}}
 @keyframes gdPop{from{opacity:0;transform:scale(.72)}}
-@media (prefers-reduced-motion:reduce){.gd-view,.gd-cp,.gd-fo,.gd-msg,.gd-ask,.gd-pc,.gd-today,.gd-today li{animation:none}.gd-zone,.gd-fab,.gd-pc{transition:none}}
+@media (prefers-reduced-motion:reduce){.gd-view,.gd-cp,.gd-fo,.gd-msg,.gd-ask,.gd-pc,.gd-today,.gd-today li,.gd-row,.gd-dnote,.gd-rtext,.gd-paper{animation:none}.gd-zone,.gd-fab,.gd-pc{transition:none}}
 
 /* ===== 外觀（設定 → 帳號 → 外觀；沒有帳號頁時是設定清單的「外觀」。nav.js 的 lookHTML，設定存取在 theme.js） =====
    淺色／深色＝液態分段切換（.lseg，樣式在「液態分段切換」段）；主題按鈕一格一格，每顆帶自己的 data-pal，
@@ -2174,7 +2214,7 @@ body.ag-open{overflow:hidden}
 /* 紙張：不管深淺色模式都是白紙黑字，列印也一樣。2026-11-06 改版：封面、目錄、每一章各一張紙（A4 比例），
    版面參考使用者給的極簡白紙範例：大標題靠左、上下小字、細線分隔、細體大數字（Jost 200）當章節號、右上角章節索引 */
 /* 例外：工作報告的白紙（紙上的顏色只在這一條定義，下面的紙張元件一律引用這些變數） */
-.rpt-paper,.ag-paper,.ag-pk-p,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
+.rpt-paper,.ag-paper,.ag-pk-p,.gd-paper,.rpt-ov>.rpt-bt,.rpt-ov>.rpt-pt{--blk:#fff;--ink:#111114;--muted:#5d5d66;--line:#111114;--hair:#dcdce2;--rest:#c9c9d0;--prog-lo:var(--accent-light);--prog-lo-ink:var(--accent-light)}   /* 手機搬到畫面底部的工具列（report.js 的 rptDock）也用白紙的顏色 */
 .rpt-paper{--pad:6.667%;width:210mm;display:grid;grid-template-columns:minmax(0,1fr);gap:28px;color:var(--ink);font-size:14px;line-height:1.75}
 .rpt-page{position:relative;aspect-ratio:210/297;padding:var(--pad) var(--pad) calc(var(--pad) + 8px);border-radius:4px;background:var(--blk);box-shadow:0 10px 40px rgba(0,0,0,.25)/* 例外：陰影黑 */}
 .rpt-paper .num{font-family:"Jost",sans-serif}
