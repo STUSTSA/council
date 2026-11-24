@@ -304,6 +304,9 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
    寬螢幕沒打開卡片時排成格；打開時左邊一欄膠囊、右邊卡片（.split）。全螢幕卡片從哪一顆長出去，那一顆留著位置但看不到（.away） */
 .ev-list .cps{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
 .cps .sepr{grid-column:1/-1;height:1px;margin:8px 0;background:color-mix(in srgb,var(--ink) 22%,transparent)}
+.cps .cps-h{grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:14px 4px 2px;font-size:12.5px;font-weight:500;letter-spacing:.1em;color:var(--muted)}   /* 分區小標（會長室的「收藏」）：字＋細線，下面是別的部門的卡片 */
+.cps .cps-h:first-child{margin-top:0}
+.cps .cps-h::after{content:"";flex:1;height:1px;background:color-mix(in srgb,var(--ink) 22%,transparent)}
 .cp{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;height:54px;min-height:54px;padding:1.2px 20px 0;border:0;border-radius:999px;background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);text-align:left;font-size:15px;touch-action:pan-y;-webkit-touch-callout:none;transition:transform .24s var(--mo-spring),opacity var(--mo-base) var(--mo-out),box-shadow var(--mo-base) var(--mo-out),background-color var(--mo-base) var(--mo-out)}
 @media (hover:hover){.cp:hover{transform:scale(1.025)}}
 .cp:active{transform:scale(.97)}

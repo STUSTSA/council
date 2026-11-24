@@ -3,11 +3,11 @@
    樣式在 board.css「即時回報」段。載入順序：events.js 之後（index.html）。 */
 
 /* ===== 狀態 =====
-   lvOpen／dnOpen＝打開的即時回報／完成紀錄（一次只開一張；兩個不會同時有值）。
+   lvOpen／dnOpen／fvOpen＝打開的即時回報／完成紀錄／會長收藏的別部門卡片（一次只開一張；不會同時有值）。fvOpen 是「部門|live|卡片 ID」（fvKey）。
    版面：寬螢幕（lvWide：即時回報容器可用寬度 980 以上）＝左邊膠囊清單、右邊卡片（#evDetail／#doneDetail）；其他＝卡片從膠囊長成全螢幕（#lcFull，蓋住工具列）。
    編輯中：lvPane＝卡片內容換成哪一頁（staff 人／time 時間／place 地點；null＝逐行內容），lvPop＝母議題選單開著，lvSeg＝時間頁選到的那一段 {tid,k,buf}。
    kp＝{id,before}：正在原位編輯的那張與開始前的內容（render.js 的 startEdit 設定）；kpSt＝儲存回饋 {id,st:"saving"|"ok"|"fail"|"bad",msg,before,after}。 */
-let lvOpen=null,dnOpen=null,lvPane=null,lvPop=false,lvSeg=null,lvDragAt=0;   /* lvDragAt：最近一次在時間頁上下拖曳調整的時刻（拖完放開不當成「點一下」開選擇器） */
+let lvOpen=null,dnOpen=null,fvOpen=null,lvPane=null,lvPop=false,lvSeg=null,lvDragAt=0;   /* lvDragAt：最近一次在時間頁上下拖曳調整的時刻（拖完放開不當成「點一下」開選擇器） */
 let kp=null,kpSt=null;
 /* 寬螢幕的判斷（DESIGN-next 第七節「卡片寬不到 980」）：量即時回報／完成紀錄容器（#liveMD、#doneMD）的可用寬度，不看視窗寬。
    ResizeObserver 只記看得到的那一個（藏起來的分頁量到 0，不算）；寬窄真的變了才在下一格重畫——分不分欄只改容器的高度、不改寬度，不會形成迴圈 */
@@ -16,7 +16,7 @@ let lvWideV=(()=>{const w=$("#liveMD")?.clientWidth;return w?w>=LV_MIN:innerWidt
 const lvWide=()=>lvWideV;
 {const ro=new ResizeObserver(es=>{const w=Math.max(0,...es.map(x=>x.contentRect.width));if(!w||(w>=LV_MIN)===lvWideV)return;
     lvWideV=w>=LV_MIN;requestAnimationFrame(()=>{if(lvWideV===lvWideDone)return;lvWideDone=lvWideV;
-      if(lvOpen||dnOpen){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()})});
+      if(lcCur()){if(lvWide())Back.closed("card");else Back.opened("card",lcBack)}render()})});
   ["#liveMD","#doneMD"].forEach(k=>{const el=$(k);if(el)ro.observe(el)})}
 const kpType=b=>b.timeId?"time":b.check===null?"text":"check";
 /* 沒有連到任何一行的時間標記（03 以前的舊資料）：列在逐行內容下面（時間頁也列出來，可以改） */
@@ -122,6 +122,17 @@ function lcLiveHTML(ev,o){
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
     save:done?"":lcSaveHTML(ev),tools:ro?"":lcToolsHTML(ev,ed)});
 }
+/* 會長收藏的別的部門卡片（follow.js 的 favItems）：同一個外框、同一套打開／收回／上下張動畫，但一律唯讀：沒有報告、完成、刪除、工具列，也沒有 data-ev（events.js 的操作碰不到）。
+   右上角寫「部門 · 唯讀」。x＝{e,dept}，o＝{ids,full} */
+const fvKey=x=>`${x.dept}|live|${x.e.id}`;
+const fvFind=key=>key&&favItems().live.find(x=>fvKey(x)===key);
+function lcFavHTML(x,o){
+  const e=x.e,st=evStatus(e),key=fvKey(x);
+  return lcFrame({k:"fav",id:key,key:"f:"+key,st,ids:o.ids,full:o.full,ro:true,attr:"",title:`<b class="lc-title">${esc(evName(e))}</b>`,
+    rep:`<span class="lc-tag">${esc(deptName(x.dept))} · 唯讀</span>`,
+    meta:`<span class="ev-st">${EV_ST[st]}</span>${e.round>1?`<span class="lc-tag">第 ${e.round} 段</span>`:""}${lcWhen(e.touchedAt)}`,
+    body:(e.blocks&&e.blocks.length)||(e.times&&e.times.length)?lcLinesHTML(e,false,true):e.desc?`<p class="fw-text">${esc(e.desc)}</p>`:`<p class="ln-empty">沒有說明</p>`});
+}
 /* 分欄時詳情卡往上延伸到搜尋列的高度（搜尋列縮回左欄寬，右邊讓出來）：--rise＝#liveMD 頂端比搜尋列頂端低多少，board.css 的 .lc-pane 用負邊距往上拉。
    搜尋列固定住時它的位置會隨捲動變，所以不量它：用外層 .layout（不會固定）當基準，加上搜尋列自己的高度與下邊距，推回它在一般排版的位置，捲到哪裡量都一樣。 */
 function lvRise(split){
@@ -135,15 +146,17 @@ function renderEvents(){
   const live=liveOrder(),ids=live.map(e=>e.id),rep=live.filter(reportOn),rest=live.filter(e=>!reportOn(e));
   if(lvOpen&&!ids.includes(lvOpen)){lvOpen=null;lcGone()}
   if(!editing){kp=null;lvPane=null;lvPop=false;lvSeg=null;if(kpSt&&kpSt.st!=="saving"&&kpSt.id!==lvOpen)kpSt=null}   /* 收合（或換成別張）＝儲存回饋與「復原」消失 */
-  const wide=lvWide(),split=wide&&!!lvOpen,pane=$("#evDetail");
+  const favs=favItems().live,fids=favs.map(fvKey),fv=fvOpen&&favs.find(x=>fvKey(x)===fvOpen);
+  if(fvOpen&&!fv){fvOpen=null;lcGone()}   /* 收藏的那張完成了、被刪了或讀不到了：卡片收掉 */
+  const wide=lvWide(),split=wide&&!!(lvOpen||fvOpen),pane=$("#evDetail");
   $("#liveMD").classList.toggle("split",split);
   lvRise(split);
   const cp=ev=>cpHTML(ev,{sel:split&&ev.id===lvOpen,away:!wide&&ev.id===lvOpen});
   /* 原位更新（morph.js）：沒變的膠囊、正在打字的欄位都是同一個節點，焦點、捲動、正在播的動畫都留著。新增鈕是右下角的浮動圓鈕（nav.js 的 fabSync） */
-  /* 會長收藏的別的部門的即時回報（follow.js 的 favItems）：排在自己的後面，名稱右邊寫部門，點了開原看板 */
-  const fav=favItems().live.map(({e,dept})=>{const key=`${dept}|live|${e.id}`;return `<button type="button" class="cp fav-cp${FAV_OPEN===key?" sel":""}" data-favopen="${esc(key)}" data-st="${esc(evStatus(e))}"><span class="live-dot" aria-hidden="true"></span><b>${esc(evName(e))}</b><span class="cp-d">${esc(deptName(dept))}</span></button>${FAV_OPEN===key?favDetHTML(dept,"live",e.id):""}`}).join("");
-  morphTo($("#events"),live.length||fav?`<div class="cps">${rep.map(cp).join("")}${rep.length&&rest.length?'<span class="sepr" aria-hidden="true"></span>':""}${rest.map(cp).join("")}${fav&&live.length?'<span class="sepr" aria-hidden="true"></span>':""}${fav}</div>`:`<p class="empty">目前沒有即時回報。</p>`);
-  if(split){morphTo(pane,lcLiveHTML(live.find(e=>e.id===lvOpen),{k:"live",ids}));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
+  /* 會長收藏的別的部門的即時回報：排在自己的後面、自成一區（小標「收藏」＋細線），名稱右邊寫部門；點了跟自己的卡片一樣打開，但唯讀（lcFavHTML） */
+  const fav=favs.map(x=>{const key=fvKey(x),on=key===fvOpen;return `<button type="button" class="cp fav-cp${split&&on?" sel":""}${!wide&&on?" away":""}" data-cp="${esc(key)}" data-st="${esc(evStatus(x.e))}"${split&&on?' aria-current="true"':""}><span class="live-dot" aria-hidden="true"></span><b>${esc(evName(x.e))}</b><span class="cp-d">${esc(deptName(x.dept))}</span></button>`}).join("");
+  morphTo($("#events"),live.length||fav?`<div class="cps">${rep.map(cp).join("")}${rep.length&&rest.length?'<span class="sepr" aria-hidden="true"></span>':""}${rest.map(cp).join("")}${fav?'<h3 class="cps-h">收藏</h3>':""}${fav}</div>`:`<p class="empty">目前沒有即時回報。</p>`);
+  if(split){morphTo(pane,fv?lcFavHTML(fv,{ids:fids}):lcLiveHTML(live.find(e=>e.id===lvOpen),{k:"live",ids}));pane.hidden=false}else{pane.textContent="";pane.hidden=true}
   document.body.classList.toggle("lc-lock",split&&editing&&!!kp);   /* 寬螢幕編輯中：鎖住整頁捲動（卡片內容自己捲） */
   lcFullSync();Anim.syncPings();fabSync();
 }
@@ -151,21 +164,23 @@ function renderEvents(){
 function lcFullSync(){
   let host=$("#lcFull");
   const ev=!lvWide()&&lvOpen&&state.events.find(e=>e.id===lvOpen&&!e.doneAt);
-  const html=ev?lcLiveHTML(ev,{k:"live",ids:liveOrder().map(e=>e.id),full:true}):!lvWide()&&dnOpen&&typeof doneCardHTML==="function"?doneCardHTML(dnOpen,true):"";
+  const fv=!ev&&!lvWide()&&fvFind(fvOpen);
+  const html=ev?lcLiveHTML(ev,{k:"live",ids:liveOrder().map(e=>e.id),full:true}):fv?lcFavHTML(fv,{ids:favItems().live.map(fvKey),full:true}):!lvWide()&&dnOpen&&typeof doneCardHTML==="function"?doneCardHTML(dnOpen,true):"";
   if(!html){if(host&&!host.hidden){host.textContent="";host.hidden=true}return}
   if(!host){document.body.insertAdjacentHTML("beforeend",'<div id="lcFull" class="lc-host" role="dialog" aria-modal="true" aria-label="即時回報卡片" hidden></div>');host=$("#lcFull")}
   morphTo(host,html);host.hidden=false;
 }
 
 /* ===== 打開、收回、上一張／下一張（容器轉化：DESIGN-next 第五節） ===== */
-const lcHostOf=k=>lvWide()?$(k==="live"?"#evDetail":"#doneDetail"):$("#lcFull");
+const lcHostOf=k=>lvWide()?$(k==="done"?"#doneDetail":"#evDetail"):$("#lcFull");
 const lcCard=k=>{const h=lcHostOf(k);return h&&h.querySelector(":scope>.lc")};
-const lcPill=(k,id)=>id&&document.querySelector(`${k==="live"?"#events":"#doneList"} [data-cp="${CSS.escape(id)}"]`);
+const lcPill=(k,id)=>id&&document.querySelector(`${k==="done"?"#doneList":"#events"} [data-cp="${CSS.escape(id)}"]`);
 const lcCap=el=>{if(!el)return null;const r=el.getBoundingClientRect(),b=el.querySelector(".lc-title,b");return r.width?{r,tr:b?b.getBoundingClientRect():null,rad:parseFloat(getComputedStyle(el).borderRadius)||0}:null};
-const lcSet=(k,id)=>{if(k==="live"){lvOpen=id;if(id)dnOpen=null}else{dnOpen=id;if(id)lvOpen=null}};
+const lcSet=(k,id)=>{if(id)lvOpen=dnOpen=fvOpen=null;if(k==="live")lvOpen=id;else if(k==="done")dnOpen=id;else fvOpen=id};
+const lcKind=cp=>cp.closest("#doneList")?"done":cp.classList.contains("fav-cp")?"fav":"live";   /* 點到的膠囊是哪一種 */
 /* 卡片被資料變動收掉（結案、被刪、別人改了）而不是使用者收的：Back 的「card」那一層也要拿掉，不然左上角還顯示「上一頁」、按了沒有任何反應 */
-const lcGone=()=>{if(!lvOpen&&!dnOpen)Back.closed("card")};
-const lcCur=()=>lvOpen?["live",lvOpen]:dnOpen?["done",dnOpen]:null;
+const lcGone=()=>{if(!lcCur())Back.closed("card")};
+const lcCur=()=>lvOpen?["live",lvOpen]:dnOpen?["done",dnOpen]:fvOpen?["fav",fvOpen]:null;
 /* 外框從膠囊的位置與圓角展開（clip-path），標題從膠囊的名稱滑到卡片標題，其餘淡入 */
 function lcGrow(el,from){
   if(!el||reduceMotion())return;
@@ -224,7 +239,7 @@ async function lvEndEdit(){
 /* 上一張／下一張：卡片外框留在原地、高度滑到新的（手機不動高度），舊內容往一邊滑出、新內容從另一邊滑進，底部工具列不動 */
 async function lcStep(dir){
   const cur=lcCur();if(!cur)return;const [k,id]=cur;
-  const ids=k==="live"?liveOrder().map(e=>e.id):doneIds(),to=ids[ids.indexOf(id)+dir];if(!to)return;
+  const ids=k==="live"?liveOrder().map(e=>e.id):k==="fav"?favItems().live.map(fvKey):doneIds(),to=ids[ids.indexOf(id)+dir];if(!to)return;
   Sfx.play("tab");   /* 上一張／下一張＝換頁 */
   if(!(await lvEndEdit()))return;
   const el=lcCard(k),inn=el&&el.querySelector(".lc-in"),h0=el&&el.getBoundingClientRect().height,gi=inn&&!reduceMotion()?inn.cloneNode(true):null,top=inn&&inn.offsetTop;
@@ -550,13 +565,13 @@ document.addEventListener("click",e=>{
   const t=e.target;if(!t.closest||t.closest("#dlg,.csel-list,#toast,#logOv"))return;
   if(t.closest(`[data-edbox="e:${CSS.escape(kp.id)}"]`))return;
   lvJust=e;const cp=t.closest("[data-cp]"),p=kpCommit();
-  if(cp){e.preventDefault();e.stopPropagation();const k=cp.closest("#doneList")?"done":"live",id=cp.dataset.cp;
+  if(cp){e.preventDefault();e.stopPropagation();const k=lcKind(cp),id=cp.dataset.cp;
     p.then(ok=>{if(ok!==false&&!editing){const c=lcCur();lcShow(k,c&&c[0]===k&&c[1]===id?null:id)}})}
 },true);
 document.addEventListener("click",async e=>{
   const t=e.target;if(!t.closest)return;
   const cp=t.closest("[data-cp]");
-  if(cp&&cp.closest("#events,#doneList")){e.preventDefault();if(editing)return;const k=cp.closest("#doneList")?"done":"live",id=cp.dataset.cp,c=lcCur();lcShow(k,c&&c[0]===k&&c[1]===id?null:id);return}
+  if(cp&&cp.closest("#events,#doneList")){e.preventDefault();if(editing)return;const k=lcKind(cp),id=cp.dataset.cp,c=lcCur();lcShow(k,c&&c[0]===k&&c[1]===id?null:id);return}
   const card=t.closest(".lc:not(.lc-ghost)");
   if(!card){
     if(lvJust===e||editing||!lcCur()||!lvWide())return;
@@ -599,7 +614,7 @@ document.addEventListener("keydown",e=>{
 const lvZone=()=>{let z=$("#lzDel");if(!z){document.body.insertAdjacentHTML("beforeend",`<div class="lz del" id="lzDel" aria-hidden="true">${ico("close","solo")}</div><div class="lz ok" id="lzOk" aria-hidden="true">${ico("check","solo")}</div>`)}return [$("#lzDel"),$("#lzOk")]};
 (()=>{
   let d=null,suppress=false,pend=null,raf=0;const zq={};
-  const handle=t=>canEdit()&&!editing&&t.closest&&t.closest("#events .cp");
+  const handle=t=>canEdit()&&!editing&&t.closest&&t.closest("#events .cp:not(.fav-cp)");
   function zoneAt(x,y){const W=innerWidth,H=innerHeight,R=Math.min(200,W*.38),far=Math.min(W,H)*.8,[zd,zo]=lvZone();let hot="";const k={};
     [["del",Math.hypot(x,y),zd],["ok",Math.hypot(W-x,y),zo]].forEach(([n,dd,z])=>{const v=Math.max(0,Math.min(1,1-(dd-R)/(far-R)));k[n]=v;const q=v.toFixed(2);if(zq[n]!==q){zq[n]=q;z.style.setProperty("--k",q)}   /* 值沒變（兩位小數）不寫：每次寫 --k 都會讓角落重算樣式、重新啟動透明度的過渡 */
       z.classList.toggle("hot",dd<R);if(dd<R)hot=n});
