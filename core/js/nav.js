@@ -7,9 +7,8 @@ const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==
      - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），拖過兩端時整條列跟著偏最多 4px；放開吸到最近的分頁
      - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿移動方向拉伸（最多兩成）、垂直方向略縮；
        整條列沿長邊放大 16px、鏡片那一格的內容放大 1.2（--ts，board.css 只套在 .lit 那一格）；
-       鏡片位置一圈白光（彈簧 .5／300；2026-11-17 起材質只有平面，白光不畫，--hp 照樣寫但沒有樣式用到）
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
-   設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
+   設定鍵：按下放大 4px、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
 let setOpen=false;
 const TABS=()=>[["live","即時回報","live"],["progress",ISS==="專案"?"專案":"進度","progress"],["done","完成紀錄","done"],["ext",CFG.ext,CFG.extIcon||"flag"]].filter(([k])=>secTab(k));
 /* 設定打開時，三個分頁都不亮；點任一個就關掉並回到那一區 */
@@ -23,11 +22,20 @@ const lens={
   sx:spring(1,.6,250),sy:spring(1,.7,250),
   vel:spring(0,.5,300),     /* 速度（每秒幾個分頁 ÷ 分頁間距數），放開時回到 0 */
   off:spring(0,1,300),      /* 整條列跟著拖曳的累積位移（px），顯示時壓成最多 4px */
-  hl:spring(0,.5,300),      /* 整條列的白光 */
   drag:null,releaseAt:0,releasing:false,raf:0,last:0,shown:false,
 };
-const gearSt={p:spring(0,.5,300),ox:spring(0,.5,300),oy:spring(0,.5,300),sx0:0,sy0:0,down:false};
+const gearSt={p:spring(0,.5,300),ox:spring(0,.5,300),oy:spring(0,.5,300),down:false};
 function tabEls(){return [...$("#tabbar").querySelectorAll(".tab")]}
+/* 鏡片動畫每一格要用的版面量測（分頁中心、列長、鏡片與設定鍵大小），量一次記著：這些只跟排版有關，動畫只動 transform／scale，播的途中不會變。
+   每一格都重量的話，上一格剛寫的樣式會逼瀏覽器當場重算樣式與排版（手機上一格多花好幾毫秒，換分頁時整段都在卡）。
+   排版真的變了才丟掉重量（tbGeoDrop）：動畫從靜止起跑、列的大小變了（ResizeObserver）、分頁重排、直接定位（lensTo instant） */
+let tbGeo=null;
+const tbGeoDrop=()=>{tbGeo=null};
+function tbGeoGet(tb,main,el,gear){
+  if(tbGeo)return tbGeo;
+  const cs=tabCenters();if(!cs.length||!cs[0].x&&!cs[0].y)return null;   /* 還沒排版（藏著）：不記，下次再量 */
+  return tbGeo={cs,tabs:tabEls(),box:tb.querySelector(".tb-tabs"),mw:main.offsetWidth,mh:main.offsetHeight,ew:el.offsetWidth,eh:el.offsetHeight,gw:gear.offsetWidth,gh:gear.offsetHeight};
+}
 /* 用版面位置（offset）計算，不受全螢幕／縮放動畫影響 */
 function tabCenters(){
   /* 相對於 .tb-main（鏡片的定位容器）。分頁有 scale（--ts）時會變成圖示的 offsetParent，所以要看圖示的 offset 是相對誰 */
@@ -41,44 +49,41 @@ const clampV=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 function tbFrame(){
   const tb=$("#tabbar");if(!tb)return;
   const main=tb.querySelector(".tb-main"),el=tb.querySelector(".tb-lens"),gear=tb.querySelector(".tb-gear");
-  const cs=tabCenters();if(!cs.length||!cs[0].x&&!cs[0].y)return;
+  const G=tbGeoGet(tb,main,el,gear);if(!G)return;const cs=G.cs;
   /* 手機沿 x、桌面沿 y；其他都一樣 */
-  const rail=isRail(),ax=rail?"y":"x",n=cs.length,p=lens.press.x,pos=interp(cs,lens.val.x,ax),len=(rail?main.offsetHeight:main.offsetWidth)||1;
+  const rail=isRail(),ax=rail?"y":"x",n=cs.length,p=lens.press.x,pos=interp(cs,lens.val.x,ax),len=(rail?G.mh:G.mw)||1;
   /* 主軸、側軸的縮放：移動時依速度沿移動方向拉伸（最多兩成，往哪邊移都一樣），垂直方向略縮（DESIGN-next 第五節「彈簧與回彈」） */
   const v=Math.abs(lens.vel.x)/10,ma=lens.sx.x*(1+Math.min(.2,v*.75)),cr=lens.sy.x*(1-Math.min(.2,v*.25));
-  if(rail){el.style.top="";el.style.transform=`translate(0,${(pos-el.offsetHeight/2).toFixed(2)}px) scale(${cr.toFixed(4)},${ma.toFixed(4)})`}
-  else{el.style.top=cs[0].top+"px";el.style.transform=`translate(${(pos-el.offsetWidth/2).toFixed(2)}px,0) scale(${ma.toFixed(4)},${cr.toFixed(4)})`}
+  if(rail){el.style.top="";el.style.transform=`translate(0,${(pos-G.eh/2).toFixed(2)}px) scale(${cr.toFixed(4)},${ma.toFixed(4)})`}
+  else{el.style.top=cs[0].top+"px";el.style.transform=`translate(${(pos-G.ew/2).toFixed(2)}px,0) scale(${ma.toFixed(4)},${cr.toFixed(4)})`}
   /* 鏡片底下那一格的圖示反白（跟著鏡片走，不是跟著選取狀態） */
   const lit=el.classList.contains("off")?-1:Math.round(clampV(lens.val.x,0,n-1));
-  tabEls().forEach((b,i)=>b.classList.toggle("lit",i===lit));
+  G.tabs.forEach((b,i)=>b.classList.toggle("lit",i===lit));
   /* 整條列：拖過兩端時跟著偏最多 4px（EaseOut；lens.off＝超出兩端的距離），按下時沿長邊放大 16px */
   const fr=clampV(lens.off.x/len,-1,1),ease=1-Math.pow(1-Math.abs(fr),2),po=4*Math.sign(fr)*ease;
   main.style.transform=po?`translate${rail?"Y":"X"}(${po.toFixed(2)}px)`:"";main.style.scale=p>.0005?(1+16/len*p).toFixed(4):"";
-  tb.querySelector(".tb-tabs").style.setProperty("--ts",(1+.2*p).toFixed(4));
-  main.style.setProperty("--hp",lens.hl.x.toFixed(4));
-  main.style.setProperty("--hx",rail?"50%":(pos+po).toFixed(1)+"px");main.style.setProperty("--hy",rail?(pos+po).toFixed(1)+"px":"50%");
+  const ts=(1+.2*p).toFixed(4);if(G.ts!==ts){G.ts=ts;G.box.style.setProperty("--ts",ts)}   /* 值有變才寫：自訂屬性一寫，整列分頁的樣式都要重算 */
   /* 設定鍵（手機、桌面同一套） */
-  const g=gearSt,gh=gear.offsetHeight||1,gw=gear.offsetWidth||1,md=Math.min(gw,gh),mx=Math.max(gw,gh),ox=g.ox.x,oy=g.oy.x;
+  const g=gearSt,gh=G.gh||1,gw=G.gw||1,md=Math.min(gw,gh),mx=Math.max(gw,gh),ox=g.ox.x,oy=g.oy.x;
   const gs=1+4/gh*g.p.x,ang=Math.atan2(oy,ox),mds=4/gh;
   const tx=md*Math.tanh(.05*ox/md),ty=md*Math.tanh(.05*oy/md);
   const gsx=gs+mds*Math.abs(Math.cos(ang)*ox/mx)*Math.min(gw/gh,1),gsy=gs+mds*Math.abs(Math.sin(ang)*oy/mx)*Math.min(gh/gw,1);
   gear.style.transform=(tx||ty)?`translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px)`:"";
   gear.style.scale=g.p.x>.0005||tx||ty?`${gsx.toFixed(4)} ${gsy.toFixed(4)}`:"";
-  gear.style.setProperty("--hp",g.p.x.toFixed(4));gear.style.setProperty("--hx",(g.sx0+ox).toFixed(1)+"px");gear.style.setProperty("--hy",(g.sy0+oy).toFixed(1)+"px");
 }
-const TB_SPRINGS=()=>[lens.val,lens.press,lens.sx,lens.sy,lens.vel,lens.off,lens.hl,gearSt.p,gearSt.ox,gearSt.oy];
+const TB_SPRINGS=()=>[lens.val,lens.press,lens.sx,lens.sy,lens.vel,lens.off,gearSt.p,gearSt.ox,gearSt.oy];
 function tbLoop(now){
   const dt=Math.min(1/30,Math.max(1/240,(now-(lens.last||now))/1000||1/60));lens.last=now;
   if(!lens.drag)TB_SPRINGS().forEach(s=>sprStep(s,dt));
-  else{[lens.press,lens.sx,lens.sy,lens.hl,gearSt.p,gearSt.ox,gearSt.oy].forEach(s=>sprStep(s,dt));
+  else{[lens.press,lens.sx,lens.sy,gearSt.p,gearSt.ox,gearSt.oy].forEach(s=>sprStep(s,dt));
     if(now-lens.drag.t>80)sprSnap(lens.vel,0)}   /* 手指停住：速度歸零（Convx 的速度追蹤器也是看最近的移動） */
   /* 放開：等鏡片接近目標（間距的 2.5%）或最多 400ms，才讓按下的形變消失 */
-  if(lens.releasing){const n=Math.max(1,tabEls().length-1);if(Math.abs(lens.val.x-lens.val.t)<n*.025||now-lens.releaseAt>400){lens.releasing=false;lens.vel.t=0;lens.press.t=0;lens.sx.t=1;lens.sy.t=1}}
+  if(lens.releasing){const n=Math.max(1,(tbGeo?tbGeo.cs.length:tabEls().length)-1);if(Math.abs(lens.val.x-lens.val.t)<n*.025||now-lens.releaseAt>400){lens.releasing=false;lens.vel.t=0;lens.press.t=0;lens.sx.t=1;lens.sy.t=1}}
   tbFrame();
   if(lens.drag||lens.releasing||gearSt.down||!TB_SPRINGS().every(s=>sprDone(s,.0008))){lens.raf=requestAnimationFrame(tbLoop);return}
   TB_SPRINGS().forEach(s=>sprSnap(s,s.t));tbFrame();lens.raf=0;lens.last=0;
 }
-const tbKick=()=>{if(!lens.raf){lens.last=0;lens.raf=requestAnimationFrame(tbLoop)}};
+const tbKick=()=>{if(!lens.raf){tbGeoDrop();lens.last=0;lens.raf=requestAnimationFrame(tbLoop)}};
 function lensPress(){if(reduceMotion())return;lens.press.t=1;lens.sx.t=PRESSED;lens.sy.t=PRESSED;lens.releasing=false}
 function lensRelease(){lens.releasing=true;lens.releaseAt=performance.now()}
 /* 移到某個分頁：照 animateToValue（按下 → 移過去 → 放開），手機、桌面一樣 */
@@ -86,7 +91,7 @@ function lensTo(k,instant){
   const tb=$("#tabbar");if(!tb)return;const el=tb.querySelector(".tb-lens");
   const i=k?tabIndex(k):-1;el.classList.toggle("off",i<0);
   if(i<0){lens.shown=false;tabEls().forEach(b=>b.classList.remove("lit"));return}
-  if(instant||reduceMotion()||!lens.shown){lens.shown=true;sprSnap(lens.val,i);tbFrame();return}
+  if(instant||reduceMotion()||!lens.shown){lens.shown=true;sprSnap(lens.val,i);tbGeoDrop();tbFrame();return}
   if(lens.val.t!==i&&!lens.drag){lens.val.t=i;lensPress();lensRelease()}   /* 點分頁：按下 → 移過去 → 放開 */
   tbKick();
 }
@@ -98,7 +103,7 @@ function renderTabbar(){
     document.body.append(tb);setupTabbar(tb);
   }
   const tabs=TABS(),box=tb.querySelector(".tb-tabs"),sig=tabs.map(t=>t[0]).join();
-  if(box._sig!==sig){box._sig=sig;box.innerHTML=tabs.map(([k,t,ic])=>`<button type="button" class="tab" role="tab" data-tab="${k}" aria-label="${t}"><span class="tab-ind">${ico(ic,"solo")}</span><span class="tab-l">${t}</span>${k==="done"?'<span class="tb-due" aria-hidden="true"></span>':""}</button>`).join("");lens.shown=false}
+  if(box._sig!==sig){box._sig=sig;box.innerHTML=tabs.map(([k,t,ic])=>`<button type="button" class="tab" role="tab" data-tab="${k}" aria-label="${t}"><span class="tab-ind">${ico(ic,"solo")}</span><span class="tab-l">${t}</span>${k==="done"?'<span class="tb-due" aria-hidden="true"></span>':""}</button>`).join("");lens.shown=false;tbGeoDrop()}
   const act=tbActive();
   box.querySelectorAll(".tab").forEach(b=>{const on=b.dataset.tab===act;b.classList.toggle("on",on);b.setAttribute("aria-selected",on)});
   const g=tb.querySelector("#setBtn");g.classList.toggle("on",setOpen);g.setAttribute("aria-expanded",setOpen);
@@ -169,7 +174,7 @@ function setupTabbar(tb){
     const lp=interp(cs,lens.val.x,ax);if(Math.abs(at(e)-(rail?r.top:r.left)-lp)>slot/2)return;
     lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now(),raw:lens.val.x};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
     try{main.setPointerCapture(e.pointerId)}catch(_){}
-    tb.classList.add("dragging");lensPress();lens.hl.t=reduceMotion()?0:1;tbKick();
+    tb.classList.add("dragging");lensPress();tbKick();
   });
   main.addEventListener("pointermove",e=>{
     const d=lens.drag;if(!d||e.pointerId!==d.id)return;
@@ -185,7 +190,7 @@ function setupTabbar(tb){
     const d=lens.drag;if(!d)return;lens.drag=null;tb.classList.remove("dragging");tabEls().forEach(b=>b.classList.remove("hov"));
     if(d.moved){suppress=true;setTimeout(()=>suppress=false,80)}
     const i=Math.round(clampV(lens.val.x,0,d.n-1)),k=tabEls()[i]&&tabEls()[i].dataset.tab;
-    lens.vel.t=lens.vel.x;lens.off.t=0;lens.hl.t=0;lens.val.t=i;lensRelease();tbKick();
+    lens.vel.t=lens.vel.x;lens.off.t=0;lens.val.t=i;lensRelease();tbKick();
     if(d.moved&&k&&k!==tbActive())setTimeout(()=>tabGo(k),60);
     else if(!d.moved&&k&&notiOpen)setTimeout(()=>tabGo(k),60);   /* 通知與行事曆那一頁：按鏡片那一格（指標被整列接走，click 不會落在分頁上）＝回到原分頁 */
   }
@@ -195,14 +200,14 @@ function setupTabbar(tb){
   addEventListener("pointerup",dragEnd);addEventListener("pointercancel",dragEnd);addEventListener("blur",dragEnd);
   /* 設定鍵：LiquidButton */
   gear.addEventListener("pointerdown",e=>{
-    if(e.button>0||reduceMotion())return;const r=gear.getBoundingClientRect(),g=gearSt;
-    g.down=e.pointerId;g.sx0=e.clientX-r.left;g.sy0=e.clientY-r.top;g.x0=e.clientX;g.y0=e.clientY;sprSnap(g.ox,0);sprSnap(g.oy,0);g.p.t=1;
+    if(e.button>0||reduceMotion())return;const g=gearSt;
+    g.down=e.pointerId;g.x0=e.clientX;g.y0=e.clientY;sprSnap(g.ox,0);sprSnap(g.oy,0);g.p.t=1;
     try{gear.setPointerCapture(e.pointerId)}catch(_){}tbKick();
   });
   gear.addEventListener("pointermove",e=>{const g=gearSt;if(g.down!==e.pointerId)return;sprSnap(g.ox,e.clientX-g.x0);sprSnap(g.oy,e.clientY-g.y0);tbKick()});
   const gearUp=e=>{const g=gearSt;if(g.down===false||e&&e.pointerId!==undefined&&e.pointerId!==g.down)return;g.down=false;g.p.t=0;g.ox.t=0;g.oy.t=0;tbKick()};
   gear.addEventListener("pointerup",gearUp);gear.addEventListener("pointercancel",gearUp);addEventListener("pointerup",gearUp);addEventListener("blur",()=>gearUp());
-  if(window.ResizeObserver)new ResizeObserver(()=>tbFrame()).observe(main);   /* 列的寬度變了（設定鍵出現／消失、字型載入）：鏡片照新的位置重畫 */
+  if(window.ResizeObserver)new ResizeObserver(()=>{tbGeoDrop();tbFrame()}).observe(main);   /* 列的寬度變了（設定鍵出現／消失、字型載入）：鏡片照新的位置重畫 */
   const relayout=()=>lensTo(tbActive(),true);
   RAIL_MQ.addEventListener("change",()=>{TB_SPRINGS().forEach(s=>sprSnap(s,s===lens.val?s.x:(s===lens.sx||s===lens.sy?1:0)));lens.drag=null;lens.releasing=false;requestAnimationFrame(relayout)});
   addEventListener("resize",()=>lensTo(tbActive(),true));
