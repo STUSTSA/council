@@ -7,9 +7,8 @@ const IS_IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==
      - 只有按在鏡片那一格才能拖；拖的時候位置跟著指標（不加彈簧），拖過兩端時整條列跟著偏最多 4px；放開吸到最近的分頁
      - 按下時鏡片放大到 78/56（主軸彈簧 .6／250、側軸 .7／250），移動時依速度沿移動方向拉伸（最多兩成）、垂直方向略縮；
        整條列沿長邊放大 16px、鏡片那一格的內容放大 1.2（--ts，board.css 只套在 .lit 那一格）；
-       鏡片位置一圈白光（彈簧 .5／300；2026-11-17 起材質只有平面，白光不畫，--hp 照樣寫但沒有樣式用到）
      - 點分頁＝「按下 → 鏡片移過去（彈簧 1／1000）→ 接近目標或 400ms 後放開」
-   設定鍵：按下放大 4px、白光跟著指標、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
+   設定鍵：按下放大 4px、被指標拖著微微偏移與拉伸（tanh 阻尼），放開彈回 */
 let setOpen=false;
 const TABS=()=>[["live","即時回報","live"],["progress",ISS==="專案"?"專案":"進度","progress"],["done","完成紀錄","done"],["ext",CFG.ext,CFG.extIcon||"flag"]].filter(([k])=>secTab(k));
 /* 設定打開時，三個分頁都不亮；點任一個就關掉並回到那一區 */
@@ -23,10 +22,9 @@ const lens={
   sx:spring(1,.6,250),sy:spring(1,.7,250),
   vel:spring(0,.5,300),     /* 速度（每秒幾個分頁 ÷ 分頁間距數），放開時回到 0 */
   off:spring(0,1,300),      /* 整條列跟著拖曳的累積位移（px），顯示時壓成最多 4px */
-  hl:spring(0,.5,300),      /* 整條列的白光 */
   drag:null,releaseAt:0,releasing:false,raf:0,last:0,shown:false,
 };
-const gearSt={p:spring(0,.5,300),ox:spring(0,.5,300),oy:spring(0,.5,300),sx0:0,sy0:0,down:false};
+const gearSt={p:spring(0,.5,300),ox:spring(0,.5,300),oy:spring(0,.5,300),down:false};
 function tabEls(){return [...$("#tabbar").querySelectorAll(".tab")]}
 /* 鏡片動畫每一格要用的版面量測（分頁中心、列長、鏡片與設定鍵大小），量一次記著：這些只跟排版有關，動畫只動 transform／scale，播的途中不會變。
    每一格都重量的話，上一格剛寫的樣式會逼瀏覽器當場重算樣式與排版（手機上一格多花好幾毫秒，換分頁時整段都在卡）。
@@ -73,11 +71,11 @@ function tbFrame(){
   gear.style.transform=(tx||ty)?`translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px)`:"";
   gear.style.scale=g.p.x>.0005||tx||ty?`${gsx.toFixed(4)} ${gsy.toFixed(4)}`:"";
 }
-const TB_SPRINGS=()=>[lens.val,lens.press,lens.sx,lens.sy,lens.vel,lens.off,lens.hl,gearSt.p,gearSt.ox,gearSt.oy];
+const TB_SPRINGS=()=>[lens.val,lens.press,lens.sx,lens.sy,lens.vel,lens.off,gearSt.p,gearSt.ox,gearSt.oy];
 function tbLoop(now){
   const dt=Math.min(1/30,Math.max(1/240,(now-(lens.last||now))/1000||1/60));lens.last=now;
   if(!lens.drag)TB_SPRINGS().forEach(s=>sprStep(s,dt));
-  else{[lens.press,lens.sx,lens.sy,lens.hl,gearSt.p,gearSt.ox,gearSt.oy].forEach(s=>sprStep(s,dt));
+  else{[lens.press,lens.sx,lens.sy,gearSt.p,gearSt.ox,gearSt.oy].forEach(s=>sprStep(s,dt));
     if(now-lens.drag.t>80)sprSnap(lens.vel,0)}   /* 手指停住：速度歸零（Convx 的速度追蹤器也是看最近的移動） */
   /* 放開：等鏡片接近目標（間距的 2.5%）或最多 400ms，才讓按下的形變消失 */
   if(lens.releasing){const n=Math.max(1,(tbGeo?tbGeo.cs.length:tabEls().length)-1);if(Math.abs(lens.val.x-lens.val.t)<n*.025||now-lens.releaseAt>400){lens.releasing=false;lens.vel.t=0;lens.press.t=0;lens.sx.t=1;lens.sy.t=1}}
@@ -176,7 +174,7 @@ function setupTabbar(tb){
     const lp=interp(cs,lens.val.x,ax);if(Math.abs(at(e)-(rail?r.top:r.left)-lp)>slot/2)return;
     lens.drag={id:e.pointerId,x:at(e),moved:false,slot,n:cs.length,t:performance.now(),raw:lens.val.x};lastX=at(e);lastT=performance.now();lastV=lens.val.x;
     try{main.setPointerCapture(e.pointerId)}catch(_){}
-    tb.classList.add("dragging");lensPress();lens.hl.t=reduceMotion()?0:1;tbKick();
+    tb.classList.add("dragging");lensPress();tbKick();
   });
   main.addEventListener("pointermove",e=>{
     const d=lens.drag;if(!d||e.pointerId!==d.id)return;
@@ -192,7 +190,7 @@ function setupTabbar(tb){
     const d=lens.drag;if(!d)return;lens.drag=null;tb.classList.remove("dragging");tabEls().forEach(b=>b.classList.remove("hov"));
     if(d.moved){suppress=true;setTimeout(()=>suppress=false,80)}
     const i=Math.round(clampV(lens.val.x,0,d.n-1)),k=tabEls()[i]&&tabEls()[i].dataset.tab;
-    lens.vel.t=lens.vel.x;lens.off.t=0;lens.hl.t=0;lens.val.t=i;lensRelease();tbKick();
+    lens.vel.t=lens.vel.x;lens.off.t=0;lens.val.t=i;lensRelease();tbKick();
     if(d.moved&&k&&k!==tbActive())setTimeout(()=>tabGo(k),60);
     else if(!d.moved&&k&&notiOpen)setTimeout(()=>tabGo(k),60);   /* 通知與行事曆那一頁：按鏡片那一格（指標被整列接走，click 不會落在分頁上）＝回到原分頁 */
   }
@@ -202,8 +200,8 @@ function setupTabbar(tb){
   addEventListener("pointerup",dragEnd);addEventListener("pointercancel",dragEnd);addEventListener("blur",dragEnd);
   /* 設定鍵：LiquidButton */
   gear.addEventListener("pointerdown",e=>{
-    if(e.button>0||reduceMotion())return;const r=gear.getBoundingClientRect(),g=gearSt;
-    g.down=e.pointerId;g.sx0=e.clientX-r.left;g.sy0=e.clientY-r.top;g.x0=e.clientX;g.y0=e.clientY;sprSnap(g.ox,0);sprSnap(g.oy,0);g.p.t=1;
+    if(e.button>0||reduceMotion())return;const g=gearSt;
+    g.down=e.pointerId;g.x0=e.clientX;g.y0=e.clientY;sprSnap(g.ox,0);sprSnap(g.oy,0);g.p.t=1;
     try{gear.setPointerCapture(e.pointerId)}catch(_){}tbKick();
   });
   gear.addEventListener("pointermove",e=>{const g=gearSt;if(g.down!==e.pointerId)return;sprSnap(g.ox,e.clientX-g.x0);sprSnap(g.oy,e.clientY-g.y0);tbKick()});
