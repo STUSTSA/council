@@ -1451,6 +1451,10 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
 .hm-lkf .primary{min-height:36px;padding:0 16px;font-size:14px}
 /* 連結名稱的小膠囊（#hmTip，放在 body 下，不會被下排裁到）：桌面滑鼠停在連結上時浮在圖示上方，淡入 fast；手機（沒有 hover）不出現 */
 /* 下排連結的圖示選單（home.js 的 ipOpen；編輯中點連結）：浮在圓鈕上方的圓角面板，5 欄，圓鈕大小 40px；選到的反白。選了線條圖示的連結（.pick）圖示與「+」同大小 */
+/* 編輯中的提示（#hmLkHint，home.js 的 hintSync）：浮在下排正上方的小膠囊，跟名稱小膠囊同一個樣子；淡入 fast，不擋點擊 */
+.hm-lkh{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:var(--ink);color:var(--blk);font-size:12.5px;font-weight:500;line-height:1.3;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity var(--mo-fast) var(--mo-out)}
+.hm-lkh.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.hm-lkh{transition:none}}
 .hm-lk.pick .hm-lkl{display:grid;place-items:center;line-height:0;text-box:normal}
 .hm-lk.pick .hm-lkl .ico{width:calc(var(--hm-dot)*18/44);height:calc(var(--hm-dot)*18/44)}
 .hm-ip{position:fixed;left:0;top:0;z-index:50;display:grid;grid-template-columns:repeat(5,40px);gap:6px;padding:10px;border-radius:24px;background:var(--blk);color:var(--ink);box-shadow:0 12px 30px -8px var(--wal-sh),inset 0 0 0 1px var(--hair);opacity:0;pointer-events:none;transition:opacity var(--mo-fast) var(--mo-out)}
