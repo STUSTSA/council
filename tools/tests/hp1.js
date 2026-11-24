@@ -3,12 +3,13 @@
    2. 連結到這個專案自己的專案頁（index.html?d=events&proj=ID，見 hp2.js）；切回部門：部門數量與原本的焦點都還在
    3. 活動部在新資料庫：用替身模組讀 issues（帶 open），沒登入也讀
    4. 沒有專案、讀不到：顯示一行說明，方向鍵不出錯
+   5. 專案的自訂圖示（議題的 icon）：認得的名稱才顯示
    失敗會印 FAIL 並以非 0 結束。node hp1.js shot 另存截圖 */
 const {chromium}=require('playwright');
 let fails=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(!v)fails++};
 const XSS='<img src=x onerror="window.__xss=1">',SHOT=process.argv[2]==='shot';
-const ISS=[{id:'i3',title:'沒日期的專案',start:'',end:'',tags:['籌備'],cur:0},{id:'i2',title:'聖誕點燈',start:'2026-12-16',end:'2026-12-18',tags:['籌備','執行'],cur:1},
-  {id:'i1',title:'校慶園遊會'+XSS,start:'2026-11-28',end:'2026-11-28',tags:['籌備'],cur:0},{id:'i0',title:'結案的',start:'2026-09-01',end:'',doneAt:'2026-09-30T10:00',tags:[],cur:0}];
+const ISS=[{id:'i3',title:'沒日期的專案',start:'',end:'',tags:['籌備'],cur:0},{id:'i2',title:'聖誕點燈',start:'2026-12-16',end:'2026-12-18',tags:['籌備','執行'],cur:1,icon:'flag'},
+  {id:'i1',title:'校慶園遊會'+XSS,start:'2026-11-28',end:'2026-11-28',tags:['籌備'],cur:0,icon:'"><img src=x onerror="window.__xss=1'},{id:'i0',title:'結案的',start:'2026-09-01',end:'',doneAt:'2026-09-30T10:00',tags:[],cur:0}];
 (async()=>{
   const b=await chromium.launch();
   const mk=async(w,h,touch,issues,sc)=>{const ctx=await b.newContext({viewport:{width:w,height:h},hasTouch:touch,isMobile:touch,serviceWorkers:'block',colorScheme:sc||'light',deviceScaleFactor:SHOT?2:1});
@@ -27,6 +28,8 @@ const ISS=[{id:'i3',title:'沒日期的專案',start:'',end:'',tags:['籌備'],c
     ok(a.t.length===3&&/^校慶園遊會/.test(a.t[0])&&a.t[1]==='聖誕點燈'&&a.t[2]==='沒日期的專案',`${nm}：專案三張（結案的不列），照日期排、沒日期的最後（${a.t.map(x=>x.slice(0,5))}）`);
     ok(a.d[0]==='11/28'&&a.d[1]==='12/16–12/18'&&a.d[2]===''&&a.en[1]==='執行',`${nm}：日期與目前階段（${a.d}｜${a.en}）`);
     ok(a.img===0&&!a.x,`${nm}：名稱裡的 <img onerror> 照字面顯示`);
+    const ic=await p.evaluate(c=>[...document.querySelectorAll(c)].map(x=>x.querySelector('.hm-pji svg path')?1:0).join(''),card);
+    ok(ic==='010',`${nm}：有挑圖示的專案卡片顯示圖示，不認得的圖示名稱當成沒有（${ic}）`);
     ok(a.href==='index.html?d=events&proj=i1'&&a.sel==='true',`${nm}：連到這個專案自己的專案頁（${a.href}）`);
     if(SHOT)await p.screenshot({path:`/mnt/project-files/home-projects/${nm==='桌面'?'desk':'mob'}_proj.png`});
     await p.keyboard.press(touch?'ArrowDown':'ArrowRight');await p.waitForTimeout(500);

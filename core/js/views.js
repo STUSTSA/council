@@ -274,6 +274,9 @@ const noneTxt=t=>`<span class="sub">${t}</span>`;
 /* 階段：每一列一個階段（可改名、刪除），「目前」選這個議題現在在哪個階段；「+ 階段」在最後加一列 */
 const stageRowHTML=(g,cur)=>`<span class="stg-row"><button type="button" class="stg-cur" data-iffx="stgcur" aria-pressed="${cur}">目前</button><input data-stg value="${esc(g)}" placeholder="階段名稱"><button type="button" class="icon stg-del" data-iffx="stgdel" aria-label="刪除這個階段">${ico("close","solo")}</button></span>`;
 function stageEditorHTML(it){return `<div class="stg-list">${it.tags.map((g,k)=>stageRowHTML(g,k===it.cur)).join("")}</div><button type="button" class="ghost evd-add" data-iffx="stgadd">+ 階段</button><span class="sub evf-hint">按「目前」選這個議題現在在哪個階段；空白的階段會拿掉</span>`}
+/* 活動專案的圖示（2026-11-24）：一排圓鈕（「不用」＋ icons.js 的 ICO_PICK），點了只換選取，按完成才寫回（events.js 的 ifFldAct／fldApply）。
+   存在議題的 icon（圖示名稱），主頁的專案卡片會顯示，所有人看到同一個 */
+const icoPickHTML=cur=>`<span class="ico-pick" role="radiogroup" aria-label="圖示"><button type="button" class="hm-ipb hm-ipa${cur?"":" sel"}" data-iffx="icopick" data-i="" role="radio" aria-checked="${!cur}">不用</button>${ICO_PICK.map(n=>`<button type="button" class="hm-ipb${n===cur?" sel":""}" data-iffx="icopick" data-i="${n}" role="radio" aria-checked="${n===cur}" aria-label="${n}">${ico(n,"solo")}</button>`).join("")}</span><span class="sub evf-hint">主頁的專案卡片會顯示這個圖示，所有人看到的都一樣</span>`;
 /* 議題詳情（編輯中）的欄位 */
 function issueFieldsHTML(it){
   const F=(k,l,v,e)=>ifFieldHTML("i",it.id,k,l,v,e);
@@ -284,6 +287,7 @@ function issueFieldsHTML(it){
       ${F("dates","期間",hasDates(it)?`<span class="num">${esc(fmt(it.start))} – ${esc(fmt(it.end))}</span>`:noneTxt("未排程，點一下填開始與結束日"),()=>`<span class="evf-when"><input type="date" data-e="start" value="${esc(it.start)}" aria-label="開始日"><span class="sub">～</span><input type="date" data-e="end" value="${esc(it.end)}" aria-label="結束日"></span><span class="sub evf-hint">兩個日期都填才會顯示在甘特圖；清空就從甘特圖移除</span>`)}
       ${state.members.length?F("staff","專員",staffNames(it.staff).map(n=>`<span class="staff-chip">${esc(n)}</span>`).join("")||noneTxt("沒有標專員"),()=>fieldHTML({name:"staff",label:"從本看板的身分挑選，可複選",type:"multi",value:it.staff||[],options:staffOpts()})):""}
       ${F("labels","標籤",labelChipsHTML(it.labels)||noneTxt("沒有標籤"),()=>labelPickerHTML("labels",it.labels))}
+      ${CFG.deptId==="events"?F("icon","圖示",it.icon?`<span class="ico-view">${ico(it.icon,"solo")}</span>`:noneTxt("沒有圖示，點一下挑一個"),()=>icoPickHTML(it.icon)):""}
       <div class="evf-group"><span class="evf-l">超連結</span>
         ${it.links.map(l=>F("l:"+l.id,"",`<span class="link" style="--c:${cssColor(l.color)}">${esc(l.name)}</span><span class="sub evf-url">${esc(l.url)}</span>`,()=>linkEditorHTML(l,it.links.length,"iffx"))).join("")}
         ${ifOpen("i",it.id,"l:+")?F("l:+","","",()=>linkEditorHTML(null,it.links.length,"iffx")):`<button type="button" class="ghost evd-add" data-ifpen="l:+" data-ift="i" data-ifid="${esc(it.id)}">+ 超連結</button>`}</div>

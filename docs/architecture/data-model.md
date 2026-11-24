@@ -118,7 +118,7 @@
 `cardId`、`deptId`、`version`、`title`、`blocks`、`times`（當時的時間值快照）、`state`、`by`、`at`、`imported`（遷移產生的第 1 版為 true）、`importBatch`（只有遷移產生的第 1 版有，等於母卡片的批次；01B R1）。`title`、`blocks`、`state`、`deptId`、`by`、`at` 由規則比對批次後的卡片；03 起 `blocks` 也照卡片的 `blocksOk` 檢查形狀。
 
 ### `issues/{id}`：母議題
-`deptId`、`title`、`cur`（目前階段）、`start`、`end`（原字串＋時間）、`note`、`tags`、`labels`、`links`、`staff`、`markers`（陣列，保留舊結構，`evId`／`tmId` 改新 ID）、`doneAt`、`order`、`rev`、`updatedAt`、`updatedBy`。
+`deptId`、`title`、`cur`（目前階段）、`start`、`end`（原字串＋時間）、`note`、`tags`、`labels`、`links`、`staff`、`markers`（陣列，保留舊結構，`evId`／`tmId` 改新 ID）、`doneAt`、`order`、`rev`、`updatedAt`、`updatedBy`、`icon`（選填，2026-11-24：活動專案的圖示名稱，`core/js/icons.js` 的 `ICO_PICK` 其中一個；規則只收 24 字以內的小寫英數，畫面不認得的名稱當成沒有）。
 
 ### `weeks/{id}`：週報
 `deptId`、`date`、`text`、`auto`、`createdAt`、`updatedBy`。

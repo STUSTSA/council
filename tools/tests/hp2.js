@@ -2,11 +2,11 @@
    1. 標題列是專案名稱＋PROJECT 小標（日期、倒數）；只有即時回報、完成紀錄兩個分頁，只列這個專案的；結案後唯讀
    2. 沒帶 proj、proj 找不到：照一般的活動部看板（全部都列）
    3. 登入後在專案頁新增卡片：自動掛在這個專案底下
-   4. 主頁的專案卡片連到專案頁
+   4. 活動部看板的專案編輯可以挑圖示（其他部門沒有這一欄）
    失敗會印 FAIL 並以非 0 結束。node hp2.js shot 另存截圖 */
 const c=require('./common');c.serveDept=true;
 let fails=0;const ok=(v,m)=>{console.log((v?'OK ':'FAIL ')+m);if(!v)fails++};
-const PID='imvpc3f0dcpi6',SHOT=process.argv[2]==='shot';
+const ICO_N=20,PID='imvpc3f0dcpi6',SHOT=process.argv[2]==='shot';
 const read=p=>p.evaluate(()=>({nm:$('#dhName').textContent,en:$('#dhEn').textContent,title:document.title,live:liveOrder().length,cp:document.querySelectorAll('#events .cp').length,done:doneItems().length,act:activeIssues().length,
   ro:readOnly()}));
 (async()=>{
@@ -38,6 +38,22 @@ const read=p=>p.evaluate(()=>({nm:$('#dhName').textContent,en:$('#dhEn').textCon
     if(SHOT)await p.screenshot({path:'/mnt/project-files/home-projects/專案頁_通知.png'});await S.b.close()}
   {c.q='?d=events';const S=await c.setup(),p=await S.mk(1366,900,'light',false);await seedT(p);await p.click('#notiBtn');await p.waitForTimeout(1000);const a=await cal(p);
     ok(a.mine===2&&/專案的事｜六宿停車場雜物/.test(a.ev)&&/部門的事｜/.test(a.ev)&&a.seg,`活動部自己的行事曆：專案的時間標出專案名稱（${a.ev}）`);await S.b.close()}
+  /* 專案的圖示：活動部看板的專案編輯裡挑，按完成才寫回；選「不用」拿掉 */
+  {c.q='?d=events';const S=await c.setup(),p=await S.mk(1366,900,'light',false);await S.login(p);await p.waitForTimeout(400);
+    await p.evaluate(P=>{setSection('progress',{instant:true});progShow(P)},PID);await p.waitForTimeout(900);await p.evaluate(P=>startEdit('i:'+P),PID);await p.waitForTimeout(900);
+    await p.click('[data-ifpen="icon"]');await p.waitForTimeout(500);
+    const n=await p.evaluate(()=>document.querySelectorAll('[data-iffk="icon"] [data-iffx="icopick"]').length);
+    await p.click('[data-iffk="icon"] [data-iffx="icopick"][data-i="flag"]');const mid=await p.evaluate(P=>state.issues.find(i=>i.id===P).icon||'',PID);
+    if(SHOT){await p.waitForTimeout(500);await p.screenshot({path:'/mnt/project-files/home-projects/專案圖示選單.png'})}
+    await p.click('[data-iffk="icon"] [data-iffx="ok"]');await p.waitForTimeout(500);
+    const a=await p.evaluate(P=>({icon:state.issues.find(i=>i.id===P).icon||'',view:!!document.querySelector('[data-iffk="icon"] .ico-view svg')}),PID);
+    ok(n===ICO_N+1&&mid===''&&a.icon==='flag'&&a.view,`專案編輯挑圖示：${n} 顆、按完成才寫回（${a.icon}）`);
+    await p.click('[data-ifpen="icon"]');await p.waitForTimeout(400);await p.click('[data-iffk="icon"] [data-iffx="icopick"][data-i=""]');await p.click('[data-iffk="icon"] [data-iffx="ok"]');await p.waitForTimeout(400);
+    ok(await p.evaluate(P=>!('icon' in state.issues.find(i=>i.id===P)),PID),'選「不用」：圖示欄位拿掉');
+    ok(!p.errs.length,`沒有錯誤（${p.errs.join('｜').slice(0,200)}）`);await S.b.close()}
+  {c.q='';const S=await c.setup(),p=await S.mk(1366,900,'light',false);await S.login(p);
+    await p.evaluate(()=>{setSection('progress',{instant:true});progShow(state.issues[0].id)});await p.waitForTimeout(900);await p.evaluate(()=>startEdit('i:'+state.issues[0].id));await p.waitForTimeout(900);
+    ok(await p.evaluate(()=>!document.querySelector('[data-iffk="icon"]')&&!!document.querySelector('[data-iffk="dates"]')),'其他部門的議題沒有圖示欄位');await S.b.close()}
   /* 已結案的專案：專案頁唯讀 */
   {c.q='?d=events&proj='+PID;const S=await c.setup(),p=await S.mk(1366,900,'light',false);await S.login(p);await p.waitForTimeout(400);
     const r=await p.evaluate(P=>{const a=readOnly();state.issues.find(i=>i.id===P).doneAt=today();render();return {a,b:readOnly(),en:$('#dhEn').textContent}},PID);

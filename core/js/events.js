@@ -154,6 +154,7 @@ function ifFldAct(fx){
   if(a==="color"){const c=COLORS[(COLORS.indexOf(fx.dataset.c)+1)%COLORS.length];fx.dataset.c=c;fx.style.background=c;return}
   if(a==="stgadd"){const list=box.querySelector(".stg-list");list.insertAdjacentHTML("beforeend",stageRowHTML("",!list.querySelector('.stg-cur[aria-pressed="true"]')));list.lastElementChild.querySelector("input").focus();return}
   if(a==="stgdel"){const row=fx.closest(".stg-row"),was=row.querySelector('.stg-cur[aria-pressed="true"]');row.remove();if(was)box.querySelector(".stg-cur")?.setAttribute("aria-pressed","true");return}
+  if(a==="icopick"){box.querySelectorAll('[data-iffx="icopick"]').forEach(b=>{const on=b===fx;b.classList.toggle("sel",on);b.setAttribute("aria-checked",on)});return}
   if(a==="stgcur"){box.querySelectorAll(".stg-cur").forEach(b=>b.setAttribute("aria-pressed",b===fx));return}
   if(a==="cancel"){ifFld=null;render();return}
   if(a==="ok"){if(ifFldWrite(box)){ifFld=null;changed()}return}
@@ -169,7 +170,7 @@ function ifFldWrite(box){
   dirty=true;return true;
 }
 /* 逐欄編輯的寫回（即時回報、議題、完成紀錄、秘書處會議卡共用一份）：把打開的那一欄 k 的值寫進 o；填錯回傳 false、停在原欄。
-   k＝name／title／desc／note／dates／stage／staff／labels／done／issue／t:時間標記 id／l:連結 id（t:+、l:+ 是新增） */
+   k＝name／title／desc／note／dates／stage／icon／staff／labels／done／issue／t:時間標記 id／l:連結 id（t:+、l:+ 是新增） */
 function fldApply(box,o,k){
   const g=n=>box.querySelector(`[data-e="${n}"]`),bad=n=>{Sfx.play("no");g(n).classList.add("bad");g(n).focus();return false};
   if(k==="title"||k==="name"){const v=g(k).value.trim();if(!v){toast("請填名稱");return bad(k)}o[k]=v}
@@ -178,6 +179,7 @@ function fldApply(box,o,k){
   else if(k==="dates"){const a=g("start").value,b=g("end").value;if(a&&b&&b<a){toast("結束日不能早於開始日");return bad("end")}o.start=a;o.end=b}
   else if(k==="stage"){const rows=[...box.querySelectorAll(".stg-row")].map(r=>({n:r.querySelector("input").value.trim(),cur:r.querySelector(".stg-cur").getAttribute("aria-pressed")==="true"})).filter(r=>r.n);
     o.tags=rows.map(r=>r.n);o.cur=Math.max(0,rows.findIndex(r=>r.cur))}
+  else if(k==="icon"){const b=box.querySelector('[data-iffx="icopick"].sel'),v=b?b.dataset.i:"";if(v)o.icon=v;else delete o.icon}
   else if(k==="staff")o.staff=[...box.querySelectorAll('input[name="staff"]:checked')].map(x=>x.value);
   else if(k==="labels")o.labels=[...box.querySelectorAll('input[name="labels"]:checked')].map(x=>x.value);
   else if(k==="done"){const v=g("done").value;if(!v){toast("請選完成日期");return bad("done")}o.doneAt=v}

@@ -710,7 +710,7 @@ service cloud.firestore {
     match /issues/{id} {
       function shape() {
         return d().keys().hasOnly(['deptId', 'title', 'cur', 'start', 'end', 'startAt', 'endAt', 'note', 'tags', 'labels',
-                                   'links', 'staff', 'markers', 'doneAt', 'order', 'rev', 'updatedAt', 'updatedBy', 'importBatch'])
+                                   'links', 'staff', 'markers', 'doneAt', 'order', 'rev', 'updatedAt', 'updatedBy', 'importBatch', 'icon'])
           && d().deptId in deptIds() && d().title is string
           // 04：名稱最多 500 字；期間 start／end 是日期或空字串；結案 doneAt 是 null 或日期（時刻）；startAt／endAt 是時間戳記或 null；
           // 階段、標籤、專員是字串陣列；超連結最多 50 個、處理紀錄最多 300 筆（陣列裡是物件，規則沒有迴圈、不逐筆檢查，畫面讀進來時再整理一次）
@@ -721,6 +721,8 @@ service cloud.firestore {
           && (kept('startAt') || d().get('startAt', null) == null || d().startAt is timestamp)
           && (kept('endAt')   || d().get('endAt', null) == null || d().endAt is timestamp)
           && (kept('cur')     || d().get('cur', 0) is number)
+          // 活動專案的圖示（選填）：只收短的小寫英數名稱（畫面只認自己那份清單裡的名稱，其餘當成沒有）
+          && (kept('icon')    || (d().get('icon', '') is string && d().get('icon', '').matches('^[a-z0-9]{0,24}$')))
           && (kept('order')   || d().get('order', 0) is number)
           && (kept('note')    || short(d().get('note', ''), 20000))
           && (kept('tags')    || textList(d().get('tags', []), 50, 5000))
