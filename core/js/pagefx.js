@@ -16,6 +16,9 @@ const PageFx=(()=>{
   /* 2026-11-06 使用者：整頁動畫慢一點，效果比較明顯——時間全部拉長約 1.5 倍（位移距離、曲線不變） */
   const OUT=220,BOUT=300,IN=680,BIN=560,SPREAD_IN=200,SPREAD_BIN=110,OVER=.7,BACK_OVER=.55,FADE_IN=.12,COVER_IN=.06;
   const EASE_OUT="cubic-bezier(.4,0,1,1)",EASE_IN="cubic-bezier(.1,.9,.2,1)",MAXP=14;
+  /* 跨頁到達（主頁 ↔ 看板、專案頁；run 的 all）的時間倍率：2026-11-24 DievE 選「縮短、保留同樣的動畫」——進部門要先播主頁那一半、再載入、再進場，
+     三段加起來太久，所以到達這一段的時間與錯開都乘 XP（位移、曲線、順序不變）。頁面內的換頁（設定、通知、每週概述等）不乘 */
+  const XP=.56;
   let tok=0;const owner=new WeakMap();const live=new Set();   /* live：目前還在換頁動畫裡的元素；owner：每個元素目前歸哪一次換頁管：被新的換頁接手，舊的那段就停下 */
   const keep=new WeakMap(),anims=new WeakMap();
   function save(el){if(!keep.has(el))keep.set(el,{o:el.style.opacity,p:el.style.pointerEvents})}
@@ -50,13 +53,13 @@ const PageFx=(()=>{
       list.push(el.animate(back?[{transform:"translateY(0)"+B,opacity:1},{transform:"translateY(80px)"+B,opacity:0}]:[{opacity:1},{opacity:0}],
         {duration:(back?BOUT:OUT)+lag,easing:EASE_OUT,fill:"both",delay:0}));
     }else{
-      const ps=pieces(el,all),dur=back?BIN:IN,spread=back?SPREAD_BIN:SPREAD_IN,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
+      const k=all?XP:1,ps=pieces(el,all),dur=(back?BIN:IN)*k,spread=(back?SPREAD_BIN:SPREAD_IN)*k,dy=back?-24:Math.min(120,Math.round(H*.14)),total=dur+spread+lag;
       ps.forEach(({el:p,r,op,base})=>{
         const B=base?" "+base:"";   /* 區塊原本的變形（例如工具列置中的 translateX）接在後面保留 */
         /* rnd＝不規則浮現（手機從主頁翻進部門之後，DESIGN-next 第五節）：每一塊各自的延遲（0–320ms）、方向、距離與大小，不照順序 */
-        if(rnd){const dl=lag+Math.random()*320,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
-          list.push(p.animate([{opacity:0},{opacity:op}],{duration:220,delay:dl,easing:"ease-out",fill:"both"}));
-          list.push(p.animate([{transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})${B}`},{transform:`translate(0,0)${B}`}],{duration:560+Math.random()*160,delay:dl,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"both"}));return}
+        if(rnd){const dl=lag+Math.random()*320*k,tx=(Math.random()*2-1)*40,ty=14+Math.random()*56,sc=.86+Math.random()*.1;
+          list.push(p.animate([{opacity:0},{opacity:op}],{duration:220*k,delay:dl,easing:"ease-out",fill:"both"}));
+          list.push(p.animate([{transform:`translate(${tx.toFixed(0)}px,${ty.toFixed(0)}px) scale(${sc.toFixed(3)})${B}`},{transform:`translate(0,0)${B}`}],{duration:(560+Math.random()*160)*k,delay:dl,easing:"cubic-bezier(.3,1.45,.45,1)",fill:"both"}));return}
         const delay=lag+Math.round(Math.max(0,Math.min(1,r.top/H))*spread);
         list.push(p.animate([{transform:`translateY(${dy}px)${B}`,opacity:0},{opacity:op,offset:.4},{transform:`translateY(0)${B}`,opacity:op}],{duration:dur,delay,easing:EASE_IN,fill:"both"}));
       });
@@ -136,15 +139,16 @@ const PageFx=(()=>{
     const h=document.documentElement;if(!h.classList.contains("pfx-arrive")){arriveFns.splice(0).forEach(f=>f());return}
     if(RM()){h.classList.remove("pfx-arrive");if(cover){cover.remove();cover=null}arriveFns.splice(0).forEach(f=>f());return}
     /* 2026-11-06 使用者：進部門後整個介面卡一下。看板剛載入時要畫第一次畫面、讀雲端、套秘書處的學年（又重畫一次），
-       翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 5 格都在 22ms 內畫完才開始，最多等 1.6 秒；
+       翻進來的動畫跟這些搶主執行緒就會頓。所以等「畫面穩定」：連續 3 格都在 22ms 內畫完才開始，最多等 0.8 秒
+       （2026-11-24 縮短：原本 5 格、最多 1.6 秒，慢的手機常常等滿；資料與字型另外由 gate 把關，這裡只擋剛畫完那一下）；
        等的這段時間整頁還是透明（底色），看不到半成品 */
     /* quick（html[data-pfx-quick]，主頁 home.html 設）：回主頁沒有資料要等，連 load（字型、圖）都不等，連續 3 格穩就收、最多 0.45 秒，免得蓋著底板乾等 */
-    const quick=h.hasAttribute("data-pfx-quick"),NEED=quick?3:5,MAXW=quick?450:1600;
+    const quick=h.hasAttribute("data-pfx-quick"),NEED=3,MAXW=quick?450:800;
     const calm=f=>{let n=0,last=performance.now();const t0=last,tick=now=>{n=now-last<22?n+1:0;last=now;if(n>=NEED||now-t0>MAXW)f();else requestAnimationFrame(tick)};requestAnimationFrame(tick)};
     const start=()=>ready().then(()=>calm(()=>{
       const my=++tok,c=cover,flip=c&&c.dataset.k==="flip";cover=null;owner.set(document.body,my);hold(document.body);h.classList.remove("pfx-arrive");
       /* 主頁過場的底板：桌面＝淡出並略放大，區塊照常浮上來；手機＝標誌淡出，區塊不規則浮現 */
-      if(c){const a=flip?c.animate([{opacity:1},{opacity:0}],{duration:320,easing:EASE_OUT,fill:"forwards"}):c.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(1.04)"}],{duration:360,delay:60,easing:EASE_OUT,fill:"forwards"});
+      if(c){const a=flip?c.animate([{opacity:1},{opacity:0}],{duration:200,easing:EASE_OUT,fill:"forwards"}):c.animate([{opacity:1,transform:"none"},{opacity:0,transform:"scale(1.04)"}],{duration:220,easing:EASE_OUT,fill:"forwards"});
         a.finished.catch(()=>{}).then(()=>c.remove())}
       arriveFns.splice(0).forEach(f=>f());
       run(document.body,"in",my,FADE_IN,false,0,true,flip).then(()=>{if(owner.get(document.body)===my){owner.delete(document.body);reset(document.body)}});
