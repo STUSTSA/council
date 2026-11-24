@@ -61,7 +61,7 @@ const storeDeptData=id=>storeDeptFull(id).then(r=>r.data);
    測試部門（test:true，例如實測 Google 登入時的水果部）切到 firestore 不算：不讓一個測試部門改變其他部門與主頁全會行事曆的行為（2026-11-19） */
 const storeScopeOn=()=>!!(CFG.firebase&&CFG.firebase.projectId)&&BOARD_DEPTS.some(d=>d.source==="firestore"&&!d.test);
 function storeScopeEvents(scope,from,to,o){return storeFsGet().then(fs=>fs.eventsByScope(CFG.firebase,scope,from,to,o))}   /* o.pub＝公共版（沒登入時只查公開事件） */
-const storeDeptIssues=id=>storeFsGet().then(fs=>fs.issuesOf(CFG.firebase,id));   /* 某個部門的議題（行事曆「活動」讀活動部的專案用；要登入） */
+const storeDeptIssues=(id,o)=>storeFsGet().then(fs=>fs.issuesOf(CFG.firebase,id,o));   /* 某個部門的議題（行事曆「活動」讀活動部的專案用，要登入；主頁的專案卡片帶 {open:true}，沒登入也讀） */
 /* 讀取新資料庫失敗時把原始錯誤記到 console（2026-11-20：開發專案缺索引時畫面只寫「讀取失敗」、查不到原因）。畫面照舊只顯示簡短原因：
    原始訊息可能含專案網址與建索引的連結，不放上畫面。沒登入或沒權限（permission-denied）是預期中會發生的，用 warn */
 const fsReadErr=(where,e)=>{(e&&e.code==="permission-denied"?console.warn:console.error)(`Firestore 讀取失敗（${where}）`,e)};

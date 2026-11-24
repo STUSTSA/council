@@ -81,11 +81,11 @@ async function eventsByScope(cfg, scope, from, to, o = {}) {
 }
 /* 行事曆「活動」的活動專案（2026-11-24）：活動部的專案＝issues 裡 deptId 是 events 的那幾筆（名稱、起訖）。只讀這一個集合，不讀整個部門。
    跟行事曆其他內容一樣要登入才讀；期限短（2 分鐘），剛建立的專案回主頁很快就看得到 */
-async function issuesOf(cfg, dept) {
+async function issuesOf(cfg, dept, o = {}) {   /* o.open＝主頁的專案卡片：議題本來就對外公開，沒登入也讀；行事曆不帶（行事曆要登入） */
   await authReady(cfg);
   const { db, auth } = fb(cfg);
-  if (!auth.currentUser) throw Object.assign(new Error("login required"), { code: "permission-denied" });
-  return cached(`${auth.currentUser.uid}|issues|${dept}`, TTL_PRES, () => many(query(collection(db, "issues"), where("deptId", "==", dept))), T);
+  if (!auth.currentUser && !o.open) throw Object.assign(new Error("login required"), { code: "permission-denied" });
+  return cached(`${uidOf(cfg)}|issues|${dept}`, TTL_PRES, () => many(query(collection(db, "issues"), where("deptId", "==", dept))), T);
 }
 /* 登出、換帳號：這台裝置上存的讀取結果全部清掉（不留給下一個人） */
 const clearCache = async () => { await drop(""); return wipePersistence(); };   /* 回傳 true＝連 Firestore 的離線快取也清了（連線已終止，呼叫端要重新載入頁面） */
