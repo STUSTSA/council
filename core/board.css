@@ -327,7 +327,8 @@ button.add-row:hover{color:var(--ink);transform:none;box-shadow:none}
 .lc{--pad:24px;position:relative;display:flex;flex-direction:column;min-height:340px;padding:22px var(--pad) 0;border-radius:var(--r-lg);background:var(--blk);color:var(--ink);box-shadow:var(--blk-sh);container:lc/inline-size}
 .lc.ro{min-height:0;padding-bottom:16px}
 .lc-pane .lc{max-height:calc(100dvh - var(--dtop-h,150px) - 24px)}
-.lc-pane .lc:not(.ro){height:calc(100dvh - var(--dtop-h,150px) - 56px);min-height:340px}   /* 可編輯的詳情卡高度跟著視窗（上面固定的標題列與搜尋列＝--dtop-h）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
+.lc-pane .lc{min-height:min(340px,100dvh - var(--dtop-h,150px) - 24px)}   /* 視窗很矮時（瀏覽器沒放到最大、開著別的視窗）卡片最小高度跟著縮，不超出視窗：超出的話捲到底卡片會被往上推，標題鑽到固定頂部區下面被切掉（2026-11-24 回報） */
+.lc-pane .lc:not(.ro){height:calc(100dvh - var(--dtop-h,150px) - 56px)}   /* 可編輯的詳情卡高度跟著視窗（上面固定的標題列與搜尋列＝--dtop-h）：內容少也一樣高，進出編輯不跳動，逐行內容區（.lc-body）撐滿剩下的高度；唯讀卡片照內容高 */
 .lc-in{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
 .lc-head{display:flex;align-items:center;gap:10px;min-height:40px}
 .lc-head .live-dot{width:10px;height:10px}
@@ -570,7 +571,7 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 .wrap:has(#liveMD.split) .dsrow:has(#dSearch:not([hidden])){width:calc(clamp(240px,34%,320px) + var(--dtop-x));padding-right:0}
 #liveMD.split .lc-pane{top:var(--dhd-h,64px);margin-top:calc(-1 * var(--rise,0px));margin-bottom:calc(36px - var(--pane-d))}
 #liveMD.split .lc-pane .lc:not(.ro){height:calc(100dvh - var(--dhd-h,64px) - 36px)}
-#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px)}
+#liveMD.split .lc-pane .lc{max-height:calc(100dvh - var(--dhd-h,64px) - 24px);min-height:min(340px,100dvh - var(--dhd-h,64px) - 36px)}
 /* --- 議題卡片裡的小膠囊 --- */
 /* 議題卡片裡「進行中的即時回報」小膠囊：卡片色塊上的內層膠囊（--bg 底）、燈號帶狀態色 */
 .kid-evs{display:grid;gap:4px}
