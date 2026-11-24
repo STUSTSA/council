@@ -1409,8 +1409,6 @@ dialog#dlg.in-pane .dlg-actions{margin-top:6px}
 .hm-round{display:grid;place-items:center;flex:none;width:52px;height:52px;min-height:0;padding:0;border:0;border-radius:50%;background:var(--blk);box-shadow:var(--blk-sh);color:var(--ink)}
 .hm-round .ico{width:22px;height:22px}
 .hm-seg{flex:none}   /* 部門／專案切換：上排中間（桌面兩邊各一個 .hm-sp；手機不顯示時間、改成三欄格線對畫面正中央置中，見下面手機那段）；外觀是共用的 .lseg */
-@media (max-width:640px){.hm-seg.lseg>[data-k]{padding-inline:11px}}   /* 手機上排放標誌、切換、時間、設定四樣：切換的左右內距收一點 */
-@media (max-width:380px){.hm .hm-top{gap:6px}}   /* 360 寬的手機：上排間距再收，四樣才放得下 */
 .hm-seg[hidden]{display:none}
 .hm-n small{margin-left:.3em;font-size:.48em;font-weight:400;color:var(--muted)}   /* 專案卡片：開始日期後面接結束日期 */
 .hm-none{margin:auto;padding:40px 0;color:var(--muted);font-size:14px;letter-spacing:.06em;text-align:center}   /* 「專案」是空的、讀取中、讀不到 */
