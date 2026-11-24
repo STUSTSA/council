@@ -193,17 +193,21 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     await p.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='fruit').source='github';storeFsMod=window.__fm;CAL_DATA.forEach((v,k)=>{if(!k.startsWith('dept:'))CAL_DATA.delete(k)})});await p.click('.cal-seg [data-k="mine"]');await p.waitForTimeout(400);
     ok(!t0&&!t1.on&&t1.q===0&&t1.ev===0,`活動、會議：只有測試部門（水果部）是 firestore 不算＝空的、不讀（${JSON.stringify(t1)}）`);
     /* 有部門切到 firestore 時，活動、會議讀 scope 的時間事件（用替身模組，記下查詢參數） */
-    const sc=await p.evaluate(async X=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';window.__q=[];
-      storeFsMod=Promise.resolve({eventsByScope:async(cfg,s,a,b)=>{__q.push([s,a<b]);return [{id:'events__e1',deptId:'events',label:X,startRaw:today()+' 18:00',endRaw:'',allDay:false,place:'操場',scope:s}]}});
+    const sc=await p.evaluate(async X=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';window.__q=[];window.__qi=[];
+      storeFsMod=Promise.resolve({eventsByScope:async(cfg,s,a,b)=>{__q.push([s,a<b]);return [{id:'events__e1',deptId:'events',label:X,startRaw:today()+' 18:00',endRaw:'',allDay:false,place:'操場',scope:s}]},
+        /* 活動專案（2026-11-24）：活動部的議題，有起訖的才列 */
+        issuesOf:async(cfg,d)=>{__qi.push(d);return [{id:'events__i1',deptId:'events',title:'迎新專案'+X,start:today(),end:addDays(today(),2)},{id:'events__i2',deptId:'events',title:'沒排日期的專案',start:'',end:''}]}});
       NOTI.day=today();NOTI.month=today().slice(0,7);renderNoti();return storeScopeOn()},XSS);
     await p.click('.cal-seg [data-k="act"]');await p.waitForTimeout(700);
     const a=await p.evaluate(()=>({q:JSON.stringify(__q),ev:document.querySelectorAll('.cal-list .cal-ev').length,pill:$('.cal-list .ce-k')?.textContent,cls:$('.cal-list .ce-k')?.className,img:document.querySelectorAll('.cal-list img').length,x:window.__xss}));
-    ok(sc&&a.q==='[["all-activity",true]]'&&a.ev===1&&a.pill==='活動部'&&/pri/.test(a.cls),`活動：讀 scope=all-activity（${a.q}），清單是那個部門的事`);
+    ok(sc&&a.q==='[["all-activity",true]]'&&a.ev===2&&a.pill==='活動部'&&/pri/.test(a.cls),`活動：讀 scope=all-activity（${a.q}），清單是那個部門的事`);
+    const pj=await p.evaluate(()=>({qi:__qi.join(),txt:$('.cal-list').textContent,nx:(()=>{NOTI.day=addDays(today(),2);calPaint(NOTI);const t=$('.cal-list').textContent;NOTI.day=today();calPaint(NOTI);return t})()}));
+    ok(pj.qi==='events'&&/迎新專案/.test(pj.txt)&&!/沒排日期的專案/.test(pj.txt)&&/迎新專案/.test(pj.nx),`活動：活動部的專案（有起訖的）也列出來、跨到結束那天（讀 ${pj.qi}）`);
     ok(a.img===0&&!a.x,'活動清單的事件名稱有 <img onerror>：照字面顯示');
     await p.click('.cal-seg [data-k="meet"]');await p.waitForTimeout(700);
     ok(await p.evaluate(()=>JSON.stringify(__q.map(x=>x[0]))==='["all-activity","all-meeting"]'&&!!$('.cal-list .ce-k.line')),'會議：讀 scope=all-meeting，膠囊是外框');
     await p.click('.cal-seg [data-k="act"]');await p.waitForTimeout(400);
-    ok(await p.evaluate(()=>__q.length===2),'切回活動：讀過的不重讀');
+    ok(await p.evaluate(()=>__q.length===2&&__qi.length===1),'切回活動：讀過的不重讀');
     await p.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='events').source='github'});
     await p.click('.cal-seg [data-k="mine"]');await p.waitForTimeout(400);}
 
@@ -285,7 +289,7 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
     /* P2-1：活動模式（替身模組）、點明日（12/01）→ 讀十二月 */
     await q.evaluate(()=>{BOARD_DEPTS.find(d=>d.id==='events').source='firestore';window.__q=[];
       storeFsMod=Promise.resolve({eventsByScope:async(cfg,s,a,b,o)=>{__q.push([s,new Date(a).toISOString().slice(0,10),new Date(b).toISOString().slice(0,10),!!(o&&o.pub)]);
-        return [{id:'events__d1',deptId:'events',label:'十二月活動',startRaw:'2026-12-01 18:00',endRaw:'',allDay:false,place:'',scope:s}]}})});
+        return [{id:'events__d1',deptId:'events',label:'十二月活動',startRaw:'2026-12-01 18:00',endRaw:'',allDay:false,place:'',scope:s}]},issuesOf:async()=>[]})});
     await q.click('.cal-seg [data-k="act"]');await q.waitForTimeout(700);
     await q.click('#notiPage .nd-card:not(.today)');await q.waitForTimeout(1200);
     const m=await q.evaluate(()=>({month:NOTI.month,day:NOTI.day,q:__q.length,last:__q[__q.length-1],list:$('.cal-list').textContent.trim()}));
@@ -333,7 +337,8 @@ const noAnims=p=>p.evaluate(()=>document.getAnimations().filter(a=>a.playState==
       out.q2=[...window.__fsq];calUnmount&&calUnmount($('#pubW'));$('#pubW').remove();return out}).catch(e=>({err:e.message}));
     ok(!r.err&&r.q.length===2&&r.q.every(x=>/^events:visibility==public&/.test(x)&&!/scope==/.test(x))&&/公開活動/.test(r.list)&&!/部門公開事件/.test(r.list),
       `未登入的公共版：查詢帶 visibility=='public'（${JSON.stringify(r.q)}），只列活動／會議（${(r.list||'').trim().slice(0,30)}）`);
-    ok(!r.err&&r.q2&&r.q2.length===2&&r.q2.every(x=>/^events:scope==all-(activity|meeting)&/.test(x)&&!/visibility/.test(x)),`登入後的公共版：照舊用 scope 查（${JSON.stringify(r.q2)}）`);
+    {const ev=(r.q2||[]).filter(x=>/^events:/.test(x)),is=(r.q2||[]).filter(x=>/^issues:/.test(x));
+      ok(!r.err&&ev.length===2&&ev.every(x=>/^events:scope==all-(activity|meeting)&/.test(x)&&!/visibility/.test(x))&&is.join()==='issues:deptId==events'&&r.q2.length===3,`登入後的公共版：照舊用 scope 查，另外讀一次活動部的專案（${JSON.stringify(r.q2)}）`)}
     await q.close();}
   /* 9e. P2-7：通知頁開著時按設定鍵 */
   {const S3=await c.setup(),q=await S3.mk(1300,900,'light',false);await S3.login(q);await q.click('#notiBtn');await q.waitForTimeout(800);

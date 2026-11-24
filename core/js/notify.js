@@ -117,13 +117,20 @@ const calPopHTML=c=>`<div class="cal-pop" role="listbox" aria-label="月份">${c
    公共版的活動、會議另外一組 key（pub:）：沒登入 Google 的人讀不到時間事件（06：行事曆要登入），公共版顯示「登入後才看得到」；登入後所有人讀同一份（store-firestore.js 的 eventsByScope） */
 const CAL_MODES=[["mine","本部門"],["pres","會長室"],["act","活動"],["meet","會議"],["other","其他"]],CAL_PMODES=[["all","全部"],["act","活動"],["meet","會議"]];
 const CAL_DATA=new Map();   /* key（dept:代號、scope:all-activity:YYYY-MM、公共版 pub:all-activity:YYYY-MM）→ {items, err, at} 或 {loading:true} */
+/* 活動專案（2026-11-24）：活動部「專案」分頁建立的專案（資料是活動部的議題，config.js 的 ISS）有起訖日期的，出現在「活動」（公共版還有「全部」）。
+   活動部自己的看板直接用畫面上的資料（剛建立馬上看得到）；其他部門與主頁另外讀活動部的議題（key「proj:events」，不分月份、讀一次）；已結案的也留著 */
+const CAL_PROJ="proj:events";
+const calProjOwn=c=>!c.pub&&CFG.deptId==="events";
+const calProjKeys=c=>!calProjOwn(c)&&storeScopeOn()&&deptSourceOf("events")==="firestore"?[CAL_PROJ]:[];
+const projItems=is=>(is||[]).filter(i=>/^\d{4}-\d\d-\d\d/.test(i.start||"")).map(i=>{const d=i.start.slice(0,10),en=String(i.end||"").slice(0,10);
+  return {key:`proj:${i.id}`,date:d,end:en>d?en:"",time:"",etime:"",title:i.title||"（未命名）",place:"",ev:"",dept:"events",kind:"act"}});
 const calOthers=()=>(window.BOARD_DEPTS||[]).filter(d=>d.id!==CFG.deptId&&d.id!=="president");
 function calKeys(c){
   if(c.find)return c.fp.filter(id=>id&&id!==CFG.deptId).map(id=>"dept:"+id);   /* 找重疊：只讀選到的兩個部門（自己的用已載入的看板） */
   const sc=s=>storeScopeOn()?[`${c.pub?"pub":"scope"}:${s}:${c.month}`]:[];
-  if(c.pub)return c.mode==="act"?sc("all-activity"):c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting")];
+  if(c.pub)return c.mode==="act"?[...sc("all-activity"),...calProjKeys(c)]:c.mode==="meet"?sc("all-meeting"):[...sc("all-activity"),...sc("all-meeting"),...calProjKeys(c)];
   if(c.mode==="pres")return CFG.deptId==="president"?[]:["dept:president"];
-  if(c.mode==="act")return sc("all-activity");
+  if(c.mode==="act")return [...sc("all-activity"),...calProjKeys(c)];
   if(c.mode==="meet")return sc("all-meeting");
   if(c.mode==="other")return c.oth.map(id=>"dept:"+id);
   return [];
@@ -131,6 +138,7 @@ function calKeys(c){
 function calItems(c){
   let xs=!c.pub&&(c.mode==="mine"||c.mode==="pres"&&CFG.deptId==="president")?notiMine():[],loading=false,err="";
   if(!c.pub&&c.mode==="pres")xs=xs.concat(bkItems());   /* 會長預約（booking.js）：開放時段與我的預約也是這個模式裡的事，標在月曆上、點日期看得到 */
+  if(c.mode==="act"&&calProjOwn(c))xs=xs.concat(projItems(state.issues));
   calKeys(c).forEach(k=>{const v=CAL_DATA.get(k);if(!v||v.loading)loading=true;else{if(v.err)err=err||v.err;xs=xs.concat(v.items)}});
   return {xs:xs.sort(byWhen),loading,err};
 }
@@ -145,6 +153,7 @@ function calLoad(c){
   calKeys(c).forEach(k=>{if(CAL_DATA.has(k))return;CAL_DATA.set(k,{loading:true});
     let p;
     if(k.startsWith("dept:")){const id=k.slice(5);p=fwLoad(id).then(r=>r&&r.data?{items:notiItems(r.data,id)}:{items:[],err:(r&&r.err)||"讀不到這個部門的資料"})}
+    else if(k===CAL_PROJ)p=storeDeptIssues("events").then(docs=>({items:projItems(docs)}));
     else{const [kind,s,m]=k.split(":"),a=StoreMap.parseTaipei(addDays(m+"-01",-31)),b=StoreMap.parseTaipei(ym(new Date(+m.slice(0,4),+m.slice(5,7),1))+"-01");
       p=storeScopeEvents(s,a.ms,b.ms,{pub:kind==="pub"}).then(docs=>({items:scopeItems(docs,s==="all-meeting"?"meet":"act")}))}
     p.catch(e=>{if(!k.startsWith("dept:"))fsReadErr("行事曆 "+k,e);return {items:[],err:!k.startsWith("dept:")&&e&&e.code==="permission-denied"?"登入後才看得到":STORE_XERR(e)}}).then(   /* 活動、會議不是「某個部門搬家」：沒權限只說要登入 */v=>{CAL_DATA.set(k,{...v,at:Date.now()});CALS.forEach(x=>{if(calKeys(x).includes(k)&&(x!==NOTI||notiOpen))calPaint(x)})});
@@ -158,7 +167,7 @@ function calStale(){CAL_DATA.forEach((v,k)=>{if(!v.loading&&(v.err||Date.now()-v
    輸入時只換結果那一塊（不重畫整個行事曆，輸入框的焦點與輸入法不會斷） */
 function calSearch(c){
   const q=c.q.trim().toLowerCase(),seen=new Set(),out=[];if(!q)return out;
-  const all=[...(c.pub?[]:notiMine())];CAL_DATA.forEach((v,k)=>{if(v.items&&(c.pub?k.startsWith("pub:"):!k.startsWith("pub:")))all.push(...v.items)});
+  const all=[...(c.pub?[]:notiMine()),...(calProjOwn(c)?projItems(state.issues):[])];CAL_DATA.forEach((v,k)=>{if(v.items&&(k===CAL_PROJ||(c.pub?k.startsWith("pub:"):!k.startsWith("pub:"))))all.push(...v.items)});
   all.forEach(x=>{if(seen.has(x.key))return;seen.add(x.key);
     if([x.title,x.place,x.ev,deptName(x.dept)].some(t=>t&&String(t).toLowerCase().includes(q)))out.push(x)});
   return out.sort(byWhen);
