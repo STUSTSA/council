@@ -35,9 +35,9 @@ const ALLOWED=new Set(['transform','opacity','offset','easing','composite']);
   {const p=await mk(1300,860,{data:1});await go(p,'home.html');
     const r=await p.evaluate(()=>({tiles:document.querySelectorAll('.hm-tile').length,on:document.querySelector('.hm-tile.on .hm-nm')?.textContent,en:document.querySelector('.hm-tile.on .hm-en')?.textContent,
       su:!!document.querySelector('#hmMe svg.hm-su .su-emb'),clock:document.getElementById('hmClock').textContent,set:document.getElementById('hmSet').getAttribute('aria-label'),
-      bad:document.querySelectorAll('#tabbar,.tb-main,#notiBtn,.noti-n,.lseg').length,title:document.querySelectorAll('[title]').length}));
+      bad:document.querySelectorAll('#tabbar,.tb-main,#notiBtn,.noti-n').length,seg:[...document.querySelectorAll('#hmSeg:not([hidden]) [data-k]')].map(b=>b.textContent).join(),title:document.querySelectorAll('[title]').length}));
     ok(r.tiles===9&&r.on==='權益部'&&r.en==='STUDENT RIGHTS',`九張色塊、焦點預設權益部（${r.tiles} ${r.on} ${r.en}）`);
-    ok(r.su&&/^\d\d:\d\d$/.test(r.clock)&&r.set==='外觀主題'&&r.bad===0,`只有左上標誌、時間 ${r.clock}、外觀主題鈕；沒有工具列、通知、部門／專案切換`);
+    ok(r.su&&/^\d\d:\d\d$/.test(r.clock)&&r.set==='外觀主題'&&r.bad===0&&r.seg==='部門,專案',`上排：左上標誌、部門／專案切換（${r.seg}；2026-11-24 起）、時間 ${r.clock}、外觀主題鈕；沒有工具列、通知`);
     ok(r.title===0,'主頁沒有 title 屬性');
     const ring=()=>p.evaluate(()=>{const g=document.getElementById('hmRing'),t=document.querySelector('.hm-tile.on'),m=new DOMMatrix(getComputedStyle(g).transform);
       return {tf:g.style.transform,cx:m.m41+g.offsetWidth/2,tx:t.offsetLeft+t.offsetWidth/2,w:g.offsetWidth,i:+t.dataset.i,trans:getComputedStyle(g).transitionProperty}});
