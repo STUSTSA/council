@@ -1,4 +1,4 @@
-/* 使用說明（設定 →「使用說明」，core/js/guide.js）：不用登入就看得到；三項教學（即時回報卡片、看過期的事、看今天要處理的事）；
+/* 使用說明（設定 →「使用說明」，core/js/guide.js）：不用登入就看得到；七項教學（即時回報卡片、進度與專案、看過期的事、看今天要處理的事、完成紀錄、產生每週報告、產生工作報告）；
    示範會自己播（畫面會變、手指出現）；練習照題目做完顯示「練習完成」；練習的內容不進 state、不打 GitHub API；名稱輸入 HTML 不會變成節點。
    手機 412 與桌面 1366；截圖寫到 OUT（預設 /tmp/gd1）。準備：照 CLAUDE.md 開 8300，在 tools/tests/ 執行 node gd1.js */
 const c=require('./common.js'),fs=require('fs');const OUT=process.env.OUT||'/tmp/gd1';fs.mkdirSync(OUT,{recursive:true});
@@ -14,7 +14,7 @@ for(const [name,w,h,touch] of [['m',412,880,true],['d',1366,768,false]]){
   await p.click('#setBtn');await p.waitForTimeout(900);
   ok(await p.locator('#setOv [data-set=guide]').count()===1,name+' 沒登入也有「使用說明」一列');
   await p.click('#setOv [data-set=guide]');await p.waitForTimeout(900);
-  ok(await p.locator(host+' [data-gdl]').count()===3,name+' 教學清單三項');
+  ok(await p.locator(host+' [data-gdl]').count()===7,name+' 教學清單七項');
   await p.screenshot({path:`${OUT}/${name}_list.png`});
 
   /* 1 即時回報卡片 */
@@ -44,9 +44,14 @@ for(const [name,w,h,touch] of [['m',412,880,true],['d',1366,768,false]]){
   ok(await p.locator('.gd-in .gd-cp').count()===2&&(await tip(p)).includes('練習完成'),name+' 確認後刪除，四題做完：'+await tip(p));
   await p.screenshot({path:`${OUT}/${name}_live_done.png`});
   await p.click('[data-gdreset]');await p.waitForTimeout(400);
+  await p.click('.gd-in .gd-cp >> nth=0');await p.waitForTimeout(400);await p.click('.gd-in [data-gd=c-ok]');await p.waitForTimeout(500);
+  ok(await p.locator('.gd-in .gd-cp').count()===2,name+' 卡片上的「完成」鈕也能完成');
+  await p.click('.gd-in .gd-cp >> nth=0');await p.waitForTimeout(400);await p.click('.gd-in [data-gd=c-del]');await p.waitForTimeout(500);
+  ok(await p.locator('.gd-in .gd-ask').count()===1,name+' 卡片上的「刪除」鈕先確認');
+  await p.click('.gd-in [data-gd=ask-no]');await p.waitForTimeout(300);await p.click('[data-gdreset]');await p.waitForTimeout(400);
   ok(await p.locator('.gd-in .gd-cp').count()===3&&(await tip(p)).includes('練習 1／4'),name+' 重來回到原本三張');
   await p.goBack();await p.waitForTimeout(700);
-  ok(await p.locator(host+' [data-gdl]').count()===3,name+' 上一頁回到教學清單');
+  ok(await p.locator(host+' [data-gdl]').count()===7,name+' 上一頁回到教學清單');
 
   /* 3 看過期的事 */
   await p.click(host+' [data-gdl=overdue]');await p.waitForTimeout(400);await p.click('[data-gdmode=practice]');await p.waitForTimeout(400);
@@ -70,6 +75,42 @@ for(const [name,w,h,touch] of [['m',412,880,true],['d',1366,768,false]]){
   ok(await p.locator('.gd-in .gd-today li').count()===3,name+' 今日層列出三件事');await p.screenshot({path:`${OUT}/${name}_today.png`});
   await p.click('.gd-in [data-gd=shut]');await p.waitForTimeout(400);
   ok((await tip(p)).includes('練習完成'),name+' 今日教學做完');
+  await p.goBack();await p.waitForTimeout(600);
+
+  /* 2 進度與專案 */
+  const tap=async sel=>{await p.click('.gd-in '+sel);await p.waitForTimeout(450)};
+  await p.click(host+' [data-gdl=prog]');await p.waitForTimeout(400);await p.waitForTimeout(3600);await p.screenshot({path:`${OUT}/${name}_prog_demo.png`});
+  await p.click('[data-gdmode=practice]');await p.waitForTimeout(400);
+  await tap('[data-gd=new]');await p.fill('.gd-in [data-gdin=title]','<b onclick=1>新議題</b>');await tap('[data-gd=close]');
+  ok(await p.locator('.gd-in .gd-row').count()===3&&await p.locator('.gd-in .gd-row b b').count()===0&&(await tip(p)).includes('練習 2／3'),name+' 進度：新增一個議題，名稱只當文字');
+  await p.screenshot({path:`${OUT}/${name}_prog.png`});
+  await tap('.gd-row >> nth=0');await p.locator('.gd-in .gd-st >> nth=3').click({force:true});await p.waitForTimeout(300);
+  ok(await p.locator('.gd-in .gd-st.on').evaluate(e=>e.textContent)==='處理中',name+' 進度：沒按編輯不能改階段');
+  await tap('[data-gd=edit]');await tap('.gd-st >> nth=3');await p.screenshot({path:`${OUT}/${name}_prog_edit.png`});await tap('[data-gd=edit]');
+  ok((await tip(p)).includes('練習完成'),name+' 進度教學做完');
+  await p.goBack();await p.waitForTimeout(600);
+
+  /* 5 完成紀錄 */
+  await p.click(host+' [data-gdl=done]');await p.waitForTimeout(400);await p.click('[data-gdmode=practice]');await p.waitForTimeout(400);
+  await tap('[data-gd=tab]');await p.screenshot({path:`${OUT}/${name}_done_weeks.png`});await tap('[data-gd=week]');await tap('.gd-dn >> nth=1');
+  ok(await p.locator('.gd-in .gd-dnote').count()===1&&(await tip(p)).includes('練習完成'),name+' 完成紀錄：進週、點一項看到內容');
+  await p.screenshot({path:`${OUT}/${name}_done.png`});
+  await p.goBack();await p.waitForTimeout(600);
+
+  /* 6 每週報告 */
+  await p.click(host+' [data-gdl=weekly]');await p.waitForTimeout(400);await p.click('[data-gdmode=practice]');await p.waitForTimeout(400);
+  await tap('[data-gd=gen]');await tap('[data-gd=rep]');
+  ok(await p.locator('.gd-in .gd-rtext span').count()===8,name+' 每週報告：生成後點開有全文');
+  await p.screenshot({path:`${OUT}/${name}_weekly.png`});await tap('[data-gd=copy]');
+  ok((await tip(p)).includes('練習完成'),name+' 每週報告教學做完');
+  await p.goBack();await p.waitForTimeout(600);
+
+  /* 7 工作報告 */
+  await p.click(host+' [data-gdl=report]');await p.waitForTimeout(400);await p.click('[data-gdmode=practice]');await p.waitForTimeout(400);
+  await tap('[data-gd=rpt]');await tap('[data-gd=go]');await tap('[data-gd=chap]');
+  ok(await p.locator('.gd-in .gd-paper>span').count()===5,name+' 工作報告：預覽、加一章');
+  await tap('[data-gd=pdf]');await p.screenshot({path:`${OUT}/${name}_report.png`});
+  ok((await tip(p)).includes('練習完成'),name+' 工作報告教學做完');
   await p.goBack();await p.waitForTimeout(600);await p.goBack();await p.waitForTimeout(900);
   ok(await p.locator('.gd-stage').count()===0,name+' 離開後教學畫面收掉');
   ok(await p.evaluate(()=>JSON.stringify(state))===before,name+' 看板資料沒有被練習改到');
