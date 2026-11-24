@@ -17,8 +17,8 @@ function hsEvHit(e,ql){
 }
 function hsIndex(ql){
   const live=[],done=[],issue=[];
-  state.events.forEach(e=>{const h=hsEvHit(e,ql);if(!h)return;(e.doneAt?done:live).push({k:e.doneAt?"done":"live",id:e.id,title:evName(e),sub:h.sub,st:e.doneAt?"done":evStatus(e),d:e.doneAt||""})});
-  state.issues.forEach(i=>{
+  state.events.forEach(e=>{if(!inProj(e))return;const h=hsEvHit(e,ql);if(!h)return;(e.doneAt?done:live).push({k:e.doneAt?"done":"live",id:e.id,title:evName(e),sub:h.sub,st:e.doneAt?"done":evStatus(e),d:e.doneAt||""})});
+  state.issues.forEach(i=>{if(!projIs(i))return;
     if(i.doneAt){if(hsHit(i.title,ql)||hsHit(i.note,ql))done.push({k:"done",id:i.id,title:i.title,sub:hsHit(i.title,ql)?"":i.note,st:"done",d:i.doneAt});return}
     const m=(i.markers||[]).map(x=>x.text).find(t=>hsHit(t,ql));
     if(hsHit(i.title,ql)||hsHit(i.note,ql)||m)issue.push({k:"issue",id:i.id,title:i.title,sub:hsHit(i.title,ql)?"":hsHit(i.note,ql)?i.note:m});

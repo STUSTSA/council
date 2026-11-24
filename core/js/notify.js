@@ -11,18 +11,20 @@ function notiItems(s,dept){
   const out=[];
   (s.events||[]).filter(e=>!e.doneAt).forEach(e=>(e.times||[]).forEach(t=>{if(!t.start)return;
     const d=t.start.slice(0,10),en=(t.end||"").slice(0,10),b=(e.blocks||[]).find(x=>x.timeId===t.id);
-    out.push({key:`${dept}:t:${t.id}`,evId:e.id,tid:t.id,done:!!(b&&b.check),date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
+    const pj=dept==="events"&&e.issueId?((s.issues||[]).find(i=>i.id===e.issueId)||{}).title||"":"";   /* 活動部：這張卡片掛在哪個專案底下（行事曆的膠囊標出來） */
+    out.push({pj,key:`${dept}:t:${t.id}`,evId:e.id,tid:t.id,done:!!(b&&b.check),date:d,end:en&&en>d?en:"",time:t.start.slice(11,16),etime:(t.end||"").slice(11,16),title:t.label||"（未命名）",place:t.place||"",ev:e.name||"",dept})}));
   return out.sort(byWhen);
 }
 const byWhen=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
-const notiMine=()=>notiItems(state,CFG.deptId||"rights");
+const notiMine=()=>notiItems(notiState(),CFG.deptId||"rights");
+const notiState=()=>projCur()?{...state,events:state.events.filter(inProj)}:state;   /* 專案頁：通知只算這個專案的卡片 */
 /* 某一天有這件事：單日＝那天；時段＝頭到尾每一天 */
 const covers=(x,d)=>x.end?d>=x.date&&d<=x.end:x.date===d;
 const nmd=s=>`${+s.slice(5,7)}/${+s.slice(8,10)}`;
 const deptName=id=>{const d=fwDept(id);return d?d.name:id};
 /* 標題列通知鈕上的紅色數字＝清點區「已過期」的件數（定義見 notiTodoItems：還沒結案的即時回報裡，時間行還沒勾、時間已經過了；舊時間標記也算） */
-const notiLateItems=(s=state)=>notiTodoItems(s).filter(x=>x.g==="late");
-const notiLate=(s=state)=>notiLateItems(s).length;
+const notiLateItems=(s=notiState())=>notiTodoItems(s).filter(x=>x.g==="late");
+const notiLate=(s=notiState())=>notiLateItems(s).length;
 function notiBadge(){
   const b=$("#notiBtn");if(!b)return;
   const n=notiLate(),el=b.querySelector(".noti-n"),txt=n?String(n>99?"99+":n):"";
@@ -94,7 +96,7 @@ function posterHTML(c,list,ov){
 }
 /* 那一天的清單：每件事一張（日期、時刻；名稱；地點、所屬的小膠囊） */
 const calWhen=x=>x.end?`${nmd(x.date)}–${nmd(x.end)}`:x.time?x.time+(x.etime&&x.etime>x.time?`–${x.etime}`:""):"整天";
-const calPill=(c,x)=>c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);
+const calPill=(c,x)=>c.mode==="mine"&&x.pj&&!projCur()?x.pj:c.mode==="mine"&&x.ev?x.ev:deptName(x.dept);   /* 活動部自己的行事曆：專案底下的時間，膠囊寫專案名稱；專案頁裡都是同一個專案，照舊寫卡片名稱 */
 const calKind=(c,x)=>x.kind==="meet"?" line":x.kind==="act"||c.mode==="mine"?" pri":c.mode==="pres"?" acc":"";
 function calListHTML(c,r){
   const d=c.day,xs=r.xs.filter(x=>covers(x,d)),ed=!c.pub&&canEdit();
@@ -225,6 +227,7 @@ function calFindToggle(c){
 }
 function calFindPick(c,id){if(c.fp.includes(id))return;c.fp[c.fpn]=id;c.fpn=1-c.fpn;calLoad(c);calPaint(c)}
 function calModesHTML(c){
+  if(!c.pub&&projCur())return "";   /* 專案頁：行事曆只有這個專案的時間，不放範圍切換（本部門、會長室、活動、會議、其他） */
   const ms=c.pub?CAL_PMODES:CAL_MODES;
   return `<div class="cal-modes"${c.find?" hidden":""}><div class="cal-seg lseg glass" role="tablist" aria-label="行事曆範圍"><span class="lseg-lens" aria-hidden="true"></span>${ms.map(([k,t])=>`<button type="button" role="tab" data-k="${k}" aria-selected="${c.mode===k}">${t}</button>`).join("")}</div></div>
     ${c.find?`<div class="cal-oth cal-fp" role="group" aria-label="選兩個部門">${(window.BOARD_DEPTS||[]).map(d=>{const k=c.fp.indexOf(d.id);return `<button type="button" class="cal-chip" role="checkbox" data-calfp="${esc(d.id)}" aria-checked="${k>=0}">${k>=0?`<i class="fnd-pm ${k?"b":"a"}"></i>`:""}${esc(d.name)}</button>`}).join("")}</div>`:""}
@@ -237,7 +240,7 @@ function calHTML(c){
   const f=c.find?calFind(c):null,r=f?{xs:[]}:calItems(c),m=c.month,id=c.pub?"calPubH":"calH";
   return `<section class="cal${c.pub?" pub":""}" aria-labelledby="${id}"><div class="cal-top">
     <div class="cal-h"><h3 class="sec-h" id="${id}" data-en="${c.pub?"STUSTSA CALENDAR":"CALENDAR"}">${c.pub?"全會行事曆":"行事曆"}</h3>
-      ${c.pub?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
+      ${c.pub||projCur()?"":`<button type="button" class="cal-fb" data-calfind aria-pressed="${c.find}" aria-label="找重疊時間">${ico("both","solo")}</button>`}<span class="cal-mp"><button type="button" class="cal-mon" data-calmon aria-haspopup="listbox" aria-expanded="${c.pop}"><span class="num">${+m.slice(5)}</span> 月${ico("down","solo")}</button>${c.pop?calPopHTML(c):""}</span></div>
     ${c===NOTI?"":`<label class="dsearch cal-q"><svg class="ds-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input type="text" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="搜尋事件" aria-label="搜尋事件" aria-controls="${id}Res" data-calq value="${esc(c.q)}"><button type="button" class="ds-x" data-calqx aria-label="清除搜尋"${c.q?"":" hidden"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg></button></label>`}
     <div class="cal-res" id="${id}Res" data-calres aria-live="polite">${calResHTML(c)}</div>
     ${calModesHTML(c)}
@@ -371,7 +374,7 @@ function notiInner(){
    已過期的用卡片堆處理（下面的 tlFly／tlBind），沒有移除：右滑或按鈕＝完成（勾起來；舊時間標記在按下的這一刻才補一行核取行，只動那一張卡片，不批次轉換）、
    左滑或按鈕＝改期（打開那張卡片的時間頁，notiRetime）。本週到期只列出來，不放動作；期限在下週以後的不收。負責人＝整張卡的專員。
    不能編輯（canEdit 為假：GitHub 模式沒選身分、唯讀）時照樣列出，但沒有按鈕、卡片拖不動。完成後卡片堆下面出現「已完成＋復原」（沿用即時回報卡的 .lc-save、.kp-st、.lc-undo） */
-function notiTodoItems(s=state){
+function notiTodoItems(s=notiState()){
   const t=today(),d=new Date(),hm=`${pad(d.getHours())}:${pad(d.getMinutes())}`,out=[];
   const past=(day,tm)=>day<t||(day===t&&!!tm&&tm<=hm);
   const wkEnd=addDays(t,(7-pd(t).getDay())%7);   /* 本週的最後一天（週日） */

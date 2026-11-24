@@ -90,8 +90,13 @@ function renderSecEdit(){
     b.classList.toggle("sec-edit",on);if(on&&!bar)b.insertAdjacentHTML("beforeend",editBarHTML());else if(!on&&bar)bar.remove()});
 }
 
-const activeIssues=()=>state.issues.filter(i=>!i.doneAt||(editing&&keepIds.has(i.id)));
-const doneIssues=()=>state.issues.filter(i=>i.doneAt&&!(editing&&keepIds.has(i.id))).sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
+/* 專案頁（config.js 的 PROJ_ID）：projCur＝這一頁的專案（議題），不是專案頁時是 null；inProj＝這張卡片屬於這一頁（一般看板全部都算）；
+   projIs＝這個議題就是這一頁的專案。各區塊的清單（即時回報、進度、完成紀錄、通知、搜尋）都經過這幾個，寫入仍然是整份部門資料 */
+const projCur=()=>PROJ_ID&&state.issues?state.issues.find(i=>i.id===PROJ_ID)||null:null;
+const inProj=e=>{const p=projCur();return !p||e.issueId===p.id};
+const projIs=i=>{const p=projCur();return !p||i.id===p.id};
+const activeIssues=()=>state.issues.filter(i=>projIs(i)&&(!i.doneAt||(editing&&keepIds.has(i.id))));
+const doneIssues=()=>state.issues.filter(i=>projIs(i)&&i.doneAt&&!(editing&&keepIds.has(i.id))).sort((a,b)=>(b.doneAt||"").localeCompare(a.doneAt||""));
 
 /* ---------- render ---------- */
 let rendering=false;
