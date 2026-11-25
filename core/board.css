@@ -167,7 +167,7 @@ body:not(.authed) :is(.card-edit-btn,.auth-only),body.edit :is(.card-edit-btn,.a
 :is(.dtop,.dsrow){--dtop-x:12px}
 .dtop{--dgap:18px;position:sticky;top:calc(8px + var(--sa-top) - var(--wrap-pt));z-index:31;margin:calc(-1 * var(--wrap-pt)) calc(-1 * var(--dtop-x)) 0;padding:var(--wrap-pt) var(--dtop-x) var(--dgap);background:var(--bg)}
 .dsrow{position:sticky;top:var(--dhd-h,64px);z-index:31;margin:0 calc(-1 * var(--dtop-x));padding:0 var(--dtop-x);background:var(--bg)}
-.dsrow::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}
+.dsrow::after{content:"";position:absolute;left:0;right:0;top:100%;z-index:-1;height:12px;background:linear-gradient(var(--bg) 20%,color-mix(in srgb,var(--bg) 0%,transparent));pointer-events:none}   /* z-index:-1＝排在搜尋列下面（.dsrow 自己是一層，淡出仍蓋得住從下面滑過的內容）：搜尋列點進去會放大一點、下緣超出 .dsrow，淡出排在上面的話外框底邊會被底色切掉（125% 縮放的螢幕最明顯，2026-11-25 回報） */
 .page-main{scroll-padding-top:var(--dtop-h,0px)}
 @media print{:is(.dtop,.dsrow){position:static}.dsrow::after{display:none}}
 .dhead{display:flex;align-items:center;gap:12px;min-width:0;margin:0;padding-top:4px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
