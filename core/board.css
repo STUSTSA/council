@@ -353,8 +353,6 @@ input.lc-title:focus{outline:none}
 .lc-rep[aria-pressed="true"]{background:var(--late);box-shadow:none;color:var(--lite)}
 /* 完成、刪除鈕（live.js lcLiveHTML：沒在編輯、有權限時；跟拖到右上角、左上角同一條流程）：同「報告」鈕的尺寸，完成＝綠框、刪除＝紅字細框 */
 .lc-act{flex:none;height:30px;min-height:30px;padding:0 14px;border:0;font-size:13px;line-height:1;transition:background-color var(--mo-fast) var(--mo-out),color var(--mo-fast) var(--mo-out)}
-.lc-act.ok{box-shadow:inset 0 0 0 1.5px var(--ok)}
-.lc-act.ok:hover{background:var(--ok);color:var(--ok-ink)}
 .lc-act.del{box-shadow:inset 0 0 0 1.5px var(--hair);color:var(--late)}
 .lc-act.del:hover{background:var(--late);box-shadow:none;color:var(--lite)}
 /* 收藏鈕＝書籤圖示（會長在別的部門看板；follow.js 的 favBtnHTML）：即時回報詳情的上下張列右側、議題卡片標題列；

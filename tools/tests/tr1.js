@@ -1,6 +1,6 @@
-/* tr1：即時回報新手引導（core/js/tour.js）與卡片上的「完成」「刪除」鈕（live.js）。固定 8300 埠，github 模式。
+/* tr1：即時回報新手引導（core/js/tour.js）與卡片上的「刪除」鈕（live.js；「完成」鈕 2026-11-25 拿掉）。固定 8300 埠，github 模式。
    沒登入不出現；登入後第一張卡片下面依序三步（完成＝右上角亮、刪除＝左上角亮、點卡片編輯＝框起來），「知道了」後記在這台裝置、不再出現；
-   設定「重看新手引導」再來一次；「略過」也記下；沒有卡片時＋鈕跳動加一句話；打開卡片有「完成」「刪除」鈕（刪除先確認、完成移到完成紀錄），編輯中收起。
+   設定「重看新手引導」再來一次；「略過」也記下；沒有卡片時＋鈕跳動加一句話；打開卡片有「刪除」鈕（先確認）、沒有「完成」鈕，編輯中收起。
    引導在自動化瀏覽器（navigator.webdriver）預設不出現，這支測試把旗標蓋掉。手機 412、桌面 1366；截圖到 SHOTS */
 const c=require('./common');const OUT=process.env.SHOTS||'.';
 (async()=>{let bad=0;const ok=(x,m)=>{console.log((x?'OK  ':'FAIL')+' '+m);if(!x)bad++};
@@ -10,7 +10,7 @@ await p.context().addInitScript(()=>Object.defineProperty(Navigator.prototype,'w
 await p.reload();await p.waitForTimeout(1800);
 await p.waitForFunction(()=>!document.body.classList.contains('intro'));await p.waitForTimeout(1500);
 const st=()=>p.evaluate(()=>{const t=document.querySelector('#tour'),f=document.querySelector('#tourFab');return {on:!!t&&!t.hidden,txt:t?t.querySelector('.tour-t').textContent:'',n:t?t.querySelector('.tour-n').textContent:'',go:t?t.querySelector('[data-tournext]').textContent:'',
-  ok:!!document.querySelector('#lzOk.show'),del:!!document.querySelector('#lzDel.show'),hl:document.querySelectorAll('.tour-hl').length,fab:!!f&&!f.hidden,pulse:!!document.querySelector('.fab.tour-pulse'),mark:localStorage.getItem('workboard:tour-live')}});
+  ok:!!document.querySelector('#lzOk.show'),del:!!document.querySelector('#lzDel.show'),hl:document.querySelectorAll('.tour-hl').length,fab:!!f&&!f.hidden,pulse:!!document.querySelector('.fab.tour-pulse'),mark:localStorage.getItem('workboard:tour-live2')}});
 let s=await st();ok(!s.on&&!s.fab,tag+' 沒登入：沒有引導 '+JSON.stringify(s));
 await login(p);await p.waitForTimeout(1600);
 s=await st();ok(s.on&&s.n==='1/3'&&/右上角＝完成/.test(s.txt)&&s.ok&&!s.del&&s.go==='下一步',tag+' 第一步：完成、右上角亮 '+JSON.stringify(s));
@@ -48,27 +48,23 @@ s=await st();ok(s.on&&s.n==='1/3'&&s.mark===null&&await p.evaluate(()=>!setOpen)
 await p.click('[data-tourskip]');await p.waitForTimeout(400);
 s=await st();ok(!s.on&&!s.ok&&s.mark==='1',tag+' 略過：收掉並記下 '+JSON.stringify(s));
 /* 引導中碰了卡片＝算看過 */
-await p.evaluate(()=>{localStorage.removeItem('workboard:tour-live');render()});await p.waitForTimeout(1600);s=await st();ok(s.on,tag+' （清掉記號）又出現');
+await p.evaluate(()=>{localStorage.removeItem('workboard:tour-live2');render()});await p.waitForTimeout(1600);s=await st();ok(s.on,tag+' （清掉記號）又出現');
 await p.evaluate(()=>document.querySelector('#events .cp').getAnimations().forEach(a=>a.cancel()));
 await p.click('#events .cp');await p.waitForTimeout(1200);
 s=await st();ok(!s.on&&s.mark==='1',tag+' 引導中點了卡片：收掉並記下 '+JSON.stringify(s));
-/* 卡片上的完成、刪除鈕 */
+/* 卡片上的刪除鈕（「完成」鈕 2026-11-25 拿掉：完成只有拖到右上角） */
 let a=await p.evaluate(()=>({done:!!document.querySelector('.lc [data-lcdone]'),del:!!document.querySelector('.lc [data-lcdel]'),id:lvOpen,n:state.events.filter(e=>!e.doneAt).length}));
-ok(a.done&&a.del,tag+' 打開卡片：有「完成」「刪除」鈕 '+JSON.stringify(a));
+ok(!a.done&&a.del&&await p.evaluate(()=>!/完成/.test(document.querySelector('.lc .lc-nav').textContent)),tag+' 打開卡片：有「刪除」鈕、沒有「完成」鈕 '+JSON.stringify(a));
 await p.screenshot({path:`${OUT}/tour_${tag}_卡片按鈕.png`});
 await p.click('.lc [data-lcdel]');await p.waitForTimeout(600);
 ok(await p.evaluate(()=>$('#dlg').open&&/刪除/.test($('#dlgForm').textContent)),tag+' 刪除：先確認');
 await p.click('#dlgForm [data-act=cancel]');await p.waitForTimeout(500);
 ok(await p.evaluate(n=>state.events.filter(e=>!e.doneAt).length===n,a.n),tag+' 取消：卡片還在');
 await p.click('.lc [data-kpgo="title"]');await p.waitForTimeout(700);
-ok(await p.evaluate(()=>editing&&!document.querySelector('.lc [data-lcdone]')),tag+' 編輯中：完成、刪除鈕收起');
+ok(await p.evaluate(()=>editing&&!document.querySelector('.lc [data-lcdel]')),tag+' 編輯中：刪除鈕收起');
 await p.keyboard.press('Escape');await p.waitForTimeout(1200);
-if(!await p.evaluate(()=>!!lvOpen)){await p.click(`#events .cp[data-cp="${a.id}"]`);await p.waitForTimeout(900)}
-await p.click('.lc [data-lcdone]');await p.waitForTimeout(2600);
-const d=await p.evaluate(id=>({done:!!state.events.find(e=>e.id===id).doneAt,open:lvOpen,n:state.events.filter(e=>!e.doneAt).length}),a.id);
-ok(d.done&&!d.open&&d.n===a.n-1,tag+' 完成：移到完成紀錄、卡片收起 '+JSON.stringify(d));
 /* 沒有卡片：＋鈕跳動加一句話；按＋時那句話藏起來 */
-await p.evaluate(()=>{localStorage.removeItem('workboard:tour-live');state.events=state.events.filter(e=>e.doneAt);render()});await p.waitForTimeout(1600);
+await p.evaluate(()=>{localStorage.removeItem('workboard:tour-live2');state.events=state.events.filter(e=>e.doneAt);render()});await p.waitForTimeout(1600);
 s=await st();ok(!s.on&&s.fab&&s.pulse,tag+' 沒有卡片：＋鈕跳動、旁邊一句話 '+JSON.stringify(s));
 const fg=await p.evaluate(()=>{const f=$('#addEvent').getBoundingClientRect(),h=$('#tourFab').getBoundingClientRect();return {gap:Math.round(f.left-h.right),l:Math.round(h.left),mid:Math.abs((f.top+f.bottom)/2-(h.top+h.bottom)/2)}});
 ok(fg.gap>4&&fg.gap<30&&fg.l>=0&&fg.mid<14,tag+' 那句話在＋鈕左邊、對齊 '+JSON.stringify(fg));
