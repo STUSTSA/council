@@ -72,7 +72,9 @@ document.addEventListener("mouseover",e=>{const m=e.target.closest(".marker.quie
    用 ResizeObserver 看高度（在畫面畫出來之前就收到），所以各處的程式不用自己呼叫。
    不做的情況：裡面的膠囊／清單正在跑自己的展開收合（motionBusy）、第一次出現、從隱藏變顯示（高度 0）、寬度也一起變（換區塊放大、視窗縮放，交給原本的 FLIP）、減少動態、動畫模式。
    動畫進行中自己造成的尺寸變化不理；動畫結束後如果內容又變了，ResizeObserver 會再收到一次，從目前高度接著滑 */
-const FLOW_SEL=".panel,.ev[open],[data-flow],#setOv .set-list,#setOv .set-pane";   /* 動畫規則 1（anim.js）：新的容器加 data-flow 就有長度過渡 */
+/* 即時回報、完成紀錄兩塊（#livePanel、#donePanel）不做：過渡期間容器要 overflow:clip，會把超出區塊的東西裁掉——桌面左右分欄時詳情卡往上延伸到搜尋列那一行，
+   每次開卡片、換卡片、新增都會看到卡片上面一截（標題那一排）不見、變成一塊空白（2026-11-25 回報）。這兩塊沒有外框、下面也沒有別的區塊，本來就看不出高度在滑（跟 board.css 的 contain 排除同一個理由） */
+const FLOW_SEL=".panel:not(#livePanel):not(#donePanel),.ev[open],[data-flow],#setOv .set-list,#setOv .set-pane";   /* 動畫規則 1（anim.js）：新的容器加 data-flow 就有長度過渡 */
 const flowLast=new WeakMap();
 const flowRO=typeof ResizeObserver==="function"?new ResizeObserver(es=>{
   for(const e of es){
