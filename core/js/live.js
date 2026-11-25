@@ -116,7 +116,7 @@ function lcPopHTML(ev){const opts=[["","不連結"],...state.issues.map(i=>[i.id
 function lcLiveHTML(ev,o){
   const done=o.k==="done",ro=done||!canEdit()&&!cardEd("e",ev.id),ed=!ro&&cardEd("e",ev.id),st=done?"done":evStatus(ev),par=parentOf(ev),view=ed&&lvPane||"main";
   const title=ed?`<input class="lc-title" data-kptitle value="${esc(ev.name)}" maxlength="500" aria-label="名稱">`:`<b class="lc-title"${ro?"":` data-kpgo="title" tabindex="0" role="button"`}>${esc(done?evName(ev):ev.name)}</b>`;   /* 完成紀錄：跟膠囊一樣帶段次（evName） */
-  const fav=favBtnHTML(done?"done":"live",ev.id),rep=fav+(done?"":ro?(reportOn(ev)?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${reportOn(ev)}">報告</button>`)+(!done&&!ro&&!ed?`<button type="button" class="lc-act ok" data-lcdone>完成</button><button type="button" class="lc-act del" data-lcdel>刪除</button>`:"");   /* 完成、刪除：看得見的按鈕（不只靠拖到角落）；編輯中收起，免得跟「點外面存檔」搶 */
+  const fav=favBtnHTML(done?"done":"live",ev.id),rep=fav+(done?"":ro?(reportOn(ev)?'<span class="lc-rp">報告</span>':""):`<button type="button" class="lc-rep" data-evrep aria-pressed="${reportOn(ev)}">報告</button>`)+(!done&&!ro&&!ed?`<button type="button" class="lc-act del" data-lcdel>刪除</button>`:"");   /* 刪除：看得見的按鈕（不只靠拖到角落）；編輯中收起，免得跟「點外面存檔」搶。「完成」鈕 2026-11-25 拿掉（DievE：會被當成「寫完按完成」），完成只有把膠囊拖到右上角，新手引導與使用說明教這個 */
   const meta=`<span class="ev-st">${done?"完成":EV_ST[st]}</span>${staffNames(ev.staff).map(n=>`<span class="lc-tag">${esc(n)}</span>`).join("")}${done?lcWhen(ev.doneAt):lcWhen(ev.touchedAt)}${(ro||done)&&par?`<span class="lc-par">${esc(par.title)}</span>`:""}${labelChipsHTML(ev.labels)}`;
   const body=o.body!=null?o.body:view==="staff"?lcStaffHTML(ev):view==="time"?lcTimeHTML(ev):view==="place"?lcPlaceHTML(ev):lcLinesHTML(ev,ed,ro);
   return lcFrame({k:o.k,id:ev.id,key:"e:"+ev.id,st,ids:o.ids,full:o.full,ro,ed,sec:!!o.edit,attr:`data-ev="${esc(ev.id)}"`,title,cnt:lcCntHTML(lvVer(ev)),rep,meta,body,view,tail:o.tail,
@@ -585,8 +585,7 @@ document.addEventListener("click",async e=>{
   if(card.dataset.lc!=="live"||card.classList.contains("ro"))return;
   const id=card.dataset.ev,ev=state.events.find(x=>x.id===id);if(!ev)return;
   const rep=t.closest("[data-evrep]");if(rep){lvReport(ev,rep);return}
-  if(t.closest("[data-lcdone]")){if(!editing&&canEdit())lvComplete(ev,document.querySelector(`#events .cp[data-cp="${CSS.escape(id)}"]`),null);return}   /* 卡片上的「完成」「刪除」鈕：跟拖到右上角、左上角同一條流程 */
-  if(t.closest("[data-lcdel]")){if(!editing&&canEdit())lvDelete(ev);return}
+  if(t.closest("[data-lcdel]")){if(!editing&&canEdit())lvDelete(ev);return}   /* 卡片上的「刪除」鈕：跟拖到左上角同一條流程 */
   if(editing&&kp&&kp.id===id){lvEdClick(t,ev);return}
   if(editing||!canEdit())return;
   /* 檢視中：點名稱、一行、核取框（同時切換勾選）、「沒有說明」、工具列、母議題＝原位進入編輯 */

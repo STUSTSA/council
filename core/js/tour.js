@@ -1,16 +1,16 @@
 /* 核心｜即時回報新手引導（2026-11-24，DievE：新手只看介面，不知道怎麼完成、刪除）
    第一次用的人（這台裝置沒看完過）：即時回報還沒有卡片時，右下角「＋」跳動並旁邊一句話；有卡片了，在第一張卡片上依序三個提示——
-   ①完成（右上角出現綠角、卡片朝那邊輕點兩下）②刪除（左上角、紅角）③點卡片編輯（卡片裡也有完成、刪除鈕）；氣泡都在第一張卡片下面。
+   ①完成（右上角出現綠角、卡片朝那邊輕點兩下）②刪除（左上角、紅角）③點卡片編輯（寫完不用按完成：點外面就存好；做完的事才拖到右上角。卡片上的「完成」鈕 2026-11-25 拿掉）；氣泡都在第一張卡片下面。
    看完或按「略過」就記在這台裝置（localStorage，只存一個「看過了」的記號，不上傳），不再出現；碰了卡片也算看過。設定頁「重看新手引導」把記號清掉再來一次。
    只有能編輯的人看得到（跟 nav.js 的 fabSync 同一個條件）：fabSync 每次重畫後把「現在能不能出現」交進來（tourSync），這裡自己等畫面穩了再判斷。
    提示氣泡 #tour 是 fixed 的一個節點，位置每次現量；不碰卡片的樣式（卡片被框起來用 .tour-hl）。 */
-const TOUR_KEY="workboard:tour-live",TOUR_N=3;
+const TOUR_KEY="workboard:tour-live2",TOUR_N=3;   /* 記號 2026-11-25 換成 -live2：卡片上的「完成」鈕拿掉，看過舊引導的人再看一次拖曳完成（舊記號 workboard:tour-live 不再讀） */
 /* 讀不到儲存空間（無痕、被擋）：當作看過，不要每次開頁都跳。自動化測試（navigator.webdriver）也當作看過：舊測試各自開頁、不會先點掉引導；引導自己的測試 tr1.js 把這個旗標蓋掉 */
 const tourDone=()=>{try{return navigator.webdriver||localStorage.getItem(TOUR_KEY)==="1"}catch(_){return true}};
 const tourMark=on=>{try{on?localStorage.setItem(TOUR_KEY,"1"):localStorage.removeItem(TOUR_KEY)}catch(_){}};
 let tourI=-1,tourOn=false,tourTm=0,tourAn=null,tourAt=null;   /* tourI＝目前第幾步（-1＝沒在跑；切到別頁、開設定時只藏起來，步數留著，回來接著看） */
 const tourCoarse=()=>matchMedia("(pointer:coarse)").matches;
-const TOUR_TXT=[()=>tourCoarse()?"長按卡片，拖到右上角＝完成":"把卡片拖到右上角＝完成",()=>"拖到左上角＝刪除（會先確認）",()=>"點一下卡片＝編輯；卡片裡也有「完成」「刪除」鈕"];
+const TOUR_TXT=[()=>tourCoarse()?"長按卡片，拖到右上角＝完成":"把卡片拖到右上角＝完成",()=>"拖到左上角＝刪除（會先確認）",()=>"點一下卡片＝編輯，離開卡片就存好，不用按完成。事情做完了再拖到右上角"];
 const tourBox=()=>{let t=$("#tour");if(!t){document.body.insertAdjacentHTML("beforeend",`<div class="tour" id="tour" role="status" hidden><p class="tour-t"></p><div class="tour-bar"><span class="tour-n num"></span><button type="button" class="tour-skip" data-tourskip>略過</button><button type="button" class="tour-go" data-tournext></button></div></div>`);t=$("#tour")}return t};
 const tourFirst=()=>document.querySelector("#events .cp:not(.lc-ghost)");
 
