@@ -26,6 +26,8 @@ ICONS.down='<path d="M7 9.5l5 5 5-5"/>';
 /* 設定「使用說明」列：圓圈問號 */
 ICONS.help='<circle cx="12" cy="12" r="8.2"/><path d="M9.5 9.7a2.6 2.6 0 1 1 3.9 2.2c-.9.5-1.4 1.1-1.4 2"/><path d="M12 16.9v.2"/>';
 ICONS.link='<path d="M10.2 13.8a3.8 3.8 0 0 0 5.4 0l2.9-2.9a3.8 3.8 0 0 0-5.4-5.4l-1 1"/><path d="M13.8 10.2a3.8 3.8 0 0 0-5.4 0l-2.9 2.9a3.8 3.8 0 0 0 5.4 5.4l1-1"/>';
+/* 可以自己挑的線條圖示（主頁下排的個人連結 home.js、活動專案的圖示 views.js 共用一份；存的是名稱，不認得的名稱當成沒有） */
+const ICO_PICK=["link","home","doc","calendar","people","user","cap","flag","bookmark","bell","pin","clock","tag","share","download","cloud","live","progress","done","eye"];
 const ico=(n,mod="")=>`<svg class="ico ${mod}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[n]||""}</svg>`;
 const icoHost=t=>t&&t.closest&&t.closest("button,a,.tab,.tb-gear");
 function icoStart(h){if(!h||!h.querySelector(".ico"))return;clearTimeout(h._icoT);h.classList.add("ico-on")}

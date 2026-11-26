@@ -74,7 +74,7 @@ function normalize(s){
   s=StoreMap.tidy(migrate(StoreMap.tidy(s||{})));if(!s.id)s.id=CFG.boardId;   /* tidy：日期、時刻只收固定格式，型別不對的欄位換成空的（store-map.js）；遷移前後各一次（遷移假設陣列是陣列，遷移也會算出新的日期） */
   s.members=s.members||[];s.labels=s.labels||[];s.docs=s.docs||[];s.minutes=s.minutes||[];s.agendas=Array.isArray(s.agendas)?s.agendas.filter(a=>a&&typeof a==="object"&&Array.isArray(a.items)):[];s.meetGrant=s.meetGrant||null;s.semester=["up","down"].includes(s.semester)?s.semester:"";s.follows=s.follows||[];(s.events||[]).forEach(e=>{e.staff=e.staff||[];e.labels=e.labels||[];e.links=linksFix(e.links);e.times=e.times||[];e.times.forEach(t=>{t.place=t.place||""});e.round=+e.round||1;e.touched=e.touched||[];e.report=!!e.report;evBlocksFix(e)});
   s.weeks=s.weeks||[];s.issues=s.issues||[];s.events=s.events||[];s.reportBase=s.reportBase||null;if(s.yearLabel===undefined)s.yearLabel=CFG.term.label;if(s.termStart===undefined)s.termStart=CFG.term.start;s.range=s.range||defaultRange();s.title=s.title||CFG.title;
-  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=linksFix(i.links);i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";
+  s.issues.forEach(i=>{i.tags=i.tags||[];i.staff=i.staff||[];i.labels=i.labels||[];i.markers=i.markers||[];i.links=linksFix(i.links);i.cur=i.cur||0;i.doneAt=i.doneAt||null;i.start=i.start||"";i.end=i.end||"";if(!ICO_PICK.includes(i.icon))delete i.icon;   /* icon＝活動專案的圖示（選填，2026-11-24）：只留認得的名稱 */
     i.markers.forEach(m=>{if(m.color!=null&&cssColor(m.color,"")!==m.color)m.color=MARK_COLORS[0];if(m.at==null){m.at=(hasDates(i)&&m.date)?Math.round(clamp((pd(m.date)-pd(i.start))/((pd(i.end)-pd(i.start))||1)*100)):50}m.date=m.date||""})});
   return s;
 }

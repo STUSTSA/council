@@ -288,7 +288,7 @@
     s.labels = (src.labels || []).map(l => ({ id: oid(dept, l.id), kind: l.kind, name: l.name }));
     const byOrder = (a, b) => (a.order || 0) - (b.order || 0);
     const arr = v => Array.isArray(v) ? v : [], objs = v => arr(v).filter(x => x && typeof x === "object");   /* 型別不對的欄位當成空的 */
-    s.issues = (src.issues || []).slice().sort(byOrder).map(i => clean({ id: oid(dept, i.id), title: i.title, cur: i.cur, start: i.start, end: i.end,
+    s.issues = (src.issues || []).slice().sort(byOrder).map(i => clean({ id: oid(dept, i.id), title: i.title, cur: i.cur, start: i.start, end: i.end, icon: typeof i.icon === "string" && i.icon ? i.icon : undefined,
       note: i.note, tags: copy(arr(i.tags)), labels: arr(i.labels).map(x => oid(dept, x)), links: linksIn(i.links),
       staff: arr(i.staff).map(x => fromStaff(dept, x)), doneAt: i.doneAt || null,
       markers: objs(i.markers).map(m => clean({ ...copy(m), color: HEX.test(m.color) ? m.color : undefined, evId: m.evId ? oid(dept, m.evId) : m.evId, tmId: m.tmId ? oid(dept, m.tmId) : m.tmId })) }));
@@ -340,7 +340,7 @@
         startAt: a ? ts(a.ms) : null, endAt: b ? ts(b.ms) : null, note: i.note || "", tags: copy(i.tags || []), labels: ids(i.labels),
         links: copy(i.links || []), staff: staff(i.staff),
         markers: (i.markers || []).map(m => clean({ ...copy(m), evId: m.evId ? nid(dept, m.evId) : m.evId, tmId: m.tmId ? nid(dept, m.tmId) : m.tmId })),
-        doneAt: i.doneAt || null, order: iord[k], ...keep(R.issues.get(id), ["importBatch"]) }); });
+        doneAt: i.doneAt || null, order: iord[k], ...(i.icon ? { icon: String(i.icon) } : {}), ...keep(R.issues.get(id), ["importBatch"]) }); });   /* icon：活動專案的圖示（選填；沒有就不寫這個欄位） */
 
     (s.weeks || []).forEach(w => { const id = nid(dept, w.id), r = R.weeks.get(id);
       out.weeks[id] = clean({ deptId: dept, date: w.date || "", text: String(w.text || ""), auto: !!w.auto,

@@ -625,6 +625,9 @@ body:not(.authed) .ev-edrow,body.edit .ev-edrow{display:none}
 /* --- 議題的「階段」欄 --- */
 /* 議題的「階段」欄（進度的逐欄編輯，views.js 的 stageEditorHTML）：一列一個階段＝「目前」鈕＋名稱＋刪除 */
 .stg-list{display:grid;gap:6px}
+.ico-pick{display:flex;flex-wrap:wrap;gap:6px}   /* 活動專案的圖示選單（views.js 的 icoPickHTML）：圓鈕沿用主頁圖示選單的 .hm-ipb */
+.ico-view{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--blk2)}
+.ico-view .ico{width:18px;height:18px}
 .stg-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px}
 .stg-cur{min-height:30px;padding:0 12px;font-size:12px;color:var(--muted);border-color:var(--hair);transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
 .stg-cur[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
@@ -1561,6 +1564,11 @@ button.hm-wc{display:flex;flex-direction:column;align-items:flex-start;justify-c
    或原地縮小再回來，不壓進鄰居；要一起動的零件在檔案裡包成 .dg-ga／.dg-gb，整個小人是 .dg-all。只動 transform。
    class 一律 dg- 開頭，不跟版面的 class 共用（進場動畫只挑版面上的區塊，不會挑到零件） */
 .hm-lg .dg{display:block;width:100%;height:100%;overflow:visible}
+.hm-pji{right:9%;top:9%;bottom:auto;width:30%;height:30%;color:var(--muted)}   /* 專案卡片的圖示（活動部替專案挑的線條圖示）：右上角、比部門標誌小，下面留給日期；名稱讓開它 */
+.hm-pji .ico{display:block;width:100%;height:100%;margin:0;stroke-width:1.1}
+.hm-wc .hm-pji{right:24px;top:22px;width:76px;height:76px}
+.hm-tile:has(.hm-pji) .hm-tt{padding-right:34%}
+.hm-wc:has(.hm-pji) .hm-tt{padding-right:96px}
 :is(.hm-lg,.hm-fxl,.pfx-cover[data-k="tile"]) .dg-w{fill:var(--blk)}
 :is(.hm-fb,.pfx-cover[data-k="flip"],.dh-logo) .dg-w{fill:var(--bg)}
 .dg-y{fill:var(--mk-a)}

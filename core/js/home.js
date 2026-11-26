@@ -7,7 +7,7 @@
    - 下排：全會行事曆圓鈕、「預約會長」膠囊鈕（進你的部門看板、打開行事曆的會長室模式（沒記到部門時到會長室頁））、個人常用連結（只存這台裝置的 localStorage「stustsa-links」）、「+」編輯（見「下排」那一段）。
    - 「部門／專案」切換（2026-11-24，上排中間的分段切換 #hmSeg）：專案＝活動部「專案」分頁裡還沒結案的專案（資料是活動部的議題，對外公開、沒登入也讀；
      切到「專案」才讀、讀過 2 分鐘內不重讀）。專案卡片跟部門色塊是同一個元件（桌面一排、手機卡片堆、同一套焦點與進場動作），
-     內容換成：目前階段（小字）、專案名稱、開始日期（大數字，有結束日的後面接小字）；點焦點那張＝進這個專案自己的專案頁（index.html?d=events&proj=ID，config.js 的 PROJ_ID）；從專案頁回來停在「專案」這一排。
+     內容換成：目前階段（小字）、專案名稱、開始日期（大數字，有結束日的後面接小字）、活動部替這個專案挑的圖示（議題的 icon，放在部門標誌的位置；沒挑就不放）；點焦點那張＝進這個專案自己的專案頁（index.html?d=events&proj=ID，config.js 的 PROJ_ID）；從專案頁回來停在「專案」這一排。
    這個檔不依賴看板的 state、store、登入（主頁只載入 config、util、morph、anim、icons，與行事曆用的 store、follow、notify）。 */
 (()=>{
   const D=[...(window.BOARD_DEPTS||[])].sort((a,b)=>(b.id==="president")-(a.id==="president")||(b.id==="secretariat")-(a.id==="secretariat"));   /* 會長室、秘書處排最前面，其他照設定檔 */
@@ -23,7 +23,7 @@
   const hmFrom=()=>{const b=document.documentElement.dataset.hmBack,bi=b?D.findIndex(d=>d.id===b):-1;if(bi>=0)return bi;
     try{const r=document.referrer&&new URL(document.referrer);if(!r||r.origin!==location.origin||!/\/(index\.html)?$/.test(r.pathname))return -1;const id=r.searchParams.get("d")||"rights";return D.findIndex(d=>d.id===id)}catch(_){return -1}};
   const FROM=hmFrom();if(FROM>=0)H.i=FROM;
-  const tileIn=(d,i)=>d.pid?`<span class="hm-tt"><i class="hm-en">${esc(d.tag)}</i><b class="hm-nm">${esc(d.name)}</b></span>${d.date?`<span class="hm-n num">${esc(d.date)}${d.end?`<small>–${esc(d.end)}</small>`:""}</span>`:""}`
+  const tileIn=(d,i)=>d.pid?`<span class="hm-tt"><i class="hm-en">${esc(d.tag)}</i><b class="hm-nm">${esc(d.name)}</b></span>${d.icon?`<span class="hm-lg hm-pji" aria-hidden="true">${ico(d.icon,"solo")}</span>`:""}${d.date?`<span class="hm-n num">${esc(d.date)}${d.end?`<small>–${esc(d.end)}</small>`:""}</span>`:""}`
     :`<span class="hm-tt"><i class="hm-en">${esc(EN(d.id))}</i><b class="hm-nm">${esc(d.name)}</b></span><span class="hm-lg" data-lg="${esc(d.id)}" aria-hidden="true"></span><span class="hm-n num" data-n="${esc(d.id)}" hidden></span>`;
 
   /* ---------- 左上的學生會標誌、時間、設定鈕 ---------- */
@@ -114,7 +114,7 @@
   const pjDay=s=>/^\d{4}-\d\d-\d\d/.test(s||"")?`${+s.slice(5,7)}/${+s.slice(8,10)}`:"";
   const pjItems=is=>(Array.isArray(is)?is:[]).filter(i=>i&&!i.doneAt).sort((a,b)=>String(a.start||"9").localeCompare(String(b.start||"9")))
     .map(i=>{const tg=Array.isArray(i.tags)?i.tags[+i.cur||0]:"",e=pjDay(i.end);
-      return {id:"events",pid:String(i.id),name:String(i.title||"（未命名）"),tag:typeof tg==="string"&&tg?tg:"活動部",date:pjDay(i.start),end:e&&String(i.end).slice(0,10)>String(i.start).slice(0,10)?e:""}});
+      return {id:"events",pid:String(i.id),name:String(i.title||"（未命名）"),tag:typeof tg==="string"&&tg?tg:"活動部",icon:ICO_PICK.includes(i.icon)?i.icon:"",date:pjDay(i.start),end:e&&String(i.end).slice(0,10)>String(i.start).slice(0,10)?e:""}});
   function pjLoad(){
     if(PJ.st==="loading"||PJ.st==="ok"&&Date.now()-PJ.at<12e4)return;
     const had=PJ.st==="ok";PJ.st=had?"ok":"loading";
@@ -250,7 +250,7 @@
      「+」＝進入編輯：連結右上角紅色 × 移除；輸入框左邊返回鍵、Esc、點下排以外＝結束編輯；Enter（或「加入」）＝加入，加完留在編輯中可以接著加。滿了「+」不出現。
      寬度改變（加、刪、進出編輯）：底板左右兩半（手機才畫；桌面是分開的圓鈕，ui-12）各自滑到新的邊、留著的按鈕滑到新位置、新的彈出來、拿掉的留分身淡出縮小（只動 transform／opacity）。
      桌面滑鼠停在連結上：圖示上方浮出名稱的小膠囊（#hmTip，不用 title）；手機（沒有 hover）不浮出 */
-  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,LK_ICOS=["link","home","doc","calendar","people","user","cap","flag","bookmark","bell","pin","clock","tag","share","download","cloud","live","progress","done","eye"],SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
+  const LK_KEY="stustsa-links",LK_MAX=12,LK_NAME=30,LK_ICOS=ICO_PICK,SOFT="cubic-bezier(.25,1.12,.4,1)",POP="cubic-bezier(.3,1.45,.45,1)";
   const lkCut=s=>[...String(s==null?"":s).trim()].slice(0,LK_NAME).join("");
   function lkUrl(raw){
     let s=String(raw==null?"":raw).trim();if(!s||s.length>2000)return null;

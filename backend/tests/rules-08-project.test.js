@@ -139,4 +139,14 @@ describe('PJ-09～PJ-12 授權的範圍', () => {
     await assertFails(commit(db('evAdm'), [w[0], w[2], w[3]]));
     await assertFails(commit(db('evAdm'), [w[0], w[1], w[2]]));
   });
+  it('PJ-13 專案圖示：選填的短名稱可以寫；太長、有符號、不是字串都擋；沒權限的人不能改', async () => {
+    await assertSucceeds(db('evEd').doc('issues/events__i1').set(issue('evEd', { icon: 'flag' })));
+    await assertSucceeds(db('evEd').doc('issues/events__i1').set({ ...issue('evEd'), rev: 2 }));   /* 拿掉圖示 */
+    await assertSucceeds(db('evEd').doc('issues/events__i1').set(issue('evEd', { icon: 'cap', rev: 3 })));
+    for (const bad of ['<svg onload=1>', 'a'.repeat(25), 'Flag', 'a b', 7, ['flag'], { n: 'flag' }])
+      await assertFails(db('evEd').doc('issues/events__i2').set(issue('evEd', { icon: bad })));
+    await assertFails(db('rtAdm').doc('issues/events__i1').set(issue('rtAdm', { icon: 'bell', rev: 4 })));
+    await assertFails(db('gen').doc('issues/events__i1').set(issue('gen', { icon: 'bell', rev: 4 })));
+    await assertFails(anon(t).doc('issues/events__i1').set(issue('x', { icon: 'bell', rev: 4 })));
+  });
 });
