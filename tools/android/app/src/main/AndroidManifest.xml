@@ -10,7 +10,7 @@
         android:allowBackup="false">
 
         <!-- 單一畫面（WebView）。singleTask：從 Chrome 登入完成回來時用同一個 App 接手。
-             第二個 intent-filter 只收登入交接（app-login.html 指定本 App 套件名送來，且要帶 App 先產生的 nonce） -->
+             第二個 intent-filter 只收登入交接、第三個收網站連結（app-login.html 指定本 App 套件名送來，且要帶 App 先產生的 nonce） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -26,6 +26,21 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="councilapp" android:host="auth" />
+            </intent-filter>
+            <!-- 網站連結：在別的 App（LINE、訊息等）點到網站網址時可以用本 App 開。
+                 沒有做網域驗證（驗證檔要放在 stustsa.github.io 的根目錄，不在這個 repo，而且每次建置簽章不同），
+                 所以要使用者自己在系統設定「預設開啟 → 新增連結」勾 stustsa.github.io（Android 12 以上）。
+                 只列首頁與看板兩頁；app-login.html 故意不列：那頁一定要在 Chrome 開，否則登入會繞回 App -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="stustsa.github.io" />
+                <data android:path="/council" />
+                <data android:path="/council/" />
+                <data android:path="/council/home.html" />
+                <data android:path="/council/index.html" />
             </intent-filter>
         </activity>
     </application>

@@ -128,7 +128,8 @@ public class MainActivity extends Activity {
         });
 
         if (Build.VERSION.SDK_INT >= 33) back = new BackHelper(this, web, () -> { if (web.canGoBack()) web.goBack(); });
-        if (state != null) web.restoreState(state); else web.loadUrl(HOME);
+        String link = siteLink(getIntent());
+        if (state != null) web.restoreState(state); else web.loadUrl(link != null ? link : HOME);
         handleIntent(getIntent());
     }
 
@@ -142,7 +143,19 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        String link = siteLink(intent);
+        if (link != null) web.loadUrl(link);
         handleIntent(intent);
+    }
+
+    /** 從別的 App 點網站連結進來（manifest 第三個 intent-filter）：只認本站的首頁與看板兩頁，其他一律不理（回 null） */
+    private static String siteLink(Intent in) {
+        if (in == null || !Intent.ACTION_VIEW.equals(in.getAction()) || in.getData() == null) return null;
+        String u = in.getData().toString();
+        if (u.equals(PREFIX.substring(0, PREFIX.length() - 1))) return HOME;
+        if (!u.startsWith(PREFIX)) return null;
+        String p = in.getData().getPath();
+        return "/council/".equals(p) || "/council/home.html".equals(p) || "/council/index.html".equals(p) ? u : null;
     }
 
     @Override
