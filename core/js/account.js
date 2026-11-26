@@ -126,7 +126,7 @@ function acctSettingsInner(){
 }
 /* 強制刷新（2026-11-23）：平常用這台裝置存的讀取結果（fs-cache.js）省讀取量；趕資料（催交、開會前）按一下就作廢本裝置的快取、立刻重讀目前這個部門。
    只立刻讀目前的部門（一次讀取量＝這個部門的文件數）；別的部門、行事曆、名單下次用到時才重讀。有未儲存的修改時不動，免得蓋掉。 */
-const refreshSec=()=>setSec(`<button type="button" class="set-row" data-fb-refresh><span class="sr-ico">${ico("refresh","sr-spin")}</span><span class="sr-t">強制刷新</span></button>`);
+const refreshSec=()=>setSec(`<button type="button" class="set-row" data-fb-refresh><span class="sr-ico">${ico("refresh","solo sr-spin")}</span><b class="sr-t">強制刷新</b></button>`);
 let acctRefreshing=false;
 async function acctRefresh(btn){
   if(acctRefreshing||!fsMode())return;
